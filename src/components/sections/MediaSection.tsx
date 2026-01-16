@@ -1,45 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { Link } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext'
+import { useContent } from '../../context/ContentContext'
 import { SectionCard } from '../ui/SectionCard'
 
 gsap.registerPlugin(ScrollTrigger)
-
-const mediaCards = [
-    {
-        label: 'Press Release',
-        title: 'LAUNCH',
-        subtitle: 'EDUCATION',
-        description: 'New Educational Initiative',
-        date: 'Oct 15, 2025',
-        color: '#e82828'
-    },
-    {
-        label: 'Event',
-        title: 'TECH',
-        subtitle: 'CONFERENCE',
-        description: 'Future Technologies',
-        date: 'Sep 28, 2025',
-        color: '#22c55e'
-    },
-    {
-        label: 'Report',
-        title: 'SERVICE',
-        subtitle: 'DRIVE',
-        description: 'Community Service',
-        date: 'Aug 10, 2025',
-        color: '#3b82f6'
-    },
-    {
-        label: 'Announcement',
-        title: 'SCHOLAR',
-        subtitle: 'WINNERS',
-        description: 'Scholarship Program',
-        date: 'Jul 22, 2025',
-        color: '#f59e0b'
-    }
-]
 
 export function MediaSection() {
     const sectionRef = useRef<HTMLElement>(null)
@@ -47,28 +14,42 @@ export function MediaSection() {
     const headerRef = useRef<HTMLHeadingElement>(null)
     const cardsContainerRef = useRef<HTMLDivElement>(null)
     const { isDark } = useTheme()
+    const { getPostsBySection } = useContent()
+
+    // Get PUBLISHED posts from database
+    const dynamicPosts = getPostsBySection('media').filter(p => p.isPublished)
+    const mediaCards = useMemo(() => {
+        const colors = ['#e82828', '#22c55e', '#3b82f6', '#f59e0b']
+        return dynamicPosts.map((post, index) => ({
+            id: post.id,
+            label: 'News',
+            title: post.title.split(' ')[0] || 'NEWS',
+            subtitle: post.title.split(' ').slice(1).join(' ') || '',
+            description: post.subtitle || '',
+            date: new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            color: colors[index % colors.length],
+            image: post.image || ''
+        }))
+    }, [dynamicPosts])
 
     useEffect(() => {
         const ctx = gsap.context(() => {
-            // Header wrapper starts HIDDEN
             gsap.set(headerWrapperRef.current, {
                 opacity: 0,
                 visibility: 'hidden'
             })
 
-            // Initial state: Header starts large, centered, and INVISIBLE
             gsap.set(headerRef.current, {
-                scale: 5,
-                y: '60vh',
-                x: '50vw',
+                scale: 3,
+                y: '80vh',
+                x: '30vw',
                 transformOrigin: 'center center',
                 opacity: 0
             })
 
-            // Show header wrapper when section reaches top
             ScrollTrigger.create({
                 trigger: sectionRef.current,
-                start: 'top top',
+                start: 'top 90%',
                 end: 'bottom top',
                 onEnter: () => {
                     gsap.set(headerWrapperRef.current, { opacity: 1, visibility: 'visible' })
@@ -84,7 +65,6 @@ export function MediaSection() {
                 }
             })
 
-            // Header opacity fades in FAST
             gsap.fromTo(headerRef.current,
                 { opacity: 0 },
                 {
@@ -92,19 +72,18 @@ export function MediaSection() {
                     ease: 'none',
                     scrollTrigger: {
                         trigger: sectionRef.current,
-                        start: 'top top',
-                        end: '+=300',
+                        start: 'top 80%',
+                        end: 'top 30%',
                         scrub: 0.5
                     }
                 }
             )
 
-            // Header zooms in from center-bottom to left position
             gsap.fromTo(headerRef.current,
                 {
-                    scale: 5,
-                    y: '60vh',
-                    x: '50vw'
+                    scale: 3,
+                    y: '80vh',
+                    x: '30vw'
                 },
                 {
                     scale: 1,
@@ -113,14 +92,13 @@ export function MediaSection() {
                     ease: 'none',
                     scrollTrigger: {
                         trigger: sectionRef.current,
-                        start: 'top top',
-                        end: '+=800',
+                        start: 'top 80%',
+                        end: 'top -20%',
                         scrub: 1
                     }
                 }
             )
 
-            // Header fades out as section ends
             gsap.fromTo(headerRef.current,
                 { opacity: 1 },
                 {
@@ -128,9 +106,9 @@ export function MediaSection() {
                     ease: 'power2.in',
                     scrollTrigger: {
                         trigger: cardsContainerRef.current,
-                        start: 'bottom 80%',
-                        end: 'bottom 30%',
-                        scrub: 1
+                        start: 'bottom 120%',
+                        end: 'bottom 60%',
+                        scrub: 0.5
                     }
                 }
             )
@@ -140,17 +118,20 @@ export function MediaSection() {
         return () => ctx.revert()
     }, [])
 
+    // Show minimal section if no published posts
+    const hasContent = mediaCards.length > 0
+
     return (
         <section
             id="media"
             ref={sectionRef}
             style={{
-                minHeight: '250vh',
+                minHeight: '200vh',
                 position: 'relative',
                 background: 'transparent',
+                paddingTop: '100px',
             }}
         >
-            {/* Fixed Header Container */}
             <div
                 ref={headerWrapperRef}
                 style={{
@@ -188,41 +169,61 @@ export function MediaSection() {
                 >
                     <span style={{ color: '#ffffff' }}>MEDIA</span>
                     <br />
-                    <span style={{ color: '#ff3333' }}>& NEWS</span>
+                    <span style={{ color: '#ff3333' }}>&amp; NEWS</span>
                 </h1>
             </div>
 
-            {/* Right Side - Cards that scroll naturally */}
             <div
                 ref={cardsContainerRef}
                 style={{
-                    marginLeft: '35%',
-                    marginRight: '5%',
-                    width: '55%',
+                    marginLeft: '30%',
+                    marginRight: '2%',
+                    width: '65%',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 280px)',
-                    gap: '32px',
+                    gridTemplateColumns: 'repeat(2, 420px)',
+                    gap: '40px',
                     justifyContent: 'center',
-                    padding: '150vh 0 20vh 0',
+                    padding: '80vh 0 100vh 0',
                     position: 'relative',
                     alignContent: 'start',
                     zIndex: 10
                 }}
             >
-                {mediaCards.map((card, index) => (
-                    <div key={index} style={{ transform: index % 2 === 1 ? 'translateY(50px)' : 'none' }}>
-                        <SectionCard
-                            className="media-card"
-                            label={card.label}
-                            labelColor={card.color}
-                            title={card.title}
-                            subtitle={card.subtitle}
-                            description={card.description}
-                            startLabel="Date"
-                            startValue={card.date}
-                        />
+                {hasContent ? (
+                    mediaCards.map((card, index) => (
+                        <div key={card.id} style={{ transform: index % 2 === 1 ? 'translateY(120px)' : 'none' }}>
+                            <Link
+                                to={`/media/${card.id}`}
+                                data-cursor="view"
+                                style={{ textDecoration: 'none', display: 'block' }}
+                            >
+                                <SectionCard
+                                    className="media-card"
+                                    label={card.label}
+                                    labelColor={card.color}
+                                    title={card.title}
+                                    subtitle={card.subtitle}
+                                    description={card.description}
+                                    startLabel="Date"
+                                    startValue={card.date}
+                                    image={card.image}
+                                />
+                            </Link>
+                        </div>
+                    ))
+                ) : (
+                    <div style={{
+                        gridColumn: '1 / -1',
+                        padding: '80px 40px',
+                        textAlign: 'center',
+                        color: '#666',
+                        background: 'rgba(255,255,255,0.02)',
+                        borderRadius: '16px',
+                        border: '1px dashed #333'
+                    }}>
+                        <p style={{ fontSize: '1.1rem', margin: 0 }}>No content published yet</p>
                     </div>
-                ))}
+                )}
             </div>
         </section>
     )

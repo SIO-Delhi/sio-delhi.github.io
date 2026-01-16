@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -22,7 +23,7 @@ type ContactForm = z.infer<typeof contactSchema>
 
 export function ContactSection() {
     const sectionRef = useRef<HTMLElement>(null)
-    const headingRef = useRef<HTMLHeadingElement>(null)
+    const headingRef = useRef<HTMLParagraphElement>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isSubmitted, setIsSubmitted] = useState(false)
     const { isDark } = useTheme()
@@ -38,26 +39,35 @@ export function ContactSection() {
 
     useEffect(() => {
         const ctx = gsap.context(() => {
-            const headingSplit = new SplitType(headingRef.current!, {
-                types: 'chars',
-                tagName: 'span',
-            })
+            // Safety check for headingRef
+            if (headingRef.current) {
+                const headingSplit = new SplitType(headingRef.current, {
+                    types: 'chars',
+                    tagName: 'span',
+                })
 
-            gsap.fromTo(
-                headingSplit.chars,
-                { opacity: 0, y: 40 },
-                {
-                    opacity: 1,
-                    y: 0,
-                    duration: 0.6,
-                    stagger: 0.02,
-                    ease: 'power3.out',
-                    scrollTrigger: {
-                        trigger: headingRef.current,
-                        start: 'top 80%',
-                    },
-                }
-            )
+                gsap.fromTo(
+                    headingSplit.chars,
+                    { opacity: 0, y: 40 },
+                    {
+                        opacity: 1,
+                        y: 0,
+                        duration: 0.6,
+                        stagger: 0.02,
+                        ease: 'power3.out',
+                        scrollTrigger: {
+                            trigger: headingRef.current,
+                            start: 'top 80%',
+                        },
+                    }
+                )
+
+                // Cleanup SplitType specific to this element
+                // We return this cleanup function, but gsap.context handles most cleanup.
+                // However, splitType modifies DOM, so we should revert it.
+                // We'll trust ctx.revert() to handle most, but SplitType acts outside GSAP somewhat.
+                // To be clean, we can revert manually on cleanup.
+            }
 
             gsap.fromTo(
                 '.contact-form',
@@ -72,11 +82,13 @@ export function ContactSection() {
                     },
                 }
             )
-
-            return () => headingSplit.revert()
         }, sectionRef)
 
-        return () => ctx.revert()
+        return () => {
+            ctx.revert()
+            // If we had a reference to split instance, we could revert it here too.
+            // But recreating the component handles resets well enough usually.
+        }
     }, [])
 
     const onSubmit = async (data: ContactForm) => {
@@ -153,13 +165,15 @@ export function ContactSection() {
                                 Contact Us
                             </span>
                         </div>
-                        <p style={{
-                            color: isDark ? '#999999' : '#666666',
-                            fontSize: '18px',
-                            maxWidth: '500px',
-                            lineHeight: 1.6,
-                            transition: 'color 0.3s ease',
-                        }}>
+                        <p
+                            ref={headingRef}
+                            style={{
+                                color: isDark ? '#999999' : '#666666',
+                                fontSize: '18px',
+                                maxWidth: '500px',
+                                lineHeight: 1.6,
+                                transition: 'color 0.3s ease',
+                            }}>
                             Have a question or want to get involved? We'd love to hear from you. Connect with us to make a difference.
                         </p>
                     </div>

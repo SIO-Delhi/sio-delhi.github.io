@@ -1,7 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { Link } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext'
+import { useContent } from '../../context/ContentContext'
 import { SectionCard } from '../ui/SectionCard'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -12,75 +14,40 @@ export function AboutSection() {
     const headerWrapperRef = useRef<HTMLDivElement>(null)
     const cardsContainerRef = useRef<HTMLDivElement>(null)
     const { isDark } = useTheme()
+    const { getPostsBySection } = useContent()
 
-    const cards = [
-        {
-            label: 'Organization',
-            title: 'ABOUT',
-            subtitle: 'SIO',
-            type: 'Student Movement',
-            startLabel: 'Est.',
-            startValue: '1982',
-            endLabel: 'Network',
-            endValue: 'Pan India',
-            color: '#ef4444'
-        },
-        {
-            label: 'Ideology',
-            title: 'SIO',
-            subtitle: 'AIMS',
-            type: 'Education & Reality',
-            startLabel: 'Focus',
-            startValue: 'Students',
-            endLabel: 'Approach',
-            endValue: 'Holistic',
-            color: '#eab308'
-        },
-        {
-            label: 'Impact',
-            title: 'SIO',
-            subtitle: 'WORKS',
-            type: 'Constructive & Peaceful',
-            startLabel: 'Method',
-            startValue: 'Grassroots',
-            endLabel: 'Reach',
-            endValue: 'National',
-            color: '#3b82f6'
-        },
-        {
-            label: 'Network',
-            title: 'PAN',
-            subtitle: 'INDIA',
-            type: 'Coast to Coast',
-            startLabel: 'From',
-            startValue: 'Punjab',
-            endLabel: 'To',
-            endValue: 'Kerala',
-            color: '#10b981'
-        }
-    ]
+    // Get PUBLISHED posts from database
+    const dynamicPosts = getPostsBySection('about').filter(p => p.isPublished)
+    const cards = useMemo(() => {
+        return dynamicPosts.map(post => ({
+            id: post.id,
+            label: 'About',
+            title: post.title.split(' ')[0] || 'ABOUT',
+            subtitle: post.title.split(' ').slice(1).join(' ') || '',
+            type: post.subtitle || '',
+            color: '#ef4444',
+            image: post.image || ''
+        }))
+    }, [dynamicPosts])
 
     useEffect(() => {
         const ctx = gsap.context(() => {
-            // Header wrapper starts HIDDEN - only shows when scrolled into section
             gsap.set(headerWrapperRef.current, {
                 opacity: 0,
                 visibility: 'hidden'
             })
 
-            // Initial state: Header starts large, centered, and INVISIBLE
             gsap.set(headerRef.current, {
-                scale: 5,
-                y: '60vh',
-                x: '50vw',
+                scale: 3,
+                y: '80vh',
+                x: '30vw',
                 transformOrigin: 'center center',
                 opacity: 0
             })
 
-            // Show header wrapper when section reaches top (same as animation start)
             ScrollTrigger.create({
                 trigger: sectionRef.current,
-                start: 'top top', // Match animation start
+                start: 'top 90%',
                 end: 'bottom top',
                 onEnter: () => {
                     gsap.set(headerWrapperRef.current, { opacity: 1, visibility: 'visible' })
@@ -96,7 +63,6 @@ export function AboutSection() {
                 }
             })
 
-            // Header opacity fades in FAST on entry
             gsap.fromTo(headerRef.current,
                 { opacity: 0 },
                 {
@@ -104,19 +70,18 @@ export function AboutSection() {
                     ease: 'none',
                     scrollTrigger: {
                         trigger: sectionRef.current,
-                        start: 'top top',
-                        end: '+=300',
+                        start: 'top 80%',
+                        end: 'top 30%',
                         scrub: 0.5
                     }
                 }
             )
 
-            // Header zooms in from center-bottom to left position (slower)
             gsap.fromTo(headerRef.current,
                 {
-                    scale: 5,
-                    y: '60vh',
-                    x: '50vw'
+                    scale: 3,
+                    y: '80vh',
+                    x: '30vw'
                 },
                 {
                     scale: 1,
@@ -125,14 +90,13 @@ export function AboutSection() {
                     ease: 'none',
                     scrollTrigger: {
                         trigger: sectionRef.current,
-                        start: 'top top',
-                        end: '+=800',
+                        start: 'top 80%',
+                        end: 'top -20%',
                         scrub: 1
                     }
                 }
             )
 
-            // Header fades out as section ends (no scale change)
             gsap.fromTo(headerRef.current,
                 { opacity: 1 },
                 {
@@ -140,9 +104,9 @@ export function AboutSection() {
                     ease: 'power2.in',
                     scrollTrigger: {
                         trigger: cardsContainerRef.current,
-                        start: 'bottom 80%',
-                        end: 'bottom 30%',
-                        scrub: 1
+                        start: 'bottom 120%',
+                        end: 'bottom 60%',
+                        scrub: 0.5
                     }
                 }
             )
@@ -152,18 +116,20 @@ export function AboutSection() {
         return () => ctx.revert()
     }, [])
 
+    // Show minimal section if no published posts
+    const hasContent = cards.length > 0
+
     return (
         <section
             id="about"
             ref={sectionRef}
             style={{
-                minHeight: '250vh',
+                minHeight: '200vh',
                 position: 'relative',
                 background: 'transparent',
-                marginTop: '-20vh',
+                paddingTop: '100px',
             }}
         >
-            {/* Fixed Header Container - Uses position:fixed via wrapper */}
             <div
                 ref={headerWrapperRef}
                 style={{
@@ -179,7 +145,7 @@ export function AboutSection() {
                     paddingRight: '40px',
                     paddingBottom: '24vh',
                     zIndex: 5,
-                    pointerEvents: 'none' // Allow clicks through to content behind
+                    pointerEvents: 'none'
                 }}
             >
                 <h1
@@ -203,40 +169,56 @@ export function AboutSection() {
                 </h1>
             </div>
 
-            {/* Right Side - Cards that scroll naturally */}
             <div
                 ref={cardsContainerRef}
                 className="cards-grid"
                 style={{
-                    marginLeft: '35%',
-                    marginRight: '5%',
-                    width: '55%',
+                    marginLeft: '30%',
+                    marginRight: '2%',
+                    width: '65%',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 280px)',
-                    gap: '32px',
+                    gridTemplateColumns: 'repeat(2, 420px)',
+                    gap: '40px',
                     justifyContent: 'center',
-                    padding: '180vh 0 20vh 0',
+                    padding: '80vh 0 100vh 0',
                     position: 'relative',
                     alignContent: 'start',
                     zIndex: 10
                 }}
             >
-                {cards.map((card, index) => (
-                    <div key={index} style={{ transform: index % 2 === 1 ? 'translateY(50px)' : 'none' }}>
-                        <SectionCard
-                            className="about-card"
-                            label={card.label}
-                            labelColor={card.color}
-                            title={card.title}
-                            subtitle={card.subtitle}
-                            description={card.type}
-                            startLabel={card.startLabel}
-                            startValue={card.startValue}
-                            endLabel={card.endLabel}
-                            endValue={card.endValue}
-                        />
+                {hasContent ? (
+                    cards.map((card, index) => (
+                        <div key={card.id} style={{ transform: index % 2 === 1 ? 'translateY(120px)' : 'none' }}>
+                            <Link
+                                to={`/about-us/${card.id}`}
+                                data-cursor="view"
+                                style={{ textDecoration: 'none', display: 'block' }}
+                            >
+                                <SectionCard
+                                    className="about-card"
+                                    label={card.label}
+                                    labelColor={card.color}
+                                    title={card.title}
+                                    subtitle={card.subtitle}
+                                    description={card.type}
+                                    image={card.image}
+                                />
+                            </Link>
+                        </div>
+                    ))
+                ) : (
+                    <div style={{
+                        gridColumn: '1 / -1',
+                        padding: '80px 40px',
+                        textAlign: 'center',
+                        color: '#666',
+                        background: 'rgba(255,255,255,0.02)',
+                        borderRadius: '16px',
+                        border: '1px dashed #333'
+                    }}>
+                        <p style={{ fontSize: '1.1rem', margin: 0 }}>No content published yet</p>
                     </div>
-                ))}
+                )}
             </div>
         </section>
     )

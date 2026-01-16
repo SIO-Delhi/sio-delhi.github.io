@@ -23,8 +23,8 @@ export function HomePage() {
             if (flagContainerRef.current) {
                 const blur = progress * 4 // Max 4px blur
                 const opacity = 1 - (progress * 0.4) // Fade slightly
-                const translateX = progress * 40 // Move 40vw to the right (toward center)
-                const translateY = progress * 15 // Move 15vh down
+                const translateX = progress * 28 // Move to true center
+                const translateY = progress * 25 // Adjust vertical center
 
                 flagContainerRef.current.style.filter = `blur(${blur}px)`
                 flagContainerRef.current.style.opacity = `${opacity}`
@@ -61,7 +61,7 @@ export function HomePage() {
                     right: 0,
                     width: '100vw',
                     height: '100vh',
-                    background: 'radial-gradient(ellipse 120% 100% at 100% 50%, rgba(232, 40, 40, 0.7) 0%, rgba(232, 40, 40, 0.4) 30%, rgba(232, 40, 40, 0.15) 55%, transparent 85%)',
+                    background: 'radial-gradient(ellipse 130% 100% at 115% 50%, rgba(255, 59, 59, 0.8) 0%, rgba(255, 59, 59, 0.5) 40%, rgba(255, 59, 59, 0.2) 70%, transparent 100%)',
                     zIndex: 1, // Below flag
                     pointerEvents: 'none',
                 }}

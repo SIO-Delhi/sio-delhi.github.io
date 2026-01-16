@@ -147,6 +147,24 @@
   font-display: swap;
 }
 
+/* The Year of The Camel Font */
+@font-face {
+  font-family: 'TheYearofTheCamel';
+  src: url('./fonts/TheYearofTheCamel-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Arabic Poetry Font */
+@font-face {
+  font-family: 'ArabicPoetry';
+  src: url('./fonts/ArabicPoetry-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 .font-urdu {
   font-family: 'Jameel Noori Nastaleeq Kasheeda', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif;
   direction: rtl;
@@ -540,4 +558,43 @@ section {
   section {
     padding: 80px 0;
   }
+}
+
+/* Shine Effect for Cards */
+@keyframes shine-slide {
+  0% {
+    left: -100%;
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    left: 200%;
+    opacity: 0;
+  }
+}
+
+.section-card-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.section-card-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+  transform: skewX(-25deg);
+  pointer-events: none;
+  z-index: 100;
+}
+
+.section-card-shine:hover::after {
+  animation: shine-slide 1.5s ease-in-out;
 }

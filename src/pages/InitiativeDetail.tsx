@@ -1,14 +1,34 @@
 import { useParams, Link } from 'react-router-dom'
 import { initiatives } from '../data/initiatives'
+import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
 import { ArrowLeft } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
+import { PDFFlipbook } from '../components/ui/PDFFlipbook'
 
 export function InitiativeDetail() {
     const { id } = useParams()
     const { isDark } = useTheme()
+    const { getPostById } = useContent()
 
-    const initiative = initiatives.find(i => i.id === id)
+    // Try to find in database first, then static data
+    const dbPost = id ? getPostById(id) : undefined
+    const staticInitiative = initiatives.find(i => i.id === id)
+
+    const initiative = useMemo(() => {
+        if (dbPost) {
+            return {
+                id: dbPost.id,
+                title: dbPost.title,
+                category: 'Initiative',
+                image: dbPost.image || '',
+                description: dbPost.subtitle || '',
+                content: dbPost.content,
+                pdfUrl: dbPost.pdfUrl
+            }
+        }
+        return staticInitiative
+    }, [dbPost, staticInitiative])
 
     // Scroll to top on mount
     useEffect(() => {
@@ -40,7 +60,7 @@ export function InitiativeDetail() {
                 }}
             />
 
-            <div className="container" style={{ maxWidth: '800px' }}>
+            <div className="container" style={{ maxWidth: '900px' }}>
                 <Link
                     to="/"
                     style={{
@@ -105,33 +125,45 @@ export function InitiativeDetail() {
                     {initiative.title}
                 </h1>
 
-                <div
-                    style={{
-                        width: '100%',
-                        height: '400px',
-                        borderRadius: '24px',
-                        overflow: 'hidden',
-                        marginBottom: '40px',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
-                    }}
-                >
-                    <img
-                        src={initiative.image}
-                        alt={initiative.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                </div>
+                {/* Cover Image */}
+                {initiative.image && (
+                    <div
+                        style={{
+                            width: '100%',
+                            height: '400px',
+                            borderRadius: '24px',
+                            overflow: 'hidden',
+                            marginBottom: '40px',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+                        }}
+                    >
+                        <img
+                            src={initiative.image}
+                            alt={initiative.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                    </div>
+                )}
+
+                {/* PDF Flipbook (if PDF attached) */}
+                {'pdfUrl' in initiative && initiative.pdfUrl && (
+                    <div style={{ marginBottom: '40px' }}>
+                        <PDFFlipbook url={initiative.pdfUrl} />
+                    </div>
+                )}
 
                 {/* Content */}
-                <div
-                    className="initiative-content"
-                    style={{
-                        color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
-                        fontSize: '1.1rem',
-                        lineHeight: 1.8
-                    }}
-                    dangerouslySetInnerHTML={{ __html: initiative.content }}
-                />
+                {initiative.content && (
+                    <div
+                        className="initiative-content"
+                        style={{
+                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            fontSize: '1.1rem',
+                            lineHeight: 1.8
+                        }}
+                        dangerouslySetInnerHTML={{ __html: initiative.content }}
+                    />
+                )}
 
                 <style>{`
                     .initiative-content h3 {

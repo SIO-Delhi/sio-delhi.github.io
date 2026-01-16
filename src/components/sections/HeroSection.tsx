@@ -103,9 +103,9 @@ export function HeroSection() {
                 <h1
                     className="drop-in-1"
                     style={{
-                        fontFamily: "'IBM Plex Sans Arabic', sans-serif",
-                        fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-                        fontWeight: 500,
+                        fontFamily: "'TheYearofTheCamel', sans-serif",
+                        fontSize: 'clamp(4rem, 8vw, 6.5rem)',
+                        fontWeight: 700,
                         color: isDark ? '#ffffff' : '#1a1a1a',
                         marginBottom: '0.5rem',
                         opacity: 0,
@@ -122,17 +122,18 @@ export function HeroSection() {
                     className="drop-in-2"
                     style={{
                         fontFamily: "'Geist', sans-serif",
-                        fontSize: 'clamp(1.2rem, 2vw, 1.8rem)',
-                        color: '#ff3b3b',
+                        fontSize: 'clamp(1.4rem, 2.5vw, 2.2rem)',
+                        color: '#ffffff',
                         maxWidth: '600px',
                         marginLeft: 'auto',
                         opacity: 0,
-                        fontWeight: 400,
+                        fontWeight: 300,
                         fontStyle: 'italic',
                         direction: 'ltr',
                         textAlign: 'right',
                         letterSpacing: '-0.02em',
                         wordSpacing: '-0.1em',
+                        marginTop: '-1.2rem', // Move even closer to Arabic
                     }}
                 >
                     "He said, 'Indeed, I will make you a leader for the people.'"

@@ -1,9 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import gsap from 'gsap'
 import logoImage from '../../assets/logo.png'
 
 export function SplashScreen() {
-    const [isCollapsed, setIsCollapsed] = useState(false)
+    const location = useLocation()
+
+    // Don't show splash on admin pages
+    if (location.pathname.startsWith('/admin')) {
+        return null
+    }
+
+    // Check if splash was already seen in this tab session
+    const alreadySeen = sessionStorage.getItem('sio_splash_seen') === 'true'
+    const [isCollapsed, setIsCollapsed] = useState(alreadySeen)
     const [scrollProgress, setScrollProgress] = useState(0)
     const overlayRef = useRef<HTMLDivElement>(null)
     const glowRef = useRef<HTMLDivElement>(null)
@@ -11,6 +21,7 @@ export function SplashScreen() {
     const buttonRef = useRef<HTMLButtonElement>(null)
 
     const handleStartExploring = () => {
+        sessionStorage.setItem('sio_splash_seen', 'true')
         setIsCollapsed(true)
     }
 
