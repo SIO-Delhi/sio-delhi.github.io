@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, Sun, Moon, ChevronDown } from 'lucide-react'
+import { Menu, X, Sun, Moon } from 'lucide-react'
 import gsap from 'gsap'
 import { useTheme } from '../../context/ThemeContext'
 
+import siodelLogo from '../../assets/logo.png'
+
 const navLinks = [
-    { name: 'Home', href: '#home', hasDropdown: false },
-    { name: 'About', href: '#about', hasDropdown: true },
-    { name: 'Initiatives', href: '#initiatives', hasDropdown: true },
-    { name: 'Media', href: '#media', hasDropdown: true },
-    { name: 'Leadership', href: '#leadership', hasDropdown: true },
-    { name: 'More', href: '#more', hasDropdown: true },
+    { name: 'About', href: '#about' },
+    { name: 'Initiatives', href: '#initiatives' },
+    { name: 'Media', href: '#media' },
+    { name: 'Leadership', href: '#leadership' },
+    { name: 'More', href: '#more' },
 ]
 
 export function Navbar() {
@@ -56,13 +57,38 @@ export function Navbar() {
     }, [])
 
     const scrollToSection = (href: string) => {
-        const element = document.querySelector(href)
-        if (element) {
-            const lenis = (window as typeof window & { lenis?: { scrollTo: (el: Element) => void } }).lenis
+        const sectionId = href.replace('#', '')
+
+        // For sections with scroll animations, scroll to the cards/content area instead
+        let targetElement: Element | null = null
+        let offset = -80 // Default offset for navbar height
+
+        // Sections with animated headers need to scroll to their content container
+        const animatedSections = ['about', 'initiatives', 'media', 'leadership']
+
+        if (animatedSections.includes(sectionId)) {
+            // Try to find the cards-grid or content container within the section
+            targetElement = document.querySelector(`#${sectionId} [ref]`) ||
+                document.querySelector(`#${sectionId} .cards-grid`) ||
+                document.querySelector(`#${sectionId} > div:last-child`)
+            // Positive offset to scroll past the padding and show cards in upper portion
+            // The padding is 80vh, so we scroll further into the cards container
+            offset = window.innerHeight * 0.6 // Scroll 60% of viewport into the cards
+        } else {
+            targetElement = document.querySelector(href)
+        }
+
+        if (targetElement) {
+            const lenis = (window as typeof window & { lenis?: { scrollTo: (target: number | Element, options?: { offset?: number, immediate?: boolean }) => void } }).lenis
+
             if (lenis) {
-                lenis.scrollTo(element)
+                lenis.scrollTo(targetElement, { offset, immediate: true }) // Instant jump
             } else {
-                element.scrollIntoView({ behavior: 'smooth' })
+                const elementPosition = targetElement.getBoundingClientRect().top + window.pageYOffset
+                window.scrollTo({
+                    top: elementPosition + offset,
+                    behavior: 'instant' // Instant jump instead of smooth
+                })
             }
         }
         setIsOpen(false)
@@ -82,7 +108,7 @@ export function Navbar() {
                 left: 0,
                 right: 0,
                 zIndex: 50,
-                padding: '24px 40px',
+                padding: '20px 40px',
                 opacity: 0,
             }}
         >
@@ -90,12 +116,83 @@ export function Navbar() {
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    maxWidth: '1400px',
+                    justifyContent: 'space-between',
+                    maxWidth: '1600px',
                     margin: '0 auto',
                     position: 'relative',
                 }}
             >
+                {/* Left: SIO Logo + Organization Name Capsule */}
+                {!isMobile && (
+                    <a
+                        href="#home"
+                        onClick={(e) => {
+                            e.preventDefault()
+                            scrollToSection('#home')
+                        }}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '8px 16px 8px 8px',
+                            borderRadius: '100px',
+                            background: isDark
+                                ? 'rgba(30, 30, 32, 0.5)'
+                                : 'rgba(255, 255, 255, 0.25)',
+                            backdropFilter: 'blur(40px) saturate(1.5)',
+                            WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
+                            border: isDark
+                                ? '1px solid rgba(255, 255, 255, 0.1)'
+                                : '1px solid rgba(255, 255, 255, 0.5)',
+                            boxShadow: isDark
+                                ? '0 4px 20px rgba(0, 0, 0, 0.3)'
+                                : '0 4px 30px rgba(0, 0, 0, 0.1)',
+                            transition: 'all 0.3s ease',
+                            flexShrink: 0,
+                            cursor: 'pointer',
+                            textDecoration: 'none',
+                        }}
+                    >
+                        {/* SIO Logo */}
+                        <div
+                            style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '50%',
+                                background: 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <img
+                                src={siodelLogo}
+                                alt="SIO Delhi Logo"
+                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                        </div>
+                        {/* Organization Text */}
+                        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+                            <span style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 500,
+                                color: isDark ? '#ffffff' : '#111111',
+                                letterSpacing: '-0.01em',
+                            }}>
+                                Students Islamic Organization
+                            </span>
+                            <span style={{
+                                fontSize: '0.7rem',
+                                fontWeight: 500,
+                                color: '#ff3b3b',
+                                letterSpacing: '-0.01em',
+                            }}>
+                                Delhi Zone
+                            </span>
+                        </div>
+                    </a>
+                )}
 
                 {/* Desktop: Center Menu */}
                 {!isMobile && (
@@ -157,7 +254,6 @@ export function Navbar() {
                                     transition: 'background 0.3s ease',
                                 }} />
                                 {link.name}
-                                {link.hasDropdown && <ChevronDown size={14} style={{ opacity: 0.6 }} />}
                             </a>
                         ))}
                     </div>
@@ -175,20 +271,22 @@ export function Navbar() {
                             style={{
                                 padding: '12px 24px',
                                 background: isDark
-                                    ? 'rgba(30, 30, 32, 0.7)'
-                                    : 'rgba(255, 255, 255, 0.15)',
-                                backdropFilter: 'blur(20px) saturate(1.1)',
-                                WebkitBackdropFilter: 'blur(20px) saturate(1.1)',
+                                    ? 'rgba(30, 30, 32, 0.5)'
+                                    : 'rgba(255, 255, 255, 0.25)',
+                                backdropFilter: 'blur(40px) saturate(1.5)',
+                                WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
                                 border: isDark
-                                    ? '1px solid rgba(255, 255, 255, 0.08)'
-                                    : '1px solid rgba(255, 255, 255, 0.3)',
+                                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                                    : '1px solid rgba(255, 255, 255, 0.5)',
                                 borderRadius: '100px',
                                 color: isDark ? '#ffffff' : '#111111',
                                 fontSize: '14px',
                                 fontWeight: 400,
                                 transition: 'all 0.3s ease',
                                 cursor: 'pointer',
-                                boxShadow: isDark ? 'none' : '0 4px 16px rgba(0, 0, 0, 0.08)',
+                                boxShadow: isDark
+                                    ? '0 4px 20px rgba(0, 0, 0, 0.3)'
+                                    : '0 4px 30px rgba(0, 0, 0, 0.1)',
                             }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
@@ -210,18 +308,20 @@ export function Navbar() {
                                 width: '44px',
                                 height: '44px',
                                 background: isDark
-                                    ? 'rgba(30, 30, 32, 0.7)'
-                                    : 'rgba(255, 255, 255, 0.15)',
-                                backdropFilter: 'blur(20px) saturate(1.1)',
-                                WebkitBackdropFilter: 'blur(20px) saturate(1.1)',
+                                    ? 'rgba(30, 30, 32, 0.5)'
+                                    : 'rgba(255, 255, 255, 0.25)',
+                                backdropFilter: 'blur(40px) saturate(1.5)',
+                                WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
                                 border: isDark
-                                    ? '1px solid rgba(255, 255, 255, 0.08)'
-                                    : '1px solid rgba(255, 255, 255, 0.3)',
+                                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                                    : '1px solid rgba(255, 255, 255, 0.5)',
                                 borderRadius: '100px',
                                 color: isDark ? '#ffffff' : '#111111',
                                 cursor: 'pointer',
                                 transition: 'all 0.3s ease',
-                                boxShadow: isDark ? 'none' : '0 4px 16px rgba(0, 0, 0, 0.08)',
+                                boxShadow: isDark
+                                    ? '0 4px 20px rgba(0, 0, 0, 0.3)'
+                                    : '0 4px 30px rgba(0, 0, 0, 0.1)',
                             }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'

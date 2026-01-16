@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import gsap from 'gsap'
 
 export function CustomCursor() {
     const dotRef = useRef<HTMLDivElement>(null)
     const circleRef = useRef<HTMLDivElement>(null)
+    const location = useLocation()
 
     useEffect(() => {
         const dot = dotRef.current
@@ -93,6 +95,17 @@ export function CustomCursor() {
             observer.disconnect()
         }
     }, [])
+
+    // Reset cursor on route change
+    useEffect(() => {
+        const dot = dotRef.current
+        const circle = circleRef.current
+        if (!dot || !circle) return
+
+        // Force reset to default state
+        gsap.to(dot, { opacity: 1, duration: 0.2 })
+        gsap.to(circle, { width: 0, height: 0, opacity: 0, duration: 0.2 })
+    }, [location])
 
     return (
         <>

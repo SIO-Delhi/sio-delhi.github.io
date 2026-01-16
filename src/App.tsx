@@ -2,21 +2,46 @@ import { Layout } from './components/layout/Layout'
 import { ThemeProvider } from './context/ThemeContext'
 import { CustomCursor } from './components/ui/CustomCursor'
 import { SplashScreen } from './components/ui/SplashScreen'
-import { Routes, Route } from 'react-router-dom'
+import { ContentProvider } from './context/ContentContext'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
-import { InitiativeDetail } from './pages/InitiativeDetail'
+import { PostDetail } from './pages/PostDetail'
+import { AdminLayout } from './components/admin/AdminLayout'
+import { Dashboard } from './components/admin/Dashboard'
+import { SectionManager } from './components/admin/SectionManager'
+import { PostEditor } from './components/admin/PostEditor'
+import { AdminLogin } from './pages/AdminLogin'
+import { ProtectedRoute } from './components/admin/ProtectedRoute'
 
 function App() {
   return (
     <ThemeProvider>
-      <Layout>
+      <ContentProvider>
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/initiative/:id" element={<InitiativeDetail />} />
+          {/* Main Site Routes - wrapped in Layout */}
+          <Route element={<Layout><HomePage /></Layout>} path="/" />
+
+          {/* Section-specific post detail pages */}
+          <Route element={<Layout><PostDetail sectionType="about" /></Layout>} path="/about-us/:id" />
+          <Route element={<Layout><PostDetail sectionType="initiatives" /></Layout>} path="/initiative/:id" />
+          <Route element={<Layout><PostDetail sectionType="media" /></Layout>} path="/media/:id" />
+          <Route element={<Layout><PostDetail sectionType="leadership" /></Layout>} path="/leader/:id" />
+
+          {/* Admin Routes - NOT wrapped in Layout */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="section/:sectionId" element={<SectionManager />} />
+              <Route path="create/:sectionId" element={<PostEditor />} />
+              <Route path="post/:id" element={<PostEditor />} />
+            </Route>
+          </Route>
         </Routes>
-      </Layout>
-      <CustomCursor />
-      <SplashScreen />
+        <CustomCursor />
+        <SplashScreen />
+      </ContentProvider>
     </ThemeProvider>
   )
 }

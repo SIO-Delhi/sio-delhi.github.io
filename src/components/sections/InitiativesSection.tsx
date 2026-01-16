@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useTheme } from '../../context/ThemeContext'
+import { useContent } from '../../context/ContentContext'
 import { Link } from 'react-router-dom'
-import { initiatives } from '../../data/initiatives'
 import { SectionCard } from '../ui/SectionCard'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -14,6 +14,23 @@ export function InitiativesSection() {
     const headerWrapperRef = useRef<HTMLDivElement>(null)
     const cardsContainerRef = useRef<HTMLDivElement>(null)
     const { isDark } = useTheme()
+    const { getPostsBySection } = useContent()
+
+    // Get PUBLISHED posts from database only
+    const dynamicPosts = getPostsBySection('initiatives').filter(p => p.isPublished)
+    const initiatives = useMemo(() => {
+        return dynamicPosts.map(post => ({
+            id: post.id,
+            title: post.title,
+            category: 'Initiative',
+            image: post.image || '',
+            description: post.subtitle || '',
+            content: post.content
+        }))
+    }, [dynamicPosts])
+
+    // Track if we have content
+    const hasContent = initiatives.length > 0
 
     useEffect(() => {
         const ctx = gsap.context(() => {
@@ -23,19 +40,19 @@ export function InitiativesSection() {
                 visibility: 'hidden'
             })
 
-            // Initial state: Header starts large, centered, and INVISIBLE
+            // Initial state: Header starts scaled and offset
             gsap.set(headerRef.current, {
-                scale: 5,
-                y: '60vh',
-                x: '50vw',
+                scale: 3,
+                y: '80vh',
+                x: '30vw',
                 transformOrigin: 'center center',
                 opacity: 0
             })
 
-            // Show header wrapper only when THIS section is at top (after About disappeared)
+            // Show header wrapper when section enters viewport
             ScrollTrigger.create({
                 trigger: sectionRef.current,
-                start: 'top top', // Only when section reaches top of viewport
+                start: 'top 90%', // Only when section reaches top of viewport
                 end: 'bottom top',
                 onEnter: () => {
                     gsap.set(headerWrapperRef.current, { opacity: 1, visibility: 'visible' })
@@ -59,19 +76,19 @@ export function InitiativesSection() {
                     ease: 'none',
                     scrollTrigger: {
                         trigger: sectionRef.current,
-                        start: 'top top',
-                        end: '+=300',
+                        start: 'top 80%',
+                        end: 'top 30%',
                         scrub: 0.5
                     }
                 }
             )
 
-            // Header zooms in from center-bottom to left position (slower)
+            // Header zooms in faster
             gsap.fromTo(headerRef.current,
                 {
-                    scale: 5,
-                    y: '60vh',
-                    x: '50vw'
+                    scale: 3,
+                    y: '80vh',
+                    x: '30vw'
                 },
                 {
                     scale: 1,
@@ -80,14 +97,14 @@ export function InitiativesSection() {
                     ease: 'none',
                     scrollTrigger: {
                         trigger: sectionRef.current,
-                        start: 'top top',
-                        end: '+=800',
+                        start: 'top 80%',
+                        end: 'top -20%',
                         scrub: 1
                     }
                 }
             )
 
-            // Header fades out as section ends (no scale change)
+            // Header fades out as cards approach exit (before next section)
             gsap.fromTo(headerRef.current,
                 { opacity: 1 },
                 {
@@ -95,9 +112,9 @@ export function InitiativesSection() {
                     ease: 'power2.in',
                     scrollTrigger: {
                         trigger: cardsContainerRef.current,
-                        start: 'bottom 80%',
-                        end: 'bottom 30%',
-                        scrub: 1
+                        start: 'bottom 120%', // Start fading when cards still below viewport bottom
+                        end: 'bottom 60%',    // Complete fade by the time cards are leaving
+                        scrub: 0.5
                     }
                 }
             )
@@ -112,9 +129,10 @@ export function InitiativesSection() {
             id="initiatives"
             ref={sectionRef}
             style={{
-                minHeight: '250vh',
+                minHeight: '200vh',
                 position: 'relative',
                 background: 'transparent',
+                paddingTop: '100px',
             }}
         >
             {/* Fixed Header Container */}
@@ -161,38 +179,51 @@ export function InitiativesSection() {
             <div
                 ref={cardsContainerRef}
                 style={{
-                    marginLeft: '35%',
-                    marginRight: '5%',
-                    width: '55%',
+                    marginLeft: '30%',
+                    marginRight: '2%',
+                    width: '65%',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 280px)',
-                    gap: '32px',
+                    gridTemplateColumns: 'repeat(2, 420px)',
+                    gap: '40px',
                     justifyContent: 'center',
-                    padding: '150vh 0 20vh 0',
+                    padding: '80vh 0 100vh 0',
                     position: 'relative',
                     alignContent: 'start',
                     zIndex: 10
                 }}
             >
-                {initiatives.map((item, index) => (
-                    <div key={index} style={{ transform: index % 2 === 1 ? 'translateY(50px)' : 'none' }}>
-                        <Link
-                            to={`/initiative/${item.id}`}
-                            data-cursor="view"
-                            style={{ textDecoration: 'none', display: 'block' }}
-                        >
-                            <SectionCard
-                                className="initiative-card"
-                                label={item.category}
-                                labelColor="#e82828"
-                                title={item.title}
-                                subtitle=""
-                                description={item.description}
-                                linkText="LEARN MORE"
-                            />
-                        </Link>
+                {hasContent ? (
+                    initiatives.map((item, index) => (
+                        <div key={index} style={{ transform: index % 2 === 1 ? 'translateY(120px)' : 'none' }}>
+                            <Link
+                                to={`/initiative/${item.id}`}
+                                data-cursor="view"
+                                style={{ textDecoration: 'none', display: 'block' }}
+                            >
+                                <SectionCard
+                                    className="initiative-card"
+                                    label={item.category}
+                                    labelColor="#e82828"
+                                    title={item.title}
+                                    subtitle=""
+                                    description={item.description}
+                                />
+                            </Link>
+                        </div>
+                    ))
+                ) : (
+                    <div style={{
+                        gridColumn: '1 / -1',
+                        padding: '80px 40px',
+                        textAlign: 'center',
+                        color: '#666',
+                        background: 'rgba(255,255,255,0.02)',
+                        borderRadius: '16px',
+                        border: '1px dashed #333'
+                    }}>
+                        <p style={{ fontSize: '1.1rem', margin: 0 }}>No content published yet</p>
                     </div>
-                ))}
+                )}
             </div>
         </section>
     )

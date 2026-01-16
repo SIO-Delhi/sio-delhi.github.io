@@ -68,9 +68,9 @@ function FlagScene() {
         }
     }, [flag])
 
-    // Adjust position: Keep at -5.5 (Left) and -3.5 (Vertical)
+    // Adjust position: Move flag left (-4.5) and slightly down (-3.8)
     return (
-        <group position={[-5.5, -3.5, 0]}>
+        <group position={[-4.5, -3.8, 0]}>
             {/* The Pole */}
             <mesh position={[0, -4, 0]}>
                 <cylinderGeometry args={[0.08, 0.08, 20, 16]} />
