@@ -121,9 +121,12 @@ export function SectionCard({
                     marginTop: 'auto', // Push to bottom if flex column
                     borderRadius: '12px',
                     overflow: 'hidden',
-                    height: '220px',
+                    height: '170px',
+                    maxHeight: '170px',
                     width: '100%',
+                    maxWidth: '100%',
                     flexShrink: 0,
+                    position: 'relative',
                 }}>
                     <img
                         src={image}
@@ -131,8 +134,11 @@ export function SectionCard({
                         style={{
                             width: '100%',
                             height: '100%',
+                            maxWidth: '100%',
+                            maxHeight: '100%',
                             objectFit: 'cover',
                             objectPosition: 'center',
+                            display: 'block',
                         }}
                     />
                 </div>

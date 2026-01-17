@@ -1,9 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
-import { ArrowLeft, Calendar, User, ChevronLeft, ChevronRight } from 'lucide-react'
-import { useEffect, useState, useMemo } from 'react'
+import { ArrowLeft, Calendar, User, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
+import { SectionCard } from '../components/ui/SectionCard'
 
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 interface ParsedBlock {
@@ -335,7 +336,7 @@ interface PostDetailProps {
 export function PostDetail({ sectionType }: PostDetailProps) {
     const { id } = useParams()
     const { isDark } = useTheme()
-    const { getPostById } = useContent()
+    const { getPostById, posts } = useContent()
     const navigate = useNavigate()
 
     const post = id ? getPostById(id) : undefined
@@ -372,7 +373,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
             case 'media':
                 return <MediaLayout post={post} isDark={isDark} />
             default:
-                return <DefaultLayout post={post} isDark={isDark} sectionLabel={config.label} />
+                return <DefaultLayout post={post} isDark={isDark} sectionLabel={config.label} posts={posts} />
         }
     }
 
@@ -422,10 +423,279 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     )
 }
 
+// --- Read Article Button (ResponsiveVoice TTS) ---
+declare global {
+    interface Window {
+        responsiveVoice: {
+            speak: (text: string, voice?: string, options?: any) => void;
+            cancel: () => void;
+            isPlaying: () => boolean;
+        };
+    }
+}
+
+function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
+    const [isPlaying, setIsPlaying] = useState(false)
+    const [elapsedSeconds, setElapsedSeconds] = useState(0)
+    const intervalRef = useRef<number | null>(null)
+
+    const extractTextFromPost = () => {
+        // Extract text from title, subtitle, and content
+        let text = post.title + '. '
+        if (post.subtitle) text += post.subtitle + '. '
+
+        // Parse HTML content to extract plain text
+        if (post.content) {
+            const tempDiv = document.createElement('div')
+            tempDiv.innerHTML = post.content
+            text += tempDiv.textContent || ''
+        }
+
+        return text
+    }
+
+    // Calculate estimated duration based on word count (~150 WPM for clear speech)
+    const fullText = useMemo(() => extractTextFromPost(), [post])
+    const wordCount = useMemo(() => fullText.split(/\s+/).filter(Boolean).length, [fullText])
+    const estimatedDurationSeconds = useMemo(() => Math.ceil((wordCount / 150) * 60), [wordCount])
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        return `${mins}:${secs.toString().padStart(2, '0')}`
+    }
+
+    const handleToggleSpeech = () => {
+        if (!window.responsiveVoice) {
+            alert('Text-to-speech is not available. Please refresh the page.')
+            return
+        }
+
+        if (isPlaying) {
+            window.responsiveVoice.cancel()
+            setIsPlaying(false)
+            setElapsedSeconds(0)
+            if (intervalRef.current) clearInterval(intervalRef.current)
+        } else {
+            window.responsiveVoice.speak(fullText, 'UK English Male', {
+                onend: () => {
+                    setIsPlaying(false)
+                    setElapsedSeconds(0)
+                    if (intervalRef.current) clearInterval(intervalRef.current)
+                },
+                onerror: () => {
+                    setIsPlaying(false)
+                    setElapsedSeconds(0)
+                    if (intervalRef.current) clearInterval(intervalRef.current)
+                }
+            })
+            setIsPlaying(true)
+            setElapsedSeconds(0)
+            // Start timer
+            intervalRef.current = window.setInterval(() => {
+                setElapsedSeconds(prev => prev + 1)
+            }, 1000)
+        }
+    }
+
+    // Cleanup: Stop audio when navigating away or tab visibility changes
+    useEffect(() => {
+        const stopAudio = () => {
+            if (window.responsiveVoice) {
+                window.responsiveVoice.cancel()
+                setIsPlaying(false)
+                setElapsedSeconds(0)
+                if (intervalRef.current) clearInterval(intervalRef.current)
+            }
+        }
+
+        // Stop on tab hidden
+        const handleVisibilityChange = () => {
+            if (document.hidden) stopAudio()
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        // Stop on unmount (navigation away)
+        return () => {
+            stopAudio()
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+    }, [])
+
+    // Progress percentage (capped at 100%)
+    const progressPercent = Math.min((elapsedSeconds / estimatedDurationSeconds) * 100, 100)
+
+    // Generate random bar heights for waveform visualization
+    const barHeights = useMemo(() =>
+        Array.from({ length: 32 }, () => 0.3 + Math.random() * 0.7)
+        , [])
+
+    const [isHovered, setIsHovered] = useState(false)
+
+    return (
+        <div
+            style={{
+                marginBottom: '32px',
+                borderRadius: '16px',
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                backdropFilter: 'blur(12px)',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                overflow: 'hidden',
+                maxWidth: '450px',
+                transition: 'all 0.3s ease',
+                transform: isHovered ? 'translateY(-2px)' : 'none',
+                boxShadow: isHovered ? '0 8px 30px rgba(0,0,0,0.15)' : 'none'
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
+            {/* Header */}
+            <div style={{
+                padding: '12px 16px',
+                borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+            }}>
+                <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)'
+                }}>
+                    🎧 Listen to this article
+                </span>
+                <span style={{
+                    fontSize: '0.65rem',
+                    color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)'
+                }}>
+                    Text-to-Speech
+                </span>
+            </div>
+
+            {/* Player Controls */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '16px 20px'
+            }}>
+                {/* Play/Stop Button */}
+                <button
+                    onClick={handleToggleSpeech}
+                    style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        background: isPlaying
+                            ? 'linear-gradient(135deg, #ff3b3b 0%, #ff6b6b 100%)'
+                            : (isDark ? '#fff' : '#222'),
+                        color: isPlaying ? 'white' : (isDark ? '#000' : '#fff'),
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        transition: 'all 0.2s ease',
+                        boxShadow: isPlaying
+                            ? '0 4px 20px rgba(255,59,59,0.5)'
+                            : '0 2px 10px rgba(0,0,0,0.1)'
+                    }}
+                    title={isPlaying ? 'Stop reading' : 'Start reading'}
+                >
+                    {isPlaying ? <VolumeX size={22} /> : <Volume2 size={22} />}
+                </button>
+
+                {/* Waveform + Status */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {/* Status Text + Time */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            color: isPlaying ? '#ff3b3b' : (isDark ? 'white' : '#222')
+                        }}>
+                            {isPlaying ? 'Now Playing...' : 'Click to listen'}
+                        </span>
+                        <span style={{
+                            fontSize: '0.75rem',
+                            fontFamily: 'monospace',
+                            color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)'
+                        }}>
+                            {formatTime(elapsedSeconds)} / ~{formatTime(estimatedDurationSeconds)}
+                        </span>
+                    </div>
+
+                    {/* Progress Bar Track */}
+                    <div style={{
+                        width: '100%',
+                        height: '8px',
+                        borderRadius: '4px',
+                        background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                        overflow: 'hidden',
+                        position: 'relative'
+                    }}>
+                        {/* Progress Fill */}
+                        <div style={{
+                            width: `${progressPercent}%`,
+                            height: '100%',
+                            borderRadius: '4px',
+                            background: 'linear-gradient(90deg, #ff3b3b 0%, #ff6b6b 100%)',
+                            transition: 'width 0.3s ease'
+                        }} />
+                    </div>
+
+                    {/* Mini Waveform (decorative, below progress) */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        height: '16px',
+                        opacity: isPlaying ? 1 : 0.5,
+                        transition: 'opacity 0.3s ease'
+                    }}>
+                        {barHeights.map((height, i) => (
+                            <div
+                                key={i}
+                                style={{
+                                    width: '2px',
+                                    height: `${height * 100}%`,
+                                    borderRadius: '1px',
+                                    background: isPlaying
+                                        ? `linear-gradient(to top, #ff3b3b, #ff8080)`
+                                        : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'),
+                                    animation: isPlaying ? `waveformPulse 0.4s ease-in-out ${i * 0.03}s infinite alternate` : 'none',
+                                    transition: 'background 0.3s ease'
+                                }}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Animation Keyframes */}
+            <style>{`
+                @keyframes waveformPulse {
+                    0% { transform: scaleY(0.3); }
+                    100% { transform: scaleY(1); }
+                }
+            `}</style>
+        </div>
+    )
+}
+
 // Default layout for About and Initiatives
-function DefaultLayout({ post, isDark }: { post: any; isDark: boolean; sectionLabel?: string }) {
+function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolean; sectionLabel?: string; posts?: any[] }) {
     // Simplified layout for subsection child posts (has parentId)
     const isSubsectionChild = !!post.parentId
+    // Check if this post IS a subsection (parent with children)
+    const isSubsection = !!post.isSubsection
+
+    // Filter children for this subsection
+    const childPosts = posts.filter(p => p.parentId === post.id)
 
     if (isSubsectionChild) {
         return (
@@ -434,16 +704,33 @@ function DefaultLayout({ post, isDark }: { post: any; isDark: boolean; sectionLa
                     fontSize: 'clamp(2rem, 4vw, 3rem)',
                     fontWeight: 700,
                     color: isDark ? '#ffffff' : '#111111',
-                    marginBottom: '32px',
+                    marginBottom: '16px',
                     lineHeight: 1.1
                 }}>
                     {post.title}
                 </h1>
 
+                {/* Audio Player */}
+                <ReadArticleButton post={post} isDark={isDark} />
+
                 {/* PDF Flipbook (main content for subsection posts) */}
                 {post.pdfUrl && (
                     <div style={{ marginBottom: '40px' }}>
                         <PDFFlipbook url={post.pdfUrl} />
+                    </div>
+                )}
+
+                {/* Content */}
+                {post.content && (
+                    <div
+                        className="post-content"
+                        style={{
+                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            fontSize: '1.1rem',
+                            lineHeight: 1.8
+                        }}
+                    >
+                        <ContentBlockRenderer content={post.content} isDark={isDark} />
                     </div>
                 )}
             </>
@@ -465,24 +752,11 @@ function DefaultLayout({ post, isDark }: { post: any; isDark: boolean; sectionLa
                 {post.title}
             </h1>
 
-            {/* Audio Player */}
-            {(post as any).audioUrl && (
-                <div style={{ marginBottom: '32px' }}>
-                    <audio
-                        controls
-                        src={(post as any).audioUrl}
-                        style={{
-                            width: '100%',
-                            height: '40px',
-                            borderRadius: '8px',
-                            filter: isDark ? 'invert(1) hue-rotate(180deg)' : 'none'
-                        }}
-                    />
-                </div>
-            )}
+            {/* Read Article Button - Only show for non-subsection posts */}
+            {!isSubsection && <ReadArticleButton post={post} isDark={isDark} />}
 
-            {/* Cover Image */}
-            {post.image && (
+            {/* Cover Image - Only show for non-subsection posts */}
+            {!isSubsection && post.image && (
                 <div
                     style={{
                         width: '100%',
@@ -519,6 +793,42 @@ function DefaultLayout({ post, isDark }: { post: any; isDark: boolean; sectionLa
                     }}
                 >
                     <ContentBlockRenderer content={post.content} isDark={isDark} />
+                </div>
+            )}
+
+            {/* Child Cards Grid for Subsection Posts */}
+            {isSubsection && childPosts.length > 0 && (
+                <div style={{ marginTop: '48px' }}>
+                    <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '24px',
+                        justifyContent: 'flex-start'
+                    }}>
+                        {childPosts.map(child => (
+                            <SectionCard
+                                key={child.id}
+                                label=""
+                                labelColor="#ff3b3b"
+                                title={child.title}
+                                subtitle={child.subtitle || ''}
+                                description=""
+                                publishedDate={child.createdAt}
+                                image={child.image}
+                                onClick={() => {
+                                    // Map sectionId to correct route path
+                                    const routeMap: Record<string, string> = {
+                                        'about': 'about-us',
+                                        'initiatives': 'initiative',
+                                        'media': 'media',
+                                        'leadership': 'leader'
+                                    }
+                                    const routePath = routeMap[post.sectionId] || 'about-us'
+                                    window.location.href = `/${routePath}/${child.id}`
+                                }}
+                            />
+                        ))}
+                    </div>
                 </div>
             )}
 

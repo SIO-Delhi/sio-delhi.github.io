@@ -6,10 +6,8 @@ import { uploadImage, uploadPdf } from '../../lib/storage'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
-import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js'
-import { uploadAudio, deleteAudio } from '../../lib/storage'
 import { toast } from 'sonner'
-import { ArrowLeft, Save, Image as ImageIcon, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Loader2, FileText, X, Plus, Trash2, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify, Images, Eye, GripVertical, Music, Play, Square, Loader } from 'lucide-react'
+import { ArrowLeft, Save, Image as ImageIcon, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Loader2, FileText, X, Plus, Trash2, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify, Images, Eye, GripVertical } from 'lucide-react'
 import gsap from 'gsap'
 
 // --- Block Types & Interfaces ---
@@ -769,10 +767,6 @@ export function PostEditor() {
     const [date, setDate] = useState('') // New Date State
     const [images, setImages] = useState<string[]>([]) // Cover image
     const [pdfUrl, setPdfUrl] = useState('')
-    const [audioUrl, setAudioUrl] = useState('')
-    const [isGeneratingAudio, setIsGeneratingAudio] = useState(false)
-    const [isPlayingAudio, setIsPlayingAudio] = useState(false)
-    const audioRef = useRef<HTMLAudioElement | null>(null)
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isSubsection, setIsSubsection] = useState(false)
@@ -805,7 +799,6 @@ export function PostEditor() {
                 if (post.pdfUrl) {
                     setPdfUrl(post.pdfUrl)
                 }
-                if ((post as any).audioUrl) setAudioUrl((post as any).audioUrl)
                 setIsSubsection(post.isSubsection || false)
                 setParentId(post.parentId || '')
                 // Set date from createdAt
@@ -973,85 +966,6 @@ export function PostEditor() {
     }
 
 
-    const handleGenerateAudio = async () => {
-        // Use env var or prompt fallback
-        const apiKey = import.meta.env.VITE_ELEVEN_LABS_API_KEY || prompt("Please enter your ElevenLabs API Key:")
-        if (!apiKey) return
-
-        setIsGeneratingAudio(true)
-        try {
-            const elevenlabs = new ElevenLabsClient({ apiKey })
-
-            // Extract text from content
-            let fullText = title + ". " + (subtitle ? subtitle + ". " : "")
-            blocks.forEach(b => {
-                const div = document.createElement('div')
-                div.innerHTML = b.content || ''
-                if (b.type === 'text' || b.type === 'composite') {
-                    fullText += div.textContent + " "
-                }
-                if (b.subtitle) fullText += b.subtitle + ". "
-            })
-
-            console.log("Generating audio for length:", fullText.length)
-
-            const audioStream = await elevenlabs.textToSpeech.convert('JBFqnCBsd6RMkjVDRZzb', {
-                text: fullText,
-                modelId: 'eleven_multilingual_v2',
-            })
-
-            // Convert stream to Blob
-            const sections: Uint8Array[] = []
-            // @ts-ignore
-            const reader = audioStream.getReader()
-            while (true) {
-                const { done, value } = await reader.read()
-                if (done) break
-                sections.push(value)
-            }
-            const blob = new Blob(sections as any[], { type: 'audio/mpeg' })
-
-            // Upload
-            const url = await uploadAudio(blob)
-            setAudioUrl(url)
-            toast.success("Audio generated and uploaded successfully!")
-
-        } catch (err: any) {
-            console.error("Audio Generation Error:", err)
-            toast.error("Failed to generate audio")
-            alert("Error: " + (err.message || err))
-        } finally {
-            setIsGeneratingAudio(false)
-        }
-    }
-
-    const toggleAudioPreview = () => {
-        if (!audioRef.current) {
-            audioRef.current = new Audio(audioUrl)
-            audioRef.current.onended = () => setIsPlayingAudio(false)
-        }
-
-        if (isPlayingAudio) {
-            audioRef.current.pause()
-            setIsPlayingAudio(false)
-        } else {
-            audioRef.current.src = audioUrl // Update src just in case
-            audioRef.current.play()
-            setIsPlayingAudio(true)
-        }
-    }
-
-    const handleDeleteAudio = async () => {
-        if (!confirm("Delete this audio?")) return
-        try {
-            await deleteAudio(audioUrl)
-            setAudioUrl('')
-            toast.success("Audio deleted")
-        } catch (err) {
-            console.error(err)
-            toast.error("Failed to delete audio")
-        }
-    }
 
     const handleSave = () => {
         if (!title) { alert('Please enter a title'); return }
@@ -1093,7 +1007,6 @@ export function PostEditor() {
                 content: finalContent,
                 image: images[0] || '',
                 pdfUrl: extractedPdfUrl || pdfUrl, // Use extracted or existing
-                audioUrl,
                 layout: 'custom',
                 createdAt: date ? new Date(date).getTime() : undefined, // Pass date
             }
@@ -1123,23 +1036,6 @@ export function PostEditor() {
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {/* Audio Controls */}
-                    {audioUrl ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#1a1a1a', padding: '4px 8px', borderRadius: '100px', border: '1px solid #333' }}>
-                            <button onClick={toggleAudioPreview} style={{ padding: '8px', borderRadius: '50%', background: isPlayingAudio ? '#4ade80' : '#333', color: isPlayingAudio ? 'black' : 'white', border: 'none', cursor: 'pointer', display: 'flex' }} title="Play/Pause Audio">
-                                {isPlayingAudio ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-                            </button>
-                            <button onClick={handleDeleteAudio} style={{ padding: '8px', borderRadius: '50%', background: 'transparent', color: '#666', border: 'none', cursor: 'pointer', display: 'flex' }} title="Delete Audio">
-                                <Trash2 size={16} />
-                            </button>
-                        </div>
-                    ) : (
-                        <button onClick={handleGenerateAudio} disabled={isGeneratingAudio} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '100px', background: '#333', color: '#aaa', border: 'none', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}>
-                            {isGeneratingAudio ? <Loader size={16} className="animate-spin" /> : <Music size={16} />}
-                            Generate Audio
-                        </button>
-                    )}
-
                     <button
                         onClick={() => setShowPreview(true)}
                         style={{

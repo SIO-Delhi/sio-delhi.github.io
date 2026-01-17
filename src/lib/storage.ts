@@ -114,7 +114,7 @@ export async function deletePdf(url: string): Promise<void> {
     }
 }
 
-const AUDIO_BUCKET = 'post-audio'
+const AUDIO_BUCKET = 'post-audios'
 
 /**
  * Upload an Audio file to Supabase Storage
