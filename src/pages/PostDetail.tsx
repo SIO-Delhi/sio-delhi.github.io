@@ -423,7 +423,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
 }
 
 // Default layout for About and Initiatives
-function DefaultLayout({ post, isDark, sectionLabel }: { post: any; isDark: boolean; sectionLabel: string }) {
+function DefaultLayout({ post, isDark }: { post: any; isDark: boolean; sectionLabel?: string }) {
     // Simplified layout for subsection child posts (has parentId)
     const isSubsectionChild = !!post.parentId
 
@@ -453,40 +453,7 @@ function DefaultLayout({ post, isDark, sectionLabel }: { post: any; isDark: bool
     // Regular full layout for top-level posts
     return (
         <>
-            {/* Badge */}
-            <div style={{ marginBottom: '24px' }}>
-                <div
-                    style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 16px',
-                        background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                        borderRadius: '100px',
-                        border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                    }}
-                >
-                    <div
-                        style={{
-                            width: '6px',
-                            height: '6px',
-                            borderRadius: '50%',
-                            background: '#ff3b3b',
-                        }}
-                    />
-                    <span
-                        style={{
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: isDark ? '#ffffff' : '#111111',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em'
-                        }}
-                    >
-                        {sectionLabel}
-                    </span>
-                </div>
-            </div>
+
 
             <h1 style={{
                 fontSize: 'clamp(2.5rem, 5vw, 4rem)',
@@ -497,6 +464,22 @@ function DefaultLayout({ post, isDark, sectionLabel }: { post: any; isDark: bool
             }}>
                 {post.title}
             </h1>
+
+            {/* Audio Player */}
+            {(post as any).audioUrl && (
+                <div style={{ marginBottom: '32px' }}>
+                    <audio
+                        controls
+                        src={(post as any).audioUrl}
+                        style={{
+                            width: '100%',
+                            height: '40px',
+                            borderRadius: '8px',
+                            filter: isDark ? 'invert(1) hue-rotate(180deg)' : 'none'
+                        }}
+                    />
+                </div>
+            )}
 
             {/* Cover Image */}
             {post.image && (

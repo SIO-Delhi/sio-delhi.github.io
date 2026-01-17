@@ -22,13 +22,13 @@ export function MediaSection() {
         const colors = ['#e82828', '#22c55e', '#3b82f6', '#f59e0b']
         return dynamicPosts.map((post, index) => ({
             id: post.id,
-            label: 'News',
-            title: post.title.split(' ')[0] || 'NEWS',
-            subtitle: post.title.split(' ').slice(1).join(' ') || '',
-            description: post.subtitle || '',
-            date: new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            color: colors[index % colors.length],
+            title: post.title,
+            category: 'Media',
             image: post.image || '',
+            description: post.subtitle || '', // Use subtitle as description
+            content: post.content,
+            date: post.createdAt,
+            color: colors[index % colors.length], // Keep color for potential future use or if it's still used elsewhere
             isSubsection: post.isSubsection || false
         }))
     }, [dynamicPosts])
@@ -181,8 +181,8 @@ export function MediaSection() {
                     marginRight: '2%',
                     width: '65%',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 420px)',
-                    gap: '40px',
+                    gridTemplateColumns: 'repeat(2, 380px)',
+                    gap: '24px 24px', // Row gap 24px, Column gap 16px
                     justifyContent: 'center',
                     padding: '80vh 0 100vh 0',
                     position: 'relative',
@@ -200,12 +200,12 @@ export function MediaSection() {
                             >
                                 <SectionCard
                                     className="media-card"
-                                    label={card.label}
-                                    labelColor={card.color}
+                                    label={card.category}
+                                    labelColor="#3b82f6"
                                     title={card.title}
-                                    subtitle={card.subtitle}
+                                    subtitle=""
                                     description={card.description}
-                                    publishedDate={dynamicPosts.find(p => p.id === card.id)?.createdAt}
+                                    publishedDate={card.date}
                                     image={card.image}
                                 />
                             </Link>
