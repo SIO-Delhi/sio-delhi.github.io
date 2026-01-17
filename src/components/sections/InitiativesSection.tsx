@@ -26,7 +26,8 @@ export function InitiativesSection() {
             image: post.image || '',
             description: post.subtitle || '',
             content: post.content,
-            isSubsection: post.isSubsection || false
+            isSubsection: post.isSubsection || false,
+            date: post.createdAt, // Pass date
         }))
     }, [dynamicPosts])
 
@@ -184,8 +185,8 @@ export function InitiativesSection() {
                     marginRight: '2%',
                     width: '65%',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 420px)',
-                    gap: '40px',
+                    gridTemplateColumns: 'repeat(2, 380px)',
+                    gap: '24px 24px', // Row gap 24px, Column gap 16px
                     justifyContent: 'center',
                     padding: '80vh 0 100vh 0',
                     position: 'relative',
@@ -208,6 +209,8 @@ export function InitiativesSection() {
                                     title={item.title}
                                     subtitle=""
                                     description={item.description}
+                                    publishedDate={item.date}
+                                    image={item.image}
                                 />
                             </Link>
                         </div>

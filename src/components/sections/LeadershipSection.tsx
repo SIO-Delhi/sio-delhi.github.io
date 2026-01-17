@@ -22,7 +22,13 @@ export function LeadershipSection() {
             id: post.id,
             name: post.title,
             role: post.subtitle || '',
-            image: post.image || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop&q=80',
+            image: post.image || '',
+            description: post.subtitle || '',
+            content: post.content,
+            date: post.createdAt,
+            // Keep these for consistency if needed, but JSX uses name/role
+            title: post.title,
+            category: 'Leadership'
         }))
     }, [dynamicPosts])
 
@@ -132,10 +138,10 @@ export function LeadershipSection() {
                     position: 'fixed',
                     top: 0,
                     left: 0,
-                    width: '35%',
-                    height: '100vh',
-                    display: 'flex',
-                    flexDirection: 'column',
+                    width: '65%',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 420px)',
+                    gap: '24px 24px', // Row gap 24px, Column gap 16px
                     justifyContent: 'center',
                     paddingLeft: '10%',
                     paddingRight: '40px',
@@ -185,7 +191,7 @@ export function LeadershipSection() {
                             display: 'flex',
                             flexWrap: 'wrap',
                             justifyContent: 'center',
-                            gap: '32px',
+                            gap: '24px 16px',
                             marginBottom: '32px'
                         }}>
                             {leaders.slice(0, 2).map((leader) => (
@@ -256,7 +262,7 @@ export function LeadershipSection() {
                             display: 'flex',
                             flexWrap: 'wrap',
                             justifyContent: 'center',
-                            gap: '32px'
+                            gap: '24px 16px'
                         }}>
                             {leaders.slice(2).map((leader) => (
                                 <Link

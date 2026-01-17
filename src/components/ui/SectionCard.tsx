@@ -14,7 +14,6 @@ interface SectionCardProps {
 }
 
 export function SectionCard({
-    label,
     labelColor,
     title,
     subtitle,
@@ -40,17 +39,17 @@ export function SectionCard({
             onClick={onClick}
             style={{
                 background: 'rgba(80, 80, 80, 0.4)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '20px',
-                padding: '24px',
+                padding: '32px',
                 boxSizing: 'border-box',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                 display: 'flex',
                 flexDirection: 'column',
                 height: '520px',
-                width: '360px',
+                width: '380px',
                 cursor: onClick ? 'pointer' : 'default',
                 transition: 'all 0.3s ease',
                 overflow: 'hidden',
@@ -67,7 +66,7 @@ export function SectionCard({
                 e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)'
             }}
         >
-            {/* Top: Label with date */}
+            {/* Top: Date (Yellow) or Label */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -78,17 +77,17 @@ export function SectionCard({
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    background: labelColor,
-                    boxShadow: `0 0 8px ${labelColor}`
+                    background: '#FFD700', // Yellow
+                    boxShadow: `0 0 8px #FFD700`
                 }} />
                 <span style={{
                     fontSize: '0.75rem',
-                    fontWeight: 500,
-                    color: labelColor,
+                    fontWeight: 600, // Slightly bolder
+                    color: '#FFD700', // Yellow
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
                 }}>
-                    {formattedDate || label}
+                    {formattedDate}
                 </span>
             </div>
 
@@ -105,28 +104,25 @@ export function SectionCard({
                 {title}
             </h3>
 
-            {/* Description */}
+            {/* Description (Summary) - Full Text with Word Limit */}
             <p style={{
                 fontSize: '0.95rem',
                 color: 'rgba(255, 255, 255, 0.7)',
-                margin: '0 0 auto 0',
+                margin: '0 0 24px 0',
                 lineHeight: 1.6,
                 fontStyle: 'italic',
-                display: '-webkit-box',
-                WebkitLineClamp: 5,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
             }}>
-                {description || subtitle}
+                {(description || subtitle || '').split(' ').slice(0, 30).join(' ') + ((description || subtitle || '').split(' ').length > 30 ? '...' : '')}
             </p>
 
             {/* Image at Bottom */}
             {image && (
                 <div style={{
-                    marginTop: '20px',
+                    marginTop: 'auto', // Push to bottom if flex column
                     borderRadius: '12px',
                     overflow: 'hidden',
-                    height: '180px',
+                    height: '220px',
+                    width: '100%',
                     flexShrink: 0,
                 }}>
                     <img

@@ -104,7 +104,7 @@ export function HeroSection() {
                     className="drop-in-1"
                     style={{
                         fontFamily: "'TheYearofTheCamel', sans-serif",
-                        fontSize: 'clamp(4rem, 8vw, 6.5rem)',
+                        fontSize: 'clamp(3.5rem, 7vw, 6rem)',
                         fontWeight: 700,
                         color: isDark ? '#ffffff' : '#1a1a1a',
                         marginBottom: '0.5rem',
@@ -134,6 +134,7 @@ export function HeroSection() {
                         letterSpacing: '-0.02em',
                         wordSpacing: '-0.1em',
                         marginTop: '-1.2rem', // Move even closer to Arabic
+                        lineHeight: 1.1,
                     }}
                 >
                     "He said, 'Indeed, I will make you a leader for the people.'"

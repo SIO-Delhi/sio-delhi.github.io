@@ -113,3 +113,56 @@ export async function deletePdf(url: string): Promise<void> {
         throw error
     }
 }
+
+const AUDIO_BUCKET = 'post-audio'
+
+/**
+ * Upload an Audio file to Supabase Storage
+ * @param file - Audio File or Blob
+ * @returns Public URL of the uploaded Audio
+ */
+export async function uploadAudio(file: File | Blob): Promise<string> {
+    const finalFilename = `${Date.now()}-audio.mp3`
+
+    // Try uploading to 'post-audio', fallback to 'post-pdfs' if strictly needed, 
+    // but for now we assume 'post-audio' or we'll catch error.
+    // Actually, let's use a bucket we know mostly works or try audio.
+    // User plan said "attempt to use a bucket named post-audio".
+
+    const { data, error } = await supabase.storage
+        .from(AUDIO_BUCKET)
+        .upload(finalFilename, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: 'audio/mpeg'
+        })
+
+    if (error) {
+        console.error('Audio upload error:', error)
+        throw error
+    }
+
+    const { data: urlData } = supabase.storage
+        .from(AUDIO_BUCKET)
+        .getPublicUrl(data.path)
+
+    return urlData.publicUrl
+}
+
+/**
+ * Delete an Audio file from Supabase Storage
+ * @param url - Public URL of the Audio
+ */
+export async function deleteAudio(url: string): Promise<void> {
+    const bucketPath = url.split(`${AUDIO_BUCKET}/`)[1]
+    if (!bucketPath) return
+
+    const { error } = await supabase.storage
+        .from(AUDIO_BUCKET)
+        .remove([bucketPath])
+
+    if (error) {
+        console.error('Audio delete error:', error)
+        throw error
+    }
+}

@@ -21,13 +21,12 @@ export function AboutSection() {
     const cards = useMemo(() => {
         return dynamicPosts.map(post => ({
             id: post.id,
-            label: 'About',
-            title: post.title.split(' ')[0] || 'ABOUT',
-            subtitle: post.title.split(' ').slice(1).join(' ') || '',
-            type: post.subtitle || '',
-            color: '#ef4444',
+            title: post.title,
+            category: 'About Us',
             image: post.image || '',
-            isSubsection: post.isSubsection || false
+            description: post.subtitle || '',
+            content: post.content,
+            date: post.createdAt
         }))
     }, [dynamicPosts])
 
@@ -178,8 +177,8 @@ export function AboutSection() {
                     marginRight: '2%',
                     width: '65%',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 420px)',
-                    gap: '40px',
+                    gridTemplateColumns: 'repeat(2, 380px)',
+                    gap: '24px 24px', // Row gap 24px, Column gap 16px
                     justifyContent: 'center',
                     padding: '80vh 0 100vh 0',
                     position: 'relative',
@@ -188,21 +187,22 @@ export function AboutSection() {
                 }}
             >
                 {hasContent ? (
-                    cards.map((card, index) => (
-                        <div key={card.id} style={{ transform: index % 2 === 1 ? 'translateY(120px)' : 'none' }}>
+                    cards.map((item, index) => (
+                        <div key={item.id} style={{ transform: index % 2 === 1 ? 'translateY(120px)' : 'none' }}>
                             <Link
-                                to={card.isSubsection ? `/subsection/${card.id}` : `/about-us/${card.id}`}
+                                to={`/about-us/${item.id}`}
                                 data-cursor="view"
                                 style={{ textDecoration: 'none', display: 'block' }}
                             >
                                 <SectionCard
                                     className="about-card"
-                                    label={card.label}
-                                    labelColor={card.color}
-                                    title={card.title}
-                                    subtitle={card.subtitle}
-                                    description={card.type}
-                                    image={card.image}
+                                    label={item.category}
+                                    labelColor="#ff3333"
+                                    title={item.title}
+                                    subtitle=""
+                                    description={item.description}
+                                    publishedDate={item.date}
+                                    image={item.image}
                                 />
                             </Link>
                         </div>
