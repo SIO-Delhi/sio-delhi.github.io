@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock, User, AlertCircle } from 'lucide-react'
 
+import logo from '../assets/logo.png'
+
 export function AdminLogin() {
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
@@ -42,14 +44,8 @@ export function AdminLogin() {
             }}>
                 {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                    <div style={{
-                        width: '64px', height: '64px', borderRadius: '50%',
-                        background: 'rgba(255, 59, 59, 0.1)',
-                        border: '1px solid rgba(255, 59, 59, 0.2)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        margin: '0 auto 20px'
-                    }}>
-                        <Lock size={28} color="#ff3b3b" />
+                    <div style={{ margin: '0 auto 24px', width: '80px' }}>
+                        <img src={logo} alt="SIO Logo" style={{ width: '100%', height: 'auto' }} />
                     </div>
                     <h1 style={{ color: 'white', fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>Admin Login</h1>
                     <p style={{ color: '#888', fontSize: '0.9rem' }}>Enter your credentials to access the dashboard.</p>

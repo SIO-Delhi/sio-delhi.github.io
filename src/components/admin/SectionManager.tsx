@@ -1,12 +1,14 @@
 
+import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
-import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff } from 'lucide-react'
+import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText } from 'lucide-react'
 
 export function SectionManager() {
     const { sectionId } = useParams()
     const { sections, getPostsBySection, deletePost, updatePost } = useContent()
     const navigate = useNavigate()
+    const [showCreateMenu, setShowCreateMenu] = useState(false)
 
     const section = sections.find(s => s.id === sectionId)
     const posts = sectionId ? getPostsBySection(sectionId) : []
@@ -30,19 +32,68 @@ export function SectionManager() {
                     <div style={{ fontSize: '0.9rem', color: '#888', marginBottom: '4px' }}>MANAGE SECTION</div>
                     <h1 style={{ fontSize: '2.5rem', fontWeight: 800 }}>{section.title}</h1>
                 </div>
-                <Link
-                    to={`/admin/create/${section.id}`}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        padding: '12px 24px', borderRadius: '100px',
-                        background: '#ff3b3b', color: 'white',
-                        textDecoration: 'none', fontWeight: 600,
-                        boxShadow: '0 4px 12px rgba(255, 59, 59, 0.3)'
-                    }}
-                >
-                    <Plus size={20} />
-                    Create New Post
-                </Link>
+
+                {/* Create New Dropdown */}
+                <div style={{ position: 'relative' }}>
+                    <button
+                        onClick={() => setShowCreateMenu(!showCreateMenu)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '12px 24px', borderRadius: '100px',
+                            background: '#ff3b3b', color: 'white', border: 'none',
+                            fontWeight: 600, cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(255, 59, 59, 0.3)'
+                        }}
+                    >
+                        <Plus size={20} />
+                        Create New
+                        <ChevronDown size={16} style={{ marginLeft: '4px', transition: 'transform 0.2s', transform: showCreateMenu ? 'rotate(180deg)' : 'rotate(0)' }} />
+                    </button>
+
+                    {showCreateMenu && (
+                        <div style={{
+                            position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+                            background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px',
+                            overflow: 'hidden', minWidth: '200px', zIndex: 100,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                        }}>
+                            <Link
+                                to={`/admin/create/${section.id}`}
+                                onClick={() => setShowCreateMenu(false)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '12px',
+                                    padding: '14px 20px', textDecoration: 'none', color: 'white',
+                                    borderBottom: '1px solid #333', transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#222'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                                <FileText size={18} color="#888" />
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>Post</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#666' }}>Regular content page</div>
+                                </div>
+                            </Link>
+                            <Link
+                                to={`/admin/create-subsection/${section.id}`}
+                                onClick={() => setShowCreateMenu(false)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '12px',
+                                    padding: '14px 20px', textDecoration: 'none', color: 'white',
+                                    transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#222'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                                <FolderOpen size={18} color="#ff3b3b" />
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>Subsection</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#666' }}>Container for posts</div>
+                                </div>
+                            </Link>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Posts List */}
@@ -86,6 +137,24 @@ export function SectionManager() {
                                 <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
                                         <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{post.title}</h3>
+                                        {/* Subsection Badge */}
+                                        {post.isSubsection && (
+                                            <span style={{
+                                                padding: '2px 10px',
+                                                borderRadius: '100px',
+                                                fontSize: '0.7rem',
+                                                fontWeight: 600,
+                                                textTransform: 'uppercase',
+                                                background: 'rgba(139, 92, 246, 0.15)',
+                                                color: '#a78bfa',
+                                                border: '1px solid rgba(139, 92, 246, 0.3)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}>
+                                                <FolderOpen size={10} /> Subsection
+                                            </span>
+                                        )}
                                         {/* Status Badge */}
                                         <span style={{
                                             padding: '2px 10px',
@@ -133,8 +202,8 @@ export function SectionManager() {
                                     {post.isPublished ? 'Unpublish' : 'Publish'}
                                 </button>
                                 <button
-                                    onClick={() => navigate(`/admin/post/${post.id}`)}
-                                    title="Edit Post"
+                                    onClick={() => navigate(post.isSubsection ? `/admin/subsection/${post.id}` : `/admin/post/${post.id}`)}
+                                    title={post.isSubsection ? "Manage Subsection" : "Edit Post"}
                                     style={{
                                         padding: '10px', borderRadius: '8px',
                                         background: '#222', border: 'none', color: '#fff',

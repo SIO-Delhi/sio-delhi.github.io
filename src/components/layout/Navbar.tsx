@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Menu, X, Sun, Moon } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
 import { useTheme } from '../../context/ThemeContext'
 
@@ -19,6 +20,11 @@ export function Navbar() {
     const [isMobile, setIsMobile] = useState(false)
     const navRef = useRef<HTMLElement>(null)
     const { isDark, toggleTheme } = useTheme()
+    const location = useLocation()
+    const navigate = useNavigate()
+
+    // Check if we're on the homepage
+    const isHomePage = location.pathname === '/'
 
     useEffect(() => {
         const checkMobile = () => {
@@ -58,6 +64,13 @@ export function Navbar() {
 
     const scrollToSection = (href: string) => {
         const sectionId = href.replace('#', '')
+
+        // If not on homepage, navigate to homepage with the hash
+        if (!isHomePage) {
+            navigate('/' + href)
+            setIsOpen(false)
+            return
+        }
 
         // For sections with scroll animations, scroll to the cards/content area instead
         let targetElement: Element | null = null

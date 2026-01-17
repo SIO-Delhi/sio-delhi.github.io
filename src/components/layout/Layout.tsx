@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import gsap from 'gsap'
 import Lenis from 'lenis'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -14,6 +15,21 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
     const mainRef = useRef<HTMLDivElement>(null)
     const lenisRef = useRef<Lenis | null>(null)
+    const location = useLocation()
+
+    // Dynamic Title Logic
+    useEffect(() => {
+        let title = 'SIO Delhi'
+        const path = location.pathname
+
+        if (path.startsWith('/about-us')) title += ' | About Us'
+        else if (path.startsWith('/initiative')) title += ' | Initiatives'
+        else if (path.startsWith('/media')) title += ' | Press & Media'
+        else if (path.startsWith('/leader')) title += ' | Leadership'
+        else if (path.startsWith('/subsection')) title += ' | Collection'
+
+        document.title = title
+    }, [location])
 
     // Initialize Lenis smooth scrolling
     useEffect(() => {

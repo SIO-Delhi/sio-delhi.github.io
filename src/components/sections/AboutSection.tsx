@@ -26,7 +26,8 @@ export function AboutSection() {
             subtitle: post.title.split(' ').slice(1).join(' ') || '',
             type: post.subtitle || '',
             color: '#ef4444',
-            image: post.image || ''
+            image: post.image || '',
+            isSubsection: post.isSubsection || false
         }))
     }, [dynamicPosts])
 
@@ -190,7 +191,7 @@ export function AboutSection() {
                     cards.map((card, index) => (
                         <div key={card.id} style={{ transform: index % 2 === 1 ? 'translateY(120px)' : 'none' }}>
                             <Link
-                                to={`/about-us/${card.id}`}
+                                to={card.isSubsection ? `/subsection/${card.id}` : `/about-us/${card.id}`}
                                 data-cursor="view"
                                 style={{ textDecoration: 'none', display: 'block' }}
                             >

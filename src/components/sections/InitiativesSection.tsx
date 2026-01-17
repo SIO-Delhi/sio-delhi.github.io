@@ -25,7 +25,8 @@ export function InitiativesSection() {
             category: 'Initiative',
             image: post.image || '',
             description: post.subtitle || '',
-            content: post.content
+            content: post.content,
+            isSubsection: post.isSubsection || false
         }))
     }, [dynamicPosts])
 
@@ -196,7 +197,7 @@ export function InitiativesSection() {
                     initiatives.map((item, index) => (
                         <div key={index} style={{ transform: index % 2 === 1 ? 'translateY(120px)' : 'none' }}>
                             <Link
-                                to={`/initiative/${item.id}`}
+                                to={item.isSubsection ? `/subsection/${item.id}` : `/initiative/${item.id}`}
                                 data-cursor="view"
                                 style={{ textDecoration: 'none', display: 'block' }}
                             >

@@ -11,7 +11,9 @@ interface ContentContextType {
     error: string | null
     getPostsBySection: (sectionId: string) => Post[]
     getPostById: (id: string) => Post | undefined
-    addPost: (post: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+    getChildPosts: (parentId: string) => Post[]
+    getSubsectionsBySection: (sectionId: string) => Post[]
+    addPost: (post: Omit<Post, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: number }) => Promise<void>
     updatePost: (id: string, post: Partial<Post>) => Promise<void>
     deletePost: (id: string) => Promise<void>
     refreshPosts: () => Promise<void>
@@ -50,6 +52,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             const mappedPosts: Post[] = (data || []).map(row => ({
                 id: row.id,
                 sectionId: row.section_id,
+                parentId: row.parent_id || undefined,
+                isSubsection: row.is_subsection ?? false,
                 title: row.title,
                 subtitle: row.subtitle || '',
                 content: row.content,
@@ -76,19 +80,30 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     }, [fetchPosts])
 
     const getPostsBySection = (sectionId: string) => {
-        return posts.filter(p => p.sectionId === sectionId).sort((a, b) => b.createdAt - a.createdAt)
+        // Only return top-level posts (no parent) for section view
+        return posts.filter(p => p.sectionId === sectionId && !p.parentId).sort((a, b) => b.createdAt - a.createdAt)
     }
 
     const getPostById = (id: string) => {
         return posts.find(p => p.id === id)
     }
 
-    const addPost = async (newPostData: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const getChildPosts = (parentId: string) => {
+        return posts.filter(p => p.parentId === parentId).sort((a, b) => b.createdAt - a.createdAt)
+    }
+
+    const getSubsectionsBySection = (sectionId: string) => {
+        return posts.filter(p => p.sectionId === sectionId && p.isSubsection).sort((a, b) => b.createdAt - a.createdAt)
+    }
+
+    const addPost = async (newPostData: Omit<Post, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: number }) => {
         try {
             const { error: insertError } = await supabase
                 .from('posts')
                 .insert({
                     section_id: newPostData.sectionId,
+                    parent_id: newPostData.parentId || null,
+                    is_subsection: newPostData.isSubsection ?? false,
                     title: newPostData.title,
                     subtitle: newPostData.subtitle || null,
                     content: newPostData.content,
@@ -96,6 +111,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                     pdf_url: newPostData.pdfUrl || null,
                     layout: newPostData.layout,
                     is_published: newPostData.isPublished ?? false,
+                    created_at: newPostData.createdAt ? new Date(newPostData.createdAt).toISOString() : undefined // Allow manual date
                 })
 
             if (insertError) throw insertError
@@ -116,6 +132,9 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             if (updates.pdfUrl !== undefined) dbUpdates.pdf_url = updates.pdfUrl || null
             if (updates.layout !== undefined) dbUpdates.layout = updates.layout
             if (updates.isPublished !== undefined) dbUpdates.is_published = updates.isPublished
+            if (updates.parentId !== undefined) dbUpdates.parent_id = updates.parentId || null
+            if (updates.isSubsection !== undefined) dbUpdates.is_subsection = updates.isSubsection
+            if (updates.createdAt !== undefined) dbUpdates.created_at = new Date(updates.createdAt).toISOString() // Allow manual date update
             dbUpdates.updated_at = new Date().toISOString()
 
             const { error: updateError } = await supabase
@@ -167,6 +186,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             error,
             getPostsBySection,
             getPostById,
+            getChildPosts,
+            getSubsectionsBySection,
             addPost,
             updatePost,
             deletePost,

@@ -214,8 +214,8 @@ export function SplashScreen() {
             </div>
 
             {/* Start Exploring Button - Glassy with animated border light */}
-            {/* Scroll Indicator - Visible when collapsed */}
-            {isCollapsed && (
+            {/* Scroll Indicator - Only on Home Page & At Top */}
+            {isCollapsed && location.pathname === '/' && (
                 <div
                     style={{
                         position: 'fixed',
@@ -232,9 +232,9 @@ export function SplashScreen() {
                         fontFamily: '"Geist", sans-serif',
                         letterSpacing: '-0.02em',
                         fontSize: 10,
-                        opacity: isCollapsed ? 1 : 0,
-                        transition: 'opacity 0.5s ease 0.5s',
-                        pointerEvents: 'none',
+                        opacity: scrollProgress < 0.02 ? 1 : 0, // Fade out when scrolled (approx moment it leaves hero)
+                        pointerEvents: scrollProgress < 0.02 ? 'auto' : 'none',
+                        transition: 'opacity 0.3s ease',
                     }}
                 >
                     <span style={{ textTransform: 'uppercase' }}>Scroll</span>

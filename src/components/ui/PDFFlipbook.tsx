@@ -1,177 +1,230 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { Document, Page, pdfjs } from 'react-pdf'
-import HTMLFlipBook from 'react-pageflip'
-import { ChevronLeft, ChevronRight, Maximize2, Loader2, Minimize2 } from 'lucide-react'
-
-// Set worker path for react-pdf
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+import { useEffect, useRef } from 'react'
 
 interface PDFFlipbookProps {
     url: string
 }
 
-// Wrapper for individual pages to support refs required by react-pageflip
-const FlipPage = React.forwardRef<HTMLDivElement, { pageNumber: number, width: number, currentPage: number }>((props, ref) => {
-    // Lazy loading: Only render actual PDF page if we are close to it
-    // 0 is cover (page 1). index 0 = page 1.
-    // currentPage from onFlip is 0-indexed (index of the page on display, or spread index?)
-    // react-pageflip onFlip returns index of the *top* page.
-
-    // Safety check for rendering buffer (render +/- 5 pages around current)
-    // Page numbers are 1-based, props.currentPage is 0-based index of the page in the array.
-    const pageIndex = props.pageNumber - 1
-    const isNear = Math.abs(pageIndex - props.currentPage) < 5
-
-    return (
-        <div ref={ref} className="page-wrapper" style={{ background: 'white', overflow: 'hidden', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.05)' }}>
-            <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {isNear ? (
-                    <Page
-                        pageNumber={props.pageNumber}
-                        width={props.width}
-                        renderTextLayer={false}
-                        renderAnnotationLayer={false}
-                        loading={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#ccc' }}><Loader2 size={24} className="animate-spin" /></div>}
-                    />
-                ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#eee', fontSize: '2rem', fontWeight: 'bold' }}>
-                        {props.pageNumber}
-                    </div>
-                )}
-
-                {/* Page Number Footer */}
-                <div style={{ position: 'absolute', bottom: '10px', right: '10px', fontSize: '10px', color: '#888' }}>
-                    {props.pageNumber}
-                </div>
-            </div>
-        </div>
-    )
-})
+declare global {
+    interface Window {
+        jQuery: any
+    }
+}
 
 export function PDFFlipbook({ url }: PDFFlipbookProps) {
-    const [numPages, setNumPages] = useState<number>(0)
-    const [isFullscreen, setIsFullscreen] = useState(false)
-    const [currentPage, setCurrentPage] = useState(0)
-
-    const bookRef = useRef<any>(null)
     const containerRef = useRef<HTMLDivElement>(null)
+    const bookInstance = useRef<any>(null)
+    const uniqueId = useRef(`df_book_${Math.random().toString(36).substr(2, 9)}`)
 
-    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-        setNumPages(numPages)
-    }
-
-    // Responsive: Update container width knowledge if needed, though react-pageflip is good at responsive.
     useEffect(() => {
-        // Optional: Add resize listener if we need dynamic resolution adjustment
-        // For now, fixed scale is sufficient
-    }, [])
+        let timeoutId: any = null
 
-    const basePageWidth = 400
-    const basePageHeight = 560
+        // Wait for jQuery and dFlip to load
+        const initBook = () => {
+            if (window.jQuery && typeof window.jQuery().flipBook === 'function' && containerRef.current) {
+                const $ = window.jQuery
 
-    const flipNext = () => bookRef.current?.pageFlip()?.flipNext()
-    const flipPrev = () => bookRef.current?.pageFlip()?.flipPrev()
+                // CRITICAL: Always empty container before initializing to prevent duplicates (double layer issue)
+                $(containerRef.current).empty()
+
+                // Initialize DearFlip
+                const options = {
+                    source: url,
+                    height: 600, // Fixed height or auto
+                    webgl: true, // Enable 3D
+                    // 3D settings
+                    stiffness: 3,
+                    backgroundColor: 'transparent',
+                    pageMode: 'auto', // single or double view based on size
+                    singlePageMode: 'auto',
+                    // Disable mouse zoom interactions
+                    scrollWheel: false,
+                    zoomRatio: 1,
+                    maxZoom: 1, // Limit max zoom level effectively disabling it
+                    doubleClickZoom: false,
+                }
+
+                bookInstance.current = $(containerRef.current).flipBook(url, options)
+            } else {
+                // Retry if scripts haven't loaded yet
+                timeoutId = setTimeout(initBook, 100)
+            }
+        }
+
+        initBook()
+
+        // Cleanup
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId)
+            if (window.jQuery && containerRef.current) {
+                window.jQuery(containerRef.current).empty()
+            }
+        }
+    }, [url])
 
     return (
         <div
-            ref={containerRef}
             style={{
-                position: isFullscreen ? 'fixed' : 'relative',
-                inset: isFullscreen ? 0 : 'auto',
-                zIndex: isFullscreen ? 9999 : 1,
-                background: '#111',
-                borderRadius: isFullscreen ? 0 : '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                height: isFullscreen ? '100vh' : '800px',
-                overflow: 'hidden'
+                width: '100%',
+                height: '650px',
+                position: 'relative',
+                background: 'transparent'
             }}
         >
-            {/* Header controls */}
-            {/* Floating Controls */}
-            <button
-                onClick={flipPrev}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors"
-                title="Previous"
-            >
-                <ChevronLeft size={32} />
-            </button>
-
-            <button
-                onClick={flipNext}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors"
-                title="Next"
-            >
-                <ChevronRight size={32} />
-            </button>
-
-            <button
-                onClick={() => setIsFullscreen(!isFullscreen)}
-                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors"
-                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-            >
-                {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
-            </button>
-
-            {/* Book Area */}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: '#222' }}>
-                <Document
-                    file={url}
-                    onLoadSuccess={onDocumentLoadSuccess}
-                    loading={<div style={{ color: 'white' }}>Loading Document...</div>}
-                    error={<div style={{ color: '#ff3b3b' }}>Failed to load PDF</div>}
-                    className="flex items-center justify-center w-full h-full"
-                >
-                    {numPages > 0 && (
-                        <div style={{
-                            position: 'relative',
-                            width: basePageWidth * 2, // 800px
-                            height: basePageHeight,   // 560px
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 0 50px rgba(0,0,0,0.5)', // Optional: visual debug/aesthetic
-                        }}>
-                            {/* @ts-ignore */}
-                            <HTMLFlipBook
-                                width={basePageWidth}
-                                height={basePageHeight}
-                                size="fixed"
-                                minWidth={300}
-                                maxWidth={1000}
-                                minHeight={400}
-                                maxHeight={1533}
-                                maxShadowOpacity={0.5}
-                                showCover={true}
-                                mobileScrollSupport={true}
-                                ref={bookRef}
-                                className="flip-book"
-                                style={{ margin: 0 }} // Explicit reset
-                                onFlip={(e) => setCurrentPage(e.data)}
-                                usePortrait={false}
-                                startPage={0}
-                                drawShadow={true}
-                                flippingTime={1000}
-                                useMouseEvents={true}
-                                swipeDistance={30}
-                            >
-                                {Array.from({ length: numPages }, (_, i) => (
-                                    <FlipPage
-                                        key={i}
-                                        pageNumber={i + 1}
-                                        width={basePageWidth}
-                                        currentPage={currentPage}
-                                    />
-                                ))}
-                            </HTMLFlipBook>
-                        </div>
-                    )}
-                </Document>
-            </div>
-
+            <div
+                id={uniqueId.current}
+                ref={containerRef}
+                style={{ width: '100%', height: '100%' }}
+            />
+            {/* Customized DearFlip UI Styles */}
             <style>{`
-                .flip-book {
-                    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+                ._df_book-stage { background: transparent !important; }
+                
+                /* Add padding to stage to center book and leave space at bottom */
+                ._df_book-stage { 
+                    height: calc(100% - 120px) !important; /* Force book to end higher for clear gap */
+                    margin-bottom: 120px !important;
+                    padding: 0 20px !important; 
+                    box-sizing: border-box !important;
+                }
+
+                /* Side Navigation Buttons (floating ones, NOT the ones in bottom control bar) */
+                ._df_book-stage > .df-ui-next,
+                ._df_book-stage > .df-ui-prev,
+                .df-container > .df-ui-next,
+                .df-container > .df-ui-prev {
+                    background: rgba(0, 0, 0, 0.6) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                    border-radius: 50% !important;
+                    width: 48px !important;
+                    height: 48px !important;
+                    color: white !important;
+                    opacity: 0.8 !important;
+                    transition: all 0.2s ease !important;
+                }
+                ._df_book-stage > .df-ui-next:hover,
+                ._df_book-stage > .df-ui-prev:hover,
+                .df-container > .df-ui-next:hover,
+                .df-container > .df-ui-prev:hover {
+                    opacity: 1 !important;
+                    background: rgba(0, 0, 0, 0.8) !important;
+                }
+                ._df_book-stage > .df-ui-prev,
+                .df-container > .df-ui-prev {
+                    left: -60px !important;
+                }
+                ._df_book-stage > .df-ui-next,
+                .df-container > .df-ui-next {
+                    right: -60px !important;
+                }
+
+                /* More Menu & All Popups - Elegant & Compact */
+                .df-ui-popup, 
+                .df-ui-more .more-container, 
+                .more-container,
+                div[class*="popup"] {
+                    background: rgba(15, 15, 15, 0.95) !important;
+                    backdrop-filter: blur(16px) !important;
+                    -webkit-backdrop-filter: blur(16px) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                    border-radius: 12px !important;
+                    color: white !important;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+                    width: 220px !important; /* Wider to fit text */
+                    padding: 6px !important;
+                    bottom: 60px !important;
+                }
+                
+                /* Triangle/Arrow fix */
+                .df-ui-popup::after, .more-container::after {
+                    border-top-color: rgba(15, 15, 15, 0.95) !important;
+                }
+                
+                /* Hide the More Button (... 3 dots) entirely - Aggressive Targeting */
+                .df-ui-more,
+                .df-ui-btn.df-ui-more,
+                button.df-ui-more,
+                .ti-more, 
+                .ti-more-alt,
+                .df-ui-btn[title="More"],
+                .df-ui-btn:has(.ti-more),
+                .df-ui-btn:has(.ti-more-alt) {
+                    display: none !important;
+                }
+
+                /* Bottom Control Bar - Perfectly Centered & Aligned */
+                .df-ui-controls {
+                    background: rgba(10, 10, 10, 0.95) !important; /* Darker bg */
+                    backdrop-filter: blur(20px) !important;
+                    -webkit-backdrop-filter: blur(20px) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+                    border-radius: 20px !important; /* Capsule shape */
+                    bottom: 10px !important; /* Sit lower at edge */
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+                    padding: 6px 16px !important;
+                    width: auto !important;
+                    max-width: fit-content !important;
+                    /* Center trick */
+                    left: 50% !important;
+                    transform: translateX(-50%) !important;
+                    margin: 0 !important;
+                    display: flex !important;
+                    align-items: center !important; /* Vertical center alignment */
+                    gap: 12px !important;
+                }
+
+                /* Fix alignment for text/inputs inside controls */
+                .df-ui-controls > * {
+                    display: flex !important;
+                    align-items: center !important;
+                    margin: 0 !important;
+                    height: 100% !important;
+                }
+                
+                /* Specific fix for page number input area */
+                input.df-ui-page-input {
+                    background: transparent !important;
+                    border: none !important;
+                    color: white !important;
+                    height: auto !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    line-height: 1 !important;
+                    text-align: center !important;
+                }
+                label.df-ui-page-label {
+                    margin: 0 4px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                }
+
+                /* Control buttons inside bar */
+                .df-ui-btn { 
+                    background: transparent !important;
+                    border-radius: 8px !important;
+                    color: rgba(255, 255, 255, 0.8) !important;
+                    border: none !important;
+                    margin: 0 2px !important;
+                    padding: 8px !important;
+                    width: auto !important;
+                    height: auto !important;
+                    aspect-ratio: 1;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    transition: all 0.2s ease;
+                }
+                .df-ui-btn:hover {
+                    background: rgba(255, 255, 255, 0.1) !important;
+                    color: white !important;
+                    transform: translateY(-2px);
+                }
+                .df-ui-btn.df-ui-active {
+                    color: #ff3b3b !important;
+                }
+                
+                /* Wrapper adjustments */
+                .df-ui-wrapper {
+                     background: transparent !important;
                 }
             `}</style>
         </div>

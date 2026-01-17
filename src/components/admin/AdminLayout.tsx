@@ -1,4 +1,5 @@
 
+import { useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Layers, LogOut } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
@@ -10,6 +11,21 @@ export function AdminLayout() {
     const location = useLocation()
 
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`)
+
+    // Update Page Title
+    useEffect(() => {
+        let title = 'Admin Panel'
+        if (location.pathname.includes('/dashboard')) {
+            title += ' | Dashboard'
+        } else if (location.pathname.includes('/section/')) {
+            const sectionId = location.pathname.split('/section/')[1]
+            const section = sections.find(s => s.id === sectionId)
+            if (section) title += ` | ${section.title}`
+        } else if (location.pathname.includes('/create') || location.pathname.includes('/post')) {
+            title += ' | Editor'
+        }
+        document.title = title
+    }, [location, sections])
 
     return (
         <div style={{

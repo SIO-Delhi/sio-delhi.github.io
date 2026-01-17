@@ -4,6 +4,8 @@ export type LayoutType = string
 export interface Post {
     id: string
     sectionId: string
+    parentId?: string // For nested posts (subsection children)
+    isSubsection?: boolean // True if this post contains other posts
     title: string
     subtitle?: string
     content: string // HTML from Tiptap

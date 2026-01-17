@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
 import { ArrowLeft, Calendar, User } from 'lucide-react'
@@ -13,6 +13,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     const { id } = useParams()
     const { isDark } = useTheme()
     const { getPostById } = useContent()
+    const navigate = useNavigate()
 
     const post = id ? getPostById(id) : undefined
 
@@ -25,17 +26,17 @@ export function PostDetail({ sectionType }: PostDetailProps) {
         return (
             <div className="container" style={{ paddingTop: '120px', textAlign: 'center', color: isDark ? 'white' : 'black' }}>
                 <h1>Post Not Found</h1>
-                <Link to="/" style={{ color: '#ff3b3b' }}>Back to Home</Link>
+                <button onClick={() => navigate(-1)} style={{ color: '#ff3b3b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }}>Back</button>
             </div>
         )
     }
 
     // Section-specific labels and colors
     const sectionConfig = {
-        about: { label: 'About', color: '#ef4444', backTo: '/' },
-        initiatives: { label: 'Initiative', color: '#e82828', backTo: '/' },
-        media: { label: 'News', color: '#3b82f6', backTo: '/' },
-        leadership: { label: 'Leader', color: '#10b981', backTo: '/' }
+        about: { label: 'About', color: '#ef4444' },
+        initiatives: { label: 'Initiative', color: '#e82828' },
+        media: { label: 'News', color: '#3b82f6' },
+        leadership: { label: 'Leader', color: '#10b981' }
     }
 
     const config = sectionConfig[sectionType]
@@ -69,8 +70,8 @@ export function PostDetail({ sectionType }: PostDetailProps) {
             />
 
             <div className="container" style={{ maxWidth: '900px' }}>
-                <Link
-                    to={config.backTo}
+                <button
+                    onClick={() => navigate(-1)}
                     style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -80,13 +81,17 @@ export function PostDetail({ sectionType }: PostDetailProps) {
                         marginBottom: '32px',
                         fontSize: '14px',
                         fontWeight: 500,
-                        transition: 'color 0.2s'
+                        transition: 'color 0.2s',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.color = config.color}
                     onMouseLeave={(e) => e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'}
                 >
-                    <ArrowLeft size={16} /> Back to Home
-                </Link>
+                    <ArrowLeft size={16} /> Back
+                </button>
 
                 {renderContent()}
             </div>
@@ -96,6 +101,33 @@ export function PostDetail({ sectionType }: PostDetailProps) {
 
 // Default layout for About and Initiatives
 function DefaultLayout({ post, isDark, sectionLabel }: { post: any; isDark: boolean; sectionLabel: string }) {
+    // Simplified layout for subsection child posts (has parentId)
+    const isSubsectionChild = !!post.parentId
+
+    if (isSubsectionChild) {
+        return (
+            <>
+                <h1 style={{
+                    fontSize: 'clamp(2rem, 4vw, 3rem)',
+                    fontWeight: 700,
+                    color: isDark ? '#ffffff' : '#111111',
+                    marginBottom: '32px',
+                    lineHeight: 1.1
+                }}>
+                    {post.title}
+                </h1>
+
+                {/* PDF Flipbook (main content for subsection posts) */}
+                {post.pdfUrl && (
+                    <div style={{ marginBottom: '40px' }}>
+                        <PDFFlipbook url={post.pdfUrl} />
+                    </div>
+                )}
+            </>
+        )
+    }
+
+    // Regular full layout for top-level posts
     return (
         <>
             {/* Badge */}
@@ -173,8 +205,8 @@ function DefaultLayout({ post, isDark, sectionLabel }: { post: any; isDark: bool
                 </div>
             )}
 
-            {/* PDF Flipbook (if PDF attached) */}
-            {post.pdfUrl && (
+            {/* PDF Flipbook (if PDF attached AND not embedded in content) */}
+            {post.pdfUrl && !post.content?.includes('block-pdf') && (
                 <div style={{ marginBottom: '40px' }}>
                     <PDFFlipbook url={post.pdfUrl} />
                 </div>
@@ -189,8 +221,25 @@ function DefaultLayout({ post, isDark, sectionLabel }: { post: any; isDark: bool
                         fontSize: '1.1rem',
                         lineHeight: 1.8
                     }}
-                    dangerouslySetInnerHTML={{ __html: post.content }}
-                />
+                >
+                    {post.content.includes('block-pdf') ? (
+                        post.content.split(/<div class="siodel-block block-pdf" data-pdf-url="(.*?)"><\/div>/g).map((part: string, index: number) => {
+                            // Odd indices are the captured PDF URLs
+                            if (index % 2 === 1) {
+                                return (
+                                    <div key={index} style={{ margin: '40px 0' }}>
+                                        <PDFFlipbook url={part} />
+                                    </div>
+                                )
+                            }
+                            // Even indices are HTML content
+                            if (!part) return null
+                            return <div key={index} dangerouslySetInnerHTML={{ __html: part }} />
+                        })
+                    ) : (
+                        <div dangerouslySetInnerHTML={{ __html: post.content }} />
+                    )}
+                </div>
             )}
 
             <style>{`

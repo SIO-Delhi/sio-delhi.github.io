@@ -28,7 +28,8 @@ export function MediaSection() {
             description: post.subtitle || '',
             date: new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             color: colors[index % colors.length],
-            image: post.image || ''
+            image: post.image || '',
+            isSubsection: post.isSubsection || false
         }))
     }, [dynamicPosts])
 
@@ -193,7 +194,7 @@ export function MediaSection() {
                     mediaCards.map((card, index) => (
                         <div key={card.id} style={{ transform: index % 2 === 1 ? 'translateY(120px)' : 'none' }}>
                             <Link
-                                to={`/media/${card.id}`}
+                                to={card.isSubsection ? `/subsection/${card.id}` : `/media/${card.id}`}
                                 data-cursor="view"
                                 style={{ textDecoration: 'none', display: 'block' }}
                             >
@@ -204,8 +205,7 @@ export function MediaSection() {
                                     title={card.title}
                                     subtitle={card.subtitle}
                                     description={card.description}
-                                    startLabel="Date"
-                                    startValue={card.date}
+                                    publishedDate={dynamicPosts.find(p => p.id === card.id)?.createdAt}
                                     image={card.image}
                                 />
                             </Link>
