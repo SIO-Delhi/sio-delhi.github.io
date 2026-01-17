@@ -162,12 +162,12 @@ export function SubsectionEditor() {
 
                     {/* Subtitle */}
                     <div>
-                        <label style={{ display: 'block', color: '#666', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 500 }}>Subtitle</label>
+                        <label style={{ display: 'block', color: '#666', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 500 }}>Summary</label>
                         <input
                             type="text"
                             value={subtitle}
                             onChange={(e) => setSubtitle(e.target.value)}
-                            placeholder="Brief description"
+                            placeholder="Brief summary"
                             style={{
                                 width: '100%', padding: '12px 16px', borderRadius: '10px',
                                 background: '#1a1a1a', border: '1px solid #333', color: '#aaa',
@@ -222,56 +222,56 @@ export function SubsectionEditor() {
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {childPosts.map(post => (
-                                    <div key={post.id} style={{
-                                        display: 'flex', alignItems: 'center', gap: '12px',
-                                        padding: '12px', borderRadius: '10px', background: '#141414',
-                                        border: '1px solid #222'
-                                    }}>
-                                        {/* Clickable area - navigates to editor */}
-                                        <div
-                                            onClick={() => navigate(`/admin/post/${post.id}`)}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '12px',
-                                                flex: 1, minWidth: 0, cursor: 'pointer'
-                                            }}
-                                        >
-                                            {/* Thumbnail */}
-                                            <div style={{
-                                                width: '50px', height: '50px', borderRadius: '8px',
-                                                overflow: 'hidden', background: '#222', flexShrink: 0
-                                            }}>
-                                                {post.image ? (
-                                                    <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                ) : (
-                                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
-                                                        <FileText size={18} />
-                                                    </div>
-                                                )}
-                                            </div>
+                                    <div
+                                        key={post.id}
+                                        onClick={() => navigate(`/admin/post/${post.id}`)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '12px',
+                                            padding: '12px', borderRadius: '10px', background: '#141414',
+                                            border: '1px solid #222', cursor: 'pointer', transition: 'background 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#1a1a1a'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = '#141414'}
+                                    >
+                                        {/* Thumbnail */}
+                                        <div style={{
+                                            width: '50px', height: '50px', borderRadius: '8px',
+                                            overflow: 'hidden', background: '#222', flexShrink: 0
+                                        }}>
+                                            {post.image ? (
+                                                <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
+                                                    <FileText size={18} />
+                                                </div>
+                                            )}
+                                        </div>
 
-                                            {/* Info */}
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ color: 'white', fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {post.title}
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
-                                                    <Calendar size={10} />
-                                                    {new Date(post.createdAt).toLocaleDateString()}
-                                                    <span style={{
-                                                        padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem',
-                                                        background: post.isPublished ? 'rgba(34,197,94,0.15)' : 'rgba(255,165,0,0.15)',
-                                                        color: post.isPublished ? '#22c55e' : '#ffa500'
-                                                    }}>
-                                                        {post.isPublished ? 'Published' : 'Draft'}
-                                                    </span>
-                                                </div>
+                                        {/* Info */}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ color: 'white', fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {post.title}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
+                                                <Calendar size={10} />
+                                                {new Date(post.createdAt).toLocaleDateString()}
+                                                <span style={{
+                                                    padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem',
+                                                    background: post.isPublished ? 'rgba(34,197,94,0.15)' : 'rgba(255,165,0,0.15)',
+                                                    color: post.isPublished ? '#22c55e' : '#ffa500'
+                                                }}>
+                                                    {post.isPublished ? 'Published' : 'Draft'}
+                                                </span>
                                             </div>
                                         </div>
 
                                         {/* Actions */}
                                         <div style={{ display: 'flex', gap: '4px' }}>
                                             <button
-                                                onClick={() => updatePost(post.id, { isPublished: !post.isPublished })}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    updatePost(post.id, { isPublished: !post.isPublished });
+                                                }}
                                                 style={{
                                                     padding: '8px', borderRadius: '6px',
                                                     background: post.isPublished ? 'rgba(255,165,0,0.1)' : 'rgba(34,197,94,0.1)',
@@ -284,14 +284,20 @@ export function SubsectionEditor() {
                                                 {post.isPublished ? <EyeOff size={14} /> : <Eye size={14} />}
                                             </button>
                                             <button
-                                                onClick={() => navigate(`/admin/post/${post.id}`)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/admin/post/${post.id}`);
+                                                }}
                                                 style={{ padding: '8px', borderRadius: '6px', background: '#222', border: 'none', color: '#888', cursor: 'pointer' }}
                                                 title="Edit"
                                             >
                                                 <Pencil size={14} />
                                             </button>
                                             <button
-                                                onClick={() => handleDeleteChildPost(post.id, post.title)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteChildPost(post.id, post.title);
+                                                }}
                                                 style={{ padding: '8px', borderRadius: '6px', background: '#222', border: 'none', color: '#666', cursor: 'pointer' }}
                                                 title="Delete"
                                             >

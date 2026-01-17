@@ -1,9 +1,332 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
-import { ArrowLeft, Calendar, User } from 'lucide-react'
-import { useEffect } from 'react'
+import { ArrowLeft, Calendar, User, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useState, useMemo } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
+
+// --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
+interface ParsedBlock {
+    type: 'text' | 'image' | 'pdf' | 'legacy' | 'composite'
+    content: string
+    pdfUrl: string
+    alignment: string
+    subtitle: string
+    caption: string
+    isCarousel: boolean
+    carouselImages: string[]
+    imageSrc: string
+    // Composite block fields
+    layout?: 'image-left' | 'image-right' | 'image-top' | 'stacked'
+    imageUrl?: string
+    textContent?: string
+}
+
+function ContentBlockRenderer({ content, isDark }: { content: string; isDark: boolean }) {
+    const [carouselIndices, setCarouselIndices] = useState<{ [key: number]: number }>({})
+
+    // Parse content into blocks
+    const blocks: ParsedBlock[] = useMemo(() => {
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = content
+        const blockElements = tempDiv.querySelectorAll('.siodel-block')
+
+        if (blockElements.length === 0) {
+            // Legacy content - return as single text block
+            return [{
+                type: 'legacy' as const,
+                content,
+                pdfUrl: '',
+                alignment: 'left',
+                subtitle: '',
+                caption: '',
+                isCarousel: false,
+                carouselImages: [],
+                imageSrc: ''
+            }]
+        }
+
+        return Array.from(blockElements).map(el => {
+            const isImage = el.classList.contains('block-image')
+            const isPdf = el.classList.contains('block-pdf')
+            const isComposite = el.classList.contains('block-composite')
+
+            let carouselImages: string[] = []
+            try {
+                const imagesAttr = el.getAttribute('data-images')
+                if (imagesAttr) {
+                    carouselImages = JSON.parse(decodeURIComponent(imagesAttr))
+                }
+            } catch { /* ignore parse errors */ }
+
+            // Determine block type
+            let blockType: ParsedBlock['type'] = 'text'
+            if (isComposite) blockType = 'composite'
+            else if (isPdf) blockType = 'pdf'
+            else if (isImage) blockType = 'image'
+
+            return {
+                type: blockType,
+                content: isPdf || isComposite ? '' : el.innerHTML,
+                pdfUrl: el.getAttribute('data-pdf-url') || '',
+                alignment: el.getAttribute('data-align') || 'left',
+                subtitle: decodeURIComponent(el.getAttribute('data-subtitle') || ''),
+                caption: decodeURIComponent(el.getAttribute('data-caption') || ''),
+                isCarousel: el.getAttribute('data-carousel') === 'true',
+                carouselImages,
+                imageSrc: el.querySelector('img')?.src || '',
+                // Composite fields
+                layout: (el.getAttribute('data-layout') || 'image-left') as ParsedBlock['layout'],
+                imageUrl: decodeURIComponent(el.getAttribute('data-image-url') || ''),
+                textContent: decodeURIComponent(el.getAttribute('data-text-content') || '')
+            }
+        })
+    }, [content])
+
+    const navigateCarousel = (blockIndex: number, direction: 'prev' | 'next', totalImages: number) => {
+        setCarouselIndices(prev => {
+            const current = prev[blockIndex] || 0
+            const next = direction === 'next'
+                ? (current + 1) % totalImages
+                : (current - 1 + totalImages) % totalImages
+            return { ...prev, [blockIndex]: next }
+        })
+    }
+
+    return (
+        <>
+            {blocks.map((block, index) => {
+                const alignStyle = {
+                    textAlign: block.alignment as 'left' | 'center' | 'right',
+                    justifyContent: block.alignment === 'center' ? 'center' : (block.alignment === 'right' ? 'flex-end' : 'flex-start')
+                }
+
+                // Text Block with Glass Card
+                if (block.type === 'text') {
+                    return (
+                        <div
+                            key={index}
+                            style={{
+                                margin: '24px 0',
+                                padding: '24px 28px',
+                                borderRadius: '16px',
+                                background: isDark
+                                    ? 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)'
+                                    : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
+                                backdropFilter: 'blur(12px)',
+                                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                ...alignStyle
+                            }}
+                        >
+                            {block.subtitle && (
+                                <h3 style={{
+                                    color: '#ff3b3b',
+                                    fontSize: '1.2rem',
+                                    fontWeight: 600,
+                                    marginBottom: '12px',
+                                    textAlign: alignStyle.textAlign
+                                }}>
+                                    {block.subtitle}
+                                </h3>
+                            )}
+                            <div
+                                dangerouslySetInnerHTML={{ __html: block.content }}
+                                style={{ textAlign: alignStyle.textAlign }}
+                            />
+                        </div>
+                    )
+                }
+
+                // Image Block (single or carousel)
+                if (block.type === 'image') {
+                    const images = block.isCarousel && block.carouselImages.length > 0
+                        ? block.carouselImages
+                        : [block.imageSrc]
+                    const currentIndex = carouselIndices[index] || 0
+
+                    return (
+                        <div
+                            key={index}
+                            style={{
+                                margin: '32px 0',
+                                width: '100%',
+                                textAlign: (block.alignment as 'left' | 'center' | 'right') || 'left'
+                            }}
+                        >
+                            {/* Image/Carousel Container */}
+                            <div style={{
+                                position: 'relative',
+                                width: '100%'
+                            }}>
+                                <img
+                                    src={images[currentIndex]}
+                                    alt={block.caption || 'Image'}
+                                    style={{
+                                        width: '100%',
+                                        borderRadius: '12px',
+                                        display: 'block'
+                                    }}
+                                />
+
+                                {/* Carousel Controls */}
+                                {block.isCarousel && images.length > 1 && (
+                                    <>
+                                        <button
+                                            onClick={() => navigateCarousel(index, 'prev', images.length)}
+                                            style={{
+                                                position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
+                                                width: '40px', height: '40px', borderRadius: '50%',
+                                                background: 'rgba(0,0,0,0.6)', border: 'none',
+                                                color: 'white', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}
+                                        >
+                                            <ChevronLeft size={20} />
+                                        </button>
+                                        <button
+                                            onClick={() => navigateCarousel(index, 'next', images.length)}
+                                            style={{
+                                                position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                                                width: '40px', height: '40px', borderRadius: '50%',
+                                                background: 'rgba(0,0,0,0.6)', border: 'none',
+                                                color: 'white', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}
+                                        >
+                                            <ChevronRight size={20} />
+                                        </button>
+
+                                        {/* Dots */}
+                                        <div style={{
+                                            position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
+                                            display: 'flex', gap: '6px'
+                                        }}>
+                                            {images.map((_: string, i: number) => (
+                                                <div
+                                                    key={i}
+                                                    style={{
+                                                        width: '8px', height: '8px', borderRadius: '50%',
+                                                        background: i === currentIndex ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
+                                                        transition: 'background 0.2s'
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Caption */}
+                            {block.caption && (
+                                <p style={{
+                                    marginTop: '12px',
+                                    color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+                                    fontSize: '0.9rem',
+                                    fontStyle: 'italic',
+                                    textAlign: alignStyle.textAlign
+                                }}>
+                                    {block.caption}
+                                </p>
+                            )}
+                        </div>
+                    )
+                }
+
+                // PDF Block
+                if (block.type === 'pdf' && block.pdfUrl) {
+                    return (
+                        <div key={index} style={{ margin: '40px 0' }}>
+                            <PDFFlipbook url={block.pdfUrl} />
+                        </div>
+                    )
+                }
+
+                // Composite Block (Image + Text Layout)
+                if (block.type === 'composite' && (block.imageUrl || block.textContent)) {
+                    const layout = block.layout || 'image-left'
+                    const isVertical = layout === 'image-top' || layout === 'stacked'
+                    return (
+                        <div
+                            key={index}
+                            style={{
+                                margin: '40px 0',
+                                padding: '32px',
+                                borderRadius: '16px',
+                                background: isDark
+                                    ? 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)'
+                                    : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
+                                backdropFilter: 'blur(12px)',
+                                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                display: 'grid',
+                                gridTemplateColumns: isVertical ? '1fr' : '1fr 1fr',
+                                gap: '32px',
+                                alignItems: 'stretch'
+                            }}
+                        >
+                            <div style={{ order: layout === 'image-right' ? 2 : 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {(block.carouselImages && block.carouselImages.length > 0
+                                    ? block.carouselImages
+                                    : (block.imageUrl ? [block.imageUrl] : [])
+                                ).map((img, i, arr) => (
+                                    <img
+                                        key={i}
+                                        src={img}
+                                        alt=""
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            minHeight: arr.length > 1 ? 'auto' : '100%',
+                                            objectFit: 'cover',
+                                            borderRadius: '12px',
+                                            display: 'block'
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                            <div
+                                style={{
+                                    order: layout === 'image-right' ? 1 : 2,
+                                    maxWidth: '100%'
+                                }}
+                            >
+                                {block.subtitle && (
+                                    <h3 style={{
+                                        color: '#ff8080',
+                                        fontSize: '1.25rem',
+                                        fontWeight: 600,
+                                        marginBottom: '16px',
+                                        marginTop: 0,
+                                        textAlign: (block.alignment as 'left' | 'center' | 'right') || (layout === 'image-top' ? 'center' : 'left')
+                                    }}>
+                                        {block.subtitle}
+                                    </h3>
+                                )}
+                                <div
+                                    style={{
+                                        color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)',
+                                        lineHeight: 1.8,
+                                        fontSize: '1.1rem',
+                                        textAlign: (block.alignment as 'left' | 'center' | 'right') || (layout === 'image-top' ? 'center' : 'left')
+                                    }}
+                                    dangerouslySetInnerHTML={{ __html: block.textContent || '' }}
+                                />
+                            </div>
+                        </div>
+                    )
+                }
+
+                // Legacy fallback
+                if (block.type === 'legacy') {
+                    return <div key={index} dangerouslySetInnerHTML={{ __html: block.content }} />
+                }
+
+                return null
+            })}
+        </>
+    )
+}
 
 interface PostDetailProps {
     sectionType: 'about' | 'initiatives' | 'media' | 'leadership'
@@ -175,16 +498,6 @@ function DefaultLayout({ post, isDark, sectionLabel }: { post: any; isDark: bool
                 {post.title}
             </h1>
 
-            {post.subtitle && (
-                <p style={{
-                    fontSize: '1.25rem',
-                    color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
-                    marginBottom: '32px'
-                }}>
-                    {post.subtitle}
-                </p>
-            )}
-
             {/* Cover Image */}
             {post.image && (
                 <div
@@ -222,23 +535,7 @@ function DefaultLayout({ post, isDark, sectionLabel }: { post: any; isDark: bool
                         lineHeight: 1.8
                     }}
                 >
-                    {post.content.includes('block-pdf') ? (
-                        post.content.split(/<div class="siodel-block block-pdf" data-pdf-url="(.*?)"><\/div>/g).map((part: string, index: number) => {
-                            // Odd indices are the captured PDF URLs
-                            if (index % 2 === 1) {
-                                return (
-                                    <div key={index} style={{ margin: '40px 0' }}>
-                                        <PDFFlipbook url={part} />
-                                    </div>
-                                )
-                            }
-                            // Even indices are HTML content
-                            if (!part) return null
-                            return <div key={index} dangerouslySetInnerHTML={{ __html: part }} />
-                        })
-                    ) : (
-                        <div dangerouslySetInnerHTML={{ __html: post.content }} />
-                    )}
+                    <ContentBlockRenderer content={post.content} isDark={isDark} />
                 </div>
             )}
 

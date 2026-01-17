@@ -61,7 +61,7 @@ export function HomePage() {
                     right: 0,
                     width: '100vw',
                     height: '100vh',
-                    background: 'radial-gradient(ellipse 130% 100% at 115% 50%, rgba(255, 59, 59, 0.8) 0%, rgba(255, 59, 59, 0.5) 40%, rgba(255, 59, 59, 0.2) 70%, transparent 100%)',
+                    background: 'radial-gradient(ellipse 130% 100% at 160% 50%, rgba(255, 59, 59, 0.8) 0%, rgba(255, 59, 59, 0.5) 40%, rgba(255, 59, 59, 0.2) 70%, transparent 100%)',
                     zIndex: 1, // Below flag
                     pointerEvents: 'none',
                 }}
