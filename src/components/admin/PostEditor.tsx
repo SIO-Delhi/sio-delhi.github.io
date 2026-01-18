@@ -1064,10 +1064,10 @@ export function PostEditor() {
                             <img src={images[0]} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px' }}>
                                 <button onClick={() => setImages([])} style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}>
-                                    <X size={14} /> Remove Cover
+                                    <X size={14} /> {sectionId === 'leadership' ? 'Remove Photo' : 'Remove Cover'}
                                 </button>
                                 <label style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}>
-                                    {isUploading ? 'Uploading...' : <> <ImageIcon size={14} /> Change </>}
+                                    {isUploading ? 'Uploading...' : <> <ImageIcon size={14} /> {sectionId === 'leadership' ? 'Change Photo' : 'Change'} </>}
                                     <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
                                 </label>
                             </div>
@@ -1075,7 +1075,7 @@ export function PostEditor() {
                     ) : (
                         <div style={{ width: '100%', borderBottom: '1px solid #333', paddingBottom: '24px' }}>
                             <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '0.9rem', cursor: 'pointer', padding: '8px 16px', borderRadius: '6px', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#222'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                <ImageIcon size={18} /> <span>{isUploading ? 'Uploading...' : 'Add Cover Image'}</span>
+                                <ImageIcon size={18} /> <span>{isUploading ? 'Uploading...' : (sectionId === 'leadership' ? 'Add Photo' : 'Add Cover Image')}</span>
                                 <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
                             </label>
                         </div>
@@ -1084,8 +1084,27 @@ export function PostEditor() {
 
                 {/* 2. Title & Subtitle */}
                 <div>
-                    <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Post Title" style={{ width: '100%', background: 'transparent', border: 'none', color: 'white', fontSize: '3.5rem', fontWeight: 800, outline: 'none', lineHeight: 1.1, marginBottom: '16px' }} />
-                    <input type="text" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Summary (shows on card)..." style={{ width: '100%', background: 'transparent', border: 'none', color: '#888', fontSize: '1.5rem', fontWeight: 400, outline: 'none', marginBottom: '16px' }} />
+                    <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
+                        {sectionId === 'leadership' ? 'NAME' : 'TITLE'}
+                    </label>
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder={sectionId === 'leadership' ? "Leader Name" : "Post Title"}
+                        style={{ width: '100%', background: 'transparent', border: 'none', color: 'white', fontSize: '3.5rem', fontWeight: 800, outline: 'none', lineHeight: 1.1, marginBottom: '16px' }}
+                    />
+
+                    <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
+                        {sectionId === 'leadership' ? 'POSITION' : 'SUBTITLE'}
+                    </label>
+                    <input
+                        type="text"
+                        value={subtitle}
+                        onChange={(e) => setSubtitle(e.target.value)}
+                        placeholder={sectionId === 'leadership' ? "Position / Role" : "Summary (shows on card)..."}
+                        style={{ width: '100%', background: 'transparent', border: 'none', color: '#888', fontSize: '1.5rem', fontWeight: 400, outline: 'none', marginBottom: '16px' }}
+                    />
 
                     {/* Date Field */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

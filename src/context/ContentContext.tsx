@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { ReactNode } from 'react'
-import type { Post, Section, Leader } from '../types/content'
+import type { Post, Section } from '../types/content'
 import { supabase } from '../lib/supabase'
 
 
@@ -17,7 +17,6 @@ interface ContentContextType {
     updatePost: (id: string, post: Partial<Post>) => Promise<void>
     deletePost: (id: string) => Promise<void>
     refreshPosts: () => Promise<void>
-    localLeaders: Leader[]
 }
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined)
@@ -179,38 +178,12 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    const localLeaders: Leader[] = [
-        {
-            id: '1',
-            name: 'Dr. Talha Faiyazuddin',
-            role: 'Zonal President',
-            image: '/images/leaders/zp.jpg'
-        },
-        {
-            id: '2',
-            name: 'Abdullah Azzam',
-            role: 'Zonal Secretary',
-            image: '/images/leaders/zs.jpg'
-        },
-        {
-            id: '3',
-            name: 'Wasiq Nadeem',
-            role: 'Zonal Secretary',
-            image: '/images/leaders/zs2.jpg'
-        },
-        {
-            id: '4',
-            name: 'Adnan',
-            role: 'Joint Secretary',
-            image: '/images/leaders/js.jpg'
-        }
-    ]
+
 
     return (
         <ContentContext.Provider value={{
             sections,
             posts,
-            localLeaders,
             loading,
             error,
             getPostsBySection,

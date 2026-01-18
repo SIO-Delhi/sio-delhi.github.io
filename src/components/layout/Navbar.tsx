@@ -73,34 +73,19 @@ export function Navbar() {
         }
 
         // For sections with scroll animations, scroll to the cards/content area instead
-        let targetElement: Element | null = null
-        let offset = -80 // Default offset for navbar height
-
-        // Sections with animated headers need to scroll to their content container
-        const animatedSections = ['about', 'initiatives', 'media', 'leadership']
-
-        if (animatedSections.includes(sectionId)) {
-            // Try to find the cards-grid or content container within the section
-            targetElement = document.querySelector(`#${sectionId} [ref]`) ||
-                document.querySelector(`#${sectionId} .cards-grid`) ||
-                document.querySelector(`#${sectionId} > div:last-child`)
-            // Positive offset to scroll past the padding and show cards in upper portion
-            // The padding is 80vh, so we scroll further into the cards container
-            offset = window.innerHeight * 0.6 // Scroll 60% of viewport into the cards
-        } else {
-            targetElement = document.querySelector(href)
-        }
+        const targetElement = document.getElementById(sectionId)
+        const offset = -100 // Navbar height buffer
 
         if (targetElement) {
             const lenis = (window as typeof window & { lenis?: { scrollTo: (target: number | Element, options?: { offset?: number, immediate?: boolean }) => void } }).lenis
 
             if (lenis) {
-                lenis.scrollTo(targetElement, { offset, immediate: true }) // Instant jump
+                lenis.scrollTo(targetElement, { offset, immediate: false }) // Smooth scroll
             } else {
                 const elementPosition = targetElement.getBoundingClientRect().top + window.pageYOffset
                 window.scrollTo({
                     top: elementPosition + offset,
-                    behavior: 'instant' // Instant jump instead of smooth
+                    behavior: 'smooth'
                 })
             }
         }

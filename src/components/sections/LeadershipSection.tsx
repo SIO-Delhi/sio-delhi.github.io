@@ -4,9 +4,10 @@ import { useContent } from '../../context/ContentContext'
 
 export function LeadershipSection() {
     const { isDark } = useTheme()
-    const { localLeaders } = useContent()
-
-    const hasContent = localLeaders.length > 0
+    const { getPostsBySection } = useContent()
+    // Filter for published leadership posts
+    const leaders = getPostsBySection('leadership').filter(p => p.isPublished)
+    const hasContent = leaders.length > 0
 
     const headerContent = (
         <h1
@@ -28,66 +29,114 @@ export function LeadershipSection() {
     const renderLeaderCard = (leader: any) => (
         <div
             key={leader.id}
+            data-cursor="view"
             style={{
-                background: 'rgba(40, 40, 40, 0.6)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(20, 20, 25, 0.65)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
                 borderRadius: '16px',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                minWidth: '260px',
-                maxWidth: '280px',
+                width: '300px',
+                height: '420px', // Slightly taller to accommodate margins
                 flexShrink: 0,
                 transition: 'all 0.3s ease',
-                cursor: 'default'
+                cursor: 'pointer',
+                zIndex: 5,
+                isolation: 'isolate',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                padding: '24px', // Increased padding for "more margin" around everything
+                gap: '20px' // Increased gap between image and text
             }}
             onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)'
                 e.currentTarget.style.transform = 'translateY(-4px)'
-                e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.3)'
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'
+                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                e.currentTarget.style.zIndex = '10'
+                const img = e.currentTarget.querySelector('img')
+                if (img) img.style.filter = 'grayscale(0%)'
             }}
             onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)'
                 e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = 'none'
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+                e.currentTarget.style.zIndex = '5'
+                const img = e.currentTarget.querySelector('img')
+                if (img) img.style.filter = 'grayscale(100%)'
+            }}
+            onClick={() => {
+                // Navigate to leader detail page
+                window.location.href = `/leader/${leader.id}`
             }}
         >
-            {/* Image */}
-            <div style={{ height: '280px', width: '100%', overflow: 'hidden' }}>
-                <img
-                    src={leader.image}
-                    alt={leader.name}
-                    style={{
+            {/* Image - Takes majority of space */}
+            <div style={{
+                flex: 1,
+                width: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                borderRadius: '12px',
+                // Adding a bit of extra "frame" look if needed, but padding handles the margin around the card edge.
+                // Depending on "margin around the image", user might mean space between image edge and card edge.
+                // The padding: 24px on parent achieves this.
+            }}>
+                {leader.image ? (
+                    <img
+                        src={leader.image}
+                        alt={leader.title}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            objectPosition: 'top center',
+                            filter: 'grayscale(100%)', // Default to black/white
+                            transition: 'filter 0.3s ease' // Smooth transition for color
+                        }}
+                    />
+                ) : (
+                    // Fallback placeholder
+                    <div style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover'
-                    }}
-                />
+                        background: 'linear-gradient(45deg, #1a1a1a, #2a2a2a)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'rgba(255,255,255,0.2)'
+                    }}>
+                        <span>No Image</span>
+                    </div>
+                )}
             </div>
-            {/* Info */}
+            {/* Info - Pinned to bottom, Centered */}
             <div style={{
-                padding: '20px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '4px'
+                gap: '6px',
+                justifyContent: 'flex-end',
+                alignItems: 'center', // Center text horizontally
+                textAlign: 'center'   // Ensure text alignment is centered
             }}>
                 <h3 style={{
                     margin: 0,
-                    fontSize: '1.2rem',
+                    fontSize: '1.4rem',
                     fontWeight: 700,
-                    color: '#ffffff'
+                    color: '#ffffff',
+                    fontFamily: '"Geist", sans-serif'
                 }}>
-                    {leader.name}
+                    {leader.title}
                 </h3>
                 <p style={{
                     margin: 0,
-                    fontSize: '0.9rem',
-                    color: '#ff3333',
-                    fontWeight: 600
+                    fontSize: '0.95rem',
+                    color: '#ff3333', // Red color as requested
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
                 }}>
-                    {leader.role}
+                    {leader.subtitle}
                 </p>
             </div>
         </div>
@@ -100,7 +149,7 @@ export function LeadershipSection() {
             subtitle="Meet the team leading SIO Delhi"
         >
             {hasContent ? (
-                localLeaders.map(renderLeaderCard)
+                leaders.map(renderLeaderCard)
             ) : (
                 <div style={{
                     minWidth: '100%',

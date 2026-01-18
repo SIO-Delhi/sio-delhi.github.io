@@ -1,339 +1,191 @@
-
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import SplitType from 'split-type'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Send, CheckCircle } from 'lucide-react'
-import { toast, Toaster } from 'sonner'
+import { Instagram, Youtube, Facebook, ArrowUpRight } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const contactSchema = z.object({
-    name: z.string().min(2, 'Name must be at least 2 characters'),
-    email: z.string().email('Please enter a valid email'),
-    subject: z.string().min(5, 'Subject must be at least 5 characters'),
-    message: z.string().min(20, 'Message must be at least 20 characters'),
-})
-
-type ContactForm = z.infer<typeof contactSchema>
+const XLogo = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
+        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+    </svg>
+)
 
 export function ContactSection() {
     const sectionRef = useRef<HTMLElement>(null)
-    const headingRef = useRef<HTMLParagraphElement>(null)
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [isSubmitted, setIsSubmitted] = useState(false)
+    const containerRef = useRef<HTMLDivElement>(null)
     const { isDark } = useTheme()
-
-    const {
-        register,
-        handleSubmit,
-        reset,
-        formState: { errors },
-    } = useForm<ContactForm>({
-        resolver: zodResolver(contactSchema),
-    })
 
     useEffect(() => {
         const ctx = gsap.context(() => {
-            // Safety check for headingRef
-            if (headingRef.current) {
-                const headingSplit = new SplitType(headingRef.current, {
-                    types: 'chars',
-                    tagName: 'span',
-                })
-
-                gsap.fromTo(
-                    headingSplit.chars,
-                    { opacity: 0, y: 40 },
-                    {
-                        opacity: 1,
-                        y: 0,
-                        duration: 0.6,
-                        stagger: 0.02,
-                        ease: 'power3.out',
-                        scrollTrigger: {
-                            trigger: headingRef.current,
-                            start: 'top 80%',
-                        },
-                    }
-                )
-
-                // Cleanup SplitType specific to this element
-                // We return this cleanup function, but gsap.context handles most cleanup.
-                // However, splitType modifies DOM, so we should revert it.
-                // We'll trust ctx.revert() to handle most, but SplitType acts outside GSAP somewhat.
-                // To be clean, we can revert manually on cleanup.
-            }
-
             gsap.fromTo(
-                '.contact-form',
-                { opacity: 0, y: 40 },
+                '.animate-up',
+                { opacity: 0, y: 30 },
                 {
                     opacity: 1,
                     y: 0,
                     duration: 0.8,
+                    stagger: 0.1,
+                    ease: 'power3.out',
                     scrollTrigger: {
-                        trigger: '.contact-form',
+                        trigger: containerRef.current,
                         start: 'top 75%',
                     },
                 }
             )
         }, sectionRef)
 
-        return () => {
-            ctx.revert()
-            // If we had a reference to split instance, we could revert it here too.
-            // But recreating the component handles resets well enough usually.
-        }
+        return () => ctx.revert()
     }, [])
-
-    const onSubmit = async (data: ContactForm) => {
-        setIsSubmitting(true)
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-        console.log('Form submitted:', data)
-        toast.success('Message sent! We will get back to you soon.')
-        reset()
-        setIsSubmitted(true)
-        setTimeout(() => setIsSubmitted(false), 3000)
-        setIsSubmitting(false)
-    }
-
-    const inputStyle: React.CSSProperties = {
-        width: '100%',
-        height: '40px',
-        padding: '0 12px',
-        borderRadius: '10px',
-        background: isDark ? 'rgba(187, 187, 187, 0.15)' : 'rgba(0, 0, 0, 0.05)',
-        border: isDark ? '1px solid rgba(136, 136, 136, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
-        color: isDark ? '#ffffff' : '#111111',
-        fontSize: '14px',
-        outline: 'none',
-        transition: 'all 0.3s ease',
-    }
 
     return (
         <section
             id="contact"
             ref={sectionRef}
             style={{
-                padding: '96px 0',
+                padding: '120px 0',
                 background: 'transparent',
-                transition: 'background 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '60vh',
+                position: 'relative',
+                zIndex: 10
             }}
         >
-            <Toaster position="top-center" richColors />
-
-            <div className="container">
-                <div style={{
+            <div
+                ref={containerRef}
+                style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '64px',
-                }}>
-                    {/* Header */}
-                    <div>
-                        <div
+                    alignItems: 'flex-start', // Left align
+                    textAlign: 'left', // Left align text
+                    gap: '24px', // Reduced gap
+                    width: '100%',
+                    paddingLeft: '8%', // Match SectionLayout
+                    paddingRight: '8%'
+                }}
+            >
+                {/* Header Block */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                    <span className="animate-up" style={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        letterSpacing: '0.2em',
+                        textTransform: 'uppercase',
+                        color: isDark ? '#ffffff' : '#000000',
+                        opacity: 0.8,
+                        marginLeft: '4px' // Subtle alignment correction
+                    }}>
+                        Get in Touch
+                    </span>
+
+                    <h2 className="animate-up" style={{
+                        fontSize: 'clamp(2.5rem, 5vw, 4.5rem)', // Matched other sections
+                        fontWeight: 700,
+                        color: isDark ? '#ffffff' : '#111111',
+                        margin: 0,
+                        lineHeight: 1, // Tighter line height
+                        letterSpacing: '-0.02em',
+                        fontFamily: '"Geist", sans-serif',
+                        textShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                    }}>
+                        Connect <span style={{ color: '#ff3333' }}>with us</span>
+                    </h2>
+
+                    <p className="animate-up" style={{
+                        marginTop: '12px',
+                        fontSize: '1.2rem',
+                        color: isDark ? '#e0e0e0' : '#333333',
+                        maxWidth: '600px',
+                        lineHeight: 1.4, // Reduced line spacing
+                        fontWeight: 400,
+                        textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                    }}>
+                        Interested in collaborating on research, initiatives, or just want to say hi? We'd love to hear from you.
+                    </p>
+                </div>
+
+                {/* Email Button */}
+                <a
+                    href="mailto:contact@sio-delhi.org"
+                    className="animate-up group"
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '24px 48px',
+                        borderRadius: '100px',
+                        background: 'rgba(20, 20, 20, 0.6)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        color: '#ffffff',
+                        fontSize: '1.35rem',
+                        fontWeight: 500,
+                        textDecoration: 'none',
+                        transition: 'all 0.3s ease',
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        marginTop: '16px',
+                        cursor: 'pointer',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px)'
+                        e.currentTarget.style.background = 'rgba(30, 30, 30, 0.8)'
+                        e.currentTarget.style.borderColor = '#ffffff'
+                        e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)'
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.background = 'rgba(20, 20, 20, 0.6)'
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+                        e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)'
+                    }}
+                >
+                    contact@sio-delhi.org
+                    <ArrowUpRight size={28} />
+                </a>
+
+                {/* Social Links */}
+                <div
+                    className="animate-up"
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '32px',
+                        marginTop: '24px'
+                    }}
+                >
+                    {[
+                        { icon: Instagram, label: 'Instagram', href: 'https://www.instagram.com/siodelhi/?hl=en' },
+                        { icon: XLogo, label: 'Twitter', href: 'https://x.com/siodelhi?lang=en' },
+                        { icon: Facebook, label: 'Facebook', href: 'https://www.facebook.com/delhisio/' },
+                        { icon: Youtube, label: 'YouTube', href: 'https://youtube.com/c/SIODELHI' }
+                    ].map((social) => (
+                        <a
+                            key={social.label}
+                            href={social.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                padding: '10px 20px',
-                                background: 'rgba(255,255,255,0.05)',
-                                borderRadius: '100px',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                marginBottom: '24px',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: '8px',
-                                    height: '8px',
-                                    borderRadius: '50%',
-                                    background: '#e82828',
-                                }}
-                            />
-                            <span
-                                style={{
-                                    fontSize: '14px',
-                                    fontWeight: 500,
-                                    color: '#ffffff',
-                                }}
-                            >
-                                Contact Us
-                            </span>
-                        </div>
-                        <p
-                            ref={headingRef}
-                            style={{
-                                color: isDark ? '#999999' : '#666666',
-                                fontSize: '18px',
-                                maxWidth: '500px',
-                                lineHeight: 1.6,
-                                transition: 'color 0.3s ease',
-                            }}>
-                            Have a question or want to get involved? We'd love to hear from you. Connect with us to make a difference.
-                        </p>
-                    </div>
-
-                    {/* Form */}
-                    <form
-                        className="contact-form"
-                        onSubmit={handleSubmit(onSubmit)}
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '20px',
-                            maxWidth: '620px',
-                        }}
-                    >
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                            {/* Name */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <label
-                                    htmlFor="name"
-                                    style={{
-                                        fontSize: '14px',
-                                        fontWeight: 500,
-                                        color: isDark ? '#ffffff' : '#111111',
-                                        transition: 'color 0.3s ease',
-                                    }}
-                                >
-                                    Full Name
-                                </label>
-                                <input
-                                    id="name"
-                                    type="text"
-                                    {...register('name')}
-                                    style={inputStyle}
-                                    placeholder="John Doe"
-                                />
-                                {errors.name && (
-                                    <p style={{ color: '#f43f5e', fontSize: '12px' }}>{errors.name.message}</p>
-                                )}
-                            </div>
-
-                            {/* Email */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <label
-                                    htmlFor="email"
-                                    style={{
-                                        fontSize: '14px',
-                                        fontWeight: 500,
-                                        color: isDark ? '#ffffff' : '#111111',
-                                        transition: 'color 0.3s ease',
-                                    }}
-                                >
-                                    Email
-                                </label>
-                                <input
-                                    id="email"
-                                    type="email"
-                                    {...register('email')}
-                                    style={inputStyle}
-                                    placeholder="john@example.com"
-                                />
-                                {errors.email && (
-                                    <p style={{ color: '#f43f5e', fontSize: '12px' }}>{errors.email.message}</p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Subject */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <label
-                                htmlFor="subject"
-                                style={{
-                                    fontSize: '14px',
-                                    fontWeight: 500,
-                                    color: isDark ? '#ffffff' : '#111111',
-                                    transition: 'color 0.3s ease',
-                                }}
-                            >
-                                Subject
-                            </label>
-                            <input
-                                id="subject"
-                                type="text"
-                                {...register('subject')}
-                                style={inputStyle}
-                                placeholder="How can we help?"
-                            />
-                            {errors.subject && (
-                                <p style={{ color: '#f43f5e', fontSize: '12px' }}>{errors.subject.message}</p>
-                            )}
-                        </div>
-
-                        {/* Message */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <label
-                                htmlFor="message"
-                                style={{
-                                    fontSize: '14px',
-                                    fontWeight: 500,
-                                    color: isDark ? '#ffffff' : '#111111',
-                                    transition: 'color 0.3s ease',
-                                }}
-                            >
-                                Message
-                            </label>
-                            <textarea
-                                id="message"
-                                {...register('message')}
-                                style={{
-                                    ...inputStyle,
-                                    height: 'auto',
-                                    minHeight: '100px',
-                                    padding: '12px',
-                                    resize: 'vertical',
-                                }}
-                                placeholder="Your message here..."
-                            />
-                            {errors.message && (
-                                <p style={{ color: '#f43f5e', fontSize: '12px' }}>{errors.message.message}</p>
-                            )}
-                        </div>
-
-                        {/* Submit */}
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            style={{
-                                width: '100%',
-                                height: '40px',
-                                padding: '16px 28px',
-                                borderRadius: '118px',
-                                background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                                border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
-                                color: isDark ? '#ffffff' : '#111111',
+                                color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                                fontSize: '0.9rem',
                                 fontWeight: 500,
-                                fontSize: '16px',
-                                display: 'inline-flex',
+                                textDecoration: 'none',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                                transition: 'color 0.2s ease',
+                                display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                                opacity: isSubmitting ? 0.7 : 1,
-                                transition: 'all 0.3s ease',
+                                gap: '8px'
                             }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = isDark ? '#ffffff' : '#000000'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'}
                         >
-                            {isSubmitting ? (
-                                'Sending...'
-                            ) : isSubmitted ? (
-                                <>
-                                    <CheckCircle size={16} />
-                                    Sent!
-                                </>
-                            ) : (
-                                <>
-                                    Send Message
-                                    <Send size={16} />
-                                </>
-                            )}
-                        </button>
-                    </form>
+                            {social.label}
+                        </a>
+                    ))}
                 </div>
             </div>
         </section>

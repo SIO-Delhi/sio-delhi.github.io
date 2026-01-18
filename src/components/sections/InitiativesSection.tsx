@@ -43,7 +43,7 @@ export function InitiativesSection() {
                         description={card.subtitle || card.content.replace(/<[^>]+>/g, '').substring(0, 100)}
                         publishedDate={(card as any).publishedDate || card.createdAt}
                         image={(card as any).coverImage || card.image}
-                        onClick={() => navigate(`/services/${card.id}`, { state: { post: card } })}
+                        onClick={() => navigate(`/initiative/${card.id}`, { state: { post: card } })}
                     />
                 ))
             ) : (

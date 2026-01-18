@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect, useCallback } from 'react'
 
 interface SectionLayoutProps {
     id: string
@@ -24,26 +24,35 @@ export default function SectionLayout({
     // Removed useLayoutEffect as all GSAP animations were causing instability
     // The layout is now purely CSS-based for maximum stability
 
-    const checkScrollButtons = () => {
+    const checkScrollButtons = useCallback(() => {
         if (scrollContainerRef.current) {
             const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current
-            setCanScrollLeft(scrollLeft > 0)
-            setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10)
+            // Use a small threshold (2px) to account for browser rounding errors
+            setCanScrollLeft(scrollLeft > 2)
+            setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 2)
         }
-    }
+    }, [])
 
     useEffect(() => {
         checkScrollButtons()
-    }, [children])
+        window.addEventListener('resize', checkScrollButtons)
+        return () => window.removeEventListener('resize', checkScrollButtons)
+    }, [checkScrollButtons, children])
 
     const scroll = (direction: 'left' | 'right') => {
         if (scrollContainerRef.current) {
-            const scrollAmount = 320
+            const scrollAmount = 340 // Card width + gap
+            console.log(`Scrolling ${direction} by ${scrollAmount}`)
+
             scrollContainerRef.current.scrollBy({
                 left: direction === 'left' ? -scrollAmount : scrollAmount,
                 behavior: 'smooth'
             })
-            setTimeout(checkScrollButtons, 300)
+
+            // Check buttons after scrolling animation (approx 300ms)
+            setTimeout(checkScrollButtons, 350)
+        } else {
+            console.error('Scroll container ref is missing')
         }
     }
 
@@ -89,7 +98,9 @@ export default function SectionLayout({
                 {/* Navigation Arrows */}
                 <div style={{
                     display: 'flex',
-                    gap: '10px'
+                    gap: '10px',
+                    position: 'relative',
+                    zIndex: 50 // Ensure buttons are above everything
                 }}>
                     <button
                         onClick={() => scroll('left')}
@@ -143,16 +154,20 @@ export default function SectionLayout({
                 onScroll={checkScrollButtons}
                 style={{
                     display: 'flex',
-                    alignItems: 'flex-start', // Force top alignment to prevent vertical shifts
-                    gap: '12px',
+                    alignItems: 'flex-start', // Force top alignment
+                    gap: '24px',
                     overflowX: 'auto',
                     overflowY: 'hidden',
-                    paddingTop: '12px', // Optimized space for hover lift (4px)
+                    paddingTop: '12px',
                     paddingLeft: '8%',
                     paddingRight: '8%',
-                    paddingBottom: '40px', // Increased for shadow
+                    paddingBottom: '40px',
                     scrollbarWidth: 'none',
-                    msOverflowStyle: 'none'
+                    msOverflowStyle: 'none',
+                    // "Nice" Snap Scroll
+                    scrollSnapType: 'x mandatory',
+                    scrollPaddingLeft: '8%', // Matches container padding for perfect alignment
+                    scrollBehavior: 'smooth'
                 }}
             >
                 {children}
@@ -161,6 +176,10 @@ export default function SectionLayout({
             <style>{`
                 #${id} > div:last-of-type::-webkit-scrollbar {
                     display: none;
+                }
+                /* Target direct children (cards) to make them snap alignment points */
+                #${id} > div:last-of-type > * {
+                    scroll-snap-align: start;
                 }
             `}</style>
         </section>
