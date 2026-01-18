@@ -6,7 +6,7 @@ import { uploadImage, uploadPdf } from '../../lib/storage'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
-import { toast } from 'sonner'
+
 import { ArrowLeft, Save, Image as ImageIcon, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Loader2, FileText, X, Plus, Trash2, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify, Images, Eye, GripVertical } from 'lucide-react'
 import gsap from 'gsap'
 
