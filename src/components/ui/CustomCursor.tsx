@@ -15,6 +15,9 @@ export function CustomCursor() {
         // Set initial position off-screen
         gsap.set([dot, circle], { xPercent: -50, yPercent: -50, x: -100, y: -100 })
 
+        // Track active state
+        let isActive = false
+
         // Mouse move handler
         const handleMouseMove = (e: MouseEvent) => {
             const { clientX, clientY } = e
@@ -34,65 +37,52 @@ export function CustomCursor() {
                 duration: 0.5,
                 ease: 'power2.out',
             })
-        }
 
-        // Hover state handlers
-        const handleMouseEnter = () => {
-            // Hide the dot
-            gsap.to(dot, {
-                opacity: 0,
-                duration: 0.2,
-            })
+            // Check for viewable elements under cursor
+            const target = e.target as HTMLElement
+            const isViewable = target.closest('[data-cursor="view"], .cursor-view')
 
-            // Show and expand the circle
-            gsap.to(circle, {
-                width: 100,
-                height: 100,
-                opacity: 1,
-                duration: 0.4,
-                ease: 'power3.out',
-            })
-        }
+            if (isViewable && !isActive) {
+                isActive = true
+                console.log('Cursor enter viewable')
+                // Hide the dot
+                gsap.to(dot, {
+                    opacity: 0,
+                    duration: 0.2,
+                })
 
-        const handleMouseLeave = () => {
-            // Show the dot
-            gsap.to(dot, {
-                opacity: 1,
-                duration: 0.2,
-            })
-            // Hide the circle
-            gsap.to(circle, {
-                width: 0,
-                height: 0,
-                opacity: 0,
-                duration: 0.4,
-                ease: 'power3.out',
-            })
+                // Show and expand the circle
+                gsap.to(circle, {
+                    width: 100,
+                    height: 100,
+                    opacity: 1,
+                    duration: 0.4,
+                    ease: 'power3.out',
+                })
+            } else if (!isViewable && isActive) {
+                isActive = false
+                console.log('Cursor leave viewable')
+                // Show the dot
+                gsap.to(dot, {
+                    opacity: 1,
+                    duration: 0.2,
+                })
+                // Hide the circle
+                gsap.to(circle, {
+                    width: 0,
+                    height: 0,
+                    opacity: 0,
+                    duration: 0.4,
+                    ease: 'power3.out',
+                })
+            }
         }
 
         // Add event listeners
         window.addEventListener('mousemove', handleMouseMove)
 
-        // Listen for specific "view" elements only (blog posts, cards, etc.)
-        const addHoverListeners = () => {
-            const viewables = document.querySelectorAll('[data-cursor="view"], .cursor-view')
-            viewables.forEach((el) => {
-                el.addEventListener('mouseenter', handleMouseEnter)
-                el.addEventListener('mouseleave', handleMouseLeave)
-            })
-        }
-
-        // Initial setup and mutation observer for dynamic content
-        addHoverListeners()
-
-        const observer = new MutationObserver(() => {
-            addHoverListeners()
-        })
-        observer.observe(document.body, { childList: true, subtree: true })
-
         return () => {
             window.removeEventListener('mousemove', handleMouseMove)
-            observer.disconnect()
         }
     }, [])
 

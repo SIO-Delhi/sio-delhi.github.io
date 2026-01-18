@@ -6,7 +6,7 @@ import { uploadImage, uploadPdf } from '../../lib/storage'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
-import { toast } from 'sonner'
+
 import { ArrowLeft, Save, Image as ImageIcon, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Loader2, FileText, X, Plus, Trash2, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify, Images, Eye, GripVertical } from 'lucide-react'
 import gsap from 'gsap'
 
@@ -756,7 +756,11 @@ export function PostEditor() {
     const { sections, getPostById, addPost, updatePost, getSubsectionsBySection } = useContent()
     const navigate = useNavigate()
     const isEditMode = !!id
-    const section = sections.find(s => s.id === sectionId)
+
+    // Determine section ID (from URL param in create mode, or from post data in edit mode)
+    const post = isEditMode && id ? getPostById(id) : undefined
+    const effectiveSectionId = sectionId || post?.sectionId
+    const section = sections.find(s => s.id === effectiveSectionId)
 
     // Get parentId from URL query (when creating from SubsectionEditor)
     const urlParentId = searchParams.get('parentId') || ''
@@ -765,6 +769,7 @@ export function PostEditor() {
     const [title, setTitle] = useState('')
     const [subtitle, setSubtitle] = useState('')
     const [date, setDate] = useState('') // New Date State
+    const [order, setOrder] = useState<number>(0) // Order for Leadership/etc
     const [images, setImages] = useState<string[]>([]) // Cover image
     const [pdfUrl, setPdfUrl] = useState('')
     const [isSaving, setIsSaving] = useState(false)
@@ -801,6 +806,7 @@ export function PostEditor() {
                 }
                 setIsSubsection(post.isSubsection || false)
                 setParentId(post.parentId || '')
+                if (post.order) setOrder(post.order)
                 // Set date from createdAt
                 if (post.createdAt) {
                     setDate(new Date(post.createdAt).toISOString().split('T')[0])
@@ -1004,6 +1010,7 @@ export function PostEditor() {
             const postData = {
                 title,
                 subtitle,
+                order: order || 0,
                 content: finalContent,
                 image: images[0] || '',
                 pdfUrl: extractedPdfUrl || pdfUrl, // Use extracted or existing
@@ -1013,8 +1020,8 @@ export function PostEditor() {
 
             if (isEditMode && id) {
                 updatePost(id, { ...postData, isSubsection, parentId: parentId || undefined })
-            } else if (sectionId) {
-                addPost({ sectionId, isPublished: false, isSubsection, parentId: parentId || undefined, ...postData })
+            } else if (effectiveSectionId) {
+                addPost({ sectionId: effectiveSectionId, isPublished: false, isSubsection, parentId: parentId || undefined, ...postData })
             }
             navigate(-1)
         } catch (error) { console.error(error); alert('Failed to save') } finally { setIsSaving(false) }
@@ -1064,10 +1071,10 @@ export function PostEditor() {
                             <img src={images[0]} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px' }}>
                                 <button onClick={() => setImages([])} style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}>
-                                    <X size={14} /> Remove Cover
+                                    <X size={14} /> {effectiveSectionId === 'leadership' ? 'Remove Photo' : 'Remove Cover'}
                                 </button>
                                 <label style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}>
-                                    {isUploading ? 'Uploading...' : <> <ImageIcon size={14} /> Change </>}
+                                    {isUploading ? 'Uploading...' : <> <ImageIcon size={14} /> {effectiveSectionId === 'leadership' ? 'Change Photo' : 'Change'} </>}
                                     <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
                                 </label>
                             </div>
@@ -1075,7 +1082,7 @@ export function PostEditor() {
                     ) : (
                         <div style={{ width: '100%', borderBottom: '1px solid #333', paddingBottom: '24px' }}>
                             <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '0.9rem', cursor: 'pointer', padding: '8px 16px', borderRadius: '6px', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#222'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                <ImageIcon size={18} /> <span>{isUploading ? 'Uploading...' : 'Add Cover Image'}</span>
+                                <ImageIcon size={18} /> <span>{isUploading ? 'Uploading...' : (effectiveSectionId === 'leadership' ? 'Add Photo' : 'Add Cover Image')}</span>
                                 <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
                             </label>
                         </div>
@@ -1084,22 +1091,59 @@ export function PostEditor() {
 
                 {/* 2. Title & Subtitle */}
                 <div>
-                    <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Post Title" style={{ width: '100%', background: 'transparent', border: 'none', color: 'white', fontSize: '3.5rem', fontWeight: 800, outline: 'none', lineHeight: 1.1, marginBottom: '16px' }} />
-                    <input type="text" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Summary (shows on card)..." style={{ width: '100%', background: 'transparent', border: 'none', color: '#888', fontSize: '1.5rem', fontWeight: 400, outline: 'none', marginBottom: '16px' }} />
+                    <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
+                        {effectiveSectionId === 'leadership' ? 'NAME' : 'TITLE'}
+                    </label>
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder={effectiveSectionId === 'leadership' ? "Leader Name" : "Post Title"}
+                        style={{ width: '100%', background: 'transparent', border: 'none', color: 'white', fontSize: '3.5rem', fontWeight: 800, outline: 'none', lineHeight: 1.1, marginBottom: '16px' }}
+                    />
 
-                    {/* Date Field */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <label style={{ color: '#666', fontSize: '0.9rem', fontWeight: 500 }}>Publish Date:</label>
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            style={{
-                                padding: '8px 12px', borderRadius: '8px',
-                                background: '#1a1a1a', border: '1px solid #333', color: 'white',
-                                fontSize: '0.9rem', outline: 'none', colorScheme: 'dark'
-                            }}
-                        />
+                    <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
+                        {effectiveSectionId === 'leadership' ? 'POSITION' : 'SUBTITLE'}
+                    </label>
+                    <input
+                        type="text"
+                        value={subtitle}
+                        onChange={(e) => setSubtitle(e.target.value)}
+                        placeholder={effectiveSectionId === 'leadership' ? "Position / Role" : "Summary (shows on card)..."}
+                        style={{ width: '100%', background: 'transparent', border: 'none', color: '#888', fontSize: '1.5rem', fontWeight: 400, outline: 'none', marginBottom: '16px' }}
+                    />
+
+                    {/* Date and Order Fields */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <label style={{ color: '#666', fontSize: '0.9rem', fontWeight: 500 }}>Publish Date:</label>
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                style={{
+                                    padding: '8px 12px', borderRadius: '8px',
+                                    background: '#1a1a1a', border: '1px solid #333', color: 'white',
+                                    fontSize: '0.9rem', outline: 'none', colorScheme: 'dark'
+                                }}
+                            />
+                        </div>
+                        {effectiveSectionId === 'leadership' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <label style={{ color: '#666', fontSize: '0.9rem', fontWeight: 500 }}>Card Order:</label>
+                                <input
+                                    type="number"
+                                    value={order}
+                                    onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
+                                    placeholder="0"
+                                    style={{
+                                        width: '80px', padding: '8px 12px', borderRadius: '8px',
+                                        background: '#1a1a1a', border: '1px solid #333', color: 'white',
+                                        fontSize: '0.9rem', outline: 'none'
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -1108,7 +1152,7 @@ export function PostEditor() {
                     2. Subsections exist in this section
                     3. Creating a new post (not editing an existing one) 
                 */}
-                {!urlParentId && sectionId && getSubsectionsBySection(sectionId).length > 0 && !isEditMode && (
+                {!urlParentId && effectiveSectionId && getSubsectionsBySection(effectiveSectionId).length > 0 && !isEditMode && (
                     <div style={{ padding: '16px', background: '#1a1a1a', borderRadius: '12px', border: '1px solid #333' }}>
                         <div style={{ color: 'white', fontWeight: 600, marginBottom: '8px' }}>Parent Subsection (optional)</div>
                         <div style={{ color: '#666', fontSize: '0.85rem', marginBottom: '12px' }}>Nest this post inside a subsection</div>
@@ -1122,7 +1166,7 @@ export function PostEditor() {
                             }}
                         >
                             <option value="">No parent (top-level post)</option>
-                            {getSubsectionsBySection(sectionId).map(sub => (
+                            {getSubsectionsBySection(effectiveSectionId).map(sub => (
                                 <option key={sub.id} value={sub.id}>{sub.title}</option>
                             ))}
                         </select>

@@ -62,6 +62,75 @@ export function Layout({ children }: LayoutProps) {
         }
     }, [])
 
+    // Handle hash scrolling
+    useEffect(() => {
+        if (!location.hash) return
+
+        const scrollToHash = () => {
+            const hash = location.hash
+            if (!hash) return
+
+            const targetId = hash.replace('#', '')
+            // Standard offset to account for fixed navbar
+            const offset = -100
+
+            // Helper to find and scroll to element
+            const attemptScroll = () => {
+                const targetElement = document.getElementById(targetId)
+                if (targetElement) {
+                    const lenis = (window as any).lenis
+                    if (lenis) {
+                        // Lenis is ready, perform smooth scroll
+                        lenis.scrollTo(targetElement, { offset, immediate: false })
+                        return true
+                    }
+                    // If target exists but Lenis isn't ready yet, we might want to wait a bit 
+                    // unless we've been waiting too long. 
+                    // For now, let's allow the loop to continue until Lenis is ready OR timeout takes over fallback.
+                    // But to prevent infinite waiting if Lenis fails, the loop limit handles "giving up".
+                    // However, we need a way to say "We found it, but waiting for Lenis".
+                    // Simplification: Just allow native scroll fallback if Lenis really isn't there after a few tries?
+                    // Actually, Lenis inits very fast. If it's null, we should probably wait.
+                    return false
+                }
+                return false // Not found yet
+            }
+
+            // Attempt immediately
+            if (attemptScroll()) return
+
+            // Polling for dynamic content AND Lenis initialization
+            let attempts = 0
+            const maxAttempts = 40 // 4 seconds max (100ms interval)
+            const interval = setInterval(() => {
+                attempts++
+                const success = attemptScroll()
+                if (success) {
+                    clearInterval(interval)
+                } else if (attempts >= maxAttempts) {
+                    // Final fallback attempt using native scroll if we timed out
+                    const targetElement = document.getElementById(targetId)
+                    if (targetElement) {
+                        const elementPosition = targetElement.getBoundingClientRect().top + window.pageYOffset
+                        window.scrollTo({
+                            top: elementPosition + offset,
+                            behavior: 'smooth'
+                        })
+                    }
+                    clearInterval(interval)
+                }
+            }, 100) // Check every 100ms
+
+            return () => clearInterval(interval)
+        }
+
+        // Run on mount and hash change
+        const cleanup = scrollToHash()
+        return () => {
+            if (cleanup) cleanup()
+        }
+    }, [location.hash, location.pathname])
+
     // Page entry animation
     useEffect(() => {
         if (!mainRef.current) return

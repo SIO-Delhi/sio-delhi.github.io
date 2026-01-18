@@ -5,17 +5,26 @@ import { MediaSection } from '../components/sections/MediaSection'
 import { InitiativesSection } from '../components/sections/InitiativesSection'
 import { MoreSection } from '../components/sections/MoreSection'
 import { ContactSection } from '../components/sections/ContactSection'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { InteractiveFlag } from '../components/three/InteractiveFlag'
 
 export function HomePage() {
     const flagContainerRef = useRef<HTMLDivElement>(null)
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 1024)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
 
     useEffect(() => {
         // Global Scroll Trigger for Flag - Blur and move to center
         const onScroll = () => {
             const scrollY = window.scrollY
             const viewportHeight = window.innerHeight
+            const mobile = window.innerWidth < 1280 // Mobile/Tablet check
 
             // Progress from 0 to 1 over first 50% of viewport scroll
             const progress = Math.min(scrollY / (viewportHeight * 0.5), 1)
@@ -23,17 +32,34 @@ export function HomePage() {
             if (flagContainerRef.current) {
                 const blur = progress * 4 // Max 4px blur
                 const opacity = 1 - (progress * 0.4) // Fade slightly
-                const translateX = progress * 28 // Move to true center
-                const translateY = progress * 25 // Adjust vertical center
 
-                flagContainerRef.current.style.filter = `blur(${blur}px)`
-                flagContainerRef.current.style.opacity = `${opacity}`
-                flagContainerRef.current.style.transform = `translate(${translateX}vw, ${translateY}vh)`
+                if (mobile) {
+                    // Mobile: Just blur/fade
+                    // Position is now handled internally by InteractiveFlag (3D centering)
+                    flagContainerRef.current.style.filter = `blur(${blur}px)`
+                    flagContainerRef.current.style.opacity = `${opacity}`
+                    flagContainerRef.current.style.transform = `none`
+                } else {
+                    // Desktop: Move to center
+                    const translateX = progress * 28 // Move to true center
+                    const translateY = progress * 25 // Adjust vertical center
+
+                    flagContainerRef.current.style.filter = `blur(${blur}px)`
+                    flagContainerRef.current.style.opacity = `${opacity}`
+                    flagContainerRef.current.style.transform = `translate(${translateX}vw, ${translateY}vh) scale(1)`
+                }
             }
         }
 
+        // Initial call to set position
+        onScroll()
+
         window.addEventListener('scroll', onScroll, { passive: true })
-        return () => window.removeEventListener('scroll', onScroll)
+        window.addEventListener('resize', onScroll) // Create responsive update
+        return () => {
+            window.removeEventListener('scroll', onScroll)
+            window.removeEventListener('resize', onScroll)
+        }
     }, [])
 
     return (
@@ -50,10 +76,10 @@ export function HomePage() {
                     willChange: 'filter, opacity, transform'
                 }}
             >
-                <InteractiveFlag />
+                <InteractiveFlag isMobile={isMobile} />
             </div>
 
-            {/* Global Blurred Gradient - Right Side - Extended */}
+            {/* Global Blurred Gradient - Responsive Position */}
             <div
                 style={{
                     position: 'fixed',
@@ -61,9 +87,12 @@ export function HomePage() {
                     right: 0,
                     width: '100vw',
                     height: '100vh',
-                    background: 'radial-gradient(ellipse 130% 100% at 160% 50%, rgba(255, 59, 59, 0.8) 0%, rgba(255, 59, 59, 0.5) 40%, rgba(255, 59, 59, 0.2) 70%, transparent 100%)',
+                    background: isMobile
+                        ? 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, transparent 100%), linear-gradient(to bottom, rgba(255, 59, 59, 0.6) 0%, rgba(255, 59, 59, 0.3) 60%, transparent 100%)' // Black Bottom-up + Red Top-down (Inverted & Extended)
+                        : 'radial-gradient(ellipse 130% 100% at 130% 50%, rgba(255, 59, 59, 0.8) 0%, rgba(255, 59, 59, 0.5) 40%, rgba(255, 59, 59, 0.2) 70%, transparent 100%)', // Right-side for desktop
                     zIndex: 1, // Below flag
                     pointerEvents: 'none',
+                    transition: 'background 0.5s ease'
                 }}
             />
 

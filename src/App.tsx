@@ -31,6 +31,7 @@ function App() {
           <Route element={<Layout><PostDetail sectionType="initiatives" /></Layout>} path="/initiative/:id" />
           <Route element={<Layout><PostDetail sectionType="media" /></Layout>} path="/media/:id" />
           <Route element={<Layout><PostDetail sectionType="leadership" /></Layout>} path="/leader/:id" />
+          <Route element={<Layout><PostDetail sectionType="resources" /></Layout>} path="/resource/:id" />
 
           {/* Admin Routes - NOT wrapped in Layout */}
           <Route path="/admin/login" element={<AdminLogin />} />

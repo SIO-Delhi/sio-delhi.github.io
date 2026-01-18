@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
-import { ArrowLeft, Calendar, User, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react'
+import { Calendar, User, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
 import { SectionCard } from '../components/ui/SectionCard'
@@ -330,7 +330,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
 }
 
 interface PostDetailProps {
-    sectionType: 'about' | 'initiatives' | 'media' | 'leadership'
+    sectionType: 'about' | 'initiatives' | 'media' | 'leadership' | 'resources'
 }
 
 export function PostDetail({ sectionType }: PostDetailProps) {
@@ -360,10 +360,21 @@ export function PostDetail({ sectionType }: PostDetailProps) {
         about: { label: 'About', color: '#ef4444' },
         initiatives: { label: 'Initiative', color: '#e82828' },
         media: { label: 'News', color: '#3b82f6' },
-        leadership: { label: 'Leader', color: '#10b981' }
+        leadership: { label: 'Leader', color: '#10b981' },
+        resources: { label: 'Resource', color: '#8b5cf6' }
     }
 
     const config = sectionConfig[sectionType]
+
+    // Determine Hero Image validity
+    // Media always shows image
+    // Default Layout shows image if NOT a subsection parent and NOT a subsection child
+    const isSubsection = !!post.isSubsection
+    const isSubsectionChild = !!post.parentId
+    const showHero = post.image && (
+        sectionType === 'media' ||
+        (!['leadership', 'subsection'].includes(sectionType) && !isSubsection && !isSubsectionChild)
+    )
 
     // Render section-specific content
     const renderContent = () => {
@@ -378,8 +389,8 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     }
 
     return (
-        <div style={{ paddingTop: '100px', paddingBottom: '80px', minHeight: '100vh', background: 'transparent' }}>
-            {/* Gradient Background */}
+        <div style={{ paddingTop: showHero ? '0' : '100px', paddingBottom: '80px', minHeight: '100vh', background: 'transparent' }}>
+            {/* Gradient Background (Global) */}
             <div
                 style={{
                     position: 'fixed',
@@ -393,29 +404,40 @@ export function PostDetail({ sectionType }: PostDetailProps) {
                 }}
             />
 
-            <div className="container" style={{ maxWidth: '900px' }}>
-                <button
-                    onClick={() => navigate(-1)}
-                    style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
-                        textDecoration: 'none',
-                        marginBottom: '32px',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        transition: 'color 0.2s',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 0
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = config.color}
-                    onMouseLeave={(e) => e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'}
-                >
-                    <ArrowLeft size={16} /> Back
-                </button>
+            {/* Hero Image (Wide) */}
+            {showHero && (
+                <div style={{
+                    width: '100%',
+                    height: '45vh', // Reduced from 60vh
+                    minHeight: '350px',
+                    maxHeight: '480px', // Reduced max height
+                    position: 'relative',
+                    marginBottom: '0', // Reduced to allow button overlap
+                    overflow: 'hidden',
+                    maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)' // Smooth fade out
+                }}>
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.5) 100%)',
+                        zIndex: 1
+                    }} />
+                    <img
+                        src={post.image}
+                        alt={post.title}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            objectPosition: 'center 20%', // Shift focus slightly up
+                        }}
+                    />
+                </div>
+            )}
+
+            <div className="container" style={{ maxWidth: '900px', position: 'relative', zIndex: 2 }}>
+                {/* Back button removed */}
 
                 {renderContent()}
             </div>
@@ -542,7 +564,8 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
                 backdropFilter: 'blur(12px)',
                 border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
                 overflow: 'hidden',
-                maxWidth: '450px',
+                width: '100%',
+                // maxWidth removed to fill content
                 transition: 'all 0.3s ease',
                 transform: isHovered ? 'translateY(-2px)' : 'none',
                 boxShadow: isHovered ? '0 8px 30px rgba(0,0,0,0.15)' : 'none'
@@ -755,25 +778,7 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
             {/* Read Article Button - Only show for non-subsection posts */}
             {!isSubsection && <ReadArticleButton post={post} isDark={isDark} />}
 
-            {/* Cover Image - Only show for non-subsection posts */}
-            {!isSubsection && post.image && (
-                <div
-                    style={{
-                        width: '100%',
-                        height: '400px',
-                        borderRadius: '24px',
-                        overflow: 'hidden',
-                        marginBottom: '40px',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
-                    }}
-                >
-                    <img
-                        src={post.image}
-                        alt={post.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                </div>
-            )}
+            {/* Cover Image moved to Hero */}
 
             {/* PDF Flipbook (if PDF attached AND not embedded in content) */}
             {post.pdfUrl && !post.content?.includes('block-pdf') && (
@@ -868,70 +873,99 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
 // Leadership-specific layout (profile style)
 function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
     return (
-        <div style={{ textAlign: 'center' }}>
-            {/* Large Profile Photo */}
-            {post.image && (
-                <div
-                    style={{
-                        width: '200px',
-                        height: '200px',
-                        borderRadius: '24px',
-                        overflow: 'hidden',
-                        margin: '0 auto 32px',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-                        border: '4px solid rgba(255,255,255,0.1)'
-                    }}
-                >
-                    <img
-                        src={post.image}
-                        alt={post.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                </div>
-            )}
-
-            <h1 style={{
-                fontSize: 'clamp(2rem, 4vw, 3rem)',
-                fontWeight: 700,
-                color: isDark ? '#ffffff' : '#111111',
-                marginBottom: '8px',
-                lineHeight: 1.2
+        <div style={{
+            padding: '40px',
+            borderRadius: '24px',
+            background: isDark
+                ? 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)'
+                : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
+            backdropFilter: 'blur(12px)',
+            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            display: 'flex',
+            flexDirection: 'row',
+            gap: '48px',
+            alignItems: 'flex-start',
+            flexWrap: 'wrap'
+        }}>
+            {/* Left Column: Profile */}
+            <div style={{
+                flexShrink: 0,
+                width: '320px',
+                maxWidth: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '24px',
+                alignItems: 'center',
+                textAlign: 'center'
             }}>
-                {post.title}
-            </h1>
+                {/* Photo */}
+                {post.image && (
+                    <div
+                        style={{
+                            width: '100%',
+                            borderRadius: '16px',
+                            overflow: 'hidden',
+                            boxShadow: '0 12px 24px rgba(0,0,0,0.2)',
+                            aspectRatio: '3/4'
+                        }}
+                    >
+                        <img
+                            src={post.image}
+                            alt={post.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                    </div>
+                )}
 
-            {post.subtitle && (
-                <p style={{
-                    fontSize: '1.1rem',
-                    color: '#10b981',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    marginBottom: '40px'
-                }}>
-                    {post.subtitle}
-                </p>
-            )}
+                {/* Name & Position */}
+                <div>
+                    <h1 style={{
+                        fontSize: '1.75rem',
+                        fontWeight: 700,
+                        color: isDark ? '#ffffff' : '#111111',
+                        margin: '0 0 8px 0',
+                        lineHeight: 1.1
+                    }}>
+                        {post.title}
+                    </h1>
 
-            {/* Bio Content */}
-            {post.content && (
-                <div
-                    className="leader-bio"
-                    style={{
-                        color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
-                        fontSize: '1.1rem',
-                        lineHeight: 1.8,
-                        textAlign: 'left',
-                        maxWidth: '700px',
-                        margin: '0 auto',
-                        padding: '40px',
-                        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                        borderRadius: '24px',
-                        border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)'
-                    }}
-                    dangerouslySetInnerHTML={{ __html: post.content }}
-                />
-            )}
+                    {post.subtitle && (
+                        <p style={{
+                            fontSize: '0.9rem',
+                            color: '#ff3b3b',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                            margin: 0
+                        }}>
+                            {post.subtitle}
+                        </p>
+                    )}
+                </div>
+            </div>
+
+            {/* Right Column: Bio Content */}
+            <div style={{ flex: 1, minWidth: '300px' }}>
+                {post.content && (
+                    <div
+                        className="leader-bio"
+                        style={{
+                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            fontSize: '1.1rem',
+                            lineHeight: 1.8,
+                            textAlign: 'left'
+                        }}
+                    >
+                        {/* We use ContentBlockRenderer but cheat by overriding styles via CSS if needed, 
+                            or simpler: Just render the content directly if it's text. 
+                            Given the user wants a single card, forcing ContentBlockRenderer (which has its own cards) is bad.
+                            I'll basically unwind the renderer for this specific view to just be the content.
+                         */}
+                        <div dangerouslySetInnerHTML={{ __html: post.content }} />
+                    </div>
+                )}
+            </div>
         </div>
     )
 }
@@ -1001,25 +1035,7 @@ function MediaLayout({ post, isDark }: { post: any; isDark: boolean }) {
                 </div>
             </div>
 
-            {/* Cover Image */}
-            {post.image && (
-                <div
-                    style={{
-                        width: '100%',
-                        height: '450px',
-                        borderRadius: '16px',
-                        overflow: 'hidden',
-                        marginBottom: '40px',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
-                    }}
-                >
-                    <img
-                        src={post.image}
-                        alt={post.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                </div>
-            )}
+            {/* Cover Image moved to Hero */}
 
             {/* Article Content */}
             {post.content && (

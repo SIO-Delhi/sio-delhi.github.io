@@ -98,10 +98,10 @@ export function Footer() {
 
                     {/* Social Icons */}
                     <div className="footer-socials" style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                        <a href="https://www.instagram.com/siodelhi/?hl=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#888', transition: 'color 0.2s' }} aria-label="Instagram"><Instagram size={20} /></a>
-                        <a href="https://x.com/siodelhi?lang=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#888', transition: 'color 0.2s' }} aria-label="X (Twitter)"><XLogo size={18} /></a>
-                        <a href="https://youtube.com/c/SIODELHI" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#888', transition: 'color 0.2s' }} aria-label="YouTube"><Youtube size={20} /></a>
-                        <a href="https://www.facebook.com/delhisio/" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#888', transition: 'color 0.2s' }} aria-label="Facebook"><Facebook size={20} /></a>
+                        <a href="https://www.instagram.com/siodelhi/?hl=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="Instagram"><Instagram size={20} /></a>
+                        <a href="https://x.com/siodelhi?lang=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="X (Twitter)"><XLogo size={18} /></a>
+                        <a href="https://youtube.com/c/SIODELHI" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="YouTube"><Youtube size={20} /></a>
+                        <a href="https://www.facebook.com/delhisio/" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="Facebook"><Facebook size={20} /></a>
                     </div>
                     <style>{`
                         .social-icon:hover { color: #fff !important; transform: translateY(-2px); }
@@ -115,7 +115,7 @@ export function Footer() {
                                 href={`#${link.toLowerCase()}`}
                                 className="footer-link"
                                 style={{
-                                    color: '#888',
+                                    color: '#e0e0e0', // Increased brightness
                                     fontSize: '0.85rem',
                                     fontWeight: 500,
                                     textTransform: 'uppercase',
@@ -124,7 +124,7 @@ export function Footer() {
                                     textDecoration: 'none'
                                 }}
                                 onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                                onMouseLeave={(e) => (e.currentTarget.style.color = '#888')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = '#e0e0e0')}
                                 onClick={(e) => {
                                     e.preventDefault()
                                     scrollToSection(`#${link.toLowerCase()}`)
@@ -137,7 +137,7 @@ export function Footer() {
 
                     {/* Copyright & Description */}
                     <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                        <p style={{ color: '#444', fontSize: '14px', lineHeight: 1.6 }}>
+                        <p style={{ color: '#b0b0b0', fontSize: '14px', lineHeight: 1.6 }}> {/* Lighter grey for copy */}
                             © {new Date().getFullYear()} Students Islamic Organisation of India - Delhi Zone. <br />
                             All rights reserved.
                         </p>
@@ -145,7 +145,7 @@ export function Footer() {
 
                     {/* Development Credits */}
                     <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
-                        <p style={{ color: '#666', fontSize: '14px', margin: 0 }}>
+                        <p style={{ color: '#999', fontSize: '14px', margin: 0 }}> {/* Lighter Credits */}
                             Development by <a href="https://github.com/0xAdnan" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>0xAdnan</a>
                         </p>
                         <button
@@ -153,14 +153,14 @@ export function Footer() {
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: '#444',
+                                color: '#aaa', // lighter button text
                                 fontSize: '13px',
                                 cursor: 'pointer',
                                 textDecoration: 'underline',
                                 padding: '4px'
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = '#888')}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = '#444')}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#aaa')}
                         >
                             Full credits
                         </button>

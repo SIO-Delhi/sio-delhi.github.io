@@ -1,137 +1,151 @@
-import { useEffect, useRef } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useTheme } from '../../context/ThemeContext'
-import { FileText, Users, Calendar, Download } from 'lucide-react'
 
-gsap.registerPlugin(ScrollTrigger)
-
-const resources = [
-    { icon: <FileText size={24} />, title: 'Constitution', desc: 'Read our organizational constitution' },
-    { icon: <Users size={24} />, title: 'Join Us', desc: 'Become a member of our movement' },
-    { icon: <Calendar size={24} />, title: 'Calendar', desc: 'Upcoming events and schedule' },
-    { icon: <Download size={24} />, title: 'Downloads', desc: 'Resources, logos, and materials' },
-]
+import SectionLayout from '../layout/SectionLayout'
+import { FileText } from 'lucide-react'
+import { useContent } from '../../context/ContentContext'
 
 export function MoreSection() {
-    const sectionRef = useRef<HTMLElement>(null)
-    const { isDark } = useTheme()
+    const { getPostsBySection } = useContent()
+    const resources = getPostsBySection('more').filter(p => p.isPublished)
 
-    useEffect(() => {
-        const ctx = gsap.context(() => {
-            gsap.fromTo(
-                '.resource-card',
-                { opacity: 0, y: 20 },
-                {
-                    opacity: 1,
-                    y: 0,
-                    duration: 0.6,
-                    stagger: 0.1,
-                    ease: 'power3.out',
-                    scrollTrigger: {
-                        trigger: sectionRef.current,
-                        start: 'top 80%',
-                    },
-                }
-            )
-        }, sectionRef)
+    // Only render if we have posts
+    // if (resources.length === 0) return null // Removed to keep section visible
 
-        return () => ctx.revert()
-    }, [])
-
-    return (
-        <section
-            id="more"
-            ref={sectionRef}
+    const headerContent = (
+        <h1
             style={{
-                padding: '100px 24px',
-                background: 'transparent',
-                transition: 'background 0.3s ease',
+                fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                fontWeight: 700,
+                color: '#ffffff',
+                lineHeight: 1.1,
+                margin: 0,
+                fontFamily: '"Geist", sans-serif',
+                letterSpacing: '-0.02em'
             }}
         >
-            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div
-                    style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '10px 20px',
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: '100px',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        marginBottom: '60px',
-                    }}
-                >
-                    <div
-                        style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            background: '#e82828',
-                        }}
-                    />
-                    <span
-                        style={{
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            color: '#ffffff',
-                        }}
-                    >
-                        Resources
-                    </span>
-                </div>
+            More <span style={{ color: '#ff3333' }}>Resources</span>
+        </h1>
+    )
 
-                <div
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                        gap: '24px',
-                    }}
-                >
-                    {resources.map((item, index) => (
-                        <div
-                            key={index}
-                            className="resource-card"
-                            style={{
-                                padding: '32px',
-                                background: isDark ? 'rgba(255, 255, 255, 0.03)' : '#f5f5f5',
-                                borderRadius: '16px',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.08)' : '#eeeeee'
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.03)' : '#f5f5f5'
-                            }}
-                        >
-                            <div style={{
-                                color: '#e82828',
-                                marginBottom: '20px'
-                            }}>
-                                {item.icon}
-                            </div>
-                            <h3 style={{
-                                fontSize: '1.25rem',
-                                fontWeight: 500,
-                                color: isDark ? '#ffffff' : '#111111',
-                                marginBottom: '8px'
-                            }}>
-                                {item.title}
-                            </h3>
-                            <p style={{
-                                fontSize: '0.9rem',
-                                color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
-                                margin: 0,
-                                lineHeight: 1.5
-                            }}>
-                                {item.desc}
-                            </p>
-                        </div>
-                    ))}
-                </div>
+    const renderResourceCard = (item: any) => (
+        <div
+            key={item.id}
+            data-cursor="view"
+            style={{
+                background: 'rgba(20, 20, 25, 0.65)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                width: '300px',
+                height: '400px',
+                flexShrink: 0,
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+                zIndex: 5,
+                isolation: 'isolate',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                padding: '32px',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: '24px'
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)'
+                e.currentTarget.style.transform = 'translateY(-4px)'
+                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                e.currentTarget.style.zIndex = '10'
+                // Colorize icon on hover
+                const icon = e.currentTarget.querySelector('.icon-container') as HTMLElement
+                if (icon) icon.style.borderColor = '#ff3333'
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)'
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+                e.currentTarget.style.zIndex = '5'
+                // Reset icon color
+                const icon = e.currentTarget.querySelector('.icon-container') as HTMLElement
+                if (icon) icon.style.borderColor = 'rgba(255,255,255,0.1)'
+            }}
+            onClick={() => {
+                // Determine if it's a link or a detail page
+                // Assuming it links to a detail page for now, or use external link if in content?
+                // For resources, maybe download or view? Let's treat as standard post detail for now.
+                window.location.href = `/resource/${item.id}`
+            }}
+        >
+            {/* Icon Circle */}
+            <div
+                className="icon-container"
+                style={{
+                    width: '100px',
+                    height: '100px',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden', // Ensure image clips to circle
+                    transition: 'border-color 0.3s ease',
+                    marginBottom: '16px'
+                }}
+            >
+                {item.image ? (
+                    <img
+                        src={item.image}
+                        alt={item.title}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                ) : (
+                    <FileText size={48} color="#ffffff" />
+                )}
             </div>
-        </section>
+
+            {/* Content */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h3 style={{
+                    margin: 0,
+                    fontSize: '1.5rem',
+                    fontWeight: 700,
+                    color: '#ffffff',
+                    fontFamily: '"Geist", sans-serif'
+                }}>
+                    {item.title}
+                </h3>
+                <p style={{
+                    margin: 0,
+                    fontSize: '1rem',
+                    color: 'rgba(255,255,255,0.6)',
+                    lineHeight: 1.5
+                }}>
+                    {item.subtitle}
+                </p>
+            </div>
+        </div>
+    )
+
+    return (
+        <SectionLayout id="more" header={headerContent}>
+            {resources.length > 0 ? (
+                resources.map(renderResourceCard)
+            ) : (
+                <div style={{
+                    padding: '40px',
+                    color: 'rgba(255,255,255,0.5)',
+                    fontSize: '1.2rem',
+                    border: '1px dashed rgba(255,255,255,0.1)',
+                    borderRadius: '16px',
+                    width: '100%',
+                    textAlign: 'center'
+                }}>
+                    No resources available yet.
+                </div>
+            )}
+        </SectionLayout>
     )
 }

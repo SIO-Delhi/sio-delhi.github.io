@@ -1,12 +1,12 @@
-
+import { useRef } from 'react'
 
 interface SectionCardProps {
     label: string
     labelColor: string
     title: string
-    subtitle: string
+    subtitle?: string
     description: string
-    publishedDate?: string | number // New: publication date
+    publishedDate?: string | number
     linkText?: string
     onClick?: () => void
     className?: string
@@ -16,118 +16,149 @@ interface SectionCardProps {
 export function SectionCard({
     labelColor,
     title,
-    subtitle,
     description,
     publishedDate,
-    linkText,
     onClick,
     className,
     image
 }: SectionCardProps) {
+    const cardRef = useRef<HTMLDivElement>(null)
+
     const formattedDate = publishedDate
         ? new Date(publishedDate).toLocaleDateString('en-US', {
-            day: 'numeric',
             month: 'short',
+            day: 'numeric',
             year: 'numeric'
-        })
+        }).toUpperCase()
         : null
+
+    // Truncate description to ~15 words
+    const truncatedDescription = description
+        ? description.replace(/<[^>]+>/g, '').split(' ').slice(0, 15).join(' ') +
+        (description.split(' ').length > 15 ? '...' : '')
+        : ''
 
     return (
         <div
-            className={`${className || ''} section-card-shine`}
-            data-cursor={onClick ? "view" : undefined}
+            ref={cardRef}
+            className={`${className || ''} section-card-shine cursor-view`}
+            data-cursor="view"
             onClick={onClick}
             style={{
-                background: 'rgba(80, 80, 80, 0.4)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '20px',
-                padding: '32px',
+                background: 'rgba(20, 20, 25, 0.65)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '16px',
+                padding: '24px',
                 boxSizing: 'border-box',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
                 display: 'flex',
                 flexDirection: 'column',
-                height: '520px',
-                width: '380px',
+                height: '380px',
+                width: '300px',
                 cursor: onClick ? 'pointer' : 'default',
                 transition: 'all 0.3s ease',
                 overflow: 'hidden',
                 position: 'relative',
+                flexShrink: 0,
+                isolation: 'isolate',
+                zIndex: 5 // Increased base z-index to prevent overlaps
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
-                e.currentTarget.style.transform = 'translateY(-6px)'
-                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.4)'
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)' // Stronger white border
+                e.currentTarget.style.transform = 'translateY(-4px)'
+                // Removed outer white glow, kept existing shadow
+                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                e.currentTarget.style.zIndex = '10' // Bring to front on hover
             }}
             onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)'
                 e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)'
+                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+                e.currentTarget.style.zIndex = '5' // Reset z-index to base value (5)
             }}
         >
-            {/* Top: Date (Yellow) or Label */}
+            {/* Date Badge */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                marginBottom: '16px'
+                marginBottom: '12px'
             }}>
                 <div style={{
-                    width: '8px',
-                    height: '8px',
+                    width: '6px',
+                    height: '6px',
                     borderRadius: '50%',
-                    background: '#FFD700', // Yellow
-                    boxShadow: `0 0 8px #FFD700`
+                    background: labelColor,
+                    boxShadow: `0 0 8px ${labelColor}`
                 }} />
                 <span style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600, // Slightly bolder
-                    color: '#FFD700', // Yellow
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    color: labelColor,
+                    letterSpacing: '0.08em'
                 }}>
                     {formattedDate}
                 </span>
             </div>
 
-            {/* Title - Large and bold */}
+            {/* Title */}
             <h3 style={{
-                fontSize: '2.2rem',
-                fontWeight: 800,
-                margin: '0 0 16px 0',
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                margin: '0 0 12px 0',
                 fontFamily: '"Geist", sans-serif',
-                lineHeight: 1.1,
+                lineHeight: 1.2,
                 color: '#ffffff',
-                letterSpacing: '-0.02em',
+                letterSpacing: '-0.01em',
             }}>
                 {title}
             </h3>
 
-            {/* Description (Summary) - Full Text with Word Limit */}
+            {/* Description - Truncated */}
             <p style={{
-                fontSize: '0.95rem',
-                color: 'rgba(255, 255, 255, 0.7)',
-                margin: '0 0 24px 0',
-                lineHeight: 1.6,
-                fontStyle: 'italic',
+                fontSize: '0.85rem',
+                color: 'rgba(255, 255, 255, 0.6)',
+                margin: '0 0 16px 0',
+                lineHeight: 1.6
             }}>
-                {(description || subtitle || '').split(' ').slice(0, 30).join(' ') + ((description || subtitle || '').split(' ').length > 30 ? '...' : '')}
+                {truncatedDescription}
             </p>
 
-            {/* Image at Bottom */}
-            {image && (
+            {/* Read More Link */}
+            {onClick && (
                 <div style={{
-                    marginTop: 'auto', // Push to bottom if flex column
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    height: '170px',
-                    maxHeight: '170px',
-                    width: '100%',
-                    maxWidth: '100%',
-                    flexShrink: 0,
-                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    marginBottom: '16px',
+                    cursor: 'pointer'
                 }}>
+                    <span>Read More</span>
+                    <span style={{
+                        color: labelColor,
+                        transition: 'transform 0.2s ease'
+                    }}>→</span>
+                </div>
+            )}
+
+            {/* Image at Bottom - Always uniform height */}
+            <div style={{
+                marginTop: 'auto', // Always pin to bottom
+                borderRadius: '10px',
+                overflow: 'hidden',
+                height: '120px',
+                width: '100%',
+                flexShrink: 0,
+                position: 'relative',
+                background: image ? '#000' : 'transparent',
+                display: 'block' // Always render container to maintain layout structure/spacing
+            }}>
+                {image && (
                     <img
                         src={image}
                         alt=""
@@ -135,34 +166,14 @@ export function SectionCard({
                             width: '100%',
                             height: '100%',
                             maxWidth: '100%',
-                            maxHeight: '100%',
+                            maxHeight: '120px',
                             objectFit: 'cover',
                             objectPosition: 'center',
                             display: 'block',
                         }}
                     />
-                </div>
-            )}
-
-            {/* Link text if provided */}
-            {linkText && (
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: '#ffffff',
-                    marginTop: '16px',
-                }}>
-                    <span style={{
-                        color: labelColor,
-                        filter: `drop-shadow(0 0 4px ${labelColor}60)`
-                    }}>→</span>
-                    {linkText}
-                </div>
-            )}
+                )}
+            </div>
         </div>
     )
 }
-

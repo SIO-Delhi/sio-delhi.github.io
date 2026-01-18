@@ -60,6 +60,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 image: row.image || '',
                 pdfUrl: row.pdf_url || '',
                 layout: row.layout,
+                order: row.display_order, // Map from DB
                 isPublished: row.is_published ?? false,
                 createdAt: new Date(row.created_at).getTime(),
                 updatedAt: new Date(row.updated_at).getTime(),
@@ -110,6 +111,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                     image: newPostData.image || null,
                     pdf_url: newPostData.pdfUrl || null,
                     layout: newPostData.layout,
+                    display_order: newPostData.order || null,
                     is_published: newPostData.isPublished ?? false,
                     created_at: newPostData.createdAt ? new Date(newPostData.createdAt).toISOString() : undefined // Allow manual date
                 })
@@ -131,6 +133,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             if (updates.image !== undefined) dbUpdates.image = updates.image || null
             if (updates.pdfUrl !== undefined) dbUpdates.pdf_url = updates.pdfUrl || null
             if (updates.layout !== undefined) dbUpdates.layout = updates.layout
+            if (updates.order !== undefined) dbUpdates.display_order = updates.order
             if (updates.isPublished !== undefined) dbUpdates.is_published = updates.isPublished
             if (updates.parentId !== undefined) dbUpdates.parent_id = updates.parentId || null
             if (updates.isSubsection !== undefined) dbUpdates.is_subsection = updates.isSubsection
@@ -177,6 +180,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             throw err
         }
     }
+
+
 
     return (
         <ContentContext.Provider value={{
