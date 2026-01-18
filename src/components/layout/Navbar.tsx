@@ -259,41 +259,33 @@ export function Navbar() {
                 {/* Desktop: Right side buttons */}
                 {!isMobile && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <a
-                            href="#contact"
-                            onClick={(e) => {
-                                e.preventDefault()
-                                scrollToSection('#contact')
-                            }}
-                            style={{
-                                padding: '12px 24px',
-                                background: isDark
-                                    ? 'rgba(30, 30, 32, 0.5)'
-                                    : 'rgba(255, 255, 255, 0.25)',
-                                backdropFilter: 'blur(40px) saturate(1.5)',
-                                WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
-                                border: isDark
-                                    ? '1px solid rgba(255, 255, 255, 0.1)'
-                                    : '1px solid rgba(255, 255, 255, 0.5)',
-                                borderRadius: '100px',
-                                color: isDark ? '#ffffff' : '#111111',
-                                fontSize: '14px',
-                                fontWeight: 400,
-                                transition: 'all 0.3s ease',
-                                cursor: 'pointer',
-                                boxShadow: isDark
-                                    ? '0 4px 20px rgba(0, 0, 0, 0.3)'
-                                    : '0 4px 30px rgba(0, 0, 0, 0.1)',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'
-                            }}
-                        >
-                            Get in touch
-                        </a>
+                        {/* Shiny Get in touch Button */}
+                        <div className="shiny-button-container">
+                            <a
+                                href="#contact"
+                                className="shiny-button"
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    scrollToSection('#contact')
+                                }}
+                                style={{
+                                    display: 'inline-block',
+                                    padding: '12px 24px',
+                                    borderRadius: '100px',
+                                    color: '#ffffff', // Always white because the button is dark
+                                    fontSize: '14px',
+                                    fontWeight: 400,
+                                    transition: 'all 0.3s ease',
+                                    cursor: 'pointer',
+                                    textDecoration: 'none',
+                                }}
+                                onMouseEnter={(e) => {
+                                    // Optional: slight hover effect on text or internal background if needed
+                                }}
+                            >
+                                Get in touch
+                            </a>
+                        </div>
 
                         {/* Theme Toggle Button */}
                         <button

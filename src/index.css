@@ -724,3 +724,58 @@ section {
 [data-theme="light"] .mobile-links a:hover {
   color: #000000;
 }
+/* Shiny Button Styles */
+.shiny-button-container {
+  position: relative;
+  border-radius: 100px;
+  padding: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+.shiny-button-container::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+      from var(--angle, 0deg),
+      transparent 0deg,
+      transparent 260deg,
+      rgba(255, 255, 255, 0.2) 290deg,
+      rgba(255, 255, 255, 0.5) 320deg,
+      rgba(255, 255, 255, 1) 350deg,
+      rgba(255, 255, 255, 0.5) 355deg,
+      rgba(255, 255, 255, 0.2) 358deg,
+      transparent 360deg
+  );
+  animation: spin 5s linear infinite;
+}
+
+.shiny-button-container::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 100px;
+  background: rgba(10, 10, 10, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.shiny-button {
+  position: relative;
+  z-index: 1;
+  border: none !important;
+  background: transparent !important;
+}
+
+@keyframes spin {
+  0% { --angle: 0deg; }
+  100% { --angle: 360deg; }
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}

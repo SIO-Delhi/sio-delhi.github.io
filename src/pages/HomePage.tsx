@@ -89,7 +89,7 @@ export function HomePage() {
                     height: '100vh',
                     background: isMobile
                         ? 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, transparent 100%), linear-gradient(to bottom, rgba(255, 59, 59, 0.6) 0%, rgba(255, 59, 59, 0.3) 60%, transparent 100%)' // Black Bottom-up + Red Top-down (Inverted & Extended)
-                        : 'radial-gradient(ellipse 130% 100% at 160% 50%, rgba(255, 59, 59, 0.8) 0%, rgba(255, 59, 59, 0.5) 40%, rgba(255, 59, 59, 0.2) 70%, transparent 100%)', // Right-side for desktop
+                        : 'radial-gradient(ellipse 130% 100% at 130% 50%, rgba(255, 59, 59, 0.8) 0%, rgba(255, 59, 59, 0.5) 40%, rgba(255, 59, 59, 0.2) 70%, transparent 100%)', // Right-side for desktop
                     zIndex: 1, // Below flag
                     pointerEvents: 'none',
                     transition: 'background 0.5s ease'
