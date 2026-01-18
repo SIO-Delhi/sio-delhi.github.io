@@ -9,7 +9,9 @@ import Wind from '../../../flagwaver/src/assets/js/flagwaver/subjects/Wind'
 import applyWindForceToCloth from '../../../flagwaver/src/assets/js/flagwaver/interactions/applyWindForceToCloth'
 import applyGravityToCloth from '../../../flagwaver/src/assets/js/flagwaver/interactions/applyGravityToCloth'
 
-function FlagScene() {
+// ... (imports remain)
+
+function FlagScene({ isMobile }: { isMobile: boolean }) {
     // Load Texture
     const flagTexture = useLoader(THREE.TextureLoader, flagImg)
     flagTexture.anisotropy = 16
@@ -27,7 +29,7 @@ function FlagScene() {
             mass: 0.1, // Adjust mass for feel
             restDistance: 0.1, // Grid density
             texture: flagTexture,
-            width: 3.5, // Even Larger flag
+            width: isMobile ? 2.5 : 3.5, // Smaller spread on mobile
             height: 2.3,
             pin: { edges: ['left'] } // Pin left edge
         })
@@ -68,9 +70,14 @@ function FlagScene() {
         }
     }, [flag])
 
-    // Adjust position: Move flag left (-4.5) and slightly down (-3.8)
+    // Adjust position: 
+    // Desktop: Move flag left (-4.5) and slightly down (-3.8)
+    // Mobile: Adjusted left (-1.2) and even lower (-4.5) to clear text
+    const position: [number, number, number] = isMobile ? [-1.2, -4.5, 0] : [-5.0, -3.8, 0]
+    const scale = isMobile ? 0.7 : 1
+
     return (
-        <group position={[-4.5, -3.8, 0]}>
+        <group position={position} scale={scale}>
             {/* The Pole */}
             <mesh position={[0, -4, 0]}>
                 <cylinderGeometry args={[0.08, 0.08, 20, 16]} />
@@ -84,21 +91,19 @@ function FlagScene() {
             </mesh>
 
             {/* The Cloth (Flag Object from library) */}
-            {/* Flag object's mesh is typically positioned at (0, -height, 0) inside object. 
-                We place the object at the top of the pole mount point (y=5.8). */}
             <primitive object={flag.object} position={[0, 5.8, 0]} />
         </group>
     )
 }
 
-export function InteractiveFlag() {
+export function InteractiveFlag({ isMobile }: { isMobile: boolean }) {
     return (
         <div style={{ width: '100%', height: '100%' }}>
             <Canvas camera={{ position: [0, 0, 8], fov: 45 }} dpr={[1, 2]}>
                 <ambientLight intensity={0.6} />
                 <directionalLight position={[10, 10, 10]} intensity={2.0} />
                 <pointLight position={[-5, 5, 2]} intensity={1.5} color="#ff3b3b" />
-                <FlagScene />
+                <FlagScene isMobile={isMobile} />
             </Canvas>
         </div>
     )

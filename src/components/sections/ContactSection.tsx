@@ -1,16 +1,10 @@
 import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { Instagram, Youtube, Facebook, ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 
 gsap.registerPlugin(ScrollTrigger)
-
-const XLogo = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
-        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
-    </svg>
-)
 
 export function ContactSection() {
     const sectionRef = useRef<HTMLElement>(null)
@@ -115,12 +109,12 @@ export function ContactSection() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '12px',
-                        padding: '24px 48px',
+                        padding: 'clamp(16px, 4vw, 24px) clamp(24px, 6vw, 48px)', // Responsive padding
                         borderRadius: '100px',
                         background: 'rgba(20, 20, 20, 0.6)',
                         border: '1px solid rgba(255,255,255,0.15)',
                         color: '#ffffff',
-                        fontSize: '1.35rem',
+                        fontSize: 'clamp(1rem, 4vw, 1.35rem)', // Responsive font size
                         fontWeight: 500,
                         textDecoration: 'none',
                         transition: 'all 0.3s ease',
@@ -128,7 +122,9 @@ export function ContactSection() {
                         WebkitBackdropFilter: 'blur(12px)',
                         marginTop: '16px',
                         cursor: 'pointer',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                        whiteSpace: 'nowrap', // Prevent line breaking
+                        maxWidth: '100%', // Prevent overflow
                     }}
                     onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-4px)'
@@ -144,50 +140,12 @@ export function ContactSection() {
                     }}
                 >
                     contact@sio-delhi.org
-                    <ArrowUpRight size={28} />
+                    <ArrowUpRight size={24} />
                 </a>
 
                 {/* Social Links */}
-                <div
-                    className="animate-up"
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '32px',
-                        marginTop: '24px'
-                    }}
-                >
-                    {[
-                        { icon: Instagram, label: 'Instagram', href: 'https://www.instagram.com/siodelhi/?hl=en' },
-                        { icon: XLogo, label: 'Twitter', href: 'https://x.com/siodelhi?lang=en' },
-                        { icon: Facebook, label: 'Facebook', href: 'https://www.facebook.com/delhisio/' },
-                        { icon: Youtube, label: 'YouTube', href: 'https://youtube.com/c/SIODELHI' }
-                    ].map((social) => (
-                        <a
-                            key={social.label}
-                            href={social.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                                color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
-                                fontSize: '0.9rem',
-                                fontWeight: 500,
-                                textDecoration: 'none',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.05em',
-                                transition: 'color 0.2s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.color = isDark ? '#ffffff' : '#000000'}
-                            onMouseLeave={(e) => e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'}
-                        >
-                            {social.label}
-                        </a>
-                    ))}
-                </div>
-            </div>
-        </section>
+                {/* Social Links Removed */}
+            </div >
+        </section >
     )
 }
