@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useTheme } from '../../context/ThemeContext'
@@ -9,6 +9,14 @@ export function HeroSection() {
     const textRef = useRef<HTMLDivElement>(null)
     const wordRefs = useRef<(HTMLSpanElement | null)[]>([])
     const { isDark } = useTheme()
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 1024)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
 
     useEffect(() => {
         const ctx = gsap.context(() => {
@@ -82,8 +90,8 @@ export function HeroSection() {
                 // Background handles by global CSS
                 background: 'transparent',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end', // Move to Right
+                alignItems: isMobile ? 'flex-start' : 'center', // Top align on mobile
+                justifyContent: isMobile ? 'center' : 'flex-end', // Center on mobile, Right on desktop
             }}
         >
 
@@ -94,9 +102,9 @@ export function HeroSection() {
                 style={{
                     position: 'relative',
                     zIndex: 2,
-                    textAlign: 'right',
                     width: '100%',
-                    padding: '0 120px 0 120px',
+                    padding: isMobile ? '160px 20px 0' : '0 120px 0 120px', // Mobile: Top pad, low side pad
+                    textAlign: isMobile ? 'center' : 'right', // Center text on mobile
                 }}
             >
                 {/* Quranic Ayah */}
@@ -111,7 +119,7 @@ export function HeroSection() {
                         opacity: 0,
                         textShadow: isDark ? '0 4px 12px rgba(0,0,0,0.5)' : 'none',
                         direction: 'rtl',
-                        lineHeight: 1.8,
+                        lineHeight: 1.2,
                     }}
                 >
                     قال إني جاعلك للناس إماما
@@ -125,15 +133,16 @@ export function HeroSection() {
                         fontSize: 'clamp(1.4rem, 2.5vw, 2.2rem)',
                         color: '#ffffff',
                         maxWidth: '600px',
-                        marginLeft: 'auto',
+                        marginLeft: isMobile ? 'auto' : 'auto', // Centered on mobile since textAlign is center
+                        marginRight: isMobile ? 'auto' : '0', // Explicitly center on mobile
                         opacity: 0,
                         fontWeight: 300,
                         fontStyle: 'italic',
                         direction: 'ltr',
-                        textAlign: 'right',
+                        textAlign: isMobile ? 'center' : 'right',
                         letterSpacing: '-0.02em',
                         wordSpacing: '-0.1em',
-                        marginTop: '-1.2rem', // Move even closer to Arabic
+                        marginTop: isMobile ? '0.5rem' : '-1.2rem', // Gap on mobile, tight on desktop
                         lineHeight: 1.1,
                     }}
                 >

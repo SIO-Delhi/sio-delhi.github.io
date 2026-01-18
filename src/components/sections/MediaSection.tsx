@@ -1,230 +1,65 @@
-import { useEffect, useRef, useMemo } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext'
-import { useContent } from '../../context/ContentContext'
 import { SectionCard } from '../ui/SectionCard'
-
-gsap.registerPlugin(ScrollTrigger)
+import SectionLayout from '../layout/SectionLayout'
+import { useContent } from '../../context/ContentContext'
 
 export function MediaSection() {
-    const sectionRef = useRef<HTMLElement>(null)
-    const headerWrapperRef = useRef<HTMLDivElement>(null)
-    const headerRef = useRef<HTMLHeadingElement>(null)
-    const cardsContainerRef = useRef<HTMLDivElement>(null)
     const { isDark } = useTheme()
-    const { getPostsBySection } = useContent()
+    const navigate = useNavigate()
+    const { posts } = useContent()
 
-    // Get PUBLISHED posts from database
-    const dynamicPosts = getPostsBySection('media').filter(p => p.isPublished)
-    const mediaCards = useMemo(() => {
-        const colors = ['#e82828', '#22c55e', '#3b82f6', '#f59e0b']
-        return dynamicPosts.map((post, index) => ({
-            id: post.id,
-            title: post.title,
-            category: 'Media',
-            image: post.image || '',
-            description: post.subtitle || '', // Use subtitle as description
-            content: post.content,
-            date: post.createdAt,
-            color: colors[index % colors.length], // Keep color for potential future use or if it's still used elsewhere
-            isSubsection: post.isSubsection || false
-        }))
-    }, [dynamicPosts])
+    const cards = posts.filter(post => post.sectionId === 'media' && post.isPublished && !post.parentId)
+    const hasContent = cards.length > 0
 
-    useEffect(() => {
-        const ctx = gsap.context(() => {
-            gsap.set(headerWrapperRef.current, {
-                opacity: 0,
-                visibility: 'hidden'
-            })
-
-            gsap.set(headerRef.current, {
-                scale: 3,
-                y: '80vh',
-                x: '30vw',
-                transformOrigin: 'center center',
-                opacity: 0
-            })
-
-            ScrollTrigger.create({
-                trigger: sectionRef.current,
-                start: 'top 90%',
-                end: 'bottom top',
-                onEnter: () => {
-                    gsap.set(headerWrapperRef.current, { opacity: 1, visibility: 'visible' })
-                },
-                onLeave: () => {
-                    gsap.set(headerWrapperRef.current, { opacity: 0, visibility: 'hidden' })
-                },
-                onEnterBack: () => {
-                    gsap.set(headerWrapperRef.current, { opacity: 1, visibility: 'visible' })
-                },
-                onLeaveBack: () => {
-                    gsap.set(headerWrapperRef.current, { opacity: 0, visibility: 'hidden' })
-                }
-            })
-
-            gsap.fromTo(headerRef.current,
-                { opacity: 0 },
-                {
-                    opacity: 1,
-                    ease: 'none',
-                    scrollTrigger: {
-                        trigger: sectionRef.current,
-                        start: 'top 80%',
-                        end: 'top 30%',
-                        scrub: 0.5
-                    }
-                }
-            )
-
-            gsap.fromTo(headerRef.current,
-                {
-                    scale: 3,
-                    y: '80vh',
-                    x: '30vw'
-                },
-                {
-                    scale: 1,
-                    y: 0,
-                    x: 0,
-                    ease: 'none',
-                    scrollTrigger: {
-                        trigger: sectionRef.current,
-                        start: 'top 80%',
-                        end: 'top -20%',
-                        scrub: 1
-                    }
-                }
-            )
-
-            gsap.fromTo(headerRef.current,
-                { opacity: 1 },
-                {
-                    opacity: 0,
-                    ease: 'power2.in',
-                    scrollTrigger: {
-                        trigger: cardsContainerRef.current,
-                        start: 'bottom 120%',
-                        end: 'bottom 60%',
-                        scrub: 0.5
-                    }
-                }
-            )
-
-        }, sectionRef)
-
-        return () => ctx.revert()
-    }, [])
-
-    // Show minimal section if no published posts
-    const hasContent = mediaCards.length > 0
-
-    return (
-        <section
-            id="media"
-            ref={sectionRef}
+    const headerContent = (
+        <h1
             style={{
-                minHeight: '200vh',
-                position: 'relative',
-                background: 'transparent',
-                paddingTop: '100px',
+                fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                fontWeight: 700,
+                color: '#ffffff',
+                lineHeight: 1.1,
+                margin: 0,
+                fontFamily: '"Geist", sans-serif',
+                letterSpacing: '-0.02em'
             }}
         >
-            <div
-                ref={headerWrapperRef}
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '35%',
-                    height: '100vh',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    paddingLeft: '10%',
-                    paddingRight: '40px',
-                    paddingBottom: '24vh',
-                    zIndex: 5,
-                    pointerEvents: 'none',
-                    opacity: 0,
-                    visibility: 'hidden'
-                }}
-            >
-                <h1
-                    ref={headerRef}
-                    style={{
-                        fontSize: 'clamp(3rem, 6vw, 5rem)',
-                        fontWeight: 800,
-                        color: isDark ? '#ffffff' : '#111111',
-                        lineHeight: 1,
-                        margin: 0,
-                        textTransform: 'uppercase',
-                        fontFamily: '"Geist", sans-serif',
-                        letterSpacing: '-0.03em',
-                        whiteSpace: 'nowrap',
-                        pointerEvents: 'auto'
-                    }}
-                >
-                    <span style={{ color: '#ffffff' }}>MEDIA</span>
-                    <br />
-                    <span style={{ color: '#ff3333' }}>&amp; NEWS</span>
-                </h1>
-            </div>
+            Media & <span style={{ color: '#ff3333' }}>News</span>
+        </h1>
+    )
 
-            <div
-                ref={cardsContainerRef}
-                style={{
-                    marginLeft: '30%',
-                    marginRight: '2%',
-                    width: '65%',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 380px)',
-                    gap: '24px 24px', // Row gap 24px, Column gap 16px
+    return (
+        <SectionLayout
+            id="media"
+            header={headerContent}
+            subtitle="Stay updated with our latest news and media coverage"
+        >
+            {hasContent ? (
+                cards.map((card) => (
+                    <SectionCard
+                        key={card.id}
+                        {...card}
+                        label="MEDIA"
+                        labelColor="#FF3333"
+                        description={card.subtitle || card.content.replace(/<[^>]+>/g, '').substring(0, 100)}
+                        publishedDate={(card as any).publishedDate || card.createdAt}
+                        image={(card as any).coverImage || card.image}
+                        onClick={() => navigate(`/media/${card.id}`, { state: { post: card } })}
+                    />
+                ))
+            ) : (
+                <div style={{
+                    minWidth: '100%',
+                    height: '300px',
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
-                    padding: '80vh 0 100vh 0',
-                    position: 'relative',
-                    alignContent: 'start',
-                    zIndex: 10
-                }}
-            >
-                {hasContent ? (
-                    mediaCards.map((card, index) => (
-                        <div key={card.id} style={{ transform: index % 2 === 1 ? 'translateY(120px)' : 'none' }}>
-                            <Link
-                                to={card.isSubsection ? `/subsection/${card.id}` : `/media/${card.id}`}
-                                data-cursor="view"
-                                style={{ textDecoration: 'none', display: 'block' }}
-                            >
-                                <SectionCard
-                                    className="media-card"
-                                    label={card.category}
-                                    labelColor="#3b82f6"
-                                    title={card.title}
-                                    subtitle=""
-                                    description={card.description}
-                                    publishedDate={card.date}
-                                    image={card.image}
-                                />
-                            </Link>
-                        </div>
-                    ))
-                ) : (
-                    <div style={{
-                        gridColumn: '1 / -1',
-                        padding: '80px 40px',
-                        textAlign: 'center',
-                        color: '#666',
-                        background: 'rgba(255,255,255,0.02)',
-                        borderRadius: '16px',
-                        border: '1px dashed #333'
-                    }}>
-                        <p style={{ fontSize: '1.1rem', margin: 0 }}>No content published yet</p>
-                    </div>
-                )}
-            </div>
-        </section>
+                    color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                    fontSize: '1.1rem'
+                }}>
+                    No content published yet
+                </div>
+            )}
+        </SectionLayout>
     )
 }

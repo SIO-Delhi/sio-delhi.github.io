@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, Sun, Moon } from 'lucide-react'
+import { Sun, Moon } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
 import { useTheme } from '../../context/ThemeContext'
@@ -73,34 +73,19 @@ export function Navbar() {
         }
 
         // For sections with scroll animations, scroll to the cards/content area instead
-        let targetElement: Element | null = null
-        let offset = -80 // Default offset for navbar height
-
-        // Sections with animated headers need to scroll to their content container
-        const animatedSections = ['about', 'initiatives', 'media', 'leadership']
-
-        if (animatedSections.includes(sectionId)) {
-            // Try to find the cards-grid or content container within the section
-            targetElement = document.querySelector(`#${sectionId} [ref]`) ||
-                document.querySelector(`#${sectionId} .cards-grid`) ||
-                document.querySelector(`#${sectionId} > div:last-child`)
-            // Positive offset to scroll past the padding and show cards in upper portion
-            // The padding is 80vh, so we scroll further into the cards container
-            offset = window.innerHeight * 0.6 // Scroll 60% of viewport into the cards
-        } else {
-            targetElement = document.querySelector(href)
-        }
+        const targetElement = document.getElementById(sectionId)
+        const offset = -100 // Navbar height buffer
 
         if (targetElement) {
             const lenis = (window as typeof window & { lenis?: { scrollTo: (target: number | Element, options?: { offset?: number, immediate?: boolean }) => void } }).lenis
 
             if (lenis) {
-                lenis.scrollTo(targetElement, { offset, immediate: true }) // Instant jump
+                lenis.scrollTo(targetElement, { offset, immediate: false }) // Smooth scroll
             } else {
                 const elementPosition = targetElement.getBoundingClientRect().top + window.pageYOffset
                 window.scrollTo({
                     top: elementPosition + offset,
-                    behavior: 'instant' // Instant jump instead of smooth
+                    behavior: 'smooth'
                 })
             }
         }
@@ -121,7 +106,7 @@ export function Navbar() {
                 left: 0,
                 right: 0,
                 zIndex: 50,
-                padding: '20px 40px',
+                padding: isMobile ? '32px 16px' : '20px 40px',
                 opacity: 0,
             }}
         >
@@ -136,76 +121,75 @@ export function Navbar() {
                 }}
             >
                 {/* Left: SIO Logo + Organization Name Capsule */}
-                {!isMobile && (
-                    <a
-                        href="#home"
-                        onClick={(e) => {
-                            e.preventDefault()
-                            scrollToSection('#home')
-                        }}
+                {/* Left: SIO Logo + Organization Name Capsule */}
+                <a
+                    href="#home"
+                    onClick={(e) => {
+                        e.preventDefault()
+                        scrollToSection('#home')
+                    }}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '8px 16px 8px 8px',
+                        borderRadius: '100px',
+                        background: isDark
+                            ? 'rgba(30, 30, 32, 0.5)'
+                            : 'rgba(255, 255, 255, 0.25)',
+                        backdropFilter: 'blur(40px) saturate(1.5)',
+                        WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
+                        border: isDark
+                            ? '1px solid rgba(255, 255, 255, 0.1)'
+                            : '1px solid rgba(255, 255, 255, 0.5)',
+                        boxShadow: isDark
+                            ? '0 4px 20px rgba(0, 0, 0, 0.3)'
+                            : '0 4px 30px rgba(0, 0, 0, 0.1)',
+                        transition: 'all 0.3s ease',
+                        flexShrink: 0,
+                        cursor: 'pointer',
+                        textDecoration: 'none',
+                    }}
+                >
+                    {/* SIO Logo */}
+                    <div
                         style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: 'transparent',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '12px',
-                            padding: '8px 16px 8px 8px',
-                            borderRadius: '100px',
-                            background: isDark
-                                ? 'rgba(30, 30, 32, 0.5)'
-                                : 'rgba(255, 255, 255, 0.25)',
-                            backdropFilter: 'blur(40px) saturate(1.5)',
-                            WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
-                            border: isDark
-                                ? '1px solid rgba(255, 255, 255, 0.1)'
-                                : '1px solid rgba(255, 255, 255, 0.5)',
-                            boxShadow: isDark
-                                ? '0 4px 20px rgba(0, 0, 0, 0.3)'
-                                : '0 4px 30px rgba(0, 0, 0, 0.1)',
-                            transition: 'all 0.3s ease',
-                            flexShrink: 0,
-                            cursor: 'pointer',
-                            textDecoration: 'none',
+                            justifyContent: 'center',
+                            overflow: 'hidden'
                         }}
                     >
-                        {/* SIO Logo */}
-                        <div
-                            style={{
-                                width: '36px',
-                                height: '36px',
-                                borderRadius: '50%',
-                                background: 'transparent',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                overflow: 'hidden'
-                            }}
-                        >
-                            <img
-                                src={siodelLogo}
-                                alt="SIO Delhi Logo"
-                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                            />
-                        </div>
-                        {/* Organization Text */}
-                        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-                            <span style={{
-                                fontSize: '0.75rem',
-                                fontWeight: 500,
-                                color: isDark ? '#ffffff' : '#111111',
-                                letterSpacing: '-0.01em',
-                            }}>
-                                Students Islamic Organization
-                            </span>
-                            <span style={{
-                                fontSize: '0.7rem',
-                                fontWeight: 500,
-                                color: '#ff3b3b',
-                                letterSpacing: '-0.01em',
-                            }}>
-                                Delhi Zone
-                            </span>
-                        </div>
-                    </a>
-                )}
+                        <img
+                            src={siodelLogo}
+                            alt="SIO Delhi Logo"
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                    </div>
+                    {/* Organization Text */}
+                    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+                        <span style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            color: isDark ? '#ffffff' : '#111111',
+                            letterSpacing: '-0.01em',
+                        }}>
+                            Students Islamic Organization
+                        </span>
+                        <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 500,
+                            color: '#ff3b3b',
+                            letterSpacing: '-0.01em',
+                        }}>
+                            Delhi Zone
+                        </span>
+                    </div>
+                </a>
 
                 {/* Desktop: Center Menu */}
                 {!isMobile && (
@@ -275,41 +259,33 @@ export function Navbar() {
                 {/* Desktop: Right side buttons */}
                 {!isMobile && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <a
-                            href="#contact"
-                            onClick={(e) => {
-                                e.preventDefault()
-                                scrollToSection('#contact')
-                            }}
-                            style={{
-                                padding: '12px 24px',
-                                background: isDark
-                                    ? 'rgba(30, 30, 32, 0.5)'
-                                    : 'rgba(255, 255, 255, 0.25)',
-                                backdropFilter: 'blur(40px) saturate(1.5)',
-                                WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
-                                border: isDark
-                                    ? '1px solid rgba(255, 255, 255, 0.1)'
-                                    : '1px solid rgba(255, 255, 255, 0.5)',
-                                borderRadius: '100px',
-                                color: isDark ? '#ffffff' : '#111111',
-                                fontSize: '14px',
-                                fontWeight: 400,
-                                transition: 'all 0.3s ease',
-                                cursor: 'pointer',
-                                boxShadow: isDark
-                                    ? '0 4px 20px rgba(0, 0, 0, 0.3)'
-                                    : '0 4px 30px rgba(0, 0, 0, 0.1)',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'
-                            }}
-                        >
-                            Get in touch
-                        </a>
+                        {/* Shiny Get in touch Button */}
+                        <div className="shiny-button-container">
+                            <a
+                                href="#contact"
+                                className="shiny-button"
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    scrollToSection('#contact')
+                                }}
+                                style={{
+                                    display: 'inline-block',
+                                    padding: '12px 24px',
+                                    borderRadius: '100px',
+                                    color: '#ffffff', // Always white because the button is dark
+                                    fontSize: '14px',
+                                    fontWeight: 400,
+                                    transition: 'all 0.3s ease',
+                                    cursor: 'pointer',
+                                    textDecoration: 'none',
+                                }}
+                                onMouseEnter={(e) => {
+                                    // Optional: slight hover effect on text or internal background if needed
+                                }}
+                            >
+                                Get in touch
+                            </a>
+                        </div>
 
                         {/* Theme Toggle Button */}
                         <button
@@ -352,88 +328,47 @@ export function Navbar() {
                 {/* Mobile: Menu Button */}
                 {isMobile && (
                     <button
+                        className={`mobile-menu-btn ${isOpen ? 'active' : ''}`}
                         onClick={() => setIsOpen(!isOpen)}
-                        style={{
-                            padding: '8px',
-                            color: isDark ? 'white' : '#111111',
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                        }}
                         aria-label="Toggle menu"
                     >
-                        {isOpen ? <X size={24} /> : <Menu size={24} />}
+                        <span className="bar"></span>
+                        <span className="bar"></span>
+                        <span className="bar"></span>
                     </button>
                 )}
             </div>
 
-            {/* Mobile Navigation Dropdown */}
+            {/* Mobile Menu Overlay */}
             {isMobile && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: '20px',
-                        right: '20px',
-                        marginTop: '10px',
-                        background: isDark ? 'rgba(20, 20, 22, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(20px)',
-                        WebkitBackdropFilter: 'blur(20px)',
-                        borderRadius: '16px',
-                        border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.1)',
-                        overflow: 'hidden',
-                        transition: 'all 0.3s ease',
-                        opacity: isOpen ? 1 : 0,
-                        transform: isOpen ? 'translateY(0)' : 'translateY(-10px)',
-                        pointerEvents: isOpen ? 'auto' : 'none',
-                    }}
-                >
-                    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {navLinks.map((link) => (
+                <div className={`mobile-menu-overlay ${isOpen ? 'active' : ''}`}>
+                    <div className="mobile-menu-content">
+                        <ul className="mobile-links">
+                            {navLinks.map((link) => (
+                                <a
+                                    key={link.href}
+                                    href={link.href}
+                                    className={isActive(link.href) ? 'active' : ''}
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        scrollToSection(link.href)
+                                        setIsOpen(false)
+                                    }}
+                                >
+                                    {link.name}
+                                </a>
+                            ))}
                             <a
-                                key={link.href}
-                                href={link.href}
+                                href="#contact"
                                 onClick={(e) => {
                                     e.preventDefault()
-                                    scrollToSection(link.href)
-                                }}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '12px 16px',
-                                    borderRadius: '12px',
-                                    color: isDark ? '#ffffff' : '#111111',
-                                    background: isActive(link.href)
-                                        ? (isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)')
-                                        : 'transparent',
+                                    scrollToSection('#contact')
+                                    setIsOpen(false)
                                 }}
                             >
-                                <span style={{
-                                    width: '6px',
-                                    height: '6px',
-                                    borderRadius: '50%',
-                                    background: isActive(link.href) ? '#ff3b3b' : (isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)'),
-                                }} />
-                                {link.name}
+                                Get in touch
                             </a>
-                        ))}
-                        <a
-                            href="#contact"
-                            onClick={(e) => { e.preventDefault(); scrollToSection('#contact'); }}
-                            style={{
-                                marginTop: '8px',
-                                padding: '12px 16px',
-                                background: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                                border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
-                                borderRadius: '12px',
-                                color: isDark ? '#ffffff' : '#111111',
-                                textAlign: 'center',
-                                fontSize: '14px',
-                            }}
-                        >
-                            Get in touch
-                        </a>
+                        </ul>
                     </div>
                 </div>
             )}

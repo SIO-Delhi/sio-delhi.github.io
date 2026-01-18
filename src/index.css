@@ -595,6 +595,187 @@ section {
   z-index: 100;
 }
 
+
 .section-card-shine:hover::after {
   animation: shine-slide 1.5s ease-in-out;
+}
+
+/* =========================================
+   Mobile Hamburger & Overlay Styles
+   ========================================= */
+
+/* Mobile Menu Button */
+.mobile-menu-btn {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 30px;
+  height: 20px;
+  z-index: 1002;
+  transition: transform 0.3s ease;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-right: 16px;
+  /* Shift leftwards from edge */
+}
+
+.mobile-menu-btn .bar {
+  width: 100%;
+  height: 2px;
+  background-color: white;
+  /* Default to white, can be overridden */
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  transform-origin: left;
+}
+
+/* Light theme override handling will be done inline or via parent class if needed */
+[data-theme="light"] .mobile-menu-btn .bar {
+  background-color: #111111;
+}
+
+.mobile-menu-btn.active .bar:nth-child(1) {
+  transform: rotate(45deg);
+}
+
+.mobile-menu-btn.active .bar:nth-child(2) {
+  opacity: 0;
+}
+
+.mobile-menu-btn.active .bar:nth-child(3) {
+  transform: rotate(-45deg);
+}
+
+/* Mobile Menu Overlay */
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  width: 100vw;
+  background-color: rgba(10, 10, 12, 0.95);
+  z-index: 1001;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+[data-theme="light"] .mobile-menu-overlay {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+.mobile-menu-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.mobile-menu-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.4s ease 0.1s;
+  width: 100%;
+}
+
+.mobile-menu-overlay.active .mobile-menu-content {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobile-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 0;
+}
+
+.mobile-links a {
+  font-size: 2rem;
+  color: #999;
+  font-weight: 500;
+  transition: color 0.3s ease;
+  text-decoration: none;
+  background: transparent;
+  padding: 0;
+  border: none;
+}
+
+[data-theme="light"] .mobile-links a {
+  color: #666;
+}
+
+.mobile-links a.active,
+.mobile-links a:hover {
+  color: #ffffff;
+}
+
+[data-theme="light"] .mobile-links a.active,
+[data-theme="light"] .mobile-links a:hover {
+  color: #000000;
+}
+/* Shiny Button Styles */
+.shiny-button-container {
+  position: relative;
+  border-radius: 100px;
+  padding: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+.shiny-button-container::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+      from var(--angle, 0deg),
+      transparent 0deg,
+      transparent 260deg,
+      rgba(255, 255, 255, 0.2) 290deg,
+      rgba(255, 255, 255, 0.5) 320deg,
+      rgba(255, 255, 255, 1) 350deg,
+      rgba(255, 255, 255, 0.5) 355deg,
+      rgba(255, 255, 255, 0.2) 358deg,
+      transparent 360deg
+  );
+  animation: spin 5s linear infinite;
+}
+
+.shiny-button-container::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 100px;
+  background: rgba(10, 10, 10, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.shiny-button {
+  position: relative;
+  z-index: 1;
+  border: none !important;
+  background: transparent !important;
+}
+
+@keyframes spin {
+  0% { --angle: 0deg; }
+  100% { --angle: 360deg; }
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
 }

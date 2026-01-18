@@ -12,6 +12,7 @@ export interface Post {
     image?: string
     pdfUrl?: string // PDF document URL
     layout: LayoutType
+    order?: number // Display order for sorting (e.g., Leadership cards)
     isPublished: boolean // Whether post shows on frontend
     createdAt: number
     updatedAt: number
@@ -23,4 +24,12 @@ export interface Section {
     label: string // e.g., "INITIATIVES"
     title: string // e.g., "Our Initiatives"
     description?: string
+}
+
+export interface Leader {
+    id: string
+    name: string
+    role: string
+    image: string
+    bio?: string
 }
