@@ -1,345 +1,119 @@
-import { useEffect, useRef, useMemo } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { Link } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext'
+import SectionLayout from '../layout/SectionLayout'
 import { useContent } from '../../context/ContentContext'
 
-gsap.registerPlugin(ScrollTrigger)
-
 export function LeadershipSection() {
-    const sectionRef = useRef<HTMLElement>(null)
-    const headerWrapperRef = useRef<HTMLDivElement>(null)
-    const headerRef = useRef<HTMLHeadingElement>(null)
-    const cardsContainerRef = useRef<HTMLDivElement>(null)
     const { isDark } = useTheme()
-    const { getPostsBySection } = useContent()
+    const { localLeaders } = useContent()
 
-    // Get PUBLISHED posts from database
-    const dynamicPosts = getPostsBySection('leadership').filter(p => p.isPublished)
-    const leaders = useMemo(() => {
-        return dynamicPosts.map(post => ({
-            id: post.id,
-            name: post.title,
-            role: post.subtitle || '',
-            image: post.image || '',
-            description: post.subtitle || '',
-            content: post.content,
-            date: post.createdAt,
-            // Keep these for consistency if needed, but JSX uses name/role
-            title: post.title,
-            category: 'Leadership'
-        }))
-    }, [dynamicPosts])
+    const hasContent = localLeaders.length > 0
 
-    useEffect(() => {
-        const ctx = gsap.context(() => {
-            gsap.set(headerWrapperRef.current, {
-                opacity: 0,
-                visibility: 'hidden'
-            })
-
-            gsap.set(headerRef.current, {
-                scale: 3,
-                y: '80vh',
-                x: '30vw',
-                transformOrigin: 'center center',
-                opacity: 0
-            })
-
-            ScrollTrigger.create({
-                trigger: sectionRef.current,
-                start: 'top 90%',
-                end: 'bottom top',
-                onEnter: () => {
-                    gsap.set(headerWrapperRef.current, { opacity: 1, visibility: 'visible' })
-                },
-                onLeave: () => {
-                    gsap.set(headerWrapperRef.current, { opacity: 0, visibility: 'hidden' })
-                },
-                onEnterBack: () => {
-                    gsap.set(headerWrapperRef.current, { opacity: 1, visibility: 'visible' })
-                },
-                onLeaveBack: () => {
-                    gsap.set(headerWrapperRef.current, { opacity: 0, visibility: 'hidden' })
-                }
-            })
-
-            gsap.fromTo(headerRef.current,
-                { opacity: 0 },
-                {
-                    opacity: 1,
-                    ease: 'none',
-                    scrollTrigger: {
-                        trigger: sectionRef.current,
-                        start: 'top 80%',
-                        end: 'top 30%',
-                        scrub: 0.5
-                    }
-                }
-            )
-
-            gsap.fromTo(headerRef.current,
-                {
-                    scale: 3,
-                    y: '80vh',
-                    x: '30vw'
-                },
-                {
-                    scale: 1,
-                    y: 0,
-                    x: 0,
-                    ease: 'none',
-                    scrollTrigger: {
-                        trigger: sectionRef.current,
-                        start: 'top 80%',
-                        end: 'top -20%',
-                        scrub: 1
-                    }
-                }
-            )
-
-            gsap.fromTo(headerRef.current,
-                { opacity: 1 },
-                {
-                    opacity: 0,
-                    ease: 'power2.in',
-                    scrollTrigger: {
-                        trigger: cardsContainerRef.current,
-                        start: 'bottom 120%',
-                        end: 'bottom 60%',
-                        scrub: 0.5
-                    }
-                }
-            )
-
-        }, sectionRef)
-
-        return () => ctx.revert()
-    }, [])
-
-    // Show minimal section if no published posts
-    const hasContent = leaders.length > 0
-
-    return (
-        <section
-            id="leadership"
-            ref={sectionRef}
+    const headerContent = (
+        <h1
             style={{
-                minHeight: '200vh',
-                position: 'relative',
-                background: 'transparent',
-                paddingTop: '100px',
+                fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                fontWeight: 700,
+                color: '#ffffff',
+                lineHeight: 1.1,
+                margin: 0,
+                fontFamily: '"Geist", sans-serif',
+                letterSpacing: '-0.02em'
             }}
         >
-            <div
-                ref={headerWrapperRef}
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '65%',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 420px)',
-                    gap: '24px 24px', // Row gap 24px, Column gap 16px
-                    justifyContent: 'center',
-                    paddingLeft: '10%',
-                    paddingRight: '40px',
-                    paddingBottom: '24vh',
-                    zIndex: 5,
-                    pointerEvents: 'none',
-                    opacity: 0,
-                    visibility: 'hidden'
-                }}
-            >
-                <h1
-                    ref={headerRef}
+            Our <span style={{ color: '#ff3333' }}>Leaders</span>
+        </h1>
+    )
+
+    // Helper for rendering leader cards
+    const renderLeaderCard = (leader: any) => (
+        <div
+            key={leader.id}
+            style={{
+                background: 'rgba(40, 40, 40, 0.6)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                minWidth: '260px',
+                maxWidth: '280px',
+                flexShrink: 0,
+                transition: 'all 0.3s ease',
+                cursor: 'default'
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)'
+                e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.3)'
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = 'none'
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'
+            }}
+        >
+            {/* Image */}
+            <div style={{ height: '280px', width: '100%', overflow: 'hidden' }}>
+                <img
+                    src={leader.image}
+                    alt={leader.name}
                     style={{
-                        fontSize: 'clamp(3rem, 6vw, 5rem)',
-                        fontWeight: 800,
-                        color: isDark ? '#ffffff' : '#111111',
-                        lineHeight: 1,
-                        margin: 0,
-                        textTransform: 'uppercase',
-                        fontFamily: '"Geist", sans-serif',
-                        letterSpacing: '-0.03em',
-                        whiteSpace: 'nowrap',
-                        pointerEvents: 'auto'
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
                     }}
-                >
-                    <span style={{ color: '#ffffff' }}>OUR</span>
-                    <br />
-                    <span style={{ color: '#ff3333' }}>LEADERS</span>
-                </h1>
+                />
             </div>
-
-            <div
-                ref={cardsContainerRef}
-                style={{
-                    marginLeft: '20%',
-                    marginRight: '5%',
-                    width: '75%',
-                    padding: '80vh 0 100vh 0',
-                    position: 'relative',
-                    zIndex: 10
-                }}
-            >
-                {hasContent ? (
-                    <>
-                        {/* First Row - Top 2 Leaders */}
-                        <div style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            justifyContent: 'center',
-                            gap: '24px 16px',
-                            marginBottom: '32px'
-                        }}>
-                            {leaders.slice(0, 2).map((leader) => (
-                                <Link
-                                    key={leader.id}
-                                    to={`/leader/${leader.id}`}
-                                    data-cursor="view"
-                                    style={{
-                                        textDecoration: 'none',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        textAlign: 'center'
-                                    }}
-                                >
-                                    <div style={{
-                                        width: '110px',
-                                        height: '110px',
-                                        borderRadius: '20px',
-                                        overflow: 'hidden',
-                                        marginBottom: '24px',
-                                        background: 'rgba(255, 255, 255, 0.08)',
-                                        backdropFilter: 'blur(20px)',
-                                        WebkitBackdropFilter: 'blur(20px)',
-                                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-                                    }}>
-                                        <img
-                                            src={leader.image}
-                                            alt={leader.name}
-                                            style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover',
-                                                transition: 'transform 0.5s ease',
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.transform = 'scale(1.1)'
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.transform = 'scale(1)'
-                                            }}
-                                        />
-                                    </div>
-                                    <h3 style={{
-                                        fontSize: '1.25rem',
-                                        fontWeight: 600,
-                                        color: '#ffffff',
-                                        marginBottom: '8px'
-                                    }}>
-                                        {leader.name}
-                                    </h3>
-                                    <p style={{
-                                        fontSize: '0.9rem',
-                                        color: 'rgba(255, 255, 255, 0.6)',
-                                        margin: 0,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em'
-                                    }}>
-                                        {leader.role}
-                                    </p>
-                                </Link>
-                            ))}
-                        </div>
-
-                        {/* Second Row - Remaining Leaders */}
-                        <div style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            justifyContent: 'center',
-                            gap: '24px 16px'
-                        }}>
-                            {leaders.slice(2).map((leader) => (
-                                <Link
-                                    key={leader.id}
-                                    to={`/leader/${leader.id}`}
-                                    data-cursor="view"
-                                    style={{
-                                        textDecoration: 'none',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        textAlign: 'center'
-                                    }}
-                                >
-                                    <div style={{
-                                        width: '110px',
-                                        height: '110px',
-                                        borderRadius: '20px',
-                                        overflow: 'hidden',
-                                        marginBottom: '20px',
-                                        background: 'rgba(255, 255, 255, 0.08)',
-                                        backdropFilter: 'blur(20px)',
-                                        WebkitBackdropFilter: 'blur(20px)',
-                                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-                                    }}>
-                                        <img
-                                            src={leader.image}
-                                            alt={leader.name}
-                                            style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover',
-                                                transition: 'transform 0.5s ease',
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.transform = 'scale(1.1)'
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.transform = 'scale(1)'
-                                            }}
-                                        />
-                                    </div>
-                                    <h3 style={{
-                                        fontSize: '1.1rem',
-                                        fontWeight: 600,
-                                        color: '#ffffff',
-                                        marginBottom: '6px'
-                                    }}>
-                                        {leader.name}
-                                    </h3>
-                                    <p style={{
-                                        fontSize: '0.8rem',
-                                        color: 'rgba(255, 255, 255, 0.6)',
-                                        margin: 0,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em'
-                                    }}>
-                                        {leader.role}
-                                    </p>
-                                </Link>
-                            ))}
-                        </div>
-                    </>
-                ) : (
-                    <div style={{
-                        padding: '80px 40px',
-                        textAlign: 'center',
-                        color: '#666',
-                        background: 'rgba(255,255,255,0.02)',
-                        borderRadius: '16px',
-                        border: '1px dashed #333'
-                    }}>
-                        <p style={{ fontSize: '1.1rem', margin: 0 }}>No content published yet</p>
-                    </div>
-                )}
+            {/* Info */}
+            <div style={{
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
+            }}>
+                <h3 style={{
+                    margin: 0,
+                    fontSize: '1.2rem',
+                    fontWeight: 700,
+                    color: '#ffffff'
+                }}>
+                    {leader.name}
+                </h3>
+                <p style={{
+                    margin: 0,
+                    fontSize: '0.9rem',
+                    color: '#ff3333',
+                    fontWeight: 600
+                }}>
+                    {leader.role}
+                </p>
             </div>
-        </section>
+        </div>
+    )
+
+    return (
+        <SectionLayout
+            id="leadership"
+            header={headerContent}
+            subtitle="Meet the team leading SIO Delhi"
+        >
+            {hasContent ? (
+                localLeaders.map(renderLeaderCard)
+            ) : (
+                <div style={{
+                    minWidth: '100%',
+                    height: '300px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                    fontSize: '1.1rem'
+                }}>
+                    No leaders content available
+                </div>
+            )}
+        </SectionLayout>
     )
 }
