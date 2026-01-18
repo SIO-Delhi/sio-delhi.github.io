@@ -65,7 +65,8 @@ export default function SectionLayout({
                 position: 'relative',
                 background: 'transparent',
                 paddingTop: '80px',
-                paddingBottom: '60px'
+                paddingBottom: '60px',
+                zIndex: 10, // Ensure content sits above fixed background gradients
             }}
         >
             {/* Header with Arrow */}
@@ -180,6 +181,12 @@ export default function SectionLayout({
                 /* Target direct children (cards) to make them snap alignment points */
                 #${id} > div:last-of-type > * {
                     scroll-snap-align: start;
+                }
+                @media (max-width: 1024px) {
+                    #${id} {
+                        padding-top: 40px !important;
+                        padding-bottom: 30px !important;
+                    }
                 }
             `}</style>
         </section>
