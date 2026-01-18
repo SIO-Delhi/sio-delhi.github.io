@@ -279,7 +279,7 @@ export function Navbar() {
                                     cursor: 'pointer',
                                     textDecoration: 'none',
                                 }}
-                                onMouseEnter={(e) => {
+                                onMouseEnter={() => {
                                     // Optional: slight hover effect on text or internal background if needed
                                 }}
                             >
