@@ -7,7 +7,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 
-import { ArrowLeft, Save, Image as ImageIcon, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Loader2, FileText, X, Plus, Trash2, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify, Images, Eye, GripVertical, Volume2 } from 'lucide-react'
+import { ArrowLeft, Save, Image as ImageIcon, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Loader2, FileText, X, Plus, Trash2, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify, Images, Eye, GripVertical, Volume2, Mail, Instagram } from 'lucide-react'
 import gsap from 'gsap'
 
 // --- Block Types & Interfaces ---
@@ -773,6 +773,8 @@ export function PostEditor() {
     const [images, setImages] = useState<string[]>([]) // Cover image
     const [pdfUrl, setPdfUrl] = useState('')
     const [enableAudio, setEnableAudio] = useState(false)
+    const [email, setEmail] = useState('')
+    const [instagram, setInstagram] = useState('')
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isSubsection, setIsSubsection] = useState(false)
@@ -808,6 +810,10 @@ export function PostEditor() {
                 if (post.enableAudio !== undefined) {
                     setEnableAudio(post.enableAudio)
                 }
+                // Load social links
+                setEmail(post.email || '')
+                setInstagram(post.instagram || '')
+
                 setIsSubsection(post.isSubsection || false)
                 setParentId(post.parentId || '')
                 if (post.order) setOrder(post.order)
@@ -1019,6 +1025,8 @@ export function PostEditor() {
                 image: images[0] || '',
                 pdfUrl: extractedPdfUrl || pdfUrl, // Use extracted or existing
                 enableAudio: enableAudio, // Whether to show TTS player on frontend
+                email: email || undefined,
+                instagram: instagram || undefined,
                 layout: 'custom',
                 createdAt: date ? new Date(date).getTime() : undefined, // Pass date
             }
@@ -1117,6 +1125,40 @@ export function PostEditor() {
                         placeholder={effectiveSectionId === 'leadership' ? "Position / Role" : "Summary (shows on card)..."}
                         style={{ width: '100%', background: 'transparent', border: 'none', color: '#888', fontSize: '1.5rem', fontWeight: 400, outline: 'none', marginBottom: '16px' }}
                     />
+
+                    {/* Social Links (Leadership only) */}
+                    {effectiveSectionId === 'leadership' && (
+                        <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                            <div style={{ flex: 1, position: 'relative' }}>
+                                <Mail size={16} color="#666" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="Email Address"
+                                    style={{
+                                        width: '100%', padding: '10px 10px 10px 36px', borderRadius: '8px',
+                                        background: '#1a1a1a', border: '1px solid #333', color: 'white',
+                                        fontSize: '0.9rem', outline: 'none'
+                                    }}
+                                />
+                            </div>
+                            <div style={{ flex: 1, position: 'relative' }}>
+                                <Instagram size={16} color="#666" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                                <input
+                                    type="text"
+                                    value={instagram}
+                                    onChange={(e) => setInstagram(e.target.value)}
+                                    placeholder="Instagram Handle/URL"
+                                    style={{
+                                        width: '100%', padding: '10px 10px 10px 36px', borderRadius: '8px',
+                                        background: '#1a1a1a', border: '1px solid #333', color: 'white',
+                                        fontSize: '0.9rem', outline: 'none'
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Date and Order Fields */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
