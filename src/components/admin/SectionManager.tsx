@@ -1,14 +1,37 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText } from 'lucide-react'
+
+// Helper to get the first image URL from a post.image (which may be a JSON array or single URL)
+const getFirstImageUrl = (imageField: string | undefined): string | undefined => {
+    if (!imageField) return undefined
+    try {
+        const parsed = JSON.parse(imageField)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed[0]
+        }
+        return imageField
+    } catch {
+        return imageField // It's a plain URL, not JSON
+    }
+}
 
 export function SectionManager() {
     const { sectionId } = useParams()
     const { sections, getPostsBySection, deletePost, updatePost } = useContent()
     const navigate = useNavigate()
     const [showCreateMenu, setShowCreateMenu] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
+
+    // Detect screen size
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
 
     const section = sections.find(s => s.id === sectionId)
     const posts = sectionId ? getPostsBySection(sectionId) : []
@@ -27,10 +50,17 @@ export function SectionManager() {
     return (
         <div>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+            <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                marginBottom: isMobile ? '20px' : '32px',
+                gap: isMobile ? '16px' : '0'
+            }}>
                 <div>
-                    <div style={{ fontSize: '0.9rem', color: '#888', marginBottom: '4px' }}>MANAGE SECTION</div>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800 }}>{section.title}</h1>
+                    <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '4px' }}>MANAGE SECTION</div>
+                    <h1 style={{ fontSize: isMobile ? '1.75rem' : '2.5rem', fontWeight: 800, margin: 0 }}>{section.title}</h1>
                 </div>
 
                 {/* Create New Dropdown */}
@@ -39,20 +69,20 @@ export function SectionManager() {
                         onClick={() => setShowCreateMenu(!showCreateMenu)}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '12px 24px', borderRadius: '100px',
+                            padding: isMobile ? '10px 16px' : '12px 24px', borderRadius: '100px',
                             background: '#ff3b3b', color: 'white', border: 'none',
-                            fontWeight: 600, cursor: 'pointer',
+                            fontWeight: 600, cursor: 'pointer', fontSize: isMobile ? '0.9rem' : '1rem',
                             boxShadow: '0 4px 12px rgba(255, 59, 59, 0.3)'
                         }}
                     >
-                        <Plus size={20} />
+                        <Plus size={isMobile ? 16 : 20} />
                         Create New
-                        <ChevronDown size={16} style={{ marginLeft: '4px', transition: 'transform 0.2s', transform: showCreateMenu ? 'rotate(180deg)' : 'rotate(0)' }} />
+                        <ChevronDown size={14} style={{ marginLeft: '4px', transition: 'transform 0.2s', transform: showCreateMenu ? 'rotate(180deg)' : 'rotate(0)' }} />
                     </button>
 
                     {showCreateMenu && (
                         <div style={{
-                            position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+                            position: 'absolute', top: '100%', right: isMobile ? 'auto' : 0, left: isMobile ? 0 : 'auto', marginTop: '8px',
                             background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px',
                             overflow: 'hidden', minWidth: '200px', zIndex: 100,
                             boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
@@ -99,120 +129,162 @@ export function SectionManager() {
             {/* Posts List */}
             {posts.length === 0 ? (
                 <div style={{
-                    padding: '64px', borderRadius: '16px', border: '2px dashed #333',
+                    padding: isMobile ? '40px 20px' : '64px', borderRadius: '16px', border: '2px dashed #333',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
-                    color: '#666'
+                    color: '#666', textAlign: 'center'
                 }}>
                     <Layers size={48} style={{ opacity: 0.5 }} />
                     <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>No posts yet</div>
                     <p>Create your first post to get started.</p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '16px' }}>
                     {posts.map(post => (
                         <div
                             key={post.id}
                             style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                padding: '24px', borderRadius: '12px',
-                                background: '#141414', border: '1px solid #222'
+                                display: 'flex',
+                                flexDirection: isMobile ? 'column' : 'row',
+                                alignItems: isMobile ? 'stretch' : 'center',
+                                justifyContent: 'space-between',
+                                padding: isMobile ? '16px' : '24px',
+                                borderRadius: '12px',
+                                background: '#141414',
+                                border: '1px solid #222',
+                                gap: isMobile ? '16px' : '0'
                             }}
                         >
-                            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: isMobile ? '12px' : '24px', alignItems: 'center' }}>
                                 {/* Thumbnail */}
                                 <div style={{
-                                    width: '80px', height: '60px', borderRadius: '8px', overflow: 'hidden',
-                                    background: '#222', flexShrink: 0
+                                    width: isMobile ? '60px' : '80px',
+                                    height: isMobile ? '45px' : '60px',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    background: '#222',
+                                    flexShrink: 0
                                 }}>
-                                    {post.image ? (
-                                        <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
-                                            <Layout size={20} />
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        const imageUrl = getFirstImageUrl(post.image)
+                                        return imageUrl ? (
+                                            <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
+                                                <Layout size={isMobile ? 16 : 20} />
+                                            </div>
+                                        )
+                                    })()}
                                 </div>
 
                                 {/* Info */}
-                                <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{post.title}</h3>
-                                        {/* Subsection Badge */}
-                                        {post.isSubsection && (
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: isMobile ? '8px' : '12px',
+                                        marginBottom: '4px',
+                                        flexWrap: 'wrap'
+                                    }}>
+                                        <h3 style={{
+                                            fontSize: isMobile ? '1rem' : '1.2rem',
+                                            fontWeight: 700,
+                                            margin: 0,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: isMobile ? 'normal' : 'nowrap',
+                                            maxWidth: isMobile ? '100%' : '200px'
+                                        }}>{post.title}</h3>
+                                        {/* Badges */}
+                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                            {post.isSubsection && (
+                                                <span style={{
+                                                    padding: '2px 8px',
+                                                    borderRadius: '100px',
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 600,
+                                                    textTransform: 'uppercase',
+                                                    background: 'rgba(139, 92, 246, 0.15)',
+                                                    color: '#a78bfa',
+                                                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '3px'
+                                                }}>
+                                                    <FolderOpen size={8} /> Sub
+                                                </span>
+                                            )}
                                             <span style={{
-                                                padding: '2px 10px',
+                                                padding: '2px 8px',
                                                 borderRadius: '100px',
-                                                fontSize: '0.7rem',
+                                                fontSize: '0.65rem',
                                                 fontWeight: 600,
                                                 textTransform: 'uppercase',
-                                                background: 'rgba(139, 92, 246, 0.15)',
-                                                color: '#a78bfa',
-                                                border: '1px solid rgba(139, 92, 246, 0.3)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px'
+                                                background: post.isPublished ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 165, 0, 0.15)',
+                                                color: post.isPublished ? '#22c55e' : '#ffa500',
+                                                border: `1px solid ${post.isPublished ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 165, 0, 0.3)'}`
                                             }}>
-                                                <FolderOpen size={10} /> Subsection
+                                                {post.isPublished ? 'Published' : 'Draft'}
                                             </span>
-                                        )}
-                                        {/* Status Badge */}
-                                        <span style={{
-                                            padding: '2px 10px',
-                                            borderRadius: '100px',
-                                            fontSize: '0.7rem',
-                                            fontWeight: 600,
-                                            textTransform: 'uppercase',
-                                            background: post.isPublished ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 165, 0, 0.15)',
-                                            color: post.isPublished ? '#22c55e' : '#ffa500',
-                                            border: `1px solid ${post.isPublished ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 165, 0, 0.3)'}`
-                                        }}>
-                                            {post.isPublished ? 'Published' : 'Draft'}
-                                        </span>
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '16px', fontSize: '0.85rem', color: '#888' }}>
+                                    <div style={{ display: 'flex', gap: isMobile ? '12px' : '16px', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#888' }}>
                                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Calendar size={14} />
+                                            <Calendar size={12} />
                                             {new Date(post.createdAt).toLocaleDateString()}
                                         </span>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'capitalize' }}>
-                                            <Layout size={14} />
-                                            {post.layout.replace('-', ' ')}
-                                        </span>
+                                        {!isMobile && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'capitalize' }}>
+                                                <Layout size={12} />
+                                                {post.layout.replace('-', ' ')}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Actions */}
-                            <div style={{ display: 'flex', gap: '8px' }}>
+                            <div style={{
+                                display: 'flex',
+                                gap: '8px',
+                                justifyContent: isMobile ? 'flex-end' : 'flex-start'
+                            }}>
                                 {/* Publish/Unpublish Toggle */}
                                 <button
                                     onClick={() => togglePublish(post.id, post.isPublished)}
                                     title={post.isPublished ? "Unpublish" : "Publish"}
                                     style={{
-                                        padding: '10px 16px', borderRadius: '8px',
+                                        padding: isMobile ? '8px 12px' : '10px 16px',
+                                        borderRadius: '8px',
                                         background: post.isPublished ? 'rgba(255, 165, 0, 0.1)' : 'rgba(34, 197, 94, 0.1)',
                                         border: 'none',
                                         color: post.isPublished ? '#ffa500' : '#22c55e',
                                         cursor: 'pointer',
-                                        display: 'flex', alignItems: 'center', gap: '6px',
-                                        fontSize: '0.85rem', fontWeight: 600
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        fontSize: isMobile ? '0.75rem' : '0.85rem',
+                                        fontWeight: 600
                                     }}
                                 >
-                                    {post.isPublished ? <EyeOff size={16} /> : <Eye size={16} />}
-                                    {post.isPublished ? 'Unpublish' : 'Publish'}
+                                    {post.isPublished ? <EyeOff size={14} /> : <Eye size={14} />}
+                                    {!isMobile && (post.isPublished ? 'Unpublish' : 'Publish')}
                                 </button>
                                 <button
                                     onClick={() => navigate(post.isSubsection ? `/admin/subsection/${post.id}` : `/admin/post/${post.id}`)}
                                     title={post.isSubsection ? "Manage Subsection" : "Edit Post"}
                                     style={{
-                                        padding: '10px', borderRadius: '8px',
-                                        background: '#222', border: 'none', color: '#fff',
-                                        cursor: 'pointer', transition: 'background 0.2s'
+                                        padding: isMobile ? '8px' : '10px',
+                                        borderRadius: '8px',
+                                        background: '#222',
+                                        border: 'none',
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s'
                                     }}
                                     onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
                                     onMouseLeave={(e) => e.currentTarget.style.background = '#222'}
                                 >
-                                    <Edit2 size={18} />
+                                    <Edit2 size={isMobile ? 16 : 18} />
                                 </button>
                                 <button
                                     onClick={async (e) => {
@@ -229,14 +301,18 @@ export function SectionManager() {
                                     }}
                                     title="Delete Post"
                                     style={{
-                                        padding: '10px', borderRadius: '8px',
-                                        background: 'rgba(255, 59, 59, 0.1)', border: 'none', color: '#ff3b3b',
-                                        cursor: 'pointer', transition: 'background 0.2s'
+                                        padding: isMobile ? '8px' : '10px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(255, 59, 59, 0.1)',
+                                        border: 'none',
+                                        color: '#ff3b3b',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s'
                                     }}
                                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 59, 59, 0.2)'}
                                     onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 59, 59, 0.1)'}
                                 >
-                                    <Trash2 size={18} />
+                                    <Trash2 size={isMobile ? 16 : 18} />
                                 </button>
                             </div>
                         </div>

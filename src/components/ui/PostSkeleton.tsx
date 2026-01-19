@@ -48,7 +48,6 @@ export function PostSkeleton({ isDark }: { isDark: boolean }) {
                     width: '100%',
                     height: '200px',
                     marginBottom: '32px',
-                    borderRadius: '16px',
                     ...skeletonStyle
                 }} />
 
@@ -57,7 +56,6 @@ export function PostSkeleton({ isDark }: { isDark: boolean }) {
                     width: '100%',
                     height: '300px',
                     marginBottom: '32px',
-                    borderRadius: '16px',
                     ...skeletonStyle
                 }} />
             </div>

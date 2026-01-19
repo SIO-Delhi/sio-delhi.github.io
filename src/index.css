@@ -724,6 +724,7 @@ section {
 [data-theme="light"] .mobile-links a:hover {
   color: #000000;
 }
+
 /* Shiny Button Styles */
 .shiny-button-container {
   position: relative;
@@ -738,8 +739,7 @@ section {
   content: '';
   position: absolute;
   inset: -50%;
-  background: conic-gradient(
-      from var(--angle, 0deg),
+  background: conic-gradient(from var(--angle, 0deg),
       transparent 0deg,
       transparent 260deg,
       rgba(255, 255, 255, 0.2) 290deg,
@@ -747,8 +747,7 @@ section {
       rgba(255, 255, 255, 1) 350deg,
       rgba(255, 255, 255, 0.5) 355deg,
       rgba(255, 255, 255, 0.2) 358deg,
-      transparent 360deg
-  );
+      transparent 360deg);
   animation: spin 5s linear infinite;
 }
 
@@ -770,8 +769,13 @@ section {
 }
 
 @keyframes spin {
-  0% { --angle: 0deg; }
-  100% { --angle: 360deg; }
+  0% {
+    --angle: 0deg;
+  }
+
+  100% {
+    --angle: 360deg;
+  }
 }
 
 @property --angle {
@@ -785,14 +789,54 @@ section {
   .composite-block-wrapper {
     grid-template-columns: 1fr !important;
   }
-  
+
   .composite-block-image {
-    order: -1 !important; /* Force image to top */
+    order: -1 !important;
+    /* Force image to top */
     margin-bottom: 24px;
     width: 100%;
   }
-  
+
   .composite-block-text {
-    order: 1 !important; /* Force text to bottom */
+    order: 1 !important;
+    /* Force text to bottom */
   }
+}
+
+/* Rich Text Content - Ensure inline styles from editor are preserved */
+.rich-text-content {
+  /* Default text color for dark mode content */
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.8;
+}
+
+/* Light mode default */
+.light .rich-text-content {
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* 
+ * IMPORTANT: Allow inline styles to override defaults.
+ * Browser inline styles have higher specificity, so they will 
+ * naturally override these class-based rules.
+ */
+.rich-text-content p {
+  margin-bottom: 1em;
+}
+
+.rich-text-content h1,
+.rich-text-content h2,
+.rich-text-content h3 {
+  font-weight: 600;
+  margin-bottom: 0.5em;
+}
+
+.rich-text-content strong {
+  font-weight: 700;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  padding-left: 1.5em;
+  margin-bottom: 1em;
 }
