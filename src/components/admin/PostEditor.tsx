@@ -7,13 +7,15 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 
-import { ArrowLeft, Save, Image as ImageIcon, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Loader2, FileText, X, Plus, Trash2, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify, Images, Eye, GripVertical, Volume2, Mail, Instagram } from 'lucide-react'
+import { ArrowLeft, Eye, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Volume2, MoveUp, MoveDown, Images, GripVertical } from 'lucide-react'
+
+import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
 
 // --- Block Types & Interfaces ---
 interface EditorBlock {
     id: string
-    type: 'text' | 'image' | 'pdf' | 'composite'
+    type: 'text' | 'image' | 'pdf' | 'composite' | 'video'
     content: string // HTML for text, URL for image/pdf
     // Enhanced fields
     caption?: string          // For images
@@ -80,7 +82,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 
 
 
-const AddBlockMenu = ({ onAdd }: { onAdd: (type: 'text' | 'image' | 'pdf' | 'composite') => void }) => {
+const AddBlockMenu = ({ onAdd }: { onAdd: (type: 'text' | 'image' | 'pdf' | 'composite' | 'video') => void }) => {
     const [isOpen, setIsOpen] = useState(false)
 
     const buttonStyle = {
@@ -121,6 +123,12 @@ const AddBlockMenu = ({ onAdd }: { onAdd: (type: 'text' | 'image' | 'pdf' | 'com
                         onMouseEnter={e => e.currentTarget.style.borderColor = '#ff3b3b'}
                         onMouseLeave={e => e.currentTarget.style.borderColor = '#ff3b3b40'}>
                         <FileText size={16} /> PDF
+                    </button>
+                    <button onClick={() => { onAdd('video'); setIsOpen(false) }}
+                        style={{ ...buttonStyle, border: '1px solid #ff3b3b40', color: '#ff8080' }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = '#ff3b3b'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = '#ff3b3b40'}>
+                        <Volume2 size={16} /> Video
                     </button>
                     <button onClick={() => setIsOpen(false)}
                         style={{ background: 'transparent', border: 'none', color: '#666', padding: '8px', borderRadius: '50%', cursor: 'pointer', marginLeft: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -255,11 +263,23 @@ const ImageBlockEditor = ({
     onCarouselImagesChange?: (images: string[]) => void
 }) => {
     const [isUploading, setIsUploading] = useState(false)
+    const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
+    const [pendingFile, setPendingFile] = useState<File | null>(null)
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files
         if (!files || files.length === 0) return
 
+        // If single file, use cropper
+        if (!isCarousel && files.length === 1) {
+            const reader = new FileReader()
+            reader.onload = () => setCropImageSrc(reader.result as string)
+            reader.readAsDataURL(files[0])
+            e.target.value = ''
+            return
+        }
+
+        // Bulk upload or carousel logic (skipping crop for simplicity/UX)
         setIsUploading(true)
         try {
             if (isCarousel && files.length > 1) {
@@ -272,7 +292,7 @@ const ImageBlockEditor = ({
                 onCarouselImagesChange?.(urls)
                 if (!url && urls.length > 0) onChange(urls[0]) // Set first as main
             } else {
-                // Single image
+                // Single image fallback (direct)
                 const uploadedUrl = await uploadImage(files[0])
                 onChange(uploadedUrl)
             }
@@ -282,6 +302,39 @@ const ImageBlockEditor = ({
         } finally {
             setIsUploading(false)
         }
+    }
+
+    const handleSkip = async () => {
+        if (!pendingFile) return
+        setCropImageSrc(null)
+        setIsUploading(true)
+        try {
+            const url = await uploadImage(pendingFile)
+            if (isCarousel) {
+                const newImages = [...(carouselImages || []), url]
+                onCarouselImagesChange?.(newImages)
+                if (!url) onChange(url)
+            } else {
+                onChange(url)
+            }
+        } catch (err) { console.error(err); alert('Upload failed') }
+        finally { setIsUploading(false); setPendingFile(null) }
+    }
+
+    const handleCropComplete = async (blob: Blob) => {
+        setCropImageSrc(null)
+        setIsUploading(true)
+        try {
+            const file = new File([blob], `cropped-block-${Date.now()}.jpg`, { type: "image/jpeg" })
+            const uploadedUrl = await uploadImage(file)
+            if (isCarousel) {
+                const newImages = [...(carouselImages || []), uploadedUrl]
+                onCarouselImagesChange?.(newImages)
+                if (!url) onChange(uploadedUrl)
+            } else {
+                onChange(uploadedUrl)
+            }
+        } catch (err) { console.error(err) } finally { setIsUploading(false) }
     }
 
     const displayImages = isCarousel && carouselImages && carouselImages.length > 0 ? carouselImages : (url ? [url] : [])
@@ -463,12 +516,16 @@ const ImageBlockEditor = ({
                     </>
                 )}
             </label>
+            {cropImageSrc && <ImageCropper imageSrc={cropImageSrc} onCancel={() => { setCropImageSrc(null); setPendingFile(null); }} onSkip={handleSkip} onCropComplete={handleCropComplete} />}
         </div>
     )
 }
 
 const PdfBlockEditor = ({ url, onChange }: { url: string, onChange: (url: string) => void }) => {
     const [isUploading, setIsUploading] = useState(false)
+
+
+
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -541,6 +598,96 @@ const PdfBlockEditor = ({ url, onChange }: { url: string, onChange: (url: string
     )
 }
 
+const VideoBlockEditor = ({
+    url,
+    subtitle,
+    textContent,
+    onChange,
+    onSubtitleChange,
+    onTextChange
+}: {
+    url: string,
+    subtitle?: string,
+    textContent?: string,
+    onChange: (url: string) => void,
+    onSubtitleChange?: (val: string) => void,
+    onTextChange?: (val: string) => void
+}) => {
+    return (
+        <div style={{ background: '#111', borderRadius: '12px', padding: '16px', border: '1px solid #333' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <Volume2 size={24} color="#ff3b3b" />
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: '#eee' }}>Video Embed</span>
+            </div>
+
+            <input
+                type="text"
+                value={url}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder="Paste YouTube or Vimeo link here..."
+                style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#222',
+                    border: '1px solid #333',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontSize: '1rem',
+                    marginBottom: '12px'
+                }}
+            />
+
+            <input
+                type="text"
+                value={subtitle || ''}
+                onChange={(e) => onSubtitleChange?.(e.target.value)}
+                placeholder="Video Title (Optional)"
+                style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    background: 'transparent',
+                    borderBottom: '1px solid #333',
+                    borderTop: 'none', borderLeft: 'none', borderRight: 'none',
+                    color: '#ff8080',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                    outline: 'none'
+                }}
+            />
+
+            <textarea
+                value={textContent || ''}
+                onChange={(e) => onTextChange?.(e.target.value)}
+                placeholder="Description..."
+                rows={2}
+                style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    background: '#151515',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: '#aaa',
+                    fontSize: '0.9rem',
+                    resize: 'vertical',
+                    outline: 'none'
+                }}
+            />
+
+            {url && (
+                <div style={{ marginTop: '16px', borderRadius: '8px', overflow: 'hidden', position: 'relative', paddingTop: '56.25%', background: '#000' }}>
+                    <iframe
+                        src={url.replace('watch?v=', 'embed/').split('&')[0]}
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    />
+                </div>
+            )}
+        </div>
+    )
+}
+
 // --- Composite Block Editor: Image + Text with Layout Options ---
 const CompositeBlockEditor = ({
     layout,
@@ -571,6 +718,8 @@ const CompositeBlockEditor = ({
 }) => {
     const [isUploading, setIsUploading] = useState(false)
     const [isFocused, setIsFocused] = useState(false)
+    const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
+    const [pendingFile, setPendingFile] = useState<File | null>(null)
     const currentLayout = layout || 'image-left'
 
     // Derived images list (prefer carouselImages, fallback to legacy imageUrl)
@@ -586,16 +735,37 @@ const CompositeBlockEditor = ({
         onBlur: () => setIsFocused(false),
     })
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+
+        const reader = new FileReader()
+        reader.onload = () => setCropImageSrc(reader.result as string)
+        reader.readAsDataURL(file)
+        e.target.value = ''
+    }
+
+    const handleSkip = async () => {
+        if (!pendingFile) return
+        setCropImageSrc(null)
         setIsUploading(true)
         try {
-            const url = await uploadImage(file)
-            // Add to list
+            const url = await uploadImage(pendingFile)
             const newImages = [...images, url]
             onImagesChange?.(newImages)
-            // Also update legacy for backward compat if it's the first one
+            if (newImages.length === 1) onImageChange?.(url)
+        } catch (err) { console.error(err); alert('Upload failed') }
+        finally { setIsUploading(false); setPendingFile(null) }
+    }
+
+    const handleCropComplete = async (blob: Blob) => {
+        setCropImageSrc(null)
+        setIsUploading(true)
+        try {
+            const file = new File([blob], `cropped-composite-${Date.now()}.jpg`, { type: "image/jpeg" })
+            const url = await uploadImage(file)
+            const newImages = [...images, url]
+            onImagesChange?.(newImages)
             if (newImages.length === 1) onImageChange?.(url)
         } catch (err) { console.error(err) }
         finally { setIsUploading(false) }
@@ -649,6 +819,33 @@ const CompositeBlockEditor = ({
             }}>
                 {/* Image Area */}
                 <div style={{ gridArea: 'image', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+                    {/* Carousel Toggle */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <button
+                            onClick={() => {
+                                // Toggle between single and carousel
+                                if (carouselImages && carouselImages.length > 0) {
+                                    // Switch to single: keep first image
+                                    onImageChange?.(carouselImages[0])
+                                    onImagesChange?.([]) // clear carousel
+                                } else {
+                                    // Switch to carousel: start with current image
+                                    if (imageUrl) onImagesChange?.([imageUrl])
+                                    else onImagesChange?.([])
+                                }
+                            }}
+                            style={{
+                                padding: '4px 10px', borderRadius: '4px', border: '1px solid #333',
+                                background: (carouselImages && carouselImages.length > 0) ? '#4ade80' : 'transparent',
+                                color: (carouselImages && carouselImages.length > 0) ? '#000' : '#888',
+                                fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600
+                            }}
+                        >
+                            {(carouselImages && carouselImages.length > 0) ? 'Carousel Mode On' : 'Single Image'}
+                        </button>
+                    </div>
+
                     {images.map((img, idx) => (
                         <div key={idx} style={{ position: 'relative' }}>
                             <img src={img} alt="" style={{
@@ -671,10 +868,12 @@ const CompositeBlockEditor = ({
                     ))}
 
                     <label style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         height: images.length > 0 ? '60px' : '150px',
                         borderRadius: '8px', background: '#1a1a1a', border: '2px dashed #333',
-                        cursor: isUploading ? 'wait' : 'pointer'
+                        cursor: isUploading ? 'wait' : 'pointer',
+                        // Hide add button if single mode and already has image
+                        display: (!carouselImages?.length && images.length > 0) ? 'none' : 'flex'
                     }}>
                         <input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} style={{ display: 'none' }} />
                         {isUploading ? (
@@ -682,7 +881,9 @@ const CompositeBlockEditor = ({
                         ) : (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Plus size={20} color="#4ade80" />
-                                <span style={{ color: '#666', fontSize: '0.8rem' }}>Add Image</span>
+                                <span style={{ color: '#666', fontSize: '0.8rem' }}>
+                                    {(carouselImages && carouselImages.length > 0) ? 'Add Slide' : 'Add Image'}
+                                </span>
                             </div>
                         )}
                     </label>
@@ -746,6 +947,7 @@ const CompositeBlockEditor = ({
                     </div>
                 </div>
             </div>
+            {cropImageSrc && <ImageCropper imageSrc={cropImageSrc} onCancel={() => { setCropImageSrc(null); setPendingFile(null); }} onSkip={handleSkip} onCropComplete={handleCropComplete} />}
         </div>
     )
 }
@@ -780,8 +982,15 @@ export function PostEditor() {
     const [isSubsection, setIsSubsection] = useState(false)
     const [parentId, setParentId] = useState<string>(urlParentId)
 
+    // Crop State
+    const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
+    const [pendingFile, setPendingFile] = useState<File | null>(null)
+
     // Blocks State
     const [blocks, setBlocks] = useState<EditorBlock[]>([])
+
+    // Cover Carousel State
+    const [currentCoverIndex, setCurrentCoverIndex] = useState(0)
 
     // Preview & Drag State
     const [showPreview, setShowPreview] = useState(false)
@@ -803,7 +1012,15 @@ export function PostEditor() {
             if (post) {
                 setTitle(post.title)
                 setSubtitle(post.subtitle || '')
-                if (post.image) setImages(Array.isArray(post.image) ? post.image : [post.image])
+                if (post.image) {
+                    try {
+                        const parsed = JSON.parse(post.image)
+                        if (Array.isArray(parsed)) setImages(parsed)
+                        else setImages([post.image])
+                    } catch {
+                        setImages([post.image])
+                    }
+                }
                 if (post.pdfUrl) {
                     setPdfUrl(post.pdfUrl)
                 }
@@ -834,11 +1051,13 @@ export function PostEditor() {
                         const isComposite = el.classList.contains('block-composite')
                         const isPdf = el.classList.contains('block-pdf')
                         const isImage = el.classList.contains('block-image')
+                        const isVideo = el.classList.contains('block-video')
 
-                        let type: 'text' | 'image' | 'pdf' | 'composite' = 'text'
+                        let type: 'text' | 'image' | 'pdf' | 'composite' | 'video' = 'text'
                         if (isComposite) type = 'composite'
                         else if (isPdf) type = 'pdf'
                         else if (isImage) type = 'image'
+                        else if (isVideo) type = 'video'
 
                         let content = ''
                         let enhancedFields: Partial<EditorBlock> = {}
@@ -861,6 +1080,13 @@ export function PostEditor() {
                                 isCarousel: el.getAttribute('data-carousel') === 'true',
                                 carouselImages: el.getAttribute('data-images') ? JSON.parse(decodeURIComponent(el.getAttribute('data-images')!)) : []
                             }
+                        } else if (type === 'video') {
+                            const iframe = el.querySelector('iframe')
+                            content = iframe ? iframe.src : ''
+                            enhancedFields = {
+                                subtitle: decodeURIComponent(el.getAttribute('data-subtitle') || ''),
+                                textContent: decodeURIComponent(el.getAttribute('data-text-content') || '')
+                            }
                         } else if (type === 'pdf') {
                             content = el.getAttribute('data-pdf-url') || ''
                         } else {
@@ -882,7 +1108,7 @@ export function PostEditor() {
     }, [isEditMode, id, sections])
 
     // Handlers
-    const addBlock = (type: 'text' | 'image' | 'pdf' | 'composite', index?: number) => {
+    const addBlock = (type: 'text' | 'image' | 'pdf' | 'composite' | 'video', index?: number) => {
         const newBlock: EditorBlock = {
             id: crypto.randomUUID(),
             type,
@@ -968,16 +1194,40 @@ export function PostEditor() {
     }
 
     // Reuse existing upload handlers for Header
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files
-        if (!files) return
+    // Reuse existing upload handlers for Header
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        setPendingFile(file) // Store file for Skip
+        const reader = new FileReader()
+        reader.onload = () => setCropImageSrc(reader.result as string)
+        reader.readAsDataURL(file)
+        e.target.value = ''
+    }
+
+    const handleSkip = async () => {
+        if (!pendingFile) return
+        setCropImageSrc(null)
         setIsUploading(true)
         try {
-            for (const file of Array.from(files)) {
-                if (file.size > 5 * 1024 * 1024) continue
-                const url = await uploadImage(file)
-                setImages(prev => [...prev, url])
-            }
+            const url = await uploadImage(pendingFile)
+            setImages(prev => [...prev, url])
+            // If first image, reset index
+            if (images.length === 0) setCurrentCoverIndex(0)
+        } catch (err) { console.error(err); alert('Upload failed') }
+        finally { setIsUploading(false); setPendingFile(null) }
+    }
+
+    const handleCoverCropComplete = async (blob: Blob) => {
+        setCropImageSrc(null)
+        setIsUploading(true)
+        try {
+            const file = new File([blob], `cropped-cover-${Date.now()}.jpg`, { type: "image/jpeg" })
+            const url = await uploadImage(file)
+            setImages(prev => [...prev, url])
+            // If first image, reset index
+            if (images.length === 0) setCurrentCoverIndex(0)
         } catch (err) { console.error(err) } finally { setIsUploading(false) }
     }
 
@@ -1013,24 +1263,35 @@ export function PostEditor() {
                 const alignAttr = block.alignment ? ` data-align="${block.alignment}"` : ''
                 const imagesAttr = block.carouselImages && block.carouselImages.length > 0 ? ` data-images='${JSON.stringify(block.carouselImages)}'` : ''
                 finalContent += `<div class="siodel-block block-composite"${layoutAttr}${imageAttr}${textAttr}${subtitleAttr}${alignAttr}${imagesAttr}></div>`
+            } else if (block.type === 'video' && block.content) {
+                const embedUrl = block.content.replace('watch?v=', 'embed/').split('&')[0]
+                const subtitleAttr = block.subtitle ? ` data-subtitle="${encodeURIComponent(block.subtitle)}"` : ''
+                const textAttr = block.textContent ? ` data-text-content="${encodeURIComponent(block.textContent)}"` : ''
+
+                let innerContent = ''
+                if (block.subtitle) innerContent += `<h3 style="margin: 0 0 12px 0; color: #ff3b3b; font-size: 1.1rem; font-weight: 600;">${block.subtitle}</h3>`
+                innerContent += `<div style="border-radius: 12px; overflow: hidden; position: relative; width: 100%; height: 0; padding-bottom: 56.25%; background: #000;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+                if (block.textContent) innerContent += `<p style="margin: 16px 0 0 0; color: rgba(255,255,255,0.8); font-size: 0.95rem; line-height: 1.6;">${block.textContent}</p>`
+
+                finalContent += `<div class="siodel-block block-video"${subtitleAttr}${textAttr} style="margin: 32px 0; padding: 20px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 6px rgba(0,0,0,0.1);">${innerContent}</div>`
             }
         })
 
         try {
+            // Construct Post Data
             const postData = {
                 title,
                 subtitle,
-                order: order || 0,
                 content: finalContent,
-                image: images[0] || '',
-                pdfUrl: extractedPdfUrl || pdfUrl, // Use extracted or existing
-                enableAudio: enableAudio, // Whether to show TTS player on frontend
-                email: email || undefined,
-                instagram: instagram || undefined,
-                layout: 'custom',
-                createdAt: date ? new Date(date).getTime() : undefined, // Pass date
+                image: images.length > 1 ? JSON.stringify(images) : (images[0] || undefined),
+                pdfUrl: pdfUrl || extractedPdfUrl,
+                enableAudio,
+                email,
+                instagram,
+                layout: 'default',
+                order,
+                createdAt: date ? new Date(date).getTime() : (post?.createdAt || Date.now()) // Use selected date or existing/current
             }
-
             if (isEditMode && id) {
                 updatePost(id, { ...postData, isSubsection, parentId: parentId || undefined })
             } else if (effectiveSectionId) {
@@ -1044,6 +1305,7 @@ export function PostEditor() {
 
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '100px' }}>
+            {cropImageSrc && <ImageCropper imageSrc={cropImageSrc} onCancel={() => { setCropImageSrc(null); setPendingFile(null); }} onSkip={handleSkip} onCropComplete={handleCoverCropComplete} />}
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -1077,28 +1339,87 @@ export function PostEditor() {
             {/* Document Area */}
             <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
-                {/* 1. Cover Image */}
+                {/* 1. Cover Image / Carousel */}
                 <div style={{ position: 'relative' }}>
                     {images.length > 0 ? (
                         <div style={{ position: 'relative', width: '100%', height: '350px', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
-                            <img src={images[0]} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img
+                                src={images[currentCoverIndex] || images[0]}
+                                alt="Cover"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+
+                            {/* Carousel Controls */}
+                            {images.length > 1 && (
+                                <>
+                                    <button
+                                        onClick={() => setCurrentCoverIndex(prev => (prev - 1 + images.length) % images.length)}
+                                        style={{
+                                            position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
+                                            width: '40px', height: '40px', borderRadius: '50%',
+                                            background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)',
+                                            color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10
+                                        }}
+                                    >
+                                        <ChevronLeft size={20} />
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentCoverIndex(prev => (prev + 1) % images.length)}
+                                        style={{
+                                            position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)',
+                                            width: '40px', height: '40px', borderRadius: '50%',
+                                            background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)',
+                                            color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10
+                                        }}
+                                    >
+                                        <ChevronRight size={20} />
+                                    </button>
+                                    <div style={{
+                                        position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
+                                        background: 'rgba(0,0,0,0.5)', padding: '4px 12px', borderRadius: '12px',
+                                        color: 'white', fontSize: '0.8rem', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.1)'
+                                    }}>
+                                        {currentCoverIndex + 1} / {images.length}
+                                    </div>
+                                </>
+                            )}
+
                             <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px' }}>
-                                <button onClick={() => setImages([])} style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}>
-                                    <X size={14} /> {effectiveSectionId === 'leadership' ? 'Remove Photo' : 'Remove Cover'}
+                                <button
+                                    onClick={() => {
+                                        const newImages = images.filter((_, i) => i !== currentCoverIndex)
+                                        setImages(newImages)
+                                        if (currentCoverIndex >= newImages.length) setCurrentCoverIndex(Math.max(0, newImages.length - 1))
+                                    }}
+                                    style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}
+                                >
+                                    <X size={14} /> Remove Slide
                                 </button>
                                 <label style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}>
-                                    {isUploading ? 'Uploading...' : <> <ImageIcon size={14} /> {effectiveSectionId === 'leadership' ? 'Change Photo' : 'Change'} </>}
+                                    {isUploading ? 'Uploading...' : <> <Plus size={14} /> Add Slide </>}
                                     <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
                                 </label>
                             </div>
                         </div>
                     ) : (
-                        <div style={{ width: '100%', borderBottom: '1px solid #333', paddingBottom: '24px' }}>
-                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '0.9rem', cursor: 'pointer', padding: '8px 16px', borderRadius: '6px', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#222'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                <ImageIcon size={18} /> <span>{isUploading ? 'Uploading...' : (effectiveSectionId === 'leadership' ? 'Add Photo' : 'Add Cover Image')}</span>
-                                <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
-                            </label>
-                        </div>
+                        <label style={{
+                            width: '100%', height: '200px',
+                            background: '#1a1a1a', border: '2px dashed #333', borderRadius: '16px',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                            color: '#666', cursor: 'pointer', transition: 'all 0.2s'
+                        }}>
+                            {isUploading ? (
+                                <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: '#666' }} />
+                            ) : (
+                                <>
+                                    <ImageIcon size={32} />
+                                    <span style={{ fontWeight: 500 }}>
+                                        {effectiveSectionId === 'leadership' ? 'Upload Profile Photo' : 'Upload Cover Image / Carousel'}
+                                    </span>
+                                </>
+                            )}
+                            <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
+                        </label>
                     )}
                 </div>
 
@@ -1350,6 +1671,16 @@ export function PostEditor() {
                                     onTextChange={(content) => updateBlockField(block.id, 'textContent', content)}
                                     onSubtitleChange={(subtitle) => updateBlockField(block.id, 'subtitle', subtitle)}
                                     onAlignmentChange={(alignment) => updateBlockField(block.id, 'alignment', alignment)}
+                                />
+                            )}
+                            {block.type === 'video' && (
+                                <VideoBlockEditor
+                                    url={block.content}
+                                    subtitle={block.subtitle}
+                                    textContent={block.textContent}
+                                    onChange={(url) => updateBlockContent(block.id, url)}
+                                    onSubtitleChange={(subtitle) => updateBlockField(block.id, 'subtitle', subtitle)}
+                                    onTextChange={(content) => updateBlockField(block.id, 'textContent', content)}
                                 />
                             )}
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage } from '../../lib/storage'
 import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff } from 'lucide-react'
+import { ImageCropper } from './ImageCropper'
 
 export function SubsectionEditor() {
     const { sectionId, id } = useParams()
@@ -21,6 +22,10 @@ export function SubsectionEditor() {
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
 
+    // Crop State
+    const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
+    const [pendingFile, setPendingFile] = useState<File | null>(null)
+
     // Load existing data if editing
     useEffect(() => {
         if (isEditMode && id) {
@@ -37,11 +42,41 @@ export function SubsectionEditor() {
         }
     }, [isEditMode, id, getPostById])
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+
+        const reader = new FileReader()
+        reader.addEventListener('load', () => {
+            setCropImageSrc(reader.result?.toString() || null)
+        })
+        reader.readAsDataURL(file)
+
+        // Reset input so same file can be selected again if cancelled
+        e.target.value = ''
+    }
+
+    const handleSkip = async () => {
+        if (!pendingFile) return
+        setCropImageSrc(null)
         setIsUploading(true)
         try {
+            const url = await uploadImage(pendingFile)
+            setCoverImage(url)
+        } catch (err) {
+            console.error(err)
+            alert('Upload failed')
+        } finally {
+            setIsUploading(false)
+            setPendingFile(null)
+        }
+    }
+
+    const handleCropComplete = async (blob: Blob) => {
+        setCropImageSrc(null)
+        setIsUploading(true)
+        try {
+            const file = new File([blob], `cropped-image-${Date.now()}.jpg`, { type: "image/jpeg" })
             const url = await uploadImage(file)
             setCoverImage(url)
         } catch (err) {
@@ -92,6 +127,15 @@ export function SubsectionEditor() {
 
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: '100px' }}>
+            {cropImageSrc && (
+                <ImageCropper
+                    imageSrc={cropImageSrc}
+                    onCancel={() => { setCropImageSrc(null); setPendingFile(null); }}
+                    onSkip={handleSkip}
+                    onCropComplete={handleCropComplete}
+                />
+            )}
+
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '48px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
