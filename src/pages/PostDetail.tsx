@@ -1,10 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
-import { Calendar, User, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react'
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { Calendar, User, ChevronLeft, ChevronRight, Volume2, VolumeX, Mail, Instagram } from 'lucide-react'
+import { useEffect, useState, useMemo } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
 import { SectionCard } from '../components/ui/SectionCard'
+import { PostSkeleton } from '../components/ui/PostSkeleton'
 
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 interface ParsedBlock {
@@ -250,6 +251,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                     return (
                         <div
                             key={index}
+                            className="composite-block-wrapper" // Added for responsive CSS
                             style={{
                                 margin: '40px 0',
                                 padding: '32px',
@@ -266,7 +268,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                 alignItems: 'stretch'
                             }}
                         >
-                            <div style={{ order: layout === 'image-right' ? 2 : 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div className="composite-block-image" style={{ order: layout === 'image-right' ? 2 : 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {(block.carouselImages && block.carouselImages.length > 0
                                     ? block.carouselImages
                                     : (block.imageUrl ? [block.imageUrl] : [])
@@ -287,6 +289,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                 ))}
                             </div>
                             <div
+                                className="composite-block-text"
                                 style={{
                                     order: layout === 'image-right' ? 1 : 2,
                                     maxWidth: '100%'
@@ -336,7 +339,7 @@ interface PostDetailProps {
 export function PostDetail({ sectionType }: PostDetailProps) {
     const { id } = useParams()
     const { isDark } = useTheme()
-    const { getPostById, posts } = useContent()
+    const { getPostById, posts, loading } = useContent()
     const navigate = useNavigate()
 
     const post = id ? getPostById(id) : undefined
@@ -345,6 +348,10 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
+
+    if (loading && !post) {
+        return <PostSkeleton isDark={isDark} />
+    }
 
     if (!post) {
         return (
@@ -458,8 +465,6 @@ declare global {
 
 function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
     const [isPlaying, setIsPlaying] = useState(false)
-    const [elapsedSeconds, setElapsedSeconds] = useState(0)
-    const intervalRef = useRef<number | null>(null)
 
     const extractTextFromPost = () => {
         // Extract text from title, subtitle, and content
@@ -476,18 +481,9 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
         return text
     }
 
-    // Calculate estimated duration based on word count (~150 WPM for clear speech)
     const fullText = useMemo(() => extractTextFromPost(), [post])
-    const wordCount = useMemo(() => fullText.split(/\s+/).filter(Boolean).length, [fullText])
-    const estimatedDurationSeconds = useMemo(() => Math.ceil((wordCount / 150) * 60), [wordCount])
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60)
-        const secs = seconds % 60
-        return `${mins}:${secs.toString().padStart(2, '0')}`
-    }
-
-    const handleToggleSpeech = () => {
+    const handleToggle = () => {
         if (!window.responsiveVoice) {
             alert('Text-to-speech is not available. Please refresh the page.')
             return
@@ -496,39 +492,26 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
         if (isPlaying) {
             window.responsiveVoice.cancel()
             setIsPlaying(false)
-            setElapsedSeconds(0)
-            if (intervalRef.current) clearInterval(intervalRef.current)
         } else {
             window.responsiveVoice.speak(fullText, 'UK English Male', {
                 onend: () => {
                     setIsPlaying(false)
-                    setElapsedSeconds(0)
-                    if (intervalRef.current) clearInterval(intervalRef.current)
                 },
                 onerror: () => {
                     setIsPlaying(false)
-                    setElapsedSeconds(0)
-                    if (intervalRef.current) clearInterval(intervalRef.current)
                 }
             })
             setIsPlaying(true)
-            setElapsedSeconds(0)
-            // Start timer
-            intervalRef.current = window.setInterval(() => {
-                setElapsedSeconds(prev => prev + 1)
-            }, 1000)
         }
     }
 
-    // Cleanup: Stop audio when navigating away or tab visibility changes
+    // Cleanup: Stop TTS when navigating away or tab visibility changes
     useEffect(() => {
         const stopAudio = () => {
             if (window.responsiveVoice) {
                 window.responsiveVoice.cancel()
-                setIsPlaying(false)
-                setElapsedSeconds(0)
-                if (intervalRef.current) clearInterval(intervalRef.current)
             }
+            setIsPlaying(false)
         }
 
         // Stop on tab hidden
@@ -545,12 +528,11 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
         }
     }, [])
 
-    // Progress percentage (capped at 100%)
-    const progressPercent = Math.min((elapsedSeconds / estimatedDurationSeconds) * 100, 100)
+
 
     // Generate random bar heights for waveform visualization
     const barHeights = useMemo(() =>
-        Array.from({ length: 32 }, () => 0.3 + Math.random() * 0.7)
+        Array.from({ length: 60 }, () => 0.2 + Math.random() * 0.8)
         , [])
 
     const [isHovered, setIsHovered] = useState(false)
@@ -602,12 +584,12 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '16px',
+                gap: '20px',
                 padding: '16px 20px'
             }}>
                 {/* Play/Stop Button */}
                 <button
-                    onClick={handleToggleSpeech}
+                    onClick={handleToggle}
                     style={{
                         width: '48px',
                         height: '48px',
@@ -632,66 +614,29 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
                     {isPlaying ? <VolumeX size={22} /> : <Volume2 size={22} />}
                 </button>
 
-                {/* Waveform + Status */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {/* Status Text + Time */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                            color: isPlaying ? '#ff3b3b' : (isDark ? 'white' : '#222')
-                        }}>
-                            {isPlaying ? 'Now Playing...' : 'Click to listen'}
-                        </span>
-                        <span style={{
-                            fontSize: '0.75rem',
-                            fontFamily: 'monospace',
-                            color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)'
-                        }}>
-                            {formatTime(elapsedSeconds)} / ~{formatTime(estimatedDurationSeconds)}
-                        </span>
-                    </div>
-
-                    {/* Progress Bar Track */}
-                    <div style={{
-                        width: '100%',
-                        height: '8px',
-                        borderRadius: '4px',
-                        background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-                        overflow: 'hidden',
-                        position: 'relative'
-                    }}>
-                        {/* Progress Fill */}
-                        <div style={{
-                            width: `${progressPercent}%`,
-                            height: '100%',
-                            borderRadius: '4px',
-                            background: 'linear-gradient(90deg, #ff3b3b 0%, #ff6b6b 100%)',
-                            transition: 'width 0.3s ease'
-                        }} />
-                    </div>
-
-                    {/* Mini Waveform (decorative, below progress) */}
+                {/* Waveform (Centered & Clean) */}
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '2px',
-                        height: '16px',
-                        opacity: isPlaying ? 1 : 0.5,
-                        transition: 'opacity 0.3s ease'
+                        gap: '4px',
+                        height: '28px',
+                        opacity: 1,
+                        maskImage: 'linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%)',
+                        WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%)'
                     }}>
                         {barHeights.map((height, i) => (
                             <div
                                 key={i}
                                 style={{
-                                    width: '2px',
-                                    height: `${height * 100}%`,
-                                    borderRadius: '1px',
+                                    width: '3px', // Thin bars
+                                    height: `${(0.3 + height * 0.7) * 100}%`,
+                                    borderRadius: '10px',
                                     background: isPlaying
                                         ? `linear-gradient(to top, #ff3b3b, #ff8080)`
                                         : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'),
-                                    animation: isPlaying ? `waveformPulse 0.4s ease-in-out ${i * 0.03}s infinite alternate` : 'none',
-                                    transition: 'background 0.3s ease'
+                                    animation: isPlaying ? `waveformPulse 0.5s ease-in-out ${i * 0.05}s infinite alternate` : 'none',
+                                    transition: 'all 0.3s ease'
                                 }}
                             />
                         ))}
@@ -733,8 +678,8 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                     {post.title}
                 </h1>
 
-                {/* Audio Player */}
-                <ReadArticleButton post={post} isDark={isDark} />
+                {/* Audio Player - Only show if enabled */}
+                {post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
                 {/* PDF Flipbook (main content for subsection posts) */}
                 {post.pdfUrl && (
@@ -775,8 +720,8 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                 {post.title}
             </h1>
 
-            {/* Read Article Button - Only show for non-subsection posts */}
-            {!isSubsection && <ReadArticleButton post={post} isDark={isDark} />}
+            {/* Read Article Button - Only show for non-subsection posts with audio enabled */}
+            {!isSubsection && post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
             {/* Cover Image moved to Hero */}
 
@@ -881,7 +826,12 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                 : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
             backdropFilter: 'blur(12px)',
             border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            // Enhanced shadow for "gradient under card" effect
+            boxShadow: isDark
+                ? '0 30px 80px -20px rgba(255, 59, 59, 0.15), 0 0 0 1px rgba(255,255,255,0.05)'
+                : '0 20px 40px -10px rgba(0,0,0,0.1)',
+            position: 'relative',
+            zIndex: 1,
             display: 'flex',
             flexDirection: 'row',
             gap: '48px',
@@ -941,6 +891,28 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                         }}>
                             {post.subtitle}
                         </p>
+                    )}
+
+                    {/* Social Icons */}
+                    {(post.email || post.instagram) && (
+                        <div style={{ display: 'flex', gap: '16px', marginTop: '16px', justifyContent: 'center' }}>
+                            {post.email && (
+                                <a href={`mailto:${post.email}`} style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)', transition: 'color 0.2s' }} className="hover:text-[#ff3b3b]">
+                                    <Mail size={20} />
+                                </a>
+                            )}
+                            {post.instagram && (
+                                <a
+                                    href={post.instagram.startsWith('http') ? post.instagram : `https://instagram.com/${post.instagram.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)', transition: 'color 0.2s' }}
+                                    className="hover:text-[#ff3b3b]"
+                                >
+                                    <Instagram size={20} />
+                                </a>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

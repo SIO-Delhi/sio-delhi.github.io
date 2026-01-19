@@ -11,12 +11,15 @@ export interface Post {
     content: string // HTML from Tiptap
     image?: string
     pdfUrl?: string // PDF document URL
+    enableAudio?: boolean // Whether to show audio player (TTS) on frontend
     layout: LayoutType
     order?: number // Display order for sorting (e.g., Leadership cards)
     isPublished: boolean // Whether post shows on frontend
     createdAt: number
     updatedAt: number
     author?: string
+    email?: string // Contact email for Leadership
+    instagram?: string // Instagram handle/url for Leadership
 }
 
 export interface Section {
