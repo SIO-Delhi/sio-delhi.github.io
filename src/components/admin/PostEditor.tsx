@@ -1101,6 +1101,15 @@ export function PostEditor() {
     const [isUploading, setIsUploading] = useState(false)
     const [isSubsection, setIsSubsection] = useState(false)
     const [parentId, setParentId] = useState<string>(urlParentId)
+    const [isMobile, setIsMobile] = useState(false)
+
+    // Screen size detection for responsive layout
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
 
     // Crop State
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
@@ -1451,34 +1460,69 @@ export function PostEditor() {
     if (!section && !isEditMode) return <div>Section not found</div>
 
     return (
-        <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '100px' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: isMobile ? '60px' : '100px' }}>
             {cropImageSrc && <ImageCropper imageSrc={cropImageSrc} onCancel={() => { setCropImageSrc(null); setPendingFile(null); }} onSkip={handleSkip} onCropComplete={handleCoverCropComplete} />}
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <button onClick={() => navigate(-1)} style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#222', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <ArrowLeft size={20} />
+            <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                justifyContent: 'space-between',
+                marginBottom: isMobile ? '20px' : '32px',
+                gap: isMobile ? '16px' : '0'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '16px' }}>
+                    <button onClick={() => navigate(-1)} style={{
+                        width: isMobile ? '36px' : '40px',
+                        height: isMobile ? '36px' : '40px',
+                        borderRadius: '50%',
+                        background: '#222',
+                        border: 'none',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                    }}>
+                        <ArrowLeft size={isMobile ? 18 : 20} />
                     </button>
                     <div>
-                        <div style={{ fontSize: '0.9rem', color: '#888' }}>{isEditMode ? 'EDIT POST' : `NEW POST IN ${section?.label}`}</div>
-                        <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{isEditMode ? 'Edit Post' : 'Create Post'}</h1>
+                        <div style={{ fontSize: isMobile ? '0.75rem' : '0.9rem', color: '#888' }}>{isEditMode ? 'EDIT POST' : `NEW POST IN ${section?.label}`}</div>
+                        <h1 style={{ fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 700, margin: 0 }}>{isEditMode ? 'Edit Post' : 'Create Post'}</h1>
                     </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-
-                    <button onClick={handleSave} disabled={isSaving} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 32px', borderRadius: '100px', background: '#ff3b3b', color: 'white', border: 'none', fontWeight: 600, fontSize: '1rem', cursor: 'pointer', opacity: isSaving ? 0.7 : 1 }}>
-                        <Save size={20} /> {isSaving ? 'Saving...' : 'Save Post'}
-                    </button>
-                </div>
+                <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: isMobile ? '10px 20px' : '12px 32px',
+                        borderRadius: '100px',
+                        background: '#ff3b3b',
+                        color: 'white',
+                        border: 'none',
+                        fontWeight: 600,
+                        fontSize: isMobile ? '0.9rem' : '1rem',
+                        cursor: 'pointer',
+                        opacity: isSaving ? 0.7 : 1,
+                        width: isMobile ? '100%' : 'auto',
+                        justifyContent: 'center'
+                    }}
+                >
+                    <Save size={isMobile ? 16 : 20} /> {isSaving ? 'Saving...' : 'Save Post'}
+                </button>
             </div>
 
             {/* Document Area */}
-            <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '32px' }}>
 
                 {/* 1. Cover Image / Carousel */}
                 <div style={{ position: 'relative' }}>
                     {images.length > 0 ? (
-                        <div style={{ position: 'relative', width: '100%', height: '350px', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+                        <div style={{ position: 'relative', width: '100%', height: isMobile ? '200px' : '350px', borderRadius: isMobile ? '12px' : '16px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
                             <img
                                 src={images[currentCoverIndex] || images[0]}
                                 alt="Cover"
