@@ -779,3 +779,20 @@ section {
   initial-value: 0deg;
   inherits: false;
 }
+
+/* Composite Layout Responsiveness */
+@media (max-width: 1024px) {
+  .composite-block-wrapper {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .composite-block-image {
+    order: -1 !important; /* Force image to top */
+    margin-bottom: 24px;
+    width: 100%;
+  }
+  
+  .composite-block-text {
+    order: 1 !important; /* Force text to bottom */
+  }
+}
