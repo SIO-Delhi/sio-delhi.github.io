@@ -85,7 +85,16 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
     const getPostsBySection = (sectionId: string) => {
         // Only return top-level posts (no parent) for section view
-        return posts.filter(p => p.sectionId === sectionId && !p.parentId).sort((a, b) => b.createdAt - a.createdAt)
+        return posts
+            .filter(p => p.sectionId === sectionId && !p.parentId)
+            .sort((a, b) => {
+                // Sort by order ascending (0, 1, 2...)
+                if (a.order !== undefined && b.order !== undefined) {
+                    return (a.order || 0) - (b.order || 0)
+                }
+                // Fallback to createdAt descending (newest first)
+                return b.createdAt - a.createdAt
+            })
     }
 
     const getPostById = (id: string) => {
@@ -93,11 +102,25 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     }
 
     const getChildPosts = (parentId: string) => {
-        return posts.filter(p => p.parentId === parentId).sort((a, b) => b.createdAt - a.createdAt)
+        return posts
+            .filter(p => p.parentId === parentId)
+            .sort((a, b) => {
+                if (a.order !== undefined && b.order !== undefined) {
+                    return (a.order || 0) - (b.order || 0)
+                }
+                return b.createdAt - a.createdAt
+            })
     }
 
     const getSubsectionsBySection = (sectionId: string) => {
-        return posts.filter(p => p.sectionId === sectionId && p.isSubsection).sort((a, b) => b.createdAt - a.createdAt)
+        return posts
+            .filter(p => p.sectionId === sectionId && p.isSubsection)
+            .sort((a, b) => {
+                if (a.order !== undefined && b.order !== undefined) {
+                    return (a.order || 0) - (b.order || 0)
+                }
+                return b.createdAt - a.createdAt
+            })
     }
 
     const addPost = async (newPostData: Omit<Post, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: number }) => {
