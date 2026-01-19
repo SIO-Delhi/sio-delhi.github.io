@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
 import { Calendar, User, ChevronLeft, ChevronRight, Volume2, VolumeX, Mail, Instagram } from 'lucide-react'
-import { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
 import { SectionCard } from '../components/ui/SectionCard'
 import { PostSkeleton } from '../components/ui/PostSkeleton'
@@ -15,6 +15,7 @@ interface ParsedBlock {
     pdfUrl: string
     alignment: string
     subtitle: string
+    subtitleColor?: string
     caption: string
     isCarousel: boolean
     carouselImages: string[]
@@ -24,6 +25,65 @@ interface ParsedBlock {
     imageUrl?: string
     textContent?: string
 }
+
+// Memoized Video Block to prevent re-renders (looping/refreshing issues)
+const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: { src: string, subtitle?: string, subtitleColor?: string, text?: string, isDark: boolean }) => {
+    return (
+        <div style={{
+            margin: '32px 0',
+            padding: '24px 28px',
+            borderRadius: '16px',
+            background: isDark
+                ? 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)'
+                : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
+            backdropFilter: 'blur(12px)',
+            border: isDark ? '1px solid rgba(255,59,59,0.15)' : '1px solid rgba(255,59,59,0.1)',
+            boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(255,59,59,0.05)',
+        }}>
+            {subtitle && (
+                <h3 style={{
+                    color: subtitleColor || '#ff3b3b',
+                    fontSize: '1.25rem',
+                    fontWeight: 600,
+                    marginBottom: '16px',
+                    borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+                    paddingBottom: '8px'
+                }}>
+                    {subtitle}
+                </h3>
+            )}
+
+            <div style={{
+                borderRadius: '12px',
+                overflow: 'hidden',
+                position: 'relative',
+                width: '100%',
+                height: 0,
+                paddingBottom: '56.25%',
+                background: '#000',
+                marginBottom: text ? '16px' : '0'
+            }}>
+                <iframe
+                    src={src}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                />
+            </div>
+
+            {text && (
+                <p style={{
+                    margin: 0,
+                    color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)',
+                    fontSize: '1rem',
+                    lineHeight: 1.6
+                }}>
+                    {text}
+                </p>
+            )}
+        </div>
+    )
+})
 
 function ContentBlockRenderer({ content, isDark }: { content: string; isDark: boolean }) {
     const [carouselIndices, setCarouselIndices] = useState<{ [key: number]: number }>({})
@@ -76,6 +136,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                 pdfUrl: el.getAttribute('data-pdf-url') || '',
                 alignment: el.getAttribute('data-align') || 'left',
                 subtitle: decodeURIComponent(el.getAttribute('data-subtitle') || ''),
+                subtitleColor: el.getAttribute('data-subtitle-color') || '',
                 caption: decodeURIComponent(el.getAttribute('data-caption') || ''),
                 isCarousel: el.getAttribute('data-carousel') === 'true',
                 carouselImages,
@@ -98,13 +159,21 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
         })
     }
 
-    // Auto-play effect
+    // Auto-play effect for carousels
     useEffect(() => {
         const interval = setInterval(() => {
             blocks.forEach((block, index) => {
-                // Composite can be carousel too if multiple images
-                const images = block.isCarousel ? block.carouselImages : (block.type === 'composite' && block.carouselImages ? block.carouselImages : [block.imageUrl || block.imageSrc].filter(Boolean))
+                // Get images list - prefer carouselImages if available
+                let images: string[] = []
+                if (block.carouselImages && block.carouselImages.length > 0) {
+                    images = block.carouselImages
+                } else if (block.imageUrl) {
+                    images = [block.imageUrl]
+                } else if (block.imageSrc) {
+                    images = [block.imageSrc]
+                }
 
+                // Only auto-advance if there are multiple images
                 if (images.length > 1) {
                     setCarouselIndices(prev => {
                         const current = prev[index] || 0
@@ -126,11 +195,19 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
 
                 // Video Block (No glass card needed as it handles its own style in existing HTML)
                 if (block.type === 'video') {
+                    // Parse inline HTML from editor to get video src for cleaner rendering
+                    const tempDiv = document.createElement('div')
+                    tempDiv.innerHTML = block.content
+                    const iframeSrc = tempDiv.querySelector('iframe')?.src || ''
+
                     return (
-                        <div
+                        <VideoBlock
                             key={index}
-                            dangerouslySetInnerHTML={{ __html: block.content }}
-                            style={{ margin: '32px 0' }}
+                            src={iframeSrc}
+                            subtitle={block.subtitle}
+                            subtitleColor={block.subtitleColor}
+                            text={block.textContent}
+                            isDark={isDark}
                         />
                     )
                 }
@@ -148,23 +225,23 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                     ? 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)'
                                     : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
                                 backdropFilter: 'blur(12px)',
-                                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                border: isDark ? '1px solid rgba(255,59,59,0.15)' : '1px solid rgba(255,59,59,0.1)',
+                                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(255,59,59,0.05)',
                                 ...alignStyle
                             }}
                         >
                             {block.subtitle && (
                                 <h3 style={{
-                                    color: '#ff3b3b',
-                                    fontSize: '1.2rem',
-                                    fontWeight: 600,
-                                    marginBottom: '12px',
-                                    textAlign: alignStyle.textAlign
+                                    fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px',
+                                    color: block.subtitleColor || '#ff3b3b',
+                                    borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+                                    paddingBottom: '8px'
                                 }}>
                                     {block.subtitle}
                                 </h3>
                             )}
                             <div
+                                className="rich-text-content"
                                 dangerouslySetInnerHTML={{ __html: block.content }}
                                 style={{ textAlign: alignStyle.textAlign }}
                             />
@@ -174,9 +251,14 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
 
                 // Image Block (single or carousel)
                 if (block.type === 'image') {
-                    const images = block.isCarousel && block.carouselImages.length > 0
+                    // Build list of images - prefer carouselImages if available, otherwise use imageSrc
+                    const images = (block.carouselImages && block.carouselImages.length > 0)
                         ? block.carouselImages
-                        : [block.imageSrc]
+                        : (block.imageSrc ? [block.imageSrc] : [])
+
+                    // Skip rendering if no images
+                    if (images.length === 0) return null
+
                     const currentIndex = carouselIndices[index] || 0
 
                     return (
@@ -356,7 +438,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                             >
                                 {block.subtitle && (
                                     <h3 style={{
-                                        color: '#ff8080',
+                                        color: block.subtitleColor || '#ff8080',
                                         fontSize: '1.25rem',
                                         fontWeight: 600,
                                         marginBottom: '16px',
@@ -367,8 +449,8 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                     </h3>
                                 )}
                                 <div
+                                    className="rich-text-content"
                                     style={{
-                                        color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)',
                                         lineHeight: 1.8,
                                         fontSize: '1.1rem',
                                         textAlign: (block.alignment as 'left' | 'center' | 'right') || (layout === 'image-top' ? 'center' : 'left')
@@ -941,8 +1023,9 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                 .post-content li {
                     margin-bottom: 8px;
                 }
+                /* Removed forced red color on strong - let inline styles win */
                 .post-content strong {
-                    color: ${isDark ? '#ff3b3b' : '#cc2929'};
+                    font-weight: 700;
                 }
             `}</style>
         </>

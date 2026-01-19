@@ -282,13 +282,23 @@ export function SubsectionEditor() {
                                             width: '50px', height: '50px', borderRadius: '8px',
                                             overflow: 'hidden', background: '#222', flexShrink: 0
                                         }}>
-                                            {post.image ? (
-                                                <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : (
-                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
-                                                    <FileText size={18} />
-                                                </div>
-                                            )}
+                                            {(() => {
+                                                const getFirstImageUrl = (imageField: string | undefined): string | undefined => {
+                                                    if (!imageField) return undefined
+                                                    try {
+                                                        const parsed = JSON.parse(imageField)
+                                                        return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : imageField
+                                                    } catch { return imageField }
+                                                }
+                                                const imageUrl = getFirstImageUrl(post.image)
+                                                return imageUrl ? (
+                                                    <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
+                                                        <FileText size={18} />
+                                                    </div>
+                                                )
+                                            })()}
                                         </div>
 
                                         {/* Info */}

@@ -1,13 +1,16 @@
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage, uploadPdf } from '../../lib/storage'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
+import TextAlign from '@tiptap/extension-text-align'
+import { Color } from '@tiptap/extension-color'
+import { TextStyle } from '@tiptap/extension-text-style'
 
-import { ArrowLeft, Eye, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Volume2, MoveUp, MoveDown, Images, GripVertical } from 'lucide-react'
+import { ArrowLeft, Eye, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette } from 'lucide-react'
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
@@ -31,6 +34,53 @@ interface EditorBlock {
 
 // --- Helper Components ---
 
+import { Extension } from '@tiptap/core'
+
+export const FontSize = Extension.create({
+    name: 'fontSize',
+    addOptions() {
+        return {
+            types: ['textStyle'],
+        }
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: {
+                    fontSize: {
+                        default: null,
+                        parseHTML: element => element.style.fontSize.replace(/['"]+/g, ''),
+                        renderHTML: attributes => {
+                            if (!attributes.fontSize) {
+                                return {}
+                            }
+                            return {
+                                style: `font-size: ${attributes.fontSize}`,
+                            }
+                        },
+                    },
+                },
+            },
+        ]
+    },
+    addCommands() {
+        return {
+            setFontSize: (fontSize: string) => ({ chain }) => {
+                return chain()
+                    .setMark('textStyle', { fontSize })
+                    .run()
+            },
+            unsetFontSize: () => ({ chain }) => {
+                return chain()
+                    .setMark('textStyle', { fontSize: null })
+                    .removeEmptyTextStyle()
+                    .run()
+            },
+        }
+    },
+})
+
 const EditorToolbar = ({ editor }: { editor: any }) => {
     if (!editor) return null
 
@@ -48,28 +98,83 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
         fontWeight: 600
     })
 
+    const setFontSize = (size: string) => {
+        if (size === 'default') {
+            editor.chain().focus().unsetFontSize().run()
+        } else {
+            editor.chain().focus().setFontSize(size).run()
+        }
+    }
+
+    const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        editor.chain().focus().setColor(e.target.value).run()
+    }
+
     return (
         <div style={{
             display: 'flex', gap: '4px', padding: '8px', borderBottom: '1px solid #333',
             background: '#1a1a1a', borderRadius: '8px 8px 0 0',
             flexWrap: 'wrap', alignItems: 'center'
-        }} onMouseDown={(e) => e.preventDefault()}>
+        }}>
             {/* Text Formatting */}
-            <button onClick={() => editor.chain().focus().toggleBold().run()} style={buttonStyle(editor.isActive('bold'))}><Bold size={16} /></button>
-            <button onClick={() => editor.chain().focus().toggleItalic().run()} style={buttonStyle(editor.isActive('italic'))}><Italic size={16} /></button>
-            <button onClick={() => editor.chain().focus().toggleUnderline().run()} style={buttonStyle(editor.isActive('underline'))}><UnderlineIcon size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))}><Bold size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))}><Italic size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))}><UnderlineIcon size={16} /></button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
-            {/* Headings */}
+            {/* Font Size */}
+            <select
+                onMouseDown={(e) => e.stopPropagation()}
+                onChange={(e) => { e.preventDefault(); setFontSize(e.target.value) }}
+                value={editor.getAttributes('textStyle').fontSize || 'default'}
+                style={{
+                    background: '#333', color: '#fff', border: '1px solid #444',
+                    borderRadius: '4px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer'
+                }}
+            >
+                <option value="default">Size</option>
+                <option value="0.875rem">Small</option>
+                <option value="1rem">Normal</option>
+                <option value="1.25rem">Large</option>
+                <option value="1.5rem">X-Large</option>
+                <option value="1.875rem">XX-Large</option>
+            </select>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+
+            {/* Colors */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                    type="color"
+                    onChange={handleColorChange}
+                    value={editor.getAttributes('textStyle').color || '#ffffff'}
+                    style={{
+                        width: '28px', height: '28px', padding: 0, border: '2px solid #444',
+                        borderRadius: '4px', cursor: 'pointer', background: 'transparent'
+                    }}
+                    title="Text Color"
+                />
+            </div>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+
+            {/* Alignment */}
+            <button onClick={() => editor.chain().focus().setTextAlign('left').run()} style={buttonStyle(editor.isActive({ textAlign: 'left' }))}><AlignLeft size={16} /></button>
+            <button onClick={() => editor.chain().focus().setTextAlign('center').run()} style={buttonStyle(editor.isActive({ textAlign: 'center' }))}><AlignCenter size={16} /></button>
+            <button onClick={() => editor.chain().focus().setTextAlign('right').run()} style={buttonStyle(editor.isActive({ textAlign: 'right' }))}><AlignRight size={16} /></button>
+            <button onClick={() => editor.chain().focus().setTextAlign('justify').run()} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))}><AlignJustify size={16} /></button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+
+            {/* Headings - Kept for structure */}
             <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} style={buttonStyle(editor.isActive('heading', { level: 1 }))}>
-                <Heading1 size={16} /> <span>H1</span>
+                <Heading1 size={16} />
             </button>
             <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} style={buttonStyle(editor.isActive('heading', { level: 2 }))}>
-                <Heading2 size={16} /> <span>H2</span>
-            </button>
-            <button onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} style={buttonStyle(editor.isActive('heading', { level: 3 }))}>
-                <Heading3 size={16} /> <span>H3</span>
+                <Heading2 size={16} />
             </button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
@@ -165,23 +270,27 @@ const AddBlockMenu = ({ onAdd }: { onAdd: (type: 'text' | 'image' | 'pdf' | 'com
     )
 }
 
-const TextBlockEditor = ({ content, subtitle, alignment, onChange, onSubtitleChange, onAlignmentChange }: {
-    content: string,
-    subtitle?: string,
-    alignment?: 'left' | 'center' | 'right' | 'justify',
-    onChange: (content: string) => void,
-    onSubtitleChange?: (subtitle: string) => void,
-    onAlignmentChange?: (alignment: 'left' | 'center' | 'right' | 'justify') => void
+const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange, subtitleColor, onSubtitleColorChange }: {
+    initialContent: string
+    onChange: (content: string) => void
+    subtitle?: string
+    onSubtitleChange?: (subtitle: string) => void
+    subtitleColor?: string
+    onSubtitleColorChange?: (color: string) => void
 }) => {
-    const [isFocused, setIsFocused] = useState(false)
     const editor = useEditor({
-        extensions: [StarterKit, Underline],
-        content: content,
+        extensions: [
+            StarterKit,
+            Underline,
+            TextAlign.configure({ types: ['heading', 'paragraph'] }),
+            TextStyle,
+            Color,
+            FontSize
+        ],
+        content: initialContent,
         onUpdate: ({ editor }) => {
             onChange(editor.getHTML())
         },
-        onFocus: () => setIsFocused(true),
-        onBlur: () => setIsFocused(false),
         editorProps: {
             attributes: {
                 class: 'prose prose-invert max-w-none focus:outline-none min-h-[100px]',
@@ -193,45 +302,35 @@ const TextBlockEditor = ({ content, subtitle, alignment, onChange, onSubtitleCha
         <div style={{ position: 'relative', background: '#111', borderRadius: '12px', padding: '16px', border: '1px solid #333' }}>
             {/* Block Controls Bar */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                {/* Alignment Selector */}
-                <div style={{ display: 'flex', gap: '4px', background: '#1a1a1a', borderRadius: '8px', padding: '4px' }}>
-                    {(['left', 'center', 'right'] as const).map(align => {
-                        const isActive = (alignment || 'left') === align
-                        return (
-                            <button
-                                key={align}
-                                onClick={() => onAlignmentChange?.(align)}
-                                style={{
-                                    padding: '6px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                                    background: isActive ? '#333' : 'transparent',
-                                    color: isActive ? 'white' : '#666',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }}
-                            >
-                                {align === 'left' && <AlignLeft size={16} />}
-                                {align === 'center' && <AlignCenter size={16} />}
-                                {align === 'right' && <AlignRight size={16} />}
-                            </button>
-                        )
-                    })}
-                </div>
-
-                {/* Toolbar when focused */}
-                {editor && isFocused && <EditorToolbar editor={editor} />}
+                {/* Toolbar always visible */}
+                {editor && <EditorToolbar editor={editor} />}
             </div>
 
             {/* Optional Subtitle/Heading for this text block */}
-            <input
-                type="text"
-                value={subtitle || ''}
-                onChange={(e) => onSubtitleChange?.(e.target.value)}
-                placeholder="Block heading (optional)..."
-                style={{
-                    width: '100%', padding: '8px 0', marginBottom: '8px',
-                    background: 'transparent', border: 'none', borderBottom: '1px solid #333',
-                    color: '#ff8080', fontSize: '1.1rem', fontWeight: 600, outline: 'none'
-                }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', borderBottom: '1px solid #333' }}>
+                <input
+                    type="text"
+                    value={subtitle || ''}
+                    onChange={(e) => onSubtitleChange?.(e.target.value)}
+                    placeholder="Block heading (optional)..."
+                    style={{
+                        flex: 1, padding: '8px 0',
+                        background: 'transparent', border: 'none',
+                        color: subtitleColor || '#ff8080',
+                        fontSize: '1.1rem', fontWeight: 600, outline: 'none'
+                    }}
+                    className="subtitle-input"
+                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <Palette size={16} color={subtitleColor || '#ff8080'} style={{ cursor: 'pointer' }} />
+                    <input
+                        type="color"
+                        value={subtitleColor || '#ff8080'}
+                        onChange={(e) => onSubtitleColorChange?.(e.target.value)}
+                        style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                    />
+                </div>
+            </div>
 
             {/* Rich Text Content */}
             <EditorContent editor={editor} style={{ color: '#ddd', fontSize: '1.1rem', lineHeight: 1.8 }} />
@@ -695,12 +794,14 @@ const CompositeBlockEditor = ({
     carouselImages,
     textContent,
     subtitle,
+    subtitleColor,
     alignment,
     onLayoutChange,
     onImageChange,
     onImagesChange,
     onTextChange,
     onSubtitleChange,
+    onSubtitleColorChange,
     onAlignmentChange
 }: {
     layout?: 'image-left' | 'image-right' | 'image-top' | 'stacked'
@@ -708,12 +809,14 @@ const CompositeBlockEditor = ({
     carouselImages?: string[]
     textContent?: string
     subtitle?: string
+    subtitleColor?: string
     alignment?: 'left' | 'center' | 'right' | 'justify'
     onLayoutChange?: (layout: 'image-left' | 'image-right' | 'image-top' | 'stacked') => void
     onImageChange?: (url: string) => void
     onImagesChange?: (urls: string[]) => void
     onTextChange?: (content: string) => void
     onSubtitleChange?: (subtitle: string) => void
+    onSubtitleColorChange?: (color: string) => void
     onAlignmentChange?: (alignment: 'left' | 'center' | 'right' | 'justify') => void
 }) => {
     const [isUploading, setIsUploading] = useState(false)
@@ -726,7 +829,13 @@ const CompositeBlockEditor = ({
     const images = carouselImages && carouselImages.length > 0 ? carouselImages : (imageUrl ? [imageUrl] : [])
 
     const editor = useEditor({
-        extensions: [StarterKit, Underline],
+        extensions: [
+            StarterKit,
+            Underline,
+            TextStyle,
+            Color,
+            FontSize
+        ],
         content: textContent || '<p>Add your text here...</p>',
         onUpdate: ({ editor }) => {
             onTextChange?.(editor.getHTML())
@@ -919,19 +1028,30 @@ const CompositeBlockEditor = ({
                         </div>
                     </div>
 
-                    {/* Subtitle Input */}
-                    <input
-                        type="text"
-                        value={subtitle || ''}
-                        onChange={(e) => onSubtitleChange?.(e.target.value)}
-                        placeholder="Block heading (optional)..."
-                        style={{
-                            width: '100%', background: 'transparent', border: 'none',
-                            borderBottom: '1px solid #333', color: '#ff8080', fontSize: '1rem',
-                            fontWeight: 600, padding: '8px 0', marginBottom: '12px', outline: 'none',
-                            textAlign: (alignment as any) || 'left'
-                        }}
-                    />
+                    {/* Subtitle Input with Color Picker */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', borderBottom: '1px solid #333' }}>
+                        <input
+                            type="text"
+                            value={subtitle || ''}
+                            onChange={(e) => onSubtitleChange?.(e.target.value)}
+                            placeholder="Block heading (optional)..."
+                            style={{
+                                flex: 1, padding: '8px 0',
+                                background: 'transparent', border: 'none',
+                                color: subtitleColor || '#4ade80', // Default green-ish for composite
+                                fontSize: '1rem', fontWeight: 600, outline: 'none'
+                            }}
+                        />
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <Palette size={14} color={subtitleColor || '#4ade80'} style={{ cursor: 'pointer' }} />
+                            <input
+                                type="color"
+                                value={subtitleColor || '#4ade80'}
+                                onChange={(e) => onSubtitleColorChange?.(e.target.value)}
+                                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                            />
+                        </div>
+                    </div>
 
                     {editor && isFocused && <EditorToolbar editor={editor} />}
                     <div style={{ textAlign: (alignment as any) || 'left' }}>
@@ -993,7 +1113,7 @@ export function PostEditor() {
     const [currentCoverIndex, setCurrentCoverIndex] = useState(0)
 
     // Preview & Drag State
-    const [showPreview, setShowPreview] = useState(false)
+
     const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null)
     const blocksContainerRef = useRef<HTMLDivElement>(null)
 
@@ -1047,45 +1167,66 @@ export function PostEditor() {
 
                 if (blockElements.length > 0) {
                     const loadedBlocks: EditorBlock[] = []
-                    blockElements.forEach(el => {
-                        const isComposite = el.classList.contains('block-composite')
-                        const isPdf = el.classList.contains('block-pdf')
-                        const isImage = el.classList.contains('block-image')
-                        const isVideo = el.classList.contains('block-video')
-
-                        let type: 'text' | 'image' | 'pdf' | 'composite' | 'video' = 'text'
-                        if (isComposite) type = 'composite'
-                        else if (isPdf) type = 'pdf'
-                        else if (isImage) type = 'image'
-                        else if (isVideo) type = 'video'
+                    Array.from(blockElements).forEach(el => {
+                        let type: EditorBlock['type'] = 'text'
+                        if (el.classList.contains('block-image')) type = 'image'
+                        else if (el.classList.contains('block-pdf')) type = 'pdf'
+                        else if (el.classList.contains('block-composite')) type = 'composite'
+                        else if (el.classList.contains('block-video')) type = 'video'
 
                         let content = ''
                         let enhancedFields: Partial<EditorBlock> = {}
 
+                        // Parse subtitle color
+                        const subtitleColor = el.getAttribute('data-subtitle-color') || undefined
+                        if (subtitleColor) enhancedFields.subtitleColor = subtitleColor
+
                         if (type === 'composite') {
                             enhancedFields = {
-                                layout: (el.getAttribute('data-layout') || 'image-left') as any,
+                                layout: (el.getAttribute('data-layout') as any) || 'image-left',
                                 imageUrl: decodeURIComponent(el.getAttribute('data-image-url') || ''),
                                 textContent: decodeURIComponent(el.getAttribute('data-text-content') || ''),
                                 subtitle: decodeURIComponent(el.getAttribute('data-subtitle') || ''),
                                 alignment: (el.getAttribute('data-align') as any) || 'left',
-                                carouselImages: el.getAttribute('data-images') ? JSON.parse(el.getAttribute('data-images')!) : []
+                                subtitleColor, // Add subtitleColor to enhancedFields
+                                isCarousel: false,
+                                carouselImages: []
                             }
+                            // Carousel support for Composite
+                            try {
+                                const imagesAttr = el.getAttribute('data-images')
+                                if (imagesAttr) {
+                                    enhancedFields.carouselImages = JSON.parse(decodeURIComponent(imagesAttr))
+                                    if (enhancedFields.carouselImages && enhancedFields.carouselImages.length > 0) {
+                                        enhancedFields.isCarousel = true
+                                    }
+                                }
+                            } catch (e) { console.error('Error parsing composite carousel images', e) }
+
                         } else if (type === 'image') {
-                            const img = el.querySelector('img')
-                            content = img ? img.src : ''
+                            content = el.querySelector('img')?.src || ''
                             enhancedFields = {
                                 caption: decodeURIComponent(el.getAttribute('data-caption') || ''),
-                                alignment: (el.getAttribute('data-align') as any) || 'left',
+                                alignment: (el.getAttribute('data-align') as any) || 'center',
                                 isCarousel: el.getAttribute('data-carousel') === 'true',
                                 carouselImages: el.getAttribute('data-images') ? JSON.parse(decodeURIComponent(el.getAttribute('data-images')!)) : []
                             }
                         } else if (type === 'video') {
+                            // Extract original video URL if possible (fallback to empty or iframe src)
+                            // Ideally we should have stored the original URL in a data attribute but for now we might need to parse it back or just start blank if not found content attribute
                             const iframe = el.querySelector('iframe')
+                            // We heavily rely on the dangerouslySetInnerHTML content for now which contains the iframe
+                            // But for editing we need the url.
+                            // The handleSave didn't strictly store the raw URL in a data attribute (it embedded it).
+                            // Let's try to extract src from iframe if we can
                             content = iframe ? iframe.src : ''
+
+                            // Video handling improvement: 
+                            // To fix the "refreshing" issue completely in editor, we used to rely on data- attributes
                             enhancedFields = {
                                 subtitle: decodeURIComponent(el.getAttribute('data-subtitle') || ''),
-                                textContent: decodeURIComponent(el.getAttribute('data-text-content') || '')
+                                textContent: decodeURIComponent(el.getAttribute('data-text-content') || ''),
+                                subtitleColor // Add subtitleColor
                             }
                         } else if (type === 'pdf') {
                             content = el.getAttribute('data-pdf-url') || ''
@@ -1093,7 +1234,8 @@ export function PostEditor() {
                             content = el.innerHTML
                             enhancedFields = {
                                 subtitle: decodeURIComponent(el.getAttribute('data-subtitle') || ''),
-                                alignment: (el.getAttribute('data-align') as any) || 'left'
+                                alignment: (el.getAttribute('data-align') as any) || 'left',
+                                subtitleColor // Add subtitleColor
                             }
                         }
                         loadedBlocks.push({ id: crypto.randomUUID(), type, content, ...enhancedFields })
@@ -1157,15 +1299,19 @@ export function PostEditor() {
     const handleDragStart = (e: React.DragEvent, blockId: string) => {
         setDraggedBlockId(blockId)
         e.dataTransfer.effectAllowed = 'move'
-        // Add visual feedback
-        const target = e.currentTarget as HTMLElement
-        gsap.to(target, { opacity: 0.5, scale: 0.98, duration: 0.2 })
+        // Add visual feedback to the wrapper, not just the handle
+        const target = (e.currentTarget as HTMLElement).closest('.editor-block-wrapper') as HTMLElement
+        if (target) {
+            gsap.to(target, { opacity: 0.5, scale: 0.98, duration: 0.2 })
+        }
     }
 
     const handleDragEnd = (e: React.DragEvent) => {
         setDraggedBlockId(null)
-        const target = e.currentTarget as HTMLElement
-        gsap.to(target, { opacity: 1, scale: 1, duration: 0.2 })
+        const target = (e.currentTarget as HTMLElement).closest('.editor-block-wrapper') as HTMLElement
+        if (target) {
+            gsap.to(target, { opacity: 1, scale: 1, duration: 0.2 })
+        }
     }
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -1242,10 +1388,11 @@ export function PostEditor() {
         let extractedPdfUrl = '' // For backward compatibility
         blocks.forEach(block => {
             const alignAttr = block.alignment ? ` data-align="${block.alignment}"` : ''
+            const subtitleColorAttr = block.subtitleColor ? ` data-subtitle-color="${block.subtitleColor}"` : ''
 
             if (block.type === 'text') {
                 const subtitleAttr = block.subtitle ? ` data-subtitle="${encodeURIComponent(block.subtitle)}"` : ''
-                finalContent += `<div class="siodel-block block-text"${alignAttr}${subtitleAttr}>${block.content}</div>`
+                finalContent += `<div class="siodel-block block-text"${alignAttr}${subtitleAttr}${subtitleColorAttr}>${block.content}</div>`
             } else if (block.type === 'image' && block.content) {
                 const captionAttr = block.caption ? ` data-caption="${encodeURIComponent(block.caption)}"` : ''
                 const carouselAttr = block.isCarousel ? ` data-carousel="true"` : ''
@@ -1262,7 +1409,7 @@ export function PostEditor() {
                 const subtitleAttr = block.subtitle ? ` data-subtitle="${encodeURIComponent(block.subtitle)}"` : ''
                 const alignAttr = block.alignment ? ` data-align="${block.alignment}"` : ''
                 const imagesAttr = block.carouselImages && block.carouselImages.length > 0 ? ` data-images='${JSON.stringify(block.carouselImages)}'` : ''
-                finalContent += `<div class="siodel-block block-composite"${layoutAttr}${imageAttr}${textAttr}${subtitleAttr}${alignAttr}${imagesAttr}></div>`
+                finalContent += `<div class="siodel-block block-composite"${layoutAttr}${imageAttr}${textAttr}${subtitleAttr}${subtitleColorAttr}${alignAttr}${imagesAttr}></div>`
             } else if (block.type === 'video' && block.content) {
                 const embedUrl = block.content.replace('watch?v=', 'embed/').split('&')[0]
                 const subtitleAttr = block.subtitle ? ` data-subtitle="${encodeURIComponent(block.subtitle)}"` : ''
@@ -1318,18 +1465,7 @@ export function PostEditor() {
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <button
-                        onClick={() => setShowPreview(true)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '12px 24px', borderRadius: '100px',
-                            background: '#222', color: 'white',
-                            border: '1px solid #444', fontWeight: 600,
-                            fontSize: '1rem', cursor: 'pointer'
-                        }}
-                    >
-                        <Eye size={20} /> Preview
-                    </button>
+
                     <button onClick={handleSave} disabled={isSaving} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 32px', borderRadius: '100px', background: '#ff3b3b', color: 'white', border: 'none', fontWeight: 600, fontSize: '1rem', cursor: 'pointer', opacity: isSaving ? 0.7 : 1 }}>
                         <Save size={20} /> {isSaving ? 'Saving...' : 'Save Post'}
                     </button>
@@ -1615,15 +1751,20 @@ export function PostEditor() {
                                 borderRadius: '12px',
                                 transition: 'border-color 0.2s'
                             }}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, block.id)}
-                            onDragEnd={handleDragEnd}
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, block.id)}
                         >
                             {/* Drag Handle & Block Actions (Hover) */}
                             <div className="block-actions" style={{ position: 'absolute', left: '-48px', top: '0', display: 'flex', flexDirection: 'column', gap: '4px', opacity: 0, transition: 'opacity 0.2s' }}>
-                                <div style={{ padding: '4px', color: '#666', cursor: 'grab' }} title="Drag to reorder"><GripVertical size={16} /></div>
+                                <div
+                                    style={{ padding: '4px', color: '#666', cursor: 'grab' }}
+                                    title="Drag to reorder"
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, block.id)}
+                                    onDragEnd={handleDragEnd}
+                                >
+                                    <GripVertical size={16} />
+                                </div>
                                 <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} style={{ padding: '4px', background: 'transparent', border: 'none', color: '#444', cursor: 'pointer' }}><MoveUp size={16} /></button>
                                 <button onClick={() => removeBlock(block.id)} style={{ padding: '4px', background: 'transparent', border: 'none', color: '#444', cursor: 'pointer' }}><Trash2 size={16} /></button>
                                 <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1} style={{ padding: '4px', background: 'transparent', border: 'none', color: '#444', cursor: 'pointer' }}><MoveDown size={16} /></button>
@@ -1632,12 +1773,12 @@ export function PostEditor() {
                             {/* Block Content */}
                             {block.type === 'text' && (
                                 <TextBlockEditor
-                                    content={block.content}
+                                    initialContent={block.content}
                                     subtitle={block.subtitle}
-                                    alignment={block.alignment}
+                                    subtitleColor={block.subtitleColor}
                                     onChange={(content) => updateBlockContent(block.id, content)}
                                     onSubtitleChange={(subtitle) => updateBlockField(block.id, 'subtitle', subtitle)}
-                                    onAlignmentChange={(alignment) => updateBlockField(block.id, 'alignment', alignment)}
+                                    onSubtitleColorChange={(color) => updateBlockField(block.id, 'subtitleColor', color)}
                                 />
                             )}
                             {block.type === 'image' && (
@@ -1664,12 +1805,14 @@ export function PostEditor() {
                                     carouselImages={block.carouselImages}
                                     textContent={block.textContent}
                                     subtitle={block.subtitle}
+                                    subtitleColor={block.subtitleColor}
                                     alignment={block.alignment}
                                     onLayoutChange={(layout) => updateBlockField(block.id, 'layout', layout)}
                                     onImageChange={(url) => updateBlockField(block.id, 'imageUrl', url)}
                                     onImagesChange={(urls) => updateBlockField(block.id, 'carouselImages', urls)}
                                     onTextChange={(content) => updateBlockField(block.id, 'textContent', content)}
                                     onSubtitleChange={(subtitle) => updateBlockField(block.id, 'subtitle', subtitle)}
+                                    onSubtitleColorChange={(color) => updateBlockField(block.id, 'subtitleColor', color)}
                                     onAlignmentChange={(alignment) => updateBlockField(block.id, 'alignment', alignment)}
                                 />
                             )}
@@ -1702,203 +1845,7 @@ export function PostEditor() {
             </div>
 
             {/* PREVIEW MODAL */}
-            {showPreview && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0,0,0,0.95)',
-                        zIndex: 10000,
-                        overflowY: 'auto',
-                        padding: '40px 20px'
-                    }}
-                >
-                    {/* Close Button */}
-                    <button
-                        onClick={() => setShowPreview(false)}
-                        style={{
-                            position: 'fixed',
-                            top: '20px',
-                            right: '20px',
-                            width: '48px',
-                            height: '48px',
-                            borderRadius: '50%',
-                            background: 'rgba(255,59,59,0.2)',
-                            border: '1px solid rgba(255,59,59,0.4)',
-                            color: '#ff3b3b',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 10001
-                        }}
-                    >
-                        <X size={24} />
-                    </button>
 
-                    {/* Preview Content */}
-                    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                        {/* Title */}
-                        <h1 style={{
-                            color: 'white',
-                            fontSize: 'clamp(2rem, 4vw, 3rem)',
-                            fontWeight: 700,
-                            marginBottom: '16px'
-                        }}>
-                            {title || 'Untitled Post'}
-                        </h1>
-
-                        {/* Subtitle */}
-                        {subtitle && (
-                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.2rem', marginBottom: '32px' }}>
-                                {subtitle}
-                            </p>
-                        )}
-
-                        {/* Cover Image */}
-                        {images[0] && (
-                            <div style={{ marginBottom: '40px', borderRadius: '16px', overflow: 'hidden' }}>
-                                <img src={images[0]} alt="Cover" style={{ width: '100%', display: 'block' }} />
-                            </div>
-                        )}
-
-                        {/* Content Blocks */}
-                        {blocks.map((block, index) => {
-                            const alignStyle: React.CSSProperties = {
-                                textAlign: (block.alignment as 'left' | 'center' | 'right') || 'left'
-                            }
-
-                            if (block.type === 'text') {
-                                return (
-                                    <div
-                                        key={index}
-                                        style={{
-                                            margin: '24px 0',
-                                            padding: '24px 28px',
-                                            borderRadius: '16px',
-                                            background: 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)',
-                                            backdropFilter: 'blur(12px)',
-                                            border: '1px solid rgba(255,255,255,0.08)',
-                                            ...alignStyle
-                                        }}
-                                    >
-                                        {block.subtitle && (
-                                            <h3 style={{ color: '#ff3b3b', fontSize: '1.2rem', fontWeight: 600, marginBottom: '12px' }}>
-                                                {block.subtitle}
-                                            </h3>
-                                        )}
-                                        <div
-                                            dangerouslySetInnerHTML={{ __html: block.content }}
-                                            style={{ color: 'rgba(255,255,255,0.85)', lineHeight: 1.8 }}
-                                        />
-                                    </div>
-                                )
-                            }
-
-                            if (block.type === 'image' && block.content) {
-                                const displayImages = block.isCarousel && block.carouselImages?.length
-                                    ? block.carouselImages
-                                    : [block.content]
-                                return (
-                                    <div key={index} style={{
-                                        margin: '32px 0',
-                                        clear: 'both',
-                                        display: 'block',
-                                        width: '100%',
-                                        position: 'relative',
-                                        ...alignStyle
-                                    }}>
-                                        {displayImages.length > 1 ? (
-                                            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
-                                                {displayImages.map((img, i) => (
-                                                    <img key={i} src={img} alt={`Image ${i + 1}`} style={{ height: '200px', borderRadius: '12px', flexShrink: 0 }} />
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <img src={block.content} alt="Content" style={{ width: '100%', borderRadius: '12px', display: 'block' }} />
-                                        )}
-                                        {block.caption && (
-                                            <p style={{ marginTop: '12px', color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                                                {block.caption}
-                                            </p>
-                                        )}
-                                    </div>
-                                )
-                            }
-
-                            if (block.type === 'pdf' && block.content) {
-                                return (
-                                    <div key={index} style={{ margin: '40px 0', padding: '24px', background: '#1a1a1a', borderRadius: '12px', border: '1px solid #ff3b3b40' }}>
-                                        <FileText size={32} color="#ff8080" />
-                                        <p style={{ color: '#ff8080', marginTop: '12px' }}>PDF Document (will display as flipbook when published)</p>
-                                    </div>
-                                )
-                            }
-
-                            if (block.type === 'composite') {
-                                const layout = block.layout || 'image-left'
-                                const isVertical = layout === 'image-top' || layout === 'stacked'
-
-                                // Alignment handled in inner elements or by flex/grid properties explicitly below
-                                const images = block.carouselImages && block.carouselImages.length > 0 ? block.carouselImages : (block.imageUrl ? [block.imageUrl] : [])
-
-                                return (
-                                    <div key={index} style={{
-                                        margin: '40px 0',
-                                        padding: '32px',
-                                        borderRadius: '16px',
-                                        background: 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)',
-                                        backdropFilter: 'blur(12px)',
-                                        border: '1px solid rgba(255,255,255,0.08)',
-                                        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                                        display: 'grid',
-                                        gridTemplateColumns: isVertical ? '1fr' : '1fr 1fr',
-                                        gap: '32px',
-                                        alignItems: 'stretch'
-                                    }}>
-                                        <div style={{ order: layout === 'image-right' ? 2 : 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            {images.map((img, i) => (
-                                                <img key={i} src={img} alt="" style={{ width: '100%', height: '100%', minHeight: images.length > 1 ? 'auto' : '100%', objectFit: 'cover', borderRadius: '12px', display: 'block' }} />
-                                            ))}
-                                        </div>
-                                        <div style={{
-                                            order: layout === 'image-right' ? 1 : 2,
-                                            maxWidth: '100%'
-                                        }}>
-                                            {block.subtitle && (
-                                                <h3 style={{
-                                                    color: '#ff8080',
-                                                    fontSize: '1.25rem',
-                                                    fontWeight: 700,
-                                                    marginBottom: '16px',
-                                                    marginTop: 0,
-                                                    textAlign: (block.alignment as any) || (layout === 'image-top' ? 'center' : 'left'),
-                                                    fontFamily: '"Outfit", sans-serif'
-                                                }}>
-                                                    {block.subtitle}
-                                                </h3>
-                                            )}
-                                            <div style={{
-                                                color: 'rgba(255,255,255,0.85)',
-                                                lineHeight: 1.8,
-                                                textAlign: (block.alignment as any) || (layout === 'image-top' ? 'center' : 'left'),
-                                                fontSize: '1.05rem'
-                                            }}
-                                                dangerouslySetInnerHTML={{ __html: block.textContent || '' }}
-                                            />
-                                        </div>
-                                    </div>
-                                )
-                            }
-
-                            return null
-                        })}
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

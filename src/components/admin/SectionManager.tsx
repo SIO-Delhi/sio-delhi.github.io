@@ -4,6 +4,20 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText } from 'lucide-react'
 
+// Helper to get the first image URL from a post.image (which may be a JSON array or single URL)
+const getFirstImageUrl = (imageField: string | undefined): string | undefined => {
+    if (!imageField) return undefined
+    try {
+        const parsed = JSON.parse(imageField)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed[0]
+        }
+        return imageField
+    } catch {
+        return imageField // It's a plain URL, not JSON
+    }
+}
+
 export function SectionManager() {
     const { sectionId } = useParams()
     const { sections, getPostsBySection, deletePost, updatePost } = useContent()
@@ -124,13 +138,16 @@ export function SectionManager() {
                                     width: '80px', height: '60px', borderRadius: '8px', overflow: 'hidden',
                                     background: '#222', flexShrink: 0
                                 }}>
-                                    {post.image ? (
-                                        <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
-                                            <Layout size={20} />
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        const imageUrl = getFirstImageUrl(post.image)
+                                        return imageUrl ? (
+                                            <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
+                                                <Layout size={20} />
+                                            </div>
+                                        )
+                                    })()}
                                 </div>
 
                                 {/* Info */}
