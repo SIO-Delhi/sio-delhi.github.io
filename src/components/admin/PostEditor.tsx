@@ -10,7 +10,7 @@ import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 
-import { ArrowLeft, Eye, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette } from 'lucide-react'
+import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette } from 'lucide-react'
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
@@ -30,6 +30,7 @@ interface EditorBlock {
     layout?: 'image-left' | 'image-right' | 'image-top' | 'stacked'
     imageUrl?: string         // Image URL for composite blocks
     textContent?: string      // HTML text content for composite blocks
+    subtitleColor?: string    // Custom color for subtitle/heading
 }
 
 // --- Helper Components ---
@@ -1619,12 +1620,24 @@ export function PostEditor() {
                     <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
                         {effectiveSectionId === 'leadership' ? 'POSITION' : 'SUBTITLE'}
                     </label>
-                    <input
-                        type="text"
+                    <textarea
                         value={subtitle}
                         onChange={(e) => setSubtitle(e.target.value)}
                         placeholder={effectiveSectionId === 'leadership' ? "Position / Role" : "Summary (shows on card)..."}
-                        style={{ width: '100%', background: 'transparent', border: 'none', color: '#888', fontSize: '1.5rem', fontWeight: 400, outline: 'none', marginBottom: '16px' }}
+                        rows={3}
+                        style={{
+                            width: '100%',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#888',
+                            fontSize: '1.2rem',
+                            fontWeight: 400,
+                            outline: 'none',
+                            marginBottom: '16px',
+                            resize: 'vertical',
+                            lineHeight: 1.5,
+                            fontFamily: 'inherit'
+                        }}
                     />
 
                     {/* Social Links (Leadership only) */}
