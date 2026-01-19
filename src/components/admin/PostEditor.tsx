@@ -7,7 +7,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 
-import { ArrowLeft, Save, Image as ImageIcon, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Loader2, FileText, X, Plus, Trash2, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify, Images, Eye, GripVertical } from 'lucide-react'
+import { ArrowLeft, Save, Image as ImageIcon, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3, List, Loader2, FileText, X, Plus, Trash2, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify, Images, Eye, GripVertical, Volume2 } from 'lucide-react'
 import gsap from 'gsap'
 
 // --- Block Types & Interfaces ---
@@ -772,6 +772,7 @@ export function PostEditor() {
     const [order, setOrder] = useState<number>(0) // Order for Leadership/etc
     const [images, setImages] = useState<string[]>([]) // Cover image
     const [pdfUrl, setPdfUrl] = useState('')
+    const [enableAudio, setEnableAudio] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isSubsection, setIsSubsection] = useState(false)
@@ -803,6 +804,9 @@ export function PostEditor() {
                 if (post.image) setImages(Array.isArray(post.image) ? post.image : [post.image])
                 if (post.pdfUrl) {
                     setPdfUrl(post.pdfUrl)
+                }
+                if (post.enableAudio !== undefined) {
+                    setEnableAudio(post.enableAudio)
                 }
                 setIsSubsection(post.isSubsection || false)
                 setParentId(post.parentId || '')
@@ -1014,6 +1018,7 @@ export function PostEditor() {
                 content: finalContent,
                 image: images[0] || '',
                 pdfUrl: extractedPdfUrl || pdfUrl, // Use extracted or existing
+                enableAudio: enableAudio, // Whether to show TTS player on frontend
                 layout: 'custom',
                 createdAt: date ? new Date(date).getTime() : undefined, // Pass date
             }
@@ -1145,6 +1150,56 @@ export function PostEditor() {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* 3. Audio Toggle Section */}
+                <div style={{
+                    padding: '16px 20px',
+                    background: '#1a1a1a',
+                    borderRadius: '12px',
+                    border: '1px solid #333',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Volume2 size={20} color={enableAudio ? '#ff8080' : '#666'} />
+                        <div>
+                            <div style={{ color: 'white', fontWeight: 600, fontSize: '0.95rem' }}>
+                                Enable Audio Player
+                            </div>
+                            <div style={{ color: '#666', fontSize: '0.8rem' }}>
+                                Show text-to-speech audio player on this page
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Toggle Switch */}
+                    <button
+                        onClick={() => setEnableAudio(!enableAudio)}
+                        style={{
+                            width: '52px',
+                            height: '28px',
+                            borderRadius: '14px',
+                            border: 'none',
+                            background: enableAudio ? '#ff3b3b' : '#444',
+                            position: 'relative',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s'
+                        }}
+                    >
+                        <div style={{
+                            width: '22px',
+                            height: '22px',
+                            borderRadius: '50%',
+                            background: 'white',
+                            position: 'absolute',
+                            top: '3px',
+                            left: enableAudio ? '27px' : '3px',
+                            transition: 'left 0.2s',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }} />
+                    </button>
                 </div>
 
                 {/* Parent Subsection Selector - only show when:
