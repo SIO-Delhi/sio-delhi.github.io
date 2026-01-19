@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
-import { Calendar, User, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react'
+import { Calendar, User, ChevronLeft, ChevronRight, Volume2, VolumeX, Mail, Instagram } from 'lucide-react'
 import { useEffect, useState, useMemo } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
 import { SectionCard } from '../components/ui/SectionCard'
@@ -826,7 +826,12 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                 : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
             backdropFilter: 'blur(12px)',
             border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            // Enhanced shadow for "gradient under card" effect
+            boxShadow: isDark
+                ? '0 30px 80px -20px rgba(255, 59, 59, 0.15), 0 0 0 1px rgba(255,255,255,0.05)'
+                : '0 20px 40px -10px rgba(0,0,0,0.1)',
+            position: 'relative',
+            zIndex: 1,
             display: 'flex',
             flexDirection: 'row',
             gap: '48px',
@@ -886,6 +891,28 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                         }}>
                             {post.subtitle}
                         </p>
+                    )}
+
+                    {/* Social Icons */}
+                    {(post.email || post.instagram) && (
+                        <div style={{ display: 'flex', gap: '16px', marginTop: '16px', justifyContent: 'center' }}>
+                            {post.email && (
+                                <a href={`mailto:${post.email}`} style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)', transition: 'color 0.2s' }} className="hover:text-[#ff3b3b]">
+                                    <Mail size={20} />
+                                </a>
+                            )}
+                            {post.instagram && (
+                                <a
+                                    href={post.instagram.startsWith('http') ? post.instagram : `https://instagram.com/${post.instagram.replace('@', '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)', transition: 'color 0.2s' }}
+                                    className="hover:text-[#ff3b3b]"
+                                >
+                                    <Instagram size={20} />
+                                </a>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

@@ -18,6 +18,8 @@ export interface Post {
     createdAt: number
     updatedAt: number
     author?: string
+    email?: string // Contact email for Leadership
+    instagram?: string // Instagram handle/url for Leadership
 }
 
 export interface Section {

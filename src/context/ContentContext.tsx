@@ -60,6 +60,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 image: row.image || '',
                 pdfUrl: row.pdf_url || '',
                 enableAudio: row.enable_audio ?? false,
+                email: row.email || '',
+                instagram: row.instagram || '',
                 layout: row.layout,
                 order: row.display_order, // Map from DB
                 isPublished: row.is_published ?? false,
@@ -112,6 +114,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                     image: newPostData.image || null,
                     pdf_url: newPostData.pdfUrl || null,
                     enable_audio: newPostData.enableAudio ?? false,
+                    email: newPostData.email || null,
+                    instagram: newPostData.instagram || null,
                     layout: newPostData.layout,
                     display_order: newPostData.order || null,
                     is_published: newPostData.isPublished ?? false,
@@ -135,6 +139,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             if (updates.image !== undefined) dbUpdates.image = updates.image || null
             if (updates.pdfUrl !== undefined) dbUpdates.pdf_url = updates.pdfUrl || null
             if (updates.enableAudio !== undefined) dbUpdates.enable_audio = updates.enableAudio
+            if (updates.email !== undefined) dbUpdates.email = updates.email || null
+            if (updates.instagram !== undefined) dbUpdates.instagram = updates.instagram || null
             if (updates.layout !== undefined) dbUpdates.layout = updates.layout
             if (updates.order !== undefined) dbUpdates.display_order = updates.order
             if (updates.isPublished !== undefined) dbUpdates.is_published = updates.isPublished
