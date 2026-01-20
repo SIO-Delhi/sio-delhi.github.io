@@ -1,19 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Heart, X, Copy } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
-import { useTheme } from '../../context/ThemeContext' // Keeping for style usage
+import { useTheme } from '../../context/ThemeContext'
+import { useContent } from '../../context/ContentContext'
 
 import siodelLogo from '../../assets/logo.png'
 import donateQr from '../../assets/donate-sio.svg'
-
-const navLinks = [
-    { name: 'About', href: '#about' },
-    { name: 'Initiatives', href: '#initiatives' },
-    { name: 'Media', href: '#media' },
-    { name: 'Leadership', href: '#leadership' },
-    { name: 'More', href: '#more' },
-]
 
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
@@ -22,11 +15,22 @@ export function Navbar() {
     const [showDonation, setShowDonation] = useState(false)
     const navRef = useRef<HTMLElement>(null)
     const { isDark } = useTheme()
+    const { sections } = useContent()
     const location = useLocation()
     const navigate = useNavigate()
 
     // Check if we're on the homepage
     const isHomePage = location.pathname === '/'
+
+    // Generate Dynamic Nav Links
+    const navLinks = useMemo(() => {
+        return sections
+            .filter(s => s.is_published)
+            .map(s => ({
+                name: s.label, // Use label (e.g., INITIATIVES) for navbar
+                href: `#${s.id}`
+            }))
+    }, [sections])
 
     useEffect(() => {
         const checkMobile = () => {
@@ -36,8 +40,10 @@ export function Navbar() {
         window.addEventListener('resize', checkMobile)
 
         const handleScroll = () => {
-            const sections = ['home', 'about', 'initiatives', 'media', 'leadership', 'more', 'contact']
-            for (const section of sections) {
+            // Dynamic check including home and contact
+            const sectionIds = ['home', ...navLinks.map(l => l.href.replace('#', '')), 'contact']
+
+            for (const section of sectionIds) {
                 const el = document.getElementById(section)
                 if (el) {
                     const rect = el.getBoundingClientRect()
@@ -60,7 +66,7 @@ export function Navbar() {
             window.removeEventListener('scroll', handleScroll)
             window.removeEventListener('resize', checkMobile)
         }
-    }, [])
+    }, [navLinks, activeSection]) // Added dependencies
 
     useEffect(() => {
         gsap.fromTo(
