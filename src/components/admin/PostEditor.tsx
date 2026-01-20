@@ -14,6 +14,8 @@ import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, 
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
+import { validateImage, compressImage } from '../../lib/imageProcessing'
+
 
 // --- Block Types & Interfaces ---
 interface EditorBlock {
@@ -370,8 +372,18 @@ const ImageBlockEditor = ({
         const files = e.target.files
         if (!files || files.length === 0) return
 
-        // If single file, use cropper
+        // Validate all files first
+        try {
+            Array.from(files).forEach(validateImage)
+        } catch (err: any) {
+            alert(err.message)
+            e.target.value = ''
+            return
+        }
+
+        // If single file and not carousel, use cropper
         if (!isCarousel && files.length === 1) {
+            setPendingFile(files[0]) // IMPORTANT: Store for Skip
             const reader = new FileReader()
             reader.onload = () => setCropImageSrc(reader.result as string)
             reader.readAsDataURL(files[0])
@@ -379,26 +391,31 @@ const ImageBlockEditor = ({
             return
         }
 
-        // Bulk upload or carousel logic (skipping crop for simplicity/UX)
+        // Bulk upload or carousel logic
         setIsUploading(true)
         try {
             if (isCarousel && files.length > 1) {
                 // Multiple images for carousel
                 const urls: string[] = [...(carouselImages || [])]
                 for (const file of Array.from(files)) {
-                    const uploadedUrl = await uploadImage(file)
+                    validateImage(file)
+                    const compressed = await compressImage(file)
+                    const uploadedUrl = await uploadImage(compressed)
                     urls.push(uploadedUrl)
                 }
                 onCarouselImagesChange?.(urls)
                 if (!url && urls.length > 0) onChange(urls[0]) // Set first as main
             } else {
                 // Single image fallback (direct)
-                const uploadedUrl = await uploadImage(files[0])
+                const file = files[0]
+                validateImage(file)
+                const compressed = await compressImage(file)
+                const uploadedUrl = await uploadImage(compressed)
                 onChange(uploadedUrl)
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err)
-            alert('Upload failed')
+            alert(err.message || 'Upload failed')
         } finally {
             setIsUploading(false)
         }
@@ -409,7 +426,9 @@ const ImageBlockEditor = ({
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            const url = await uploadImage(pendingFile)
+            validateImage(pendingFile)
+            const compressed = await compressImage(pendingFile)
+            const url = await uploadImage(compressed)
             if (isCarousel) {
                 const newImages = [...(carouselImages || []), url]
                 onCarouselImagesChange?.(newImages)
@@ -417,7 +436,7 @@ const ImageBlockEditor = ({
             } else {
                 onChange(url)
             }
-        } catch (err) { console.error(err); alert('Upload failed') }
+        } catch (err: any) { console.error(err); alert(err.message || 'Upload failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
 
@@ -425,7 +444,8 @@ const ImageBlockEditor = ({
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            const file = new File([blob], `cropped-block-${Date.now()}.jpg`, { type: "image/jpeg" })
+            // Blob is already WebP from getCroppedImg
+            const file = new File([blob], `cropped-block-${Date.now()}.webp`, { type: "image/webp" })
             const uploadedUrl = await uploadImage(file)
             if (isCarousel) {
                 const newImages = [...(carouselImages || []), uploadedUrl]
@@ -849,6 +869,15 @@ const CompositeBlockEditor = ({
         const file = e.target.files?.[0]
         if (!file) return
 
+        try {
+            validateImage(file)
+        } catch (err: any) {
+            alert(err.message)
+            e.target.value = ''
+            return
+        }
+
+        setPendingFile(file) // IMPORTANT: Store for Skip
         const reader = new FileReader()
         reader.onload = () => setCropImageSrc(reader.result as string)
         reader.readAsDataURL(file)
@@ -860,11 +889,13 @@ const CompositeBlockEditor = ({
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            const url = await uploadImage(pendingFile)
+            validateImage(pendingFile)
+            const compressed = await compressImage(pendingFile)
+            const url = await uploadImage(compressed)
             const newImages = [...images, url]
             onImagesChange?.(newImages)
             if (newImages.length === 1) onImageChange?.(url)
-        } catch (err) { console.error(err); alert('Upload failed') }
+        } catch (err: any) { console.error(err); alert(err.message || 'Upload failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
 
@@ -872,7 +903,8 @@ const CompositeBlockEditor = ({
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            const file = new File([blob], `cropped-composite-${Date.now()}.jpg`, { type: "image/jpeg" })
+            // Blob is already WebP
+            const file = new File([blob], `cropped-composite-${Date.now()}.webp`, { type: "image/webp" })
             const url = await uploadImage(file)
             const newImages = [...images, url]
             onImagesChange?.(newImages)
@@ -1355,6 +1387,13 @@ export function PostEditor() {
         const file = e.target.files?.[0]
         if (!file) return
 
+        try {
+            validateImage(file)
+        } catch (err: any) {
+            alert(err.message)
+            return
+        }
+
         setPendingFile(file) // Store file for Skip
         const reader = new FileReader()
         reader.onload = () => setCropImageSrc(reader.result as string)
@@ -1367,11 +1406,14 @@ export function PostEditor() {
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            const url = await uploadImage(pendingFile)
+            // Already validated but safe to re-validate
+            validateImage(pendingFile)
+            const compressed = await compressImage(pendingFile)
+            const url = await uploadImage(compressed)
             setImages(prev => [...prev, url])
             // If first image, reset index
             if (images.length === 0) setCurrentCoverIndex(0)
-        } catch (err) { console.error(err); alert('Upload failed') }
+        } catch (err: any) { console.error(err); alert(err.message || 'Upload failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
 
@@ -1379,7 +1421,8 @@ export function PostEditor() {
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            const file = new File([blob], `cropped-cover-${Date.now()}.jpg`, { type: "image/jpeg" })
+            // Blob is WebP
+            const file = new File([blob], `cropped-cover-${Date.now()}.webp`, { type: "image/webp" })
             const url = await uploadImage(file)
             setImages(prev => [...prev, url])
             // If first image, reset index

@@ -4,6 +4,8 @@ import { useContent } from '../../context/ContentContext'
 import { uploadImage } from '../../lib/storage'
 import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff } from 'lucide-react'
 import { ImageCropper } from './ImageCropper'
+import { validateImage, compressImage } from '../../lib/imageProcessing'
+
 
 export function SubsectionEditor() {
     const { sectionId, id } = useParams()
@@ -46,6 +48,13 @@ export function SubsectionEditor() {
         const file = e.target.files?.[0]
         if (!file) return
 
+        try {
+            validateImage(file)
+        } catch (err: any) {
+            alert(err.message)
+            return
+        }
+
         const reader = new FileReader()
         reader.addEventListener('load', () => {
             setCropImageSrc(reader.result?.toString() || null)
@@ -61,11 +70,14 @@ export function SubsectionEditor() {
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            const url = await uploadImage(pendingFile)
+            // Already validated in handleImageUpload usually, but strictly:
+            validateImage(pendingFile)
+            const compressed = await compressImage(pendingFile)
+            const url = await uploadImage(compressed)
             setCoverImage(url)
-        } catch (err) {
+        } catch (err: any) {
             console.error(err)
-            alert('Upload failed')
+            alert(err.message || 'Upload failed')
         } finally {
             setIsUploading(false)
             setPendingFile(null)
@@ -76,7 +88,8 @@ export function SubsectionEditor() {
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            const file = new File([blob], `cropped-image-${Date.now()}.jpg`, { type: "image/jpeg" })
+            // blob is already webp
+            const file = new File([blob], `cropped-image-${Date.now()}.webp`, { type: "image/webp" })
             const url = await uploadImage(file)
             setCoverImage(url)
         } catch (err) {
