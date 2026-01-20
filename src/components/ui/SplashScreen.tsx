@@ -111,7 +111,8 @@ export function SplashScreen() {
                             flexDirection: 'column',
                             alignItems: 'center',
                             textAlign: 'center',
-                            gap: 0, // Zero gap for precise margin control
+                            gap: 0,
+                            // Layout Grouping Only (No Visual Card)
                             padding: '1rem',
                             maxWidth: 'clamp(300px, 90vw, 700px)',
                             width: '100%',
