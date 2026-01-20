@@ -210,29 +210,29 @@ const AddBlockMenu = ({ onAdd }: { onAdd: (type: 'text' | 'image' | 'pdf' | 'com
                     justifyContent: 'center'
                 }}>
                     <span style={{ color: '#666', fontSize: '0.85rem', marginRight: '8px', fontWeight: 500 }}>ADD:</span>
-                    <button onClick={() => { onAdd('text'); setIsOpen(false) }} style={buttonStyle}
+                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd('text'); setIsOpen(false) }} style={buttonStyle}
                         onMouseEnter={e => e.currentTarget.style.borderColor = '#666'}
                         onMouseLeave={e => e.currentTarget.style.borderColor = '#444'}>
                         <FileText size={16} /> Text
                     </button>
-                    <button onClick={() => { onAdd('image'); setIsOpen(false) }} style={buttonStyle}
+                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd('image'); setIsOpen(false) }} style={buttonStyle}
                         onMouseEnter={e => e.currentTarget.style.borderColor = '#666'}
                         onMouseLeave={e => e.currentTarget.style.borderColor = '#444'}>
                         <ImageIcon size={16} /> Image
                     </button>
-                    <button onClick={() => { onAdd('composite'); setIsOpen(false) }}
+                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd('composite'); setIsOpen(false) }}
                         style={{ ...buttonStyle, border: '1px solid #4ade8040', color: '#4ade80' }}
                         onMouseEnter={e => e.currentTarget.style.borderColor = '#4ade80'}
                         onMouseLeave={e => e.currentTarget.style.borderColor = '#4ade8040'}>
                         <ImageIcon size={16} /> Layout
                     </button>
-                    <button onClick={() => { onAdd('pdf'); setIsOpen(false) }}
+                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd('pdf'); setIsOpen(false) }}
                         style={{ ...buttonStyle, border: '1px solid #ff3b3b40', color: '#ff8080' }}
                         onMouseEnter={e => e.currentTarget.style.borderColor = '#ff3b3b'}
                         onMouseLeave={e => e.currentTarget.style.borderColor = '#ff3b3b40'}>
                         <FileText size={16} /> PDF
                     </button>
-                    <button onClick={() => { onAdd('video'); setIsOpen(false) }}
+                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd('video'); setIsOpen(false) }}
                         style={{ ...buttonStyle, border: '1px solid #ff3b3b40', color: '#ff8080' }}
                         onMouseEnter={e => e.currentTarget.style.borderColor = '#ff3b3b'}
                         onMouseLeave={e => e.currentTarget.style.borderColor = '#ff3b3b40'}>
