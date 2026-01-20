@@ -13,9 +13,9 @@ interface GenericSectionProps {
 export function GenericSection({ sectionId, title, label }: GenericSectionProps) {
     const { isDark } = useTheme()
     const navigate = useNavigate()
-    const { posts } = useContent()
+    const { getPostsBySection } = useContent()
 
-    const cards = posts.filter(post => post.sectionId === sectionId && post.isPublished && !post.parentId)
+    const cards = getPostsBySection(sectionId).filter(post => post.isPublished)
     const hasContent = cards.length > 0
 
     // Split title for styling if it has spaces (e.g. "Our Initiatives")

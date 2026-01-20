@@ -30,7 +30,6 @@ const getFirstImageUrl = (imageField: string | undefined): string | undefined =>
 }
 
 export function SectionCard({
-    label,
     labelColor,
     title,
     description,
@@ -165,7 +164,7 @@ export function SectionCard({
             }
 
             {/* Title */}
-            <h3 style={{
+                <h3 style={{
                 fontSize: isMedia ? '1.75rem' : '1.5rem',
                 fontWeight: 700,
                 margin: '0 0 12px 0',
