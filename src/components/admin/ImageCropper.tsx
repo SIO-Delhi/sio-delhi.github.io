@@ -28,7 +28,7 @@ function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: numbe
     )
 }
 
-export function ImageCropper({ imageSrc, onCancel, onCropComplete, onSkip, aspectRatio }: ImageCropperProps) {
+export function ImageCropper({ imageSrc, onCancel, onCropComplete, aspectRatio }: ImageCropperProps) {
     const [crop, setCrop] = useState<Crop>()
     const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
     const imgRef = useRef<HTMLImageElement>(null)

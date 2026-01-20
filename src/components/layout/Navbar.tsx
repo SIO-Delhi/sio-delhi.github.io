@@ -42,7 +42,13 @@ export function Navbar() {
                 if (el) {
                     const rect = el.getBoundingClientRect()
                     if (rect.top <= 150 && rect.bottom >= 150) {
-                        setActiveSection(section)
+                        if (activeSection !== section) {
+                            setActiveSection(section)
+                            // Update URL hash using replaceState to avoid history stack pollution or router triggers
+                            if (window.history.replaceState) {
+                                window.history.replaceState(null, '', `#${section === 'home' ? '' : section}`)
+                            }
+                        }
                         break
                     }
                 }
@@ -400,7 +406,7 @@ export function Navbar() {
                                     </div>
 
                                     {/* Support Us Button */}
-                                    <div className="shiny-button-container red-variant" style={{ width: '100%' }}>
+                                    <div className="shiny-button-container" style={{ width: '100%' }}>
                                         <button
                                             onClick={() => {
                                                 setShowDonation(true);
@@ -414,7 +420,7 @@ export function Navbar() {
                                                 gap: '8px',
                                                 padding: '14px 24px',
                                                 borderRadius: '12px',
-                                                color: '#ffffff',
+                                                color: '#ff3b3b', // Red Text
                                                 fontSize: '16px',
                                                 fontWeight: 500,
                                                 transition: 'all 0.3s ease',
