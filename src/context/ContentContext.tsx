@@ -200,11 +200,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 const orderA = (a.order !== undefined && a.order !== null) ? a.order : Number.MAX_SAFE_INTEGER
                 const orderB = (b.order !== undefined && b.order !== null) ? b.order : Number.MAX_SAFE_INTEGER
 
-                if (orderA !== orderB) {
-                    return orderA - orderB
-                }
-                // Fallback to createdAt descending (newest first)
-                return b.createdAt - a.createdAt
+                return orderA - orderB
             })
     }
 
@@ -219,10 +215,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 const orderA = (a.order !== undefined && a.order !== null) ? a.order : Number.MAX_SAFE_INTEGER
                 const orderB = (b.order !== undefined && b.order !== null) ? b.order : Number.MAX_SAFE_INTEGER
 
-                if (orderA !== orderB) {
-                    return orderA - orderB
-                }
-                return b.createdAt - a.createdAt
+                return orderA - orderB
             })
     }
 
@@ -233,10 +226,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 const orderA = (a.order !== undefined && a.order !== null) ? a.order : Number.MAX_SAFE_INTEGER
                 const orderB = (b.order !== undefined && b.order !== null) ? b.order : Number.MAX_SAFE_INTEGER
 
-                if (orderA !== orderB) {
-                    return orderA - orderB
-                }
-                return b.createdAt - a.createdAt
+                return orderA - orderB
             })
     }
 
