@@ -21,6 +21,7 @@ export function HomePage() {
 
     useEffect(() => {
         // Global Scroll Trigger for Flag - Blur and move to center
+        // ... existing legacy code ...
         const onScroll = () => {
             const scrollY = window.scrollY
             const viewportHeight = window.innerHeight
@@ -34,15 +35,12 @@ export function HomePage() {
                 const opacity = 1 - (progress * 0.4) // Fade slightly
 
                 if (mobile) {
-                    // Mobile: Just blur/fade
-                    // Position is now handled internally by InteractiveFlag (3D centering)
                     flagContainerRef.current.style.filter = `blur(${blur}px)`
                     flagContainerRef.current.style.opacity = `${opacity}`
                     flagContainerRef.current.style.transform = `none`
                 } else {
-                    // Desktop: Move to center
-                    const translateX = progress * 28 // Move to true center
-                    const translateY = progress * 25 // Adjust vertical center
+                    const translateX = progress * 28
+                    const translateY = progress * 25
 
                     flagContainerRef.current.style.filter = `blur(${blur}px)`
                     flagContainerRef.current.style.opacity = `${opacity}`
@@ -51,11 +49,10 @@ export function HomePage() {
             }
         }
 
-        // Initial call to set position
         onScroll()
 
         window.addEventListener('scroll', onScroll, { passive: true })
-        window.addEventListener('resize', onScroll) // Create responsive update
+        window.addEventListener('resize', onScroll)
         return () => {
             window.removeEventListener('scroll', onScroll)
             window.removeEventListener('resize', onScroll)

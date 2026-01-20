@@ -29,7 +29,7 @@ function FlagScene({ isMobile }: { isMobile: boolean }) {
             mass: 0.1, // Adjust mass for feel
             restDistance: 0.1, // Grid density
             texture: flagTexture,
-            width: isMobile ? 2.9 : 3.5, // Reduced slightly from 3.2
+            width: isMobile ? 2.8 : 3.5, // Reduced slightly from 2.9 as requested
             height: 2.3,
             pin: { edges: ['left'] } // Pin left edge
         })
@@ -72,9 +72,9 @@ function FlagScene({ isMobile }: { isMobile: boolean }) {
 
     // Adjust position: 
     // Desktop: Move flag left (-4.5) and slightly down (-3.8)
-    // Mobile: Adjusted left (-1.2) and even lower (-4.5) to clear text
-    const position: [number, number, number] = isMobile ? [-1.2, -4.5, 0] : [-5.0, -3.8, 0]
-    const scale = isMobile ? 0.7 : 1
+    // Mobile: Adjusted left (-1.2) and slightly up from bottom (-4.2)
+    const position: [number, number, number] = isMobile ? [-1.2, -4.2, 0] : [-5.0, -3.8, 0]
+    const scale = isMobile ? 0.6 : 1 // Adjusted scale to fit screen while keeping aspect ratio
 
     return (
         <group position={position} scale={scale}>
