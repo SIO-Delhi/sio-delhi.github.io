@@ -725,6 +725,7 @@ section {
   color: #000000;
 }
 
+
 /* Shiny Button Styles */
 .shiny-button-container {
   position: relative;
@@ -795,14 +796,20 @@ section {
     grid-template-columns: 1fr !important;
   }
 
+
   .composite-block-image {
+    order: -1 !important;
+    /* Force image to top */
     order: -1 !important;
     /* Force image to top */
     margin-bottom: 24px;
     width: 100%;
   }
 
+
   .composite-block-text {
+    order: 1 !important;
+    /* Force text to bottom */
     order: 1 !important;
     /* Force text to bottom */
   }
