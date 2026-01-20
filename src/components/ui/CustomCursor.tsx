@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import gsap from 'gsap'
 
 export function CustomCursor() {
     const cursorRef = useRef<HTMLDivElement>(null)
     const cursorDotRef = useRef<HTMLDivElement>(null)
     const [isView, setIsView] = useState(false)
+    const location = useLocation()
+
+    // Reset cursor state on route change
+    useEffect(() => {
+        setIsView(false)
+    }, [location])
 
     useEffect(() => {
         const cursor = cursorRef.current
@@ -90,7 +97,6 @@ export function CustomCursor() {
                 ref={cursorDotRef}
                 className="cursor-dot"
                 style={{
-                    // Conditional styles for View state (no transition - instant change)
                     // Conditional styles for View state
                     width: isView ? '80px' : undefined,
                     height: isView ? '80px' : undefined,
