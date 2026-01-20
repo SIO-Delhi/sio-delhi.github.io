@@ -5,6 +5,7 @@ import Lenis from 'lenis'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
+import { CustomCursor } from '../ui/CustomCursor'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -148,6 +149,7 @@ export function Layout({ children }: LayoutProps) {
 
     return (
         <div className="min-h-screen flex flex-col">
+            <CustomCursor />
             <Navbar />
             <main ref={mainRef} className="flex-1">
                 {children}

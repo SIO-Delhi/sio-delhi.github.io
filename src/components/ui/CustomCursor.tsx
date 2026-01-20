@@ -3,161 +3,120 @@ import { useLocation } from 'react-router-dom'
 import gsap from 'gsap'
 
 export function CustomCursor() {
-    const dotRef = useRef<HTMLDivElement>(null)
-    const circleRef = useRef<HTMLDivElement>(null)
+    const cursorRef = useRef<HTMLDivElement>(null)
+    const cursorDotRef = useRef<HTMLDivElement>(null)
+    const [isView, setIsView] = useState(false)
     const location = useLocation()
-    const [isMobile, setIsMobile] = useState(false)
+
+    // Reset cursor state on route change
+    useEffect(() => {
+        setIsView(false)
+    }, [location])
 
     useEffect(() => {
-        const checkMobile = () => setIsMobile(window.matchMedia('(max-width: 1024px)').matches)
-        checkMobile()
-        window.addEventListener('resize', checkMobile)
-        return () => window.removeEventListener('resize', checkMobile)
-    }, [])
+        const cursor = cursorRef.current
+        const cursorDot = cursorDotRef.current
 
+        if (!cursor || !cursorDot) return
 
-
-    useEffect(() => {
-        const dot = dotRef.current
-        const circle = circleRef.current
-        if (!dot || !circle) return
-
-        // Set initial position off-screen
-        gsap.set([dot, circle], { xPercent: -50, yPercent: -50, x: -100, y: -100 })
-
-        // Track active state
-        let isActive = false
-
-        // Mouse move handler
-        const handleMouseMove = (e: MouseEvent) => {
-            const { clientX, clientY } = e
-
-            // Dot follows more quickly
-            gsap.to(dot, {
-                x: clientX,
-                y: clientY,
-                duration: 0.15,
-                ease: 'power2.out',
-            })
-
-            // Circle follows with more lag
-            gsap.to(circle, {
-                x: clientX,
-                y: clientY,
+        const moveCursor = (e: MouseEvent) => {
+            // Glow follows cursor center
+            gsap.to(cursor, {
+                x: e.clientX,
+                y: e.clientY,
+                xPercent: -50,
+                yPercent: -50,
                 duration: 0.5,
                 ease: 'power2.out',
             })
+            // Dot follows cursor center (removed offset)
+            gsap.to(cursorDot, {
+                x: e.clientX,
+                y: e.clientY,
+                xPercent: -50,
+                yPercent: -50,
+                duration: 0.6,
+                ease: 'power3.out',
+            })
+        }
 
-            // Check for viewable elements under cursor
+        const handleMouseEnter = () => {
+            gsap.to([cursor, cursorDot], {
+                opacity: 1,
+                duration: 0.3,
+            })
+        }
+
+        const handleMouseLeave = () => {
+            gsap.to([cursor, cursorDot], {
+                opacity: 0,
+                duration: 0.3,
+            })
+        }
+
+        // Detect hover on elements with data-cursor="view"
+        const handleMouseOver = (e: MouseEvent) => {
             const target = e.target as HTMLElement
-            const isViewable = target.closest('[data-cursor="view"], .cursor-view')
-
-            if (isViewable && !isActive) {
-                isActive = true
-                console.log('Cursor enter viewable')
-                // Hide the dot
-                gsap.to(dot, {
-                    opacity: 0,
-                    duration: 0.2,
-                })
-
-                // Show and expand the circle
-                gsap.to(circle, {
-                    width: 100,
-                    height: 100,
-                    opacity: 1,
-                    duration: 0.4,
-                    ease: 'power3.out',
-                })
-            } else if (!isViewable && isActive) {
-                isActive = false
-                console.log('Cursor leave viewable')
-                // Show the dot
-                gsap.to(dot, {
-                    opacity: 1,
-                    duration: 0.2,
-                })
-                // Hide the circle
-                gsap.to(circle, {
-                    width: 0,
-                    height: 0,
-                    opacity: 0,
-                    duration: 0.4,
-                    ease: 'power3.out',
-                })
+            const viewElement = target.closest('[data-cursor="view"]')
+            if (viewElement) {
+                setIsView(true)
             }
         }
 
-        // Add event listeners
-        window.addEventListener('mousemove', handleMouseMove)
+        const handleMouseOut = (e: MouseEvent) => {
+            const target = e.target as HTMLElement
+            const viewElement = target.closest('[data-cursor="view"]')
+            const relatedTarget = e.relatedTarget as HTMLElement
+            const relatedViewElement = relatedTarget?.closest?.('[data-cursor="view"]')
+
+            // Only set to false if we're leaving a view element and not entering another one
+            if (viewElement && !relatedViewElement) {
+                setIsView(false)
+            }
+        }
+
+        window.addEventListener('mousemove', moveCursor)
+        document.body.addEventListener('mouseenter', handleMouseEnter)
+        document.body.addEventListener('mouseleave', handleMouseLeave)
+        document.addEventListener('mouseover', handleMouseOver)
+        document.addEventListener('mouseout', handleMouseOut)
 
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove)
+            window.removeEventListener('mousemove', moveCursor)
+            document.body.removeEventListener('mouseenter', handleMouseEnter)
+            document.body.removeEventListener('mouseleave', handleMouseLeave)
+            document.removeEventListener('mouseover', handleMouseOver)
+            document.removeEventListener('mouseout', handleMouseOut)
         }
     }, [])
 
-    // Reset cursor on route change
-    useEffect(() => {
-        const dot = dotRef.current
-        const circle = circleRef.current
-        if (!dot || !circle) return
-
-        // Force reset to default state
-        gsap.to(dot, { opacity: 1, duration: 0.2 })
-        gsap.to(circle, { width: 0, height: 0, opacity: 0, duration: 0.2 })
-    }, [location])
-
-    if (isMobile) return null
-
     return (
         <>
-            {/* Small Red Glowing Dot */}
+            <div ref={cursorRef} className="cursor-glow" />
             <div
-                ref={dotRef}
+                ref={cursorDotRef}
+                className="cursor-dot"
                 style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '14px',
-                    height: '14px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 59, 59, 0.8)',
-                    pointerEvents: 'none',
-                    zIndex: 9998,
-                }}
-            />
-
-            {/* Large Transparent Circle with View Text */}
-            <div
-                ref={circleRef}
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: 0,
-                    height: 0,
-                    borderRadius: '50%',
-                    background: 'rgba(80, 80, 80, 0.6)',
-                    backdropFilter: 'blur(2px)',
-                    pointerEvents: 'none',
-                    zIndex: 9997,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: 0,
+                    // Conditional styles for View state
+                    width: isView ? '80px' : undefined,
+                    height: isView ? '80px' : undefined,
+                    borderRadius: isView ? '50%' : undefined,
+                    background: isView ? 'rgba(255, 255, 255, 0.05)' : undefined,
+                    backdropFilter: isView ? 'blur(16px) saturate(1.5)' : undefined,
+                    WebkitBackdropFilter: isView ? 'blur(16px) saturate(1.5)' : undefined,
+                    border: isView ? '1px solid rgba(255, 255, 255, 0.1)' : undefined,
+                    boxShadow: isView ? '0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)' : undefined,
+                    display: isView ? 'flex' : undefined,
+                    alignItems: isView ? 'center' : undefined,
+                    justifyContent: isView ? 'center' : undefined,
+                    fontSize: isView ? '14px' : undefined,
+                    fontWeight: isView ? 500 : undefined,
+                    letterSpacing: isView ? '0.02em' : undefined,
+                    color: isView ? '#ffffff' : undefined,
+                    filter: isView ? 'blur(0)' : undefined,
                 }}
             >
-                <span
-                    style={{
-                        color: '#ffffff',
-                        fontSize: '14px',
-                        fontWeight: 400,
-                        letterSpacing: '0.02em',
-                        pointerEvents: 'none',
-                    }}
-                >
-                    View
-                </span>
+                {isView && 'View'}
             </div>
         </>
     )
