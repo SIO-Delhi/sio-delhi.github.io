@@ -7,9 +7,9 @@ import { useContent } from '../../context/ContentContext'
 export function MediaSection() {
     const { isDark } = useTheme()
     const navigate = useNavigate()
-    const { posts } = useContent()
+    const { getPostsBySection } = useContent()
 
-    const cards = posts.filter(post => post.sectionId === 'media' && post.isPublished && !post.parentId)
+    const cards = getPostsBySection('media').filter(post => post.isPublished)
     const hasContent = cards.length > 0
 
     const headerContent = (
@@ -39,6 +39,7 @@ export function MediaSection() {
                     <SectionCard
                         key={card.id}
                         {...card}
+                        variant="media"
                         label="MEDIA"
                         labelColor="#FF3333"
                         description={card.subtitle || card.content.replace(/<[^>]+>/g, '').substring(0, 100)}

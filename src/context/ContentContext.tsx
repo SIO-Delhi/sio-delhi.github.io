@@ -196,12 +196,11 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         return posts
             .filter(p => p.sectionId === sectionId && !p.parentId)
             .sort((a, b) => {
-                // Sort by order ascending (0, 1, 2...)
-                if (a.order !== undefined && b.order !== undefined) {
-                    return (a.order || 0) - (b.order || 0)
-                }
-                // Fallback to createdAt descending (newest first)
-                return b.createdAt - a.createdAt
+                // Sort by order ascending. Treat undefined/null as Infinity (bottom)
+                const orderA = (a.order !== undefined && a.order !== null) ? a.order : Number.MAX_SAFE_INTEGER
+                const orderB = (b.order !== undefined && b.order !== null) ? b.order : Number.MAX_SAFE_INTEGER
+
+                return orderA - orderB
             })
     }
 
@@ -214,10 +213,10 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         return posts
             .filter(p => p.parentId === parentId)
             .sort((a, b) => {
-                if (a.order !== undefined && b.order !== undefined) {
-                    return (a.order || 0) - (b.order || 0)
-                }
-                return b.createdAt - a.createdAt
+                const orderA = (a.order !== undefined && a.order !== null) ? a.order : Number.MAX_SAFE_INTEGER
+                const orderB = (b.order !== undefined && b.order !== null) ? b.order : Number.MAX_SAFE_INTEGER
+
+                return orderA - orderB
             })
     }
 
@@ -225,10 +224,10 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         return posts
             .filter(p => p.sectionId === sectionId && p.isSubsection)
             .sort((a, b) => {
-                if (a.order !== undefined && b.order !== undefined) {
-                    return (a.order || 0) - (b.order || 0)
-                }
-                return b.createdAt - a.createdAt
+                const orderA = (a.order !== undefined && a.order !== null) ? a.order : Number.MAX_SAFE_INTEGER
+                const orderB = (b.order !== undefined && b.order !== null) ? b.order : Number.MAX_SAFE_INTEGER
+
+                return orderA - orderB
             })
     }
 
