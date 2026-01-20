@@ -75,7 +75,8 @@ export function SectionCard({
                 display: 'flex',
                 flexDirection: 'column',
                 height: '420px',
-                width: width || '300px',
+                width: '100%',
+                maxWidth: width || '300px',
                 cursor: onClick ? 'pointer' : 'default',
                 transition: 'all 0.3s ease',
                 overflow: 'hidden',
@@ -164,7 +165,7 @@ export function SectionCard({
             }
 
             {/* Title */}
-                <h3 style={{
+            <h3 style={{
                 fontSize: isMedia ? '1.75rem' : '1.5rem',
                 fontWeight: 700,
                 margin: '0 0 12px 0',

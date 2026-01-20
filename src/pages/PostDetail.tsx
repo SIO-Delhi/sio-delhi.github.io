@@ -362,7 +362,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                     return (
                         <div
                             key={index}
-                            className="composite-block-wrapper" // Added for responsive CSS
+
                             style={{
                                 margin: '40px 0',
                                 padding: '32px',
@@ -378,6 +378,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                 gap: '32px',
                                 alignItems: 'stretch'
                             }}
+                            className={`composite-block-wrapper ${isVertical ? "composite-block-vertical" : "composite-block-grid"}`}
                         >
                             <div className="composite-block-image" style={{ order: layout === 'image-right' ? 2 : 1, position: 'relative', overflow: 'hidden', borderRadius: '12px' }}>
                                 <CarouselBlock
@@ -1004,6 +1005,38 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                 .post-content strong {
                     font-weight: 700;
                 }
+                .post-content strong {
+                    font-weight: 700;
+                }
+                
+                /* Composite Block Responsive */
+                @media (max-width: 768px) {
+                    .composite-block-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                    .composite-block-image {
+                        order: 1 !important;
+                        min-height: 250px !important;
+                    }
+                    .composite-block-text {
+                        order: 2 !important;
+                    }
+                }
+
+                /* Responsive Images */
+                .post-content img, .leader-bio img, .news-content img {
+                    max-width: 100%;
+                    height: auto;
+                }
+                
+                /* Leadership Layout Responsive - handled via clean inline styles & flex-wrap, 
+                   but let's ensure padding reduction on small screens if needed */
+                @media (max-width: 600px) {
+                    .container {
+                        padding-left: 16px !important;
+                        padding-right: 16px !important;
+                    }
+                }
             `}</style>
         </>
     )
@@ -1035,8 +1068,8 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
             {/* Left Column: Profile */}
             <div style={{
                 flexShrink: 0,
-                width: '320px',
-                maxWidth: '100%',
+                width: '100%',
+                maxWidth: '320px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '24px',
@@ -1106,33 +1139,36 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                                     <Instagram size={20} />
                                 </a>
                             )}
-                        </div>
-                    )}
-                </div>
-            </div>
+                        </div >
+                    )
+                    }
+                </div >
+            </div >
 
             {/* Right Column: Bio Content */}
-            <div style={{ flex: 1, minWidth: '300px' }}>
-                {post.content && (
-                    <div
-                        className="leader-bio"
-                        style={{
-                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
-                            fontSize: '1.1rem',
-                            lineHeight: 1.8,
-                            textAlign: 'left'
-                        }}
-                    >
-                        {/* We use ContentBlockRenderer but cheat by overriding styles via CSS if needed, 
+            < div style={{ flex: 1, minWidth: '280px', maxWidth: '100%' }}>
+                {
+                    post.content && (
+                        <div
+                            className="leader-bio"
+                            style={{
+                                color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                                fontSize: '1.1rem',
+                                lineHeight: 1.8,
+                                textAlign: 'left'
+                            }}
+                        >
+                            {/* We use ContentBlockRenderer but cheat by overriding styles via CSS if needed, 
                             or simpler: Just render the content directly if it's text. 
                             Given the user wants a single card, forcing ContentBlockRenderer (which has its own cards) is bad.
                             I'll basically unwind the renderer for this specific view to just be the content.
                          */}
-                        <div dangerouslySetInnerHTML={{ __html: post.content }} />
-                    </div>
-                )}
-            </div>
-        </div>
+                            <div dangerouslySetInnerHTML={{ __html: post.content }} />
+                        </div>
+                    )
+                }
+            </div >
+        </div >
     )
 }
 

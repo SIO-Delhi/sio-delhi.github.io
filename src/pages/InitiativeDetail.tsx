@@ -187,6 +187,10 @@ export function InitiativeDetail() {
                     .initiative-content strong {
                         color: ${isDark ? '#ff3b3b' : '#cc2929'};
                     }
+                    .initiative-content img {
+                        max-width: 100%;
+                        height: auto;
+                    }
                 `}</style>
             </div>
         </div>
