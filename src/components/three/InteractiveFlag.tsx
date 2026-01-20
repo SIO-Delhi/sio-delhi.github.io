@@ -29,7 +29,7 @@ function FlagScene({ isMobile }: { isMobile: boolean }) {
             mass: 0.1, // Adjust mass for feel
             restDistance: 0.1, // Grid density
             texture: flagTexture,
-            width: isMobile ? 2.5 : 3.5, // Smaller spread on mobile
+            width: isMobile ? 2.9 : 3.5, // Reduced slightly from 3.2
             height: 2.3,
             pin: { edges: ['left'] } // Pin left edge
         })

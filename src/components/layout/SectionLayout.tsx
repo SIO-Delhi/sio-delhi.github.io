@@ -21,13 +21,9 @@ export default function SectionLayout({
     const [canScrollLeft, setCanScrollLeft] = useState(false)
     const [canScrollRight, setCanScrollRight] = useState(true)
 
-    // Removed useLayoutEffect as all GSAP animations were causing instability
-    // The layout is now purely CSS-based for maximum stability
-
     const checkScrollButtons = useCallback(() => {
         if (scrollContainerRef.current) {
             const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current
-            // Use a small threshold (2px) to account for browser rounding errors
             setCanScrollLeft(scrollLeft > 2)
             setCanScrollRight(Math.ceil(scrollLeft + clientWidth) < scrollWidth - 2)
         }
@@ -39,20 +35,60 @@ export default function SectionLayout({
         return () => window.removeEventListener('resize', checkScrollButtons)
     }, [checkScrollButtons, children])
 
+    // Drag Scroll Logic
+    const isDown = useRef(false)
+    const startX = useRef(0)
+    const scrollLeft = useRef(0)
+    const hasDragged = useRef(false) // Track if a meaningful drag occurred
+
+    const onMouseDown = (e: React.MouseEvent) => {
+        isDown.current = true
+        hasDragged.current = false // Reset on new drag
+        if (scrollContainerRef.current) {
+            startX.current = e.pageX - scrollContainerRef.current.offsetLeft
+            scrollLeft.current = scrollContainerRef.current.scrollLeft
+        }
+    }
+
+    const onMouseLeave = () => {
+        isDown.current = false
+    }
+
+    const onMouseUp = () => {
+        isDown.current = false
+    }
+
+    const onMouseMove = (e: React.MouseEvent) => {
+        if (!isDown.current) return
+        e.preventDefault()
+        if (scrollContainerRef.current) {
+            const x = e.pageX - scrollContainerRef.current.offsetLeft
+            const walk = (x - startX.current) * 2 // Scroll speed multiplier
+            // Mark as dragged if moved more than 5px
+            if (Math.abs(x - startX.current) > 5) {
+                hasDragged.current = true
+            }
+            scrollContainerRef.current.scrollLeft = scrollLeft.current - walk
+        }
+    }
+
+    // Prevent click if user dragged
+    const onClickCapture = (e: React.MouseEvent) => {
+        if (hasDragged.current) {
+            e.stopPropagation()
+            e.preventDefault()
+        }
+    }
+
     const scroll = (direction: 'left' | 'right') => {
         if (scrollContainerRef.current) {
             const scrollAmount = 340 // Card width + gap
-            console.log(`Scrolling ${direction} by ${scrollAmount}`)
-
             scrollContainerRef.current.scrollBy({
                 left: direction === 'left' ? -scrollAmount : scrollAmount,
                 behavior: 'smooth'
             })
-
             // Check buttons after scrolling animation (approx 300ms)
             setTimeout(checkScrollButtons, 350)
-        } else {
-            console.error('Scroll container ref is missing')
         }
     }
 
@@ -66,7 +102,7 @@ export default function SectionLayout({
                 background: 'transparent',
                 paddingTop: '80px',
                 paddingBottom: '60px',
-                zIndex: 10, // Ensure content sits above fixed background gradients
+                zIndex: 10,
             }}
         >
             {/* Header with Arrow */}
@@ -76,7 +112,7 @@ export default function SectionLayout({
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'flex-end',
-                    marginBottom: '16px', // Reduced from 28px
+                    marginBottom: '16px',
                     paddingLeft: '8%',
                     paddingRight: '8%'
                 }}
@@ -87,7 +123,7 @@ export default function SectionLayout({
                         <p style={{
                             fontSize: '0.95rem',
                             color: 'rgba(255, 255, 255, 0.45)',
-                            marginTop: '8px', // Reduced from 10px
+                            marginTop: '8px',
                             maxWidth: '450px',
                             lineHeight: 1.5
                         }}>
@@ -101,7 +137,7 @@ export default function SectionLayout({
                     display: 'flex',
                     gap: '10px',
                     position: 'relative',
-                    zIndex: 50 // Ensure buttons are above everything
+                    zIndex: 50
                 }}>
                     <button
                         onClick={() => scroll('left')}
@@ -153,9 +189,14 @@ export default function SectionLayout({
                 ref={scrollContainerRef}
                 className={className}
                 onScroll={checkScrollButtons}
+                onMouseDown={onMouseDown}
+                onMouseLeave={onMouseLeave}
+                onMouseUp={onMouseUp}
+                onMouseMove={onMouseMove}
+                onClickCapture={onClickCapture}
                 style={{
                     display: 'flex',
-                    alignItems: 'flex-start', // Force top alignment
+                    alignItems: 'flex-start',
                     gap: '24px',
                     overflowX: 'auto',
                     overflowY: 'hidden',
@@ -165,10 +206,10 @@ export default function SectionLayout({
                     paddingBottom: '40px',
                     scrollbarWidth: 'none',
                     msOverflowStyle: 'none',
-                    // "Nice" Snap Scroll
-                    scrollSnapType: 'x mandatory',
-                    scrollPaddingLeft: '8%', // Matches container padding for perfect alignment
-                    scrollBehavior: 'smooth'
+                    // Removed cursor styles to preserve custom cursor
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    scrollBehavior: 'auto'
                 }}
             >
                 {children}
@@ -178,10 +219,7 @@ export default function SectionLayout({
                 #${id} > div:last-of-type::-webkit-scrollbar {
                     display: none;
                 }
-                /* Target direct children (cards) to make them snap alignment points */
-                #${id} > div:last-of-type > * {
-                    scroll-snap-align: start;
-                }
+                /* Removed snap alignment rules */
                 @media (max-width: 1024px) {
                     #${id} {
                         padding-top: 40px !important;

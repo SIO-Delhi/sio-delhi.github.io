@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
-import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText } from 'lucide-react'
+import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText, GripVertical } from 'lucide-react'
 
 // Helper to get the first image URL from a post.image (which may be a JSON array or single URL)
 const getFirstImageUrl = (imageField: string | undefined): string | undefined => {
@@ -23,6 +23,11 @@ export function SectionManager() {
     const { sections, getPostsBySection, deletePost, updatePost } = useContent()
     const navigate = useNavigate()
     const [showCreateMenu, setShowCreateMenu] = useState(false)
+
+    // Drag and drop state
+    const [draggedItem, setDraggedItem] = useState<string | null>(null)
+    const [dragOverItem, setDragOverItem] = useState<string | null>(null)
+    const [isUpdatingOrder, setIsUpdatingOrder] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
 
     // Detect screen size
@@ -34,6 +39,7 @@ export function SectionManager() {
     }, [])
 
     const section = sections.find(s => s.id === sectionId)
+    // Get posts and ensure they are sorted by order
     const posts = sectionId ? getPostsBySection(sectionId) : []
 
     const togglePublish = async (postId: string, currentStatus: boolean) => {
@@ -42,6 +48,67 @@ export function SectionManager() {
         } catch (err) {
             console.error('Failed to toggle publish status:', err)
             alert('Failed to update publish status')
+        }
+    }
+
+    // Handle Drag Start
+    const handleDragStart = (e: React.DragEvent, id: string) => {
+        setDraggedItem(id)
+        e.dataTransfer.effectAllowed = 'move'
+        // Create ghost image if needed, or browser default
+    }
+
+    // Handle Drag Over
+    const handleDragOver = (e: React.DragEvent, id: string) => {
+        e.preventDefault()
+        if (draggedItem === id) return
+        setDragOverItem(id)
+    }
+
+    // Handle Drop
+    const handleDrop = async (e: React.DragEvent, targetId: string) => {
+        e.preventDefault()
+        const sourceId = draggedItem
+
+        if (!sourceId || sourceId === targetId) {
+            setDraggedItem(null)
+            setDragOverItem(null)
+            return
+        }
+
+        // Reorder locally first for UI snap
+        const sourceIndex = posts.findIndex(p => p.id === sourceId)
+        const targetIndex = posts.findIndex(p => p.id === targetId)
+
+        if (sourceIndex === -1 || targetIndex === -1) return
+
+        const newPosts = [...posts]
+        const [movedItem] = newPosts.splice(sourceIndex, 1)
+        newPosts.splice(targetIndex, 0, movedItem)
+
+        // Optimistic UI update could happen here if local state was used for rendering
+
+        setIsUpdatingOrder(true)
+        setDraggedItem(null)
+        setDragOverItem(null)
+
+        try {
+            // Update all affected posts with new order index
+            // We update ALL because simple swap isn't enough for clean ordering
+            const updates = newPosts.map((post, index) => ({
+                id: post.id,
+                order: index
+            }))
+
+            await Promise.all(updates.map(update =>
+                updatePost(update.id, { order: update.order })
+            ))
+
+        } catch (err) {
+            console.error('Failed to update order:', err)
+            alert('Failed to save new order')
+        } finally {
+            setIsUpdatingOrder(false)
         }
     }
 
@@ -138,69 +205,58 @@ export function SectionManager() {
                     <p>Create your first post to get started.</p>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '16px' }}>
-                    {posts.map(post => (
-                        <div
-                            key={post.id}
-                            style={{
-                                display: 'flex',
-                                flexDirection: isMobile ? 'column' : 'row',
-                                alignItems: isMobile ? 'stretch' : 'center',
-                                justifyContent: 'space-between',
-                                padding: isMobile ? '16px' : '24px',
-                                borderRadius: '12px',
-                                background: '#141414',
-                                border: '1px solid #222',
-                                gap: isMobile ? '16px' : '0'
-                            }}
-                        >
-                            <div style={{ display: 'flex', gap: isMobile ? '12px' : '24px', alignItems: 'center' }}>
-                                {/* Thumbnail */}
-                                <div style={{
-                                    width: isMobile ? '60px' : '80px',
-                                    height: isMobile ? '45px' : '60px',
-                                    borderRadius: '8px',
-                                    overflow: 'hidden',
-                                    background: '#222',
-                                    flexShrink: 0
-                                }}>
-                                    {(() => {
-                                        const imageUrl = getFirstImageUrl(post.image)
-                                        return imageUrl ? (
-                                            <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', opacity: isUpdatingOrder ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                    {posts.map(post => {
+                        const displayImage = getFirstImageUrl(post.image);
+
+                        return (
+                            <div
+                                key={post.id}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, post.id)}
+                                onDragOver={(e) => handleDragOver(e, post.id)}
+                                onDrop={(e) => handleDrop(e, post.id)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '24px', borderRadius: '12px',
+                                    background: dragOverItem === post.id ? '#1a1a1a' : '#141414',
+                                    border: dragOverItem === post.id ? '1px dashed #666' : '1px solid #222',
+                                    transition: 'all 0.2s',
+                                    cursor: 'grab',
+                                    transform: draggedItem === post.id ? 'scale(0.99)' : 'scale(1)',
+                                    boxShadow: draggedItem === post.id ? '0 8px 24px rgba(0,0,0,0.5)' : 'none'
+                                }}
+                            >
+                                <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                                    {/* Drag Handle */}
+                                    <div style={{ color: '#444', cursor: 'grab' }} title="Drag to reorder">
+                                        <GripVertical size={20} />
+                                    </div>
+
+                                    {/* Thumbnail */}
+                                    <div style={{
+                                        width: '80px', height: '60px', borderRadius: '8px', overflow: 'hidden',
+                                        background: '#222', flexShrink: 0
+                                    }}>
+                                        {displayImage ? (
+                                            <img src={displayImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
                                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
-                                                <Layout size={isMobile ? 16 : 20} />
+                                                <Layout size={20} />
                                             </div>
-                                        )
-                                    })()}
-                                </div>
+                                        )}
+                                    </div>
 
-                                {/* Info */}
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: isMobile ? '8px' : '12px',
-                                        marginBottom: '4px',
-                                        flexWrap: 'wrap'
-                                    }}>
-                                        <h3 style={{
-                                            fontSize: isMobile ? '1rem' : '1.2rem',
-                                            fontWeight: 700,
-                                            margin: 0,
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: isMobile ? 'normal' : 'nowrap',
-                                            maxWidth: isMobile ? '100%' : '200px'
-                                        }}>{post.title}</h3>
-                                        {/* Badges */}
-                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                    {/* Info */}
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{post.title}</h3>
+                                            {/* Subsection Badge */}
                                             {post.isSubsection && (
                                                 <span style={{
-                                                    padding: '2px 8px',
+                                                    padding: '2px 10px',
                                                     borderRadius: '100px',
-                                                    fontSize: '0.65rem',
+                                                    fontSize: '0.7rem',
                                                     fontWeight: 600,
                                                     textTransform: 'uppercase',
                                                     background: 'rgba(139, 92, 246, 0.15)',
@@ -208,15 +264,16 @@ export function SectionManager() {
                                                     border: '1px solid rgba(139, 92, 246, 0.3)',
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    gap: '3px'
+                                                    gap: '4px'
                                                 }}>
-                                                    <FolderOpen size={8} /> Sub
+                                                    <FolderOpen size={10} /> Subsection
                                                 </span>
                                             )}
+                                            {/* Status Badge */}
                                             <span style={{
-                                                padding: '2px 8px',
+                                                padding: '2px 10px',
                                                 borderRadius: '100px',
-                                                fontSize: '0.65rem',
+                                                fontSize: '0.7rem',
                                                 fontWeight: 600,
                                                 textTransform: 'uppercase',
                                                 background: post.isPublished ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 165, 0, 0.15)',
@@ -226,97 +283,79 @@ export function SectionManager() {
                                                 {post.isPublished ? 'Published' : 'Draft'}
                                             </span>
                                         </div>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: isMobile ? '12px' : '16px', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#888' }}>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Calendar size={12} />
-                                            {new Date(post.createdAt).toLocaleDateString()}
-                                        </span>
-                                        {!isMobile && (
+                                        <div style={{ display: 'flex', gap: '16px', fontSize: '0.85rem', color: '#888' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <Calendar size={14} />
+                                                {new Date(post.createdAt).toLocaleDateString()}
+                                            </span>
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'capitalize' }}>
-                                                <Layout size={12} />
+                                                <Layout size={14} />
                                                 {post.layout.replace('-', ' ')}
                                             </span>
-                                        )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Actions */}
-                            <div style={{
-                                display: 'flex',
-                                gap: '8px',
-                                justifyContent: isMobile ? 'flex-end' : 'flex-start'
-                            }}>
-                                {/* Publish/Unpublish Toggle */}
-                                <button
-                                    onClick={() => togglePublish(post.id, post.isPublished)}
-                                    title={post.isPublished ? "Unpublish" : "Publish"}
-                                    style={{
-                                        padding: isMobile ? '8px 12px' : '10px 16px',
-                                        borderRadius: '8px',
-                                        background: post.isPublished ? 'rgba(255, 165, 0, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                                        border: 'none',
-                                        color: post.isPublished ? '#ffa500' : '#22c55e',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        fontSize: isMobile ? '0.75rem' : '0.85rem',
-                                        fontWeight: 600
-                                    }}
-                                >
-                                    {post.isPublished ? <EyeOff size={14} /> : <Eye size={14} />}
-                                    {!isMobile && (post.isPublished ? 'Unpublish' : 'Publish')}
-                                </button>
-                                <button
-                                    onClick={() => navigate(post.isSubsection ? `/admin/subsection/${post.id}` : `/admin/post/${post.id}`)}
-                                    title={post.isSubsection ? "Manage Subsection" : "Edit Post"}
-                                    style={{
-                                        padding: isMobile ? '8px' : '10px',
-                                        borderRadius: '8px',
-                                        background: '#222',
-                                        border: 'none',
-                                        color: '#fff',
-                                        cursor: 'pointer',
-                                        transition: 'background 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = '#222'}
-                                >
-                                    <Edit2 size={isMobile ? 16 : 18} />
-                                </button>
-                                <button
-                                    onClick={async (e) => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        if (window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-                                            try {
-                                                await deletePost(post.id)
-                                            } catch (err) {
-                                                console.error('Delete error:', err)
-                                                alert('Failed to delete post.')
+                                {/* Actions */}
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {/* Publish/Unpublish Toggle */}
+                                    <button
+                                        onClick={() => togglePublish(post.id, post.isPublished)}
+                                        title={post.isPublished ? "Unpublish" : "Publish"}
+                                        style={{
+                                            padding: '10px 16px', borderRadius: '8px',
+                                            background: post.isPublished ? 'rgba(255, 165, 0, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                                            border: 'none',
+                                            color: post.isPublished ? '#ffa500' : '#22c55e',
+                                            cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', gap: '6px',
+                                            fontSize: '0.85rem', fontWeight: 600
+                                        }}
+                                    >
+                                        {post.isPublished ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        {post.isPublished ? 'Unpublish' : 'Publish'}
+                                    </button>
+                                    <button
+                                        onClick={() => navigate(post.isSubsection ? `/admin/subsection/${post.id}` : `/admin/post/${post.id}`)}
+                                        title={post.isSubsection ? "Manage Subsection" : "Edit Post"}
+                                        style={{
+                                            padding: '10px', borderRadius: '8px',
+                                            background: '#222', border: 'none', color: '#fff',
+                                            cursor: 'pointer', transition: 'background 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = '#222'}
+                                    >
+                                        <Edit2 size={18} />
+                                    </button>
+                                    <button
+                                        onClick={async (e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            if (window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+                                                try {
+                                                    await deletePost(post.id)
+                                                } catch (err) {
+                                                    console.error('Delete error:', err)
+                                                    alert('Failed to delete post.')
+                                                }
                                             }
-                                        }
-                                    }}
-                                    title="Delete Post"
-                                    style={{
-                                        padding: isMobile ? '8px' : '10px',
-                                        borderRadius: '8px',
-                                        background: 'rgba(255, 59, 59, 0.1)',
-                                        border: 'none',
-                                        color: '#ff3b3b',
-                                        cursor: 'pointer',
-                                        transition: 'background 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 59, 59, 0.2)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 59, 59, 0.1)'}
-                                >
-                                    <Trash2 size={isMobile ? 16 : 18} />
-                                </button>
+                                        }}
+                                        title="Delete Post"
+                                        style={{
+                                            padding: '10px', borderRadius: '8px',
+                                            background: 'rgba(255, 59, 59, 0.1)', border: 'none', color: '#ff3b3b',
+                                            cursor: 'pointer', transition: 'background 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 59, 59, 0.2)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 59, 59, 0.1)'}
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
