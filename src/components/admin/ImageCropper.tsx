@@ -124,9 +124,8 @@ export function ImageCropper({ imageSrc, onCancel, onCropComplete, onSkip, aspec
                         }}
                     >
                         Cancel
-                        Cancel
                     </button>
-                    {onSkip && (
+                    {/* {onSkip && (
                         <button
                             onClick={onSkip}
                             style={{
@@ -136,7 +135,7 @@ export function ImageCropper({ imageSrc, onCancel, onCropComplete, onSkip, aspec
                         >
                             Skip/Full
                         </button>
-                    )}
+                    )} */}
                     <button
                         onClick={handleSave}
                         disabled={isProcessing || !completedCrop}
