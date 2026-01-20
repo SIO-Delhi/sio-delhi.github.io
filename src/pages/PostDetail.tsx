@@ -24,6 +24,8 @@ interface ParsedBlock {
     layout?: 'image-left' | 'image-right' | 'image-top' | 'stacked'
     imageUrl?: string
     textContent?: string
+    // Video block pre-calc
+    videoSrc?: string
 }
 
 // Memoized Video Block to prevent re-renders (looping/refreshing issues)
@@ -85,9 +87,56 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
     )
 })
 
-function ContentBlockRenderer({ content, isDark }: { content: string; isDark: boolean }) {
-    const [carouselIndices, setCarouselIndices] = useState<{ [key: number]: number }>({})
+// Self-contained Carousel Component via props
+const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { images: string[], containerStyle?: any, imageStyle?: any }) => {
+    const [currentIndex, setCurrentIndex] = useState(0)
 
+    useEffect(() => {
+        if (images.length <= 1) return
+        const interval = setInterval(() => {
+            setCurrentIndex(prev => (prev + 1) % images.length)
+        }, 3000)
+        return () => clearInterval(interval)
+    }, [images.length])
+
+    const currentImage = images[currentIndex]
+
+    return (
+        <div style={{ position: 'relative', width: '100%', ...containerStyle }}>
+            <img
+                src={currentImage}
+                alt="Carousel Slide"
+                style={{
+                    width: '100%',
+                    height: 'auto',
+                    display: 'block',
+                    transition: 'opacity 0.5s ease-in-out',
+                    ...imageStyle
+                }}
+            />
+            {images.length > 1 && (
+                <div style={{
+                    position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
+                    display: 'flex', gap: '6px', zIndex: 10
+                }}>
+                    {images.map((_: string, i: number) => (
+                        <div
+                            key={i}
+                            style={{
+                                width: '6px', height: '6px', borderRadius: '50%',
+                                background: i === currentIndex ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
+                                transition: 'background 0.2s',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+})
+
+function ContentBlockRenderer({ content, isDark }: { content: string; isDark: boolean }) {
     // Parse content into blocks
     const blocks: ParsedBlock[] = useMemo(() => {
         const tempDiv = document.createElement('div')
@@ -130,6 +179,16 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
             else if (isImage) blockType = 'image'
             else if (isVideo) blockType = 'video'
 
+            // Pre-calculate video src if needed
+            let videoSrc = ''
+            if (isVideo) {
+                // Parse video src from the block content immediately
+                // We use a temporary div scope just for this element's content
+                const vidTemp = document.createElement('div')
+                vidTemp.innerHTML = el.innerHTML
+                videoSrc = vidTemp.querySelector('iframe')?.src || ''
+            }
+
             return {
                 type: blockType,
                 content: isPdf || isComposite ? '' : el.innerHTML,
@@ -144,46 +203,11 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                 // Composite fields
                 layout: (el.getAttribute('data-layout') || 'image-left') as ParsedBlock['layout'],
                 imageUrl: decodeURIComponent(el.getAttribute('data-image-url') || ''),
-                textContent: decodeURIComponent(el.getAttribute('data-text-content') || '')
+                textContent: decodeURIComponent(el.getAttribute('data-text-content') || ''),
+                videoSrc
             }
         })
     }, [content])
-
-    const navigateCarousel = (blockIndex: number, direction: 'prev' | 'next', totalImages: number) => {
-        setCarouselIndices(prev => {
-            const current = prev[blockIndex] || 0
-            const next = direction === 'next'
-                ? (current + 1) % totalImages
-                : (current - 1 + totalImages) % totalImages
-            return { ...prev, [blockIndex]: next }
-        })
-    }
-
-    // Auto-play effect for carousels
-    useEffect(() => {
-        const interval = setInterval(() => {
-            blocks.forEach((block, index) => {
-                // Get images list - prefer carouselImages if available
-                let images: string[] = []
-                if (block.carouselImages && block.carouselImages.length > 0) {
-                    images = block.carouselImages
-                } else if (block.imageUrl) {
-                    images = [block.imageUrl]
-                } else if (block.imageSrc) {
-                    images = [block.imageSrc]
-                }
-
-                // Only auto-advance if there are multiple images
-                if (images.length > 1) {
-                    setCarouselIndices(prev => {
-                        const current = prev[index] || 0
-                        return { ...prev, [index]: (current + 1) % images.length }
-                    })
-                }
-            })
-        }, 3000)
-        return () => clearInterval(interval)
-    }, [blocks])
 
     return (
         <>
@@ -193,18 +217,38 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                     justifyContent: block.alignment === 'center' ? 'center' : (block.alignment === 'right' ? 'flex-end' : 'flex-start')
                 }
 
-                // Video Block (No glass card needed as it handles its own style in existing HTML)
+                // Video Block
                 if (block.type === 'video') {
-                    // Parse inline HTML from editor to get video src for cleaner rendering
-                    const tempDiv = document.createElement('div')
-                    tempDiv.innerHTML = block.content
-                    const iframeSrc = tempDiv.querySelector('iframe')?.src || ''
+                    // Smart Duplicate Title Check
+                    // We removed internalDuplicate check because block.content might contain the title 
+                    // (saved by editor) but we don't render block.content, so we shouldn't fallback/hide based on it.
+
+                    // Check PREVIOUS block for duplication (Strict Header Match)
+                    let previousBlockDuplicate = false
+                    if (index > 0) {
+                        const prevBlock = blocks[index - 1]
+                        if (prevBlock.type === 'text' || prevBlock.type === 'legacy') {
+                            const temp = document.createElement('div')
+                            temp.innerHTML = prevBlock.content
+                            const prevText = temp.textContent?.trim().toLowerCase() || ''
+                            const currentTitle = block.subtitle.trim().toLowerCase()
+
+                            // Only hide if the previous block IS exactly the title (acting as a header)
+                            // ignoring common punctuation like colons
+                            const cleanPrev = prevText.replace(/[:\s]+$/, '')
+                            if (cleanPrev && currentTitle && cleanPrev === currentTitle) {
+                                previousBlockDuplicate = true
+                            }
+                        }
+                    }
+
+                    const displaySubtitle = previousBlockDuplicate ? undefined : block.subtitle
 
                     return (
                         <VideoBlock
-                            key={index}
-                            src={iframeSrc}
-                            subtitle={block.subtitle}
+                            key={`video-${index}`} // Explicit string key
+                            src={block.videoSrc || ''}
+                            subtitle={displaySubtitle}
                             subtitleColor={block.subtitleColor}
                             text={block.textContent}
                             isDark={isDark}
@@ -259,7 +303,9 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                     // Skip rendering if no images
                     if (images.length === 0) return null
 
-                    const currentIndex = carouselIndices[index] || 0
+                    // For single image or carousel, use CarouselBlock for consistency
+                    // OR just render single image simply if performant.
+                    // Let's use CarouselBlock but styled to look native.
 
                     return (
                         <div
@@ -270,70 +316,16 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                 textAlign: (block.alignment as 'left' | 'center' | 'right') || 'left'
                             }}
                         >
-                            {/* Image/Carousel Container */}
-                            <div style={{
-                                position: 'relative',
-                                width: '100%'
-                            }}>
-                                <img
-                                    src={images[currentIndex]}
-                                    alt={block.caption || 'Image'}
-                                    style={{
-                                        width: '100%',
-                                        borderRadius: '12px',
-                                        display: 'block'
-                                    }}
-                                />
-
-                                {/* Carousel Controls */}
-                                {block.isCarousel && images.length > 1 && (
-                                    <>
-                                        <button
-                                            onClick={() => navigateCarousel(index, 'prev', images.length)}
-                                            style={{
-                                                position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
-                                                width: '40px', height: '40px', borderRadius: '50%',
-                                                background: 'rgba(0,0,0,0.6)', border: 'none',
-                                                color: 'white', cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                            }}
-                                        >
-                                            <ChevronLeft size={20} />
-                                        </button>
-                                        <button
-                                            onClick={() => navigateCarousel(index, 'next', images.length)}
-                                            style={{
-                                                position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                                                width: '40px', height: '40px', borderRadius: '50%',
-                                                background: 'rgba(0,0,0,0.6)', border: 'none',
-                                                color: 'white', cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                            }}
-                                        >
-                                            <ChevronRight size={20} />
-                                        </button>
-
-                                        {/* Dots */}
-                                        <div style={{
-                                            position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
-                                            display: 'flex', gap: '6px'
-                                        }}>
-                                            {images.map((_: string, i: number) => (
-                                                <div
-                                                    key={i}
-                                                    style={{
-                                                        width: '8px', height: '8px', borderRadius: '50%',
-                                                        background: i === currentIndex ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
-                                                        transition: 'background 0.2s'
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Caption */}
+                            {/* Use CarouselBlock for both single and multiple to simplify logic */}
+                            <CarouselBlock
+                                images={images}
+                                containerStyle={{
+                                    borderRadius: '12px',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                                    maxWidth: '100%'
+                                }}
+                            />
                             {block.caption && (
                                 <p style={{
                                     marginTop: '12px',
@@ -362,6 +354,11 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                 if (block.type === 'composite' && (block.imageUrl || block.textContent)) {
                     const layout = block.layout || 'image-left'
                     const isVertical = layout === 'image-top' || layout === 'stacked'
+                    const images = (block.carouselImages && block.carouselImages.length > 0
+                        ? block.carouselImages
+                        : (block.imageUrl ? [block.imageUrl] : [])
+                    )
+
                     return (
                         <div
                             key={index}
@@ -383,51 +380,11 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                             }}
                         >
                             <div className="composite-block-image" style={{ order: layout === 'image-right' ? 2 : 1, position: 'relative', overflow: 'hidden', borderRadius: '12px' }}>
-                                {/* Composite Carousel Logic */}
-                                {(() => {
-                                    const images = (block.carouselImages && block.carouselImages.length > 0
-                                        ? block.carouselImages
-                                        : (block.imageUrl ? [block.imageUrl] : [])
-                                    )
-                                    const currentIndex = carouselIndices[index] || 0
-
-                                    return (
-                                        <>
-                                            <img
-                                                src={images[currentIndex]}
-                                                alt=""
-                                                style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    minHeight: isVertical ? '300px' : '100%',
-                                                    objectFit: 'cover',
-                                                    display: 'block',
-                                                    borderRadius: '12px'
-                                                }}
-                                            />
-                                            {images.length > 1 && (
-                                                <>
-                                                    <div style={{
-                                                        position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
-                                                        display: 'flex', gap: '6px', zIndex: 10
-                                                    }}>
-                                                        {images.map((_: string, i: number) => (
-                                                            <div
-                                                                key={i}
-                                                                style={{
-                                                                    width: '6px', height: '6px', borderRadius: '50%',
-                                                                    background: i === currentIndex ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
-                                                                    transition: 'background 0.2s',
-                                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                                                                }}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                </>
-                                            )}
-                                        </>
-                                    )
-                                })()}
+                                <CarouselBlock
+                                    images={images}
+                                    containerStyle={{ height: '100%', minHeight: isVertical ? '300px' : '100%' }}
+                                    imageStyle={{ height: '100%', objectFit: 'cover' }}
+                                />
                             </div>
                             <div
                                 className="composite-block-text"
@@ -516,13 +473,9 @@ export function PostDetail({ sectionType }: PostDetailProps) {
 
     // Determine Hero Image validity
     // Media always shows image
-    // Default Layout shows image if NOT a subsection parent and NOT a subsection child
+    // Show hero for all posts/subsections unless it's leadership (which has own layout)
     const isSubsection = !!post.isSubsection
-    const isSubsectionChild = !!post.parentId
-    const showHero = post.image && (
-        sectionType === 'media' ||
-        (!['leadership', 'subsection'].includes(sectionType) && !isSubsection && !isSubsectionChild)
-    )
+    const showHero = post.image && sectionType !== 'leadership'
 
     // Render section-specific content
     const renderContent = () => {
@@ -555,7 +508,14 @@ export function PostDetail({ sectionType }: PostDetailProps) {
             {/* Hero Image (Wide) */}
             {showHero && <HeroCarousel post={post} />}
 
-            <div className="container" style={{ maxWidth: '900px', position: 'relative', zIndex: 2 }}>
+            <div className="container" style={{
+                maxWidth: isSubsection ? '100%' : '900px',
+                paddingLeft: isSubsection ? '4%' : '24px',
+                paddingRight: isSubsection ? '4%' : '24px',
+                position: 'relative',
+                zIndex: 2,
+                margin: '0 auto'
+            }}>
                 {/* Back button removed */}
 
                 {renderContent()}
@@ -924,47 +884,46 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
     // Regular full layout for top-level posts
     return (
         <>
+            <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <h1 style={{
+                    fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                    fontWeight: 700,
+                    color: isDark ? '#ffffff' : '#111111',
+                    marginBottom: '16px',
+                    lineHeight: 1.1,
+                    textAlign: 'center'
+                }}>
+                    {post.title}
+                </h1>
 
+                {/* Read Article Button - Only show for non-subsection posts with audio enabled */}
+                {!isSubsection && post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
-            <h1 style={{
-                fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-                fontWeight: 700,
-                color: isDark ? '#ffffff' : '#111111',
-                marginBottom: '16px',
-                lineHeight: 1.1
-            }}>
-                {post.title}
-            </h1>
+                {/* PDF Flipbook (if PDF attached AND not embedded in content) */}
+                {post.pdfUrl && !post.content?.includes('block-pdf') && (
+                    <div style={{ marginBottom: '40px' }}>
+                        <PDFFlipbook url={post.pdfUrl} />
+                    </div>
+                )}
 
-            {/* Read Article Button - Only show for non-subsection posts with audio enabled */}
-            {!isSubsection && post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
-
-            {/* Cover Image moved to Hero */}
-
-            {/* PDF Flipbook (if PDF attached AND not embedded in content) */}
-            {post.pdfUrl && !post.content?.includes('block-pdf') && (
-                <div style={{ marginBottom: '40px' }}>
-                    <PDFFlipbook url={post.pdfUrl} />
-                </div>
-            )}
-
-            {/* Content */}
-            {post.content && (
-                <div
-                    className="post-content"
-                    style={{
-                        color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
-                        fontSize: '1.1rem',
-                        lineHeight: 1.8
-                    }}
-                >
-                    <ContentBlockRenderer content={post.content} isDark={isDark} />
-                </div>
-            )}
+                {/* Content */}
+                {post.content && (
+                    <div
+                        className="post-content"
+                        style={{
+                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            fontSize: '1.1rem',
+                            lineHeight: 1.8
+                        }}
+                    >
+                        <ContentBlockRenderer content={post.content} isDark={isDark} />
+                    </div>
+                )}
+            </div>
 
             {/* Child Cards Grid for Subsection Posts */}
             {isSubsection && childPosts.length > 0 && (
-                <div style={{ marginTop: '48px' }}>
+                <div style={{ marginTop: '64px', width: '100%' }}>
                     <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
@@ -981,6 +940,8 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                                 description=""
                                 publishedDate={child.createdAt}
                                 image={child.image}
+
+
                                 onClick={() => {
                                     // Map sectionId to correct route path
                                     const routeMap: Record<string, string> = {

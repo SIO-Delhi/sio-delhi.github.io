@@ -8,10 +8,24 @@ export function CustomCursor() {
     const [isView, setIsView] = useState(false)
     const location = useLocation()
 
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        const checkMobile = () => {
+            const mobile = window.innerWidth < 1024
+            setIsMobile(mobile)
+        }
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
     // Reset cursor state on route change
     useEffect(() => {
         setIsView(false)
     }, [location])
+
+
 
     useEffect(() => {
         const cursor = cursorRef.current
@@ -89,6 +103,8 @@ export function CustomCursor() {
             document.removeEventListener('mouseout', handleMouseOut)
         }
     }, [])
+
+    if (isMobile) return null
 
     return (
         <>

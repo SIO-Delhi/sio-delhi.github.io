@@ -103,7 +103,7 @@ export function HeroSection() {
                     position: 'relative',
                     zIndex: 2,
                     width: '100%',
-                    padding: isMobile ? '160px 20px 0' : '0 120px 0 120px', // Mobile: Top pad, low side pad
+                    padding: isMobile ? '160px 32px 0' : '0 120px 0 120px', // Mobile: Increased side padding
                     textAlign: isMobile ? 'center' : 'right', // Center text on mobile
                 }}
             >
@@ -116,6 +116,8 @@ export function HeroSection() {
                         fontWeight: 700,
                         color: isDark ? '#ffffff' : '#1a1a1a',
                         marginBottom: '0.5rem',
+                        marginLeft: isMobile ? 'auto' : undefined,
+                        marginRight: isMobile ? 'auto' : undefined,
                         opacity: 0,
                         textShadow: isDark ? '0 4px 12px rgba(0,0,0,0.5)' : 'none',
                         direction: 'rtl',

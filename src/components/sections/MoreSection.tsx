@@ -3,7 +3,10 @@ import SectionLayout from '../layout/SectionLayout'
 import { FileText } from 'lucide-react'
 import { useContent } from '../../context/ContentContext'
 
+import { useNavigate } from 'react-router-dom'
+
 export function MoreSection() {
+    const navigate = useNavigate()
     const { getPostsBySection } = useContent()
     const resources = getPostsBySection('more').filter(p => p.isPublished)
 
@@ -72,10 +75,7 @@ export function MoreSection() {
                 if (icon) icon.style.borderColor = 'rgba(255,255,255,0.1)'
             }}
             onClick={() => {
-                // Determine if it's a link or a detail page
-                // Assuming it links to a detail page for now, or use external link if in content?
-                // For resources, maybe download or view? Let's treat as standard post detail for now.
-                window.location.href = `/resource/${item.id}`
+                navigate(`/resource/${item.id}`)
             }}
         >
             {/* Icon Circle */}

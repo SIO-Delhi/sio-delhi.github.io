@@ -6,7 +6,7 @@ import { ContentProvider } from './context/ContentContext'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { PostDetail } from './pages/PostDetail'
-import { SubsectionDetail } from './pages/SubsectionDetail'
+
 import { AdminLayout } from './components/admin/AdminLayout'
 import { Dashboard } from './components/admin/Dashboard'
 import { SectionManager } from './components/admin/SectionManager'
@@ -20,19 +20,6 @@ function App() {
     <ThemeProvider>
       <ContentProvider>
         <Routes>
-          {/* Main Site Routes - wrapped in Layout */}
-          <Route element={<Layout><HomePage /></Layout>} path="/" />
-
-          {/* Subsection detail page (shows child posts) */}
-          <Route element={<Layout><SubsectionDetail /></Layout>} path="/subsection/:id" />
-
-          {/* Section-specific post detail pages */}
-          <Route element={<Layout><PostDetail sectionType="about" /></Layout>} path="/about-us/:id" />
-          <Route element={<Layout><PostDetail sectionType="initiatives" /></Layout>} path="/initiative/:id" />
-          <Route element={<Layout><PostDetail sectionType="media" /></Layout>} path="/media/:id" />
-          <Route element={<Layout><PostDetail sectionType="leadership" /></Layout>} path="/leader/:id" />
-          <Route element={<Layout><PostDetail sectionType="resources" /></Layout>} path="/resource/:id" />
-
           {/* Admin Routes - NOT wrapped in Layout */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route element={<ProtectedRoute />}>
@@ -47,6 +34,20 @@ function App() {
               <Route path="subsection/:id" element={<SubsectionEditor />} />
             </Route>
           </Route>
+
+          {/* Main Site Routes - wildcard catch-all wrapped in Layout */}
+          <Route path="/*" element={
+            <Layout>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/about-us/:id" element={<PostDetail sectionType="about" />} />
+                <Route path="/initiative/:id" element={<PostDetail sectionType="initiatives" />} />
+                <Route path="/media/:id" element={<PostDetail sectionType="media" />} />
+                <Route path="/leader/:id" element={<PostDetail sectionType="leadership" />} />
+                <Route path="/resource/:id" element={<PostDetail sectionType="resources" />} />
+              </Routes>
+            </Layout>
+          } />
         </Routes>
         <CustomCursor />
         <SplashScreen />
