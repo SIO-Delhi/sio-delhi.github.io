@@ -204,7 +204,6 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             })
     }
 
-
     const getPostById = (id: string) => {
         return posts.find(p => p.id === id)
     }
