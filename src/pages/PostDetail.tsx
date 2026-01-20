@@ -425,7 +425,8 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                 }
 
                 return null
-            })}
+            })
+            }
         </>
     )
 }
