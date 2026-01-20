@@ -11,6 +11,7 @@ interface SectionCardProps {
     onClick?: () => void
     className?: string
     image?: string
+    width?: string
 }
 
 // Helper to get the first image URL from an image field (which may be a JSON array or single URL)
@@ -34,7 +35,8 @@ export function SectionCard({
     publishedDate,
     onClick,
     className,
-    image
+    image,
+    width
 }: SectionCardProps) {
     const cardRef = useRef<HTMLDivElement>(null)
 
@@ -73,7 +75,7 @@ export function SectionCard({
                 display: 'flex',
                 flexDirection: 'column',
                 height: '380px',
-                width: '300px',
+                width: width || '300px',
                 cursor: onClick ? 'pointer' : 'default',
                 transition: 'all 0.3s ease',
                 overflow: 'hidden',
@@ -168,27 +170,49 @@ export function SectionCard({
                 marginTop: 'auto', // Always pin to bottom
                 borderRadius: '10px',
                 overflow: 'hidden',
-                height: '120px',
+                height: '140px', // Slightly taller for better proportions
                 width: '100%',
                 flexShrink: 0,
                 position: 'relative',
-                background: imageUrl ? '#000' : 'transparent',
-                display: 'block' // Always render container to maintain layout structure/spacing
+                background: '#1a1a1a', // Dark background for fallback
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: imageUrl ? 'none' : '1px solid rgba(255,255,255,0.05)'
             }}>
-                {imageUrl && (
+                {imageUrl ? (
                     <img
                         src={imageUrl}
                         alt=""
                         style={{
                             width: '100%',
                             height: '100%',
-                            maxWidth: '100%',
-                            maxHeight: '120px',
                             objectFit: 'cover',
                             objectPosition: 'center',
                             display: 'block',
                         }}
                     />
+                ) : (
+                    // Placeholder pattern
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
+                        background: `linear-gradient(45deg, ${labelColor}11 25%, transparent 25%, transparent 75%, ${labelColor}11 75%, ${labelColor}11), linear-gradient(45deg, ${labelColor}11 25%, transparent 25%, transparent 75%, ${labelColor}11 75%, ${labelColor}11)`,
+                        backgroundSize: '20px 20px',
+                        backgroundPosition: '0 0, 10px 10px',
+                        opacity: 0.3,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <div style={{
+                            width: '40px',
+                            height: '4px',
+                            borderRadius: '2px',
+                            background: labelColor,
+                            opacity: 0.2
+                        }} />
+                    </div>
                 )}
             </div>
         </div>

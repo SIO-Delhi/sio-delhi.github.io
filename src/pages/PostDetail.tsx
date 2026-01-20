@@ -516,13 +516,9 @@ export function PostDetail({ sectionType }: PostDetailProps) {
 
     // Determine Hero Image validity
     // Media always shows image
-    // Default Layout shows image if NOT a subsection parent and NOT a subsection child
+    // Show hero for all posts/subsections unless it's leadership (which has own layout)
     const isSubsection = !!post.isSubsection
-    const isSubsectionChild = !!post.parentId
-    const showHero = post.image && (
-        sectionType === 'media' ||
-        (!['leadership', 'subsection'].includes(sectionType) && !isSubsection && !isSubsectionChild)
-    )
+    const showHero = post.image && sectionType !== 'leadership'
 
     // Render section-specific content
     const renderContent = () => {
@@ -555,7 +551,14 @@ export function PostDetail({ sectionType }: PostDetailProps) {
             {/* Hero Image (Wide) */}
             {showHero && <HeroCarousel post={post} />}
 
-            <div className="container" style={{ maxWidth: '900px', position: 'relative', zIndex: 2 }}>
+            <div className="container" style={{
+                maxWidth: isSubsection ? '100%' : '900px',
+                paddingLeft: isSubsection ? '4%' : '24px',
+                paddingRight: isSubsection ? '4%' : '24px',
+                position: 'relative',
+                zIndex: 2,
+                margin: '0 auto'
+            }}>
                 {/* Back button removed */}
 
                 {renderContent()}
@@ -924,47 +927,46 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
     // Regular full layout for top-level posts
     return (
         <>
+            <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <h1 style={{
+                    fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                    fontWeight: 700,
+                    color: isDark ? '#ffffff' : '#111111',
+                    marginBottom: '16px',
+                    lineHeight: 1.1,
+                    textAlign: 'center'
+                }}>
+                    {post.title}
+                </h1>
 
+                {/* Read Article Button - Only show for non-subsection posts with audio enabled */}
+                {!isSubsection && post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
-            <h1 style={{
-                fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-                fontWeight: 700,
-                color: isDark ? '#ffffff' : '#111111',
-                marginBottom: '16px',
-                lineHeight: 1.1
-            }}>
-                {post.title}
-            </h1>
+                {/* PDF Flipbook (if PDF attached AND not embedded in content) */}
+                {post.pdfUrl && !post.content?.includes('block-pdf') && (
+                    <div style={{ marginBottom: '40px' }}>
+                        <PDFFlipbook url={post.pdfUrl} />
+                    </div>
+                )}
 
-            {/* Read Article Button - Only show for non-subsection posts with audio enabled */}
-            {!isSubsection && post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
-
-            {/* Cover Image moved to Hero */}
-
-            {/* PDF Flipbook (if PDF attached AND not embedded in content) */}
-            {post.pdfUrl && !post.content?.includes('block-pdf') && (
-                <div style={{ marginBottom: '40px' }}>
-                    <PDFFlipbook url={post.pdfUrl} />
-                </div>
-            )}
-
-            {/* Content */}
-            {post.content && (
-                <div
-                    className="post-content"
-                    style={{
-                        color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
-                        fontSize: '1.1rem',
-                        lineHeight: 1.8
-                    }}
-                >
-                    <ContentBlockRenderer content={post.content} isDark={isDark} />
-                </div>
-            )}
+                {/* Content */}
+                {post.content && (
+                    <div
+                        className="post-content"
+                        style={{
+                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            fontSize: '1.1rem',
+                            lineHeight: 1.8
+                        }}
+                    >
+                        <ContentBlockRenderer content={post.content} isDark={isDark} />
+                    </div>
+                )}
+            </div>
 
             {/* Child Cards Grid for Subsection Posts */}
             {isSubsection && childPosts.length > 0 && (
-                <div style={{ marginTop: '48px' }}>
+                <div style={{ marginTop: '64px', width: '100%' }}>
                     <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
@@ -981,6 +983,8 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                                 description=""
                                 publishedDate={child.createdAt}
                                 image={child.image}
+
+
                                 onClick={() => {
                                     // Map sectionId to correct route path
                                     const routeMap: Record<string, string> = {
