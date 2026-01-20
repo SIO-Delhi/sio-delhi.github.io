@@ -480,12 +480,12 @@ export function Navbar() {
 
                     <div style={{
                         maxWidth: '90%', width: '500px',
-                        background: '#1a1a1a',
-                        borderRadius: '24px',
-                        border: '1px solid #333',
+                        // background: '#1a1a1a', // Removed
+                        // borderRadius: '24px', // Removed
+                        // border: '1px solid #333', // Removed
                         padding: '40px',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px',
-                        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                        // boxShadow: '0 20px 50px rgba(0,0,0,0.5)', // Removed
                         position: 'relative',
                         maxHeight: '90vh',
                         overflowY: 'auto'
@@ -508,18 +508,21 @@ export function Navbar() {
                         {/* Bank Details */}
                         <div style={{
                             width: '100%',
-                            background: '#222',
-                            borderRadius: '12px',
-                            padding: '24px',
+                            // background: '#222', // Removed
+                            // borderRadius: '12px', // Removed
+                            // padding: '24px', // Removed to let text flow naturally in parent
                             fontSize: '0.9rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px'
                         }}>
                             <div style={{ display: 'grid', gap: '12px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
-                                    <span style={{ color: '#666' }}>Account Name</span>
+                                    <span style={{ color: '#999' }}>Account Name</span>
                                     <span style={{ fontWeight: 600, textAlign: 'right', maxWidth: '60%' }}>STUDENTS ISLAMIC ORGANISATION OF INDIA-Delhi</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
-                                    <span style={{ color: '#666' }}>Account No</span>
+                                    <span style={{ color: '#999' }}>Account No</span>
                                     <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         10128891237
                                         <button onClick={() => copyToClipboard('10128891237')} style={{ background: 'none', border: 'none', color: '#ff3b3b', cursor: 'pointer', padding: 0 }} title="Copy">
@@ -528,19 +531,19 @@ export function Navbar() {
                                     </span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
-                                    <span style={{ color: '#666' }}>IFSC</span>
+                                    <span style={{ color: '#999' }}>IFSC</span>
                                     <span style={{ fontWeight: 600 }}>IDFB0020197</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
-                                    <span style={{ color: '#666' }}>SWIFT</span>
+                                    <span style={{ color: '#999' }}>SWIFT</span>
                                     <span style={{ fontWeight: 600 }}>IDFBINBBMUM</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
-                                    <span style={{ color: '#666' }}>Bank name</span>
+                                    <span style={{ color: '#999' }}>Bank name</span>
                                     <span style={{ fontWeight: 600, textAlign: 'right' }}>IDFC FIRST Branch: JASOLA, NEW DELHI</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: '#666' }}>UPI ID</span>
+                                    <span style={{ color: '#999' }}>UPI ID</span>
                                     <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         Stude05.07@cmsidfc
                                         <button onClick={() => copyToClipboard('Stude05.07@cmsidfc')} style={{ background: 'none', border: 'none', color: '#ff3b3b', cursor: 'pointer', padding: 0 }} title="Copy">
@@ -551,7 +554,7 @@ export function Navbar() {
                             </div>
                         </div>
 
-                        <p style={{ fontSize: '0.8rem', color: '#666', textAlign: 'center', lineHeight: 1.5, background: 'rgba(255, 59, 59, 0.1)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255, 59, 59, 0.2)' }}>
+                        <p style={{ fontSize: '0.8rem', color: '#999', textAlign: 'center', lineHeight: 1.5, background: 'rgba(255, 59, 59, 0.1)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255, 59, 59, 0.2)' }}>
                             Send your donation details on <span style={{ color: '#ff3b3b', fontWeight: 600 }}>+91 7827378127</span> through WhatsApp to get your receipt.
                         </p>
 
