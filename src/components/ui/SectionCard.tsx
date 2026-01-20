@@ -51,11 +51,7 @@ export function SectionCard({
         }).toUpperCase()
         : null
 
-    // Truncate description to ~15 words
-    const truncatedDescription = description
-        ? description.replace(/<[^>]+>/g, '').split(' ').slice(0, 15).join(' ') +
-        (description.split(' ').length > 15 ? '...' : '')
-        : ''
+
 
     return (
         <div
@@ -74,7 +70,7 @@ export function SectionCard({
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
                 display: 'flex',
                 flexDirection: 'column',
-                height: '380px',
+                height: '420px',
                 width: width || '300px',
                 cursor: onClick ? 'pointer' : 'default',
                 transition: 'all 0.3s ease',
@@ -131,6 +127,10 @@ export function SectionCard({
                 lineHeight: 1.2,
                 color: '#ffffff',
                 letterSpacing: '-0.01em',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
             }}>
                 {title}
             </h3>
@@ -140,9 +140,13 @@ export function SectionCard({
                 fontSize: '0.85rem',
                 color: 'rgba(255, 255, 255, 0.6)',
                 margin: '0 0 16px 0',
-                lineHeight: 1.6
+                lineHeight: 1.6,
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
             }}>
-                {truncatedDescription}
+                {description.replace(/<[^>]+>/g, '')}
             </p>
 
             {/* Read More Link */}
