@@ -856,7 +856,14 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
     const isSubsection = !!post.isSubsection
 
     // Filter children for this subsection
-    const childPosts = posts.filter(p => p.parentId === post.id)
+    // Filter children for this subsection and sort by order
+    const childPosts = posts
+        .filter(p => p.parentId === post.id)
+        .sort((a, b) => {
+            const orderA = (a.order !== undefined && a.order !== null) ? a.order : Number.MAX_SAFE_INTEGER
+            const orderB = (b.order !== undefined && b.order !== null) ? b.order : Number.MAX_SAFE_INTEGER
+            return orderA - orderB
+        })
 
     if (isSubsectionChild) {
         return (
@@ -875,11 +882,14 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                 {post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
                 {/* PDF Flipbook (main content for subsection posts) */}
-                {post.pdfUrl && (
-                    <div style={{ marginBottom: '40px' }}>
-                        <PDFFlipbook url={post.pdfUrl} />
-                    </div>
-                )}
+                {/* STRICT CHECK: If content uses new block system (siodel-block) OR explicitly has a PDF block (block-pdf), we assume PDF is managed content. */}
+                {post.pdfUrl &&
+                    !post.content?.toLowerCase().includes('siodel-block') &&
+                    !post.content?.toLowerCase().includes('block-pdf') && (
+                        <div style={{ marginBottom: '40px' }}>
+                            <PDFFlipbook url={post.pdfUrl} />
+                        </div>
+                    )}
 
                 {/* Content */}
                 {post.content && (
@@ -917,11 +927,14 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                 {!isSubsection && post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
                 {/* PDF Flipbook (if PDF attached AND not embedded in content) */}
-                {post.pdfUrl && !post.content?.includes('block-pdf') && (
-                    <div style={{ marginBottom: '40px' }}>
-                        <PDFFlipbook url={post.pdfUrl} />
-                    </div>
-                )}
+                {/* STRICT CHECK: If content uses new block system (siodel-block) OR explicitly has a PDF block (block-pdf), we assume PDF is managed content. */}
+                {post.pdfUrl &&
+                    !post.content?.toLowerCase().includes('siodel-block') &&
+                    !post.content?.toLowerCase().includes('block-pdf') && (
+                        <div style={{ marginBottom: '40px' }}>
+                            <PDFFlipbook url={post.pdfUrl} />
+                        </div>
+                    )}
 
                 {/* Content */}
                 {post.content && (

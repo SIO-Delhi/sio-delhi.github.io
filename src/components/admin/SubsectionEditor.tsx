@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage } from '../../lib/storage'
-import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff, GripVertical } from 'lucide-react'
 import { ImageCropper } from './ImageCropper'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 
@@ -14,7 +14,16 @@ export function SubsectionEditor() {
     const isEditMode = !!id
     const section = isEditMode && id ? sections.find(s => s.id === getPostById(id)?.sectionId) : sections.find(s => s.id === sectionId)
     const subsection = isEditMode && id ? getPostById(id) : undefined
-    const childPosts = isEditMode && id ? getChildPosts(id) : []
+    const childPostsFromContext = isEditMode && id ? getChildPosts(id) : []
+
+    // Local state for sorting to allow immediate UI feedback
+    const [localChildPosts, setLocalChildPosts] = useState(childPostsFromContext)
+    const [draggedPostId, setDraggedPostId] = useState<string | null>(null)
+
+    // Sync local state when context changes
+    useEffect(() => {
+        setLocalChildPosts(childPostsFromContext)
+    }, [childPostsFromContext.length, childPostsFromContext.map(p => p.id).join(',')])
 
     // Form State - simplified for subsection
     const [title, setTitle] = useState('')
@@ -127,6 +136,56 @@ export function SubsectionEditor() {
             alert('Failed to save')
         } finally {
             setIsSaving(false)
+        }
+    }
+
+
+    // Drag and Drop Logic
+    const handleDragStart = (e: React.DragEvent, postId: string) => {
+        setDraggedPostId(postId)
+        e.dataTransfer.effectAllowed = 'move'
+        // Styling for drag
+        const target = e.currentTarget as HTMLElement
+        target.style.opacity = '0.5'
+    }
+
+    const handleDragEnd = (e: React.DragEvent) => {
+        setDraggedPostId(null)
+        const target = e.currentTarget as HTMLElement
+        target.style.opacity = '1'
+    }
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault() // Essential to allow dropping
+        e.dataTransfer.dropEffect = 'move'
+    }
+
+    const handleDrop = async (e: React.DragEvent, targetPostId: string) => {
+        e.preventDefault()
+        if (!draggedPostId || draggedPostId === targetPostId) return
+
+        // Calculate new order locally
+        const newPosts = [...localChildPosts]
+        const draggedIndex = newPosts.findIndex(p => p.id === draggedPostId)
+        const targetIndex = newPosts.findIndex(p => p.id === targetPostId)
+
+        if (draggedIndex === -1 || targetIndex === -1) return
+
+        // Move item
+        const [movedItem] = newPosts.splice(draggedIndex, 1)
+        newPosts.splice(targetIndex, 0, movedItem)
+
+        // Optimistically update UI
+        setLocalChildPosts(newPosts)
+
+        // Persist order to DB
+        // We update all posts with their new index as order
+        try {
+            const updates = newPosts.map((post, index) => updatePost(post.id, { order: index }))
+            await Promise.all(updates)
+        } catch (err) {
+            console.error('Failed to save order', err)
+            alert('Failed to save new order')
         }
     }
 
@@ -318,7 +377,7 @@ export function SubsectionEditor() {
                             </button>
                         </div>
 
-                        {childPosts.length === 0 ? (
+                        {localChildPosts.length === 0 ? (
                             <div style={{
                                 padding: '48px', borderRadius: '12px', border: '2px dashed #333',
                                 textAlign: 'center', color: '#555'
@@ -329,18 +388,30 @@ export function SubsectionEditor() {
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {childPosts.map(post => (
+                                {localChildPosts.map(post => (
                                     <div
                                         key={post.id}
                                         onClick={() => navigate(`/admin/post/${post.id}`)}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, post.id)}
+                                        onDragEnd={handleDragEnd}
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, post.id)}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: '12px',
-                                            padding: '12px', borderRadius: '10px', background: '#141414',
-                                            border: '1px solid #222', cursor: 'pointer', transition: 'background 0.2s'
+                                            padding: '12px 12px 12px 6px', // Left padding reduced for Grip
+                                            borderRadius: '10px', background: '#141414',
+                                            border: '1px solid #222', cursor: 'grab', transition: 'background 0.2s',
+                                            transform: draggedPostId === post.id ? 'scale(0.98)' : 'none'
                                         }}
                                         onMouseEnter={(e) => e.currentTarget.style.background = '#1a1a1a'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = '#141414'}
                                     >
+                                        {/* Drag Handle */}
+                                        <div style={{ padding: '8px 4px', cursor: 'grab', color: '#444', display: 'flex', alignItems: 'center' }}>
+                                            <GripVertical size={16} />
+                                        </div>
+
                                         {/* Thumbnail */}
                                         <div style={{
                                             width: '50px', height: '50px', borderRadius: '8px',

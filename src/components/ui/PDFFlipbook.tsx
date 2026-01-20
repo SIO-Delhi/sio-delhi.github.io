@@ -29,16 +29,16 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
                 // Initialize DearFlip
                 const options = {
                     source: url,
-                    height: 600, // Fixed height or auto
+                    height: window.innerWidth < 768 ? 400 : 800, // Responsive height
                     webgl: true, // Enable 3D
                     // 3D settings
                     stiffness: 3,
                     backgroundColor: 'transparent',
-                    pageMode: 'auto', // single or double view based on size
-                    singlePageMode: 'auto',
+                    pageMode: 'single', // Force single page view
+                    singlePageMode: true, // Force single page mode
                     // Disable mouse zoom interactions
                     scrollWheel: false,
-                    zoomRatio: 1,
+                    zoomRatio: window.innerWidth < 768 ? 1.5 : 1, // Slight zoom on mobile
                     maxZoom: 1, // Limit max zoom level effectively disabling it
                     doubleClickZoom: false,
                 }
@@ -65,15 +65,26 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
         <div
             style={{
                 width: '100%',
-                height: '650px',
+                // height handled by inner container
                 position: 'relative',
                 background: 'transparent'
             }}
         >
+            <style>{`
+                .flipbook-container-wrapper {
+                    height: 850px;
+                }
+                @media (max-width: 768px) {
+                    .flipbook-container-wrapper {
+                        height: 450px !important;
+                    }
+                }
+            `}</style>
             <div
                 id={uniqueId.current}
                 ref={containerRef}
-                style={{ width: '100%', height: '100%' }}
+                className="flipbook-container-wrapper"
+                style={{ width: '100%' }}
             />
             {/* Customized DearFlip UI Styles */}
             <style>{`
