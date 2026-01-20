@@ -7,9 +7,9 @@ import { useContent } from '../../context/ContentContext'
 export function AboutSection() {
     const { isDark } = useTheme()
     const navigate = useNavigate()
-    const { posts } = useContent()
+    const { getPostsBySection } = useContent()
 
-    const cards = posts.filter(post => post.sectionId === 'about' && post.isPublished && !post.parentId)
+    const cards = getPostsBySection('about').filter(post => post.isPublished)
     const hasContent = cards.length > 0
 
     const headerContent = (

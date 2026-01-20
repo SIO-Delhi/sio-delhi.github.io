@@ -8,7 +8,6 @@ export function LeadershipSection() {
     // Filter for published leadership posts
     const leaders = getPostsBySection('leadership')
         .filter(p => p.isPublished)
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
     const hasContent = leaders.length > 0
 
     const headerContent = (
