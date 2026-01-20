@@ -12,6 +12,7 @@ import { Dashboard } from './components/admin/Dashboard'
 import { SectionManager } from './components/admin/SectionManager'
 import { PostEditor } from './components/admin/PostEditor'
 import { SubsectionEditor } from './components/admin/SubsectionEditor'
+import { AdminSections } from './components/admin/AdminSections'
 import { AdminLogin } from './pages/AdminLogin'
 import { ProtectedRoute } from './components/admin/ProtectedRoute'
 
@@ -26,6 +27,7 @@ function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="sections" element={<AdminSections />} />
               <Route path="section/:sectionId" element={<SectionManager />} />
               <Route path="create/:sectionId" element={<PostEditor />} />
               <Route path="create-post/:sectionId" element={<PostEditor />} />
@@ -45,6 +47,8 @@ function App() {
                 <Route path="/media/:id" element={<PostDetail sectionType="media" />} />
                 <Route path="/leader/:id" element={<PostDetail sectionType="leadership" />} />
                 <Route path="/resource/:id" element={<PostDetail sectionType="resources" />} />
+                {/* Dynamic Sections Route */}
+                <Route path="/section/:sectionId/:id" element={<PostDetail sectionType="dynamic" />} />
               </Routes>
             </Layout>
           } />

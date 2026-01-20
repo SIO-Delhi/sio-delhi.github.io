@@ -7,8 +7,11 @@ import { MoreSection } from '../components/sections/MoreSection'
 import { ContactSection } from '../components/sections/ContactSection'
 import { useRef, useEffect, useState } from 'react'
 import { InteractiveFlag } from '../components/three/InteractiveFlag'
+import { useContent } from '../context/ContentContext'
+import { GenericSection } from '../components/sections/GenericSection'
 
 export function HomePage() {
+    const { sections } = useContent()
     const flagContainerRef = useRef<HTMLDivElement>(null)
     const [isMobile, setIsMobile] = useState(false)
 
@@ -94,11 +97,33 @@ export function HomePage() {
             />
 
             <HeroSection />
-            <AboutSection />
-            <InitiativesSection />
-            <MediaSection />
-            <LeadershipSection />
-            <MoreSection />
+
+            {/* Dynamic Sections */}
+            {sections
+                .filter(s => s.is_published)
+                .map(section => {
+                    // Map legacy/custom sections to their specific components
+                    if (section.type === 'custom') {
+                        switch (section.id) {
+                            case 'about': return <AboutSection key={section.id} />
+                            case 'initiatives': return <InitiativesSection key={section.id} />
+                            case 'media': return <MediaSection key={section.id} />
+                            case 'leadership': return <LeadershipSection key={section.id} />
+                            case 'more': return <MoreSection key={section.id} />
+                            default: break // Fallback to generic if id mismatch
+                        }
+                    }
+                    // Render Generic Section for new/generic types
+                    return (
+                        <GenericSection
+                            key={section.id}
+                            sectionId={section.id}
+                            title={section.title}
+                            label={section.label}
+                        />
+                    )
+                })}
+
             <ContactSection />
         </>
     )

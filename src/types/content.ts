@@ -27,6 +27,10 @@ export interface Section {
     label: string // e.g., "INITIATIVES"
     title: string // e.g., "Our Initiatives"
     description?: string
+    // Dynamic fields
+    display_order: number // mapped from display_order
+    is_published: boolean // mapped from is_published
+    type: 'custom' | 'generic'
 }
 
 export interface Leader {

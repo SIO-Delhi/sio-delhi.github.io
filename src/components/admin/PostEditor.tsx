@@ -1495,7 +1495,8 @@ export function PostEditor() {
             if (isEditMode && id) {
                 updatePost(id, { ...postData, isSubsection, parentId: parentId || undefined })
             } else if (effectiveSectionId) {
-                addPost({ sectionId: effectiveSectionId, isPublished: false, isSubsection, parentId: parentId || undefined, ...postData })
+                // Default to Published (true) instead of draft
+                addPost({ sectionId: effectiveSectionId, isPublished: true, isSubsection, parentId: parentId || undefined, ...postData })
             }
             navigate(-1)
         } catch (error) { console.error(error); alert('Failed to save') } finally { setIsSaving(false) }

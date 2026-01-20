@@ -431,13 +431,13 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
 }
 
 interface PostDetailProps {
-    sectionType: 'about' | 'initiatives' | 'media' | 'leadership' | 'resources'
+    sectionType: 'about' | 'initiatives' | 'media' | 'leadership' | 'resources' | 'dynamic'
 }
 
 export function PostDetail({ sectionType }: PostDetailProps) {
-    const { id } = useParams()
+    const { id, sectionId } = useParams()
     const { isDark } = useTheme()
-    const { getPostById, posts, loading } = useContent()
+    const { getPostById, posts, loading, sections } = useContent()
     const navigate = useNavigate()
 
     const post = id ? getPostById(id) : undefined
@@ -460,16 +460,31 @@ export function PostDetail({ sectionType }: PostDetailProps) {
         )
     }
 
-    // Section-specific labels and colors
-    const sectionConfig = {
-        about: { label: 'About', color: '#ef4444' },
-        initiatives: { label: 'Initiative', color: '#e82828' },
-        media: { label: 'News', color: '#3b82f6' },
-        leadership: { label: 'Leader', color: '#10b981' },
-        resources: { label: 'Resource', color: '#8b5cf6' }
-    }
+    // Dynamic Section Config Logic
+    let currentLabel = 'Section'
+    let currentColor = '#ff3b3b'
 
-    const config = sectionConfig[sectionType]
+    if (sectionType === 'dynamic' && sectionId) {
+        const dynamicSection = sections.find(s => s.id === sectionId)
+        if (dynamicSection) {
+            currentLabel = dynamicSection.label
+            // Hashing color based on label or ID for consistency? Or just default red.
+            currentColor = '#ff3b3b'
+        }
+    } else {
+        const sectionConfig: Record<string, { label: string, color: string }> = {
+            about: { label: 'About', color: '#ef4444' },
+            initiatives: { label: 'Initiative', color: '#e82828' },
+            media: { label: 'News', color: '#3b82f6' },
+            leadership: { label: 'Leader', color: '#10b981' },
+            resources: { label: 'Resource', color: '#8b5cf6' }
+        }
+        const config = sectionConfig[sectionType]
+        if (config) {
+            currentLabel = config.label
+            currentColor = config.color
+        }
+    }
 
     // Determine Hero Image validity
     // Media always shows image
@@ -485,7 +500,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
             case 'media':
                 return <MediaLayout post={post} isDark={isDark} />
             default:
-                return <DefaultLayout post={post} isDark={isDark} sectionLabel={config.label} posts={posts} />
+                return <DefaultLayout post={post} isDark={isDark} sectionLabel={currentLabel} posts={posts} />
         }
     }
 
@@ -499,7 +514,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
                     right: 0,
                     width: '100vw',
                     height: '100vh',
-                    background: `radial-gradient(circle at 80% 20%, ${config.color}22 0%, transparent 50%)`,
+                    background: `radial-gradient(circle at 80% 20%, ${currentColor}22 0%, transparent 50%)`,
                     zIndex: -1,
                     pointerEvents: 'none',
                 }}

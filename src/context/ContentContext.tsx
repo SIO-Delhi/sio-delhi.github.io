@@ -13,32 +13,134 @@ interface ContentContextType {
     getPostById: (id: string) => Post | undefined
     getChildPosts: (parentId: string) => Post[]
     getSubsectionsBySection: (sectionId: string) => Post[]
+    // Post Actions
     addPost: (post: Omit<Post, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: number }) => Promise<void>
     updatePost: (id: string, post: Partial<Post>) => Promise<void>
     deletePost: (id: string) => Promise<void>
     refreshPosts: () => Promise<void>
+    // Section Actions
+    createSection: (section: Omit<Section, 'display_order' | 'is_published' | 'type'>) => Promise<void>
+    updateSection: (id: string, updates: Partial<Section>) => Promise<void>
+    deleteSection: (id: string) => Promise<void>
 }
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined)
 
 export function ContentProvider({ children }: { children: ReactNode }) {
-    // Initial Sections Configuration (these are static for now)
-    const initialSections: Section[] = [
-        { id: 'about', label: 'ABOUT US', title: 'About SIO Delhi' },
-        { id: 'initiatives', label: 'INITIATIVES', title: 'Our Initiatives' },
-        { id: 'media', label: 'MEDIA', title: 'Press & Media' },
-        { id: 'leadership', label: 'LEADERSHIP', title: 'Our Leadership' },
-        { id: 'more', label: 'resources', title: 'More Resources' },
-    ]
-
-    const [sections] = useState<Section[]>(initialSections)
+    const [sections, setSections] = useState<Section[]>([])
     const [posts, setPosts] = useState<Post[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
+    // Fetch Sections from Supabase
+    const fetchSections = useCallback(async () => {
+        const { data, error } = await supabase
+            .from('sections')
+            .select('*')
+            .order('display_order', { ascending: true })
+
+        if (error) {
+            console.error('Error fetching sections:', error)
+            // Only alert if we suspect it's not just a "creating table" moment
+            if (error.code !== '42P01') { // undefined_table
+                console.warn("Using static fallback due to DB error")
+                alert(`Failed to load sections: ${error.message}`)
+            }
+
+            // Fallback for initial migration or error
+            setSections([
+                { id: 'about', label: 'ABOUT US', title: 'About SIO Delhi', display_order: 1, is_published: true, type: 'custom' },
+                { id: 'initiatives', label: 'INITIATIVES', title: 'Our Initiatives', display_order: 2, is_published: true, type: 'custom' },
+                { id: 'media', label: 'MEDIA', title: 'Press & Media', display_order: 3, is_published: true, type: 'custom' },
+                { id: 'leadership', label: 'LEADERSHIP', title: 'Our Leadership', display_order: 4, is_published: true, type: 'custom' },
+                { id: 'more', label: 'resources', title: 'More Resources', display_order: 5, is_published: true, type: 'custom' },
+            ])
+            return
+        }
+
+        const mapped: Section[] = data.map(row => ({
+            id: row.id,
+            title: row.title,
+            label: row.label,
+            description: row.description,
+            display_order: row.display_order,
+            is_published: row.is_published,
+            type: row.type || 'generic'
+        }))
+        setSections(mapped)
+    }, [])
+
+    const createSection = async (sectionData: Omit<Section, 'display_order' | 'is_published' | 'type'>) => {
+        try {
+            // Auto-assign order (last + 1)
+            const maxOrder = Math.max(...sections.map(s => s.display_order || 0), 0)
+
+            const newSection = {
+                id: sectionData.id,
+                title: sectionData.title,
+                label: sectionData.label,
+                description: sectionData.description,
+                type: 'generic',
+                display_order: maxOrder + 1,
+                is_published: true
+            }
+
+            const { error } = await supabase.from('sections').insert(newSection)
+            if (error) throw error
+            await fetchSections()
+        } catch (err) {
+            console.error('Error creating section:', err)
+            alert(`Failed to create section: ${err instanceof Error ? err.message : String(err)}`)
+            throw err
+        }
+    }
+
+    const updateSection = async (id: string, updates: Partial<Section>) => {
+        try {
+            const { data, error } = await supabase
+                .from('sections')
+                .update(updates)
+                .eq('id', id)
+                .select()
+
+            if (error) throw error
+            // If data is empty array, it means no row was updated (e.g. ID mismatch or RLS hidden)
+            if (!data || data.length === 0) {
+                throw new Error(`No section found with ID: ${id}.`)
+            }
+
+            await fetchSections()
+        } catch (err) {
+            console.error('Error updating section:', err)
+            alert(`Failed to update section: ${err instanceof Error ? err.message : String(err)}`)
+            throw err
+        }
+    }
+
+    const deleteSection = async (id: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('sections')
+                .delete()
+                .eq('id', id)
+                .select()
+
+            if (error) throw error
+            if (!data || data.length === 0) {
+                throw new Error(`No section found to delete with ID: ${id}`)
+            }
+
+            await fetchSections()
+        } catch (err) {
+            console.error('Error deleting section:', err)
+            alert(`Failed to delete section: ${err instanceof Error ? err.message : String(err)}`)
+            throw err
+        }
+    }
+
     // Fetch posts from Supabase
     const fetchPosts = useCallback(async () => {
-        setLoading(true)
+        setLoading(prev => prev && true) // partial loading
         setError(null)
         try {
             const { data, error: fetchError } = await supabase
@@ -80,8 +182,14 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
     // Initial fetch
     useEffect(() => {
-        fetchPosts()
-    }, [fetchPosts])
+        // Run both
+        const load = async () => {
+            setLoading(true)
+            await Promise.all([fetchSections(), fetchPosts()])
+            setLoading(false)
+        }
+        load()
+    }, [fetchSections, fetchPosts])
 
     const getPostsBySection = (sectionId: string) => {
         // Only return top-level posts (no parent) for section view
@@ -96,6 +204,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 return b.createdAt - a.createdAt
             })
     }
+
 
     const getPostById = (id: string) => {
         return posts.find(p => p.id === id)
@@ -228,7 +337,10 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             addPost,
             updatePost,
             deletePost,
-            refreshPosts: fetchPosts
+            refreshPosts: fetchPosts,
+            createSection,
+            updateSection,
+            deleteSection
         }}>
             {children}
         </ContentContext.Provider>
