@@ -105,22 +105,43 @@ export function AdminLayout() {
                 </div>
 
                 {/* Navigation */}
-                <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <Link
                         to="/admin/dashboard"
+                        onClick={() => isMobile && setSidebarOpen(false)}
                         style={{
-                            display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px',
-                            background: isActive('/admin/dashboard') ? (isDark ? '#222' : '#eee') : 'transparent',
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '12px', borderRadius: '8px',
+                            background: isActive('/admin/dashboard') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
                             color: isActive('/admin/dashboard') ? '#ff3b3b' : 'inherit',
-                            textDecoration: 'none', transition: 'all 0.2s', fontSize: '0.9rem'
+                            textDecoration: 'none', fontWeight: 500,
+                            transition: 'all 0.2s ease'
                         }}
                     >
-                        <LayoutDashboard size={18} />
+                        <LayoutDashboard size={20} />
                         Dashboard
                     </Link>
 
-                    <div style={{ margin: '12px 0 6px', fontSize: '0.7rem', fontWeight: 600, color: '#666', textTransform: 'uppercase' }}>
-                        Sections
+                    <Link
+                        to="/admin/sections"
+                        onClick={() => isMobile && setSidebarOpen(false)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '12px', borderRadius: '8px',
+                            background: isActive('/admin/sections') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
+                            color: isActive('/admin/sections') ? '#ff3b3b' : 'inherit',
+                            textDecoration: 'none', fontWeight: 500,
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        <Layers size={20} />
+                        Manage Sections
+                    </Link>
+
+                    <div style={{ height: '1px', background: isDark ? '#222' : '#eee', margin: '8px 0' }} />
+
+                    <div style={{ padding: '0 12px', fontSize: '0.75rem', color: '#666', fontWeight: 600, letterSpacing: '0.05em' }}>
+                        SECTIONS
                     </div>
 
                     {sections.map(section => (
