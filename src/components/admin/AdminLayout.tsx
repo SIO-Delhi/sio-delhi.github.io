@@ -1,7 +1,7 @@
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Layers, LogOut } from 'lucide-react'
+import { LayoutDashboard, Layers, LogOut, Menu, X } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
 
@@ -9,8 +9,23 @@ export function AdminLayout() {
     const { isDark } = useTheme()
     const { sections } = useContent()
     const location = useLocation()
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
 
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`)
+
+    // Detect screen size
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
+    // Close sidebar on route change (mobile)
+    useEffect(() => {
+        if (isMobile) setSidebarOpen(false)
+    }, [location, isMobile])
 
     // Update Page Title
     useEffect(() => {
@@ -27,6 +42,8 @@ export function AdminLayout() {
         document.title = title
     }, [location, sections])
 
+    const sidebarWidth = isMobile ? '280px' : '240px'
+
     return (
         <div style={{
             display: 'flex',
@@ -35,47 +52,74 @@ export function AdminLayout() {
             color: isDark ? '#ffffff' : '#111111',
             fontFamily: '"Geist", sans-serif',
         }}>
+            {/* Mobile Overlay */}
+            {isMobile && sidebarOpen && (
+                <div
+                    onClick={() => setSidebarOpen(false)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.6)',
+                        zIndex: 99,
+                        backdropFilter: 'blur(4px)'
+                    }}
+                />
+            )}
+
             {/* Sidebar */}
             <aside style={{
-                width: '280px',
+                width: sidebarWidth,
                 borderRight: isDark ? '1px solid #222' : '1px solid #ddd',
-                padding: '24px',
+                padding: '16px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '32px',
+                gap: '24px',
                 background: isDark ? '#0a0a0a' : '#ffffff',
                 position: 'fixed',
                 top: 0,
                 bottom: 0,
-                zIndex: 100
+                left: isMobile ? (sidebarOpen ? 0 : `-${sidebarWidth}`) : 0,
+                zIndex: 100,
+                transition: 'left 0.3s ease',
+                overflowY: 'auto'
             }}>
-                {/* Brand */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                        width: '32px', height: '32px', borderRadius: '50%', background: '#ff3b3b',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white'
-                    }}>
-                        A
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                            width: '28px', height: '28px', borderRadius: '50%', background: '#ff3b3b',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white', fontSize: '0.8rem'
+                        }}>
+                            A
+                        </div>
+                        <span style={{ fontSize: '1rem', fontWeight: 700 }}>Admin</span>
                     </div>
-                    <span style={{ fontSize: '1.2rem', fontWeight: 700 }}>Admin Panel</span>
+                    {isMobile && (
+                        <button
+                            onClick={() => setSidebarOpen(false)}
+                            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: '4px' }}
+                        >
+                            <X size={20} />
+                        </button>
+                    )}
                 </div>
 
                 {/* Navigation */}
-                <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
                     <Link
                         to="/admin/dashboard"
                         style={{
-                            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '8px',
+                            display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px',
                             background: isActive('/admin/dashboard') ? (isDark ? '#222' : '#eee') : 'transparent',
                             color: isActive('/admin/dashboard') ? '#ff3b3b' : 'inherit',
-                            textDecoration: 'none', transition: 'all 0.2s'
+                            textDecoration: 'none', transition: 'all 0.2s', fontSize: '0.9rem'
                         }}
                     >
-                        <LayoutDashboard size={20} />
+                        <LayoutDashboard size={18} />
                         Dashboard
                     </Link>
 
-                    <div style={{ margin: '16px 0 8px', fontSize: '0.75rem', fontWeight: 600, color: '#666', textTransform: 'uppercase' }}>
+                    <div style={{ margin: '12px 0 6px', fontSize: '0.7rem', fontWeight: 600, color: '#666', textTransform: 'uppercase' }}>
                         Sections
                     </div>
 
@@ -84,13 +128,13 @@ export function AdminLayout() {
                             key={section.id}
                             to={`/admin/section/${section.id}`}
                             style={{
-                                display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px',
+                                display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px',
                                 background: isActive(`/admin/section/${section.id}`) ? (isDark ? '#222' : '#eee') : 'transparent',
                                 color: isActive(`/admin/section/${section.id}`) ? '#ff3b3b' : 'inherit',
-                                textDecoration: 'none', transition: 'all 0.2s', fontSize: '0.9rem'
+                                textDecoration: 'none', transition: 'all 0.2s', fontSize: '0.85rem'
                             }}
                         >
-                            <Layers size={18} />
+                            <Layers size={16} />
                             {section.title}
                         </Link>
                     ))}
@@ -98,10 +142,10 @@ export function AdminLayout() {
 
                 {/* Footer */}
                 <Link to="/" style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '8px',
-                    color: '#666', textDecoration: 'none', marginTop: 'auto'
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px',
+                    color: '#666', textDecoration: 'none', fontSize: '0.85rem'
                 }}>
-                    <LogOut size={20} />
+                    <LogOut size={18} />
                     Exit to Site
                 </Link>
             </aside>
@@ -109,11 +153,41 @@ export function AdminLayout() {
             {/* Main Content */}
             <main style={{
                 flex: 1,
-                marginLeft: '280px',
-                padding: '40px',
-                maxWidth: '1200px',
-                width: '100%'
+                marginLeft: isMobile ? 0 : sidebarWidth,
+                padding: isMobile ? '16px' : '32px',
+                maxWidth: '1400px',
+                width: '100%',
+                boxSizing: 'border-box'
             }}>
+                {/* Mobile Header */}
+                {isMobile && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        marginBottom: '20px',
+                        padding: '12px 0',
+                        borderBottom: isDark ? '1px solid #222' : '1px solid #ddd'
+                    }}>
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            style={{
+                                background: isDark ? '#1a1a1a' : '#f0f0f0',
+                                border: 'none',
+                                color: 'inherit',
+                                cursor: 'pointer',
+                                padding: '8px',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <Menu size={20} />
+                        </button>
+                        <span style={{ fontWeight: 600, fontSize: '1rem' }}>Admin Panel</span>
+                    </div>
+                )}
                 <Outlet />
             </main>
         </div>

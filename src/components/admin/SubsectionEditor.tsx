@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage } from '../../lib/storage'
 import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff } from 'lucide-react'
+import { ImageCropper } from './ImageCropper'
 
 export function SubsectionEditor() {
     const { sectionId, id } = useParams()
@@ -21,6 +22,10 @@ export function SubsectionEditor() {
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
 
+    // Crop State
+    const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
+    const [pendingFile, setPendingFile] = useState<File | null>(null)
+
     // Load existing data if editing
     useEffect(() => {
         if (isEditMode && id) {
@@ -37,11 +42,41 @@ export function SubsectionEditor() {
         }
     }, [isEditMode, id, getPostById])
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+
+        const reader = new FileReader()
+        reader.addEventListener('load', () => {
+            setCropImageSrc(reader.result?.toString() || null)
+        })
+        reader.readAsDataURL(file)
+
+        // Reset input so same file can be selected again if cancelled
+        e.target.value = ''
+    }
+
+    const handleSkip = async () => {
+        if (!pendingFile) return
+        setCropImageSrc(null)
         setIsUploading(true)
         try {
+            const url = await uploadImage(pendingFile)
+            setCoverImage(url)
+        } catch (err) {
+            console.error(err)
+            alert('Upload failed')
+        } finally {
+            setIsUploading(false)
+            setPendingFile(null)
+        }
+    }
+
+    const handleCropComplete = async (blob: Blob) => {
+        setCropImageSrc(null)
+        setIsUploading(true)
+        try {
+            const file = new File([blob], `cropped-image-${Date.now()}.jpg`, { type: "image/jpeg" })
             const url = await uploadImage(file)
             setCoverImage(url)
         } catch (err) {
@@ -88,32 +123,92 @@ export function SubsectionEditor() {
         }
     }
 
+    // Mobile detection
+    const [isMobile, setIsMobile] = useState(false)
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
     if (!section && !isEditMode) return <div>Section not found</div>
 
     return (
-        <div style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: '100px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: isMobile ? '60px' : '100px' }}>
+            {cropImageSrc && (
+                <ImageCropper
+                    imageSrc={cropImageSrc}
+                    onCancel={() => { setCropImageSrc(null); setPendingFile(null); }}
+                    onSkip={handleSkip}
+                    onCropComplete={handleCropComplete}
+                />
+            )}
+
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '48px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <button onClick={() => navigate(-1)} style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#222', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <ArrowLeft size={20} />
+            <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                justifyContent: 'space-between',
+                marginBottom: isMobile ? '24px' : '48px',
+                gap: isMobile ? '16px' : '0'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '16px' }}>
+                    <button onClick={() => navigate(-1)} style={{
+                        width: isMobile ? '36px' : '40px',
+                        height: isMobile ? '36px' : '40px',
+                        borderRadius: '50%',
+                        background: '#222',
+                        border: 'none',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                    }}>
+                        <ArrowLeft size={isMobile ? 18 : 20} />
                     </button>
                     <div>
-                        <div style={{ fontSize: '0.9rem', color: '#888' }}>{isEditMode ? 'MANAGE SUBSECTION' : `NEW SUBSECTION IN ${section?.label}`}</div>
-                        <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{isEditMode ? subsection?.title || 'Subsection' : 'Create Subsection'}</h1>
+                        <div style={{ fontSize: isMobile ? '0.75rem' : '0.9rem', color: '#888' }}>{isEditMode ? 'MANAGE SUBSECTION' : `NEW SUBSECTION IN ${section?.label}`}</div>
+                        <h1 style={{ fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 700, margin: 0 }}>{isEditMode ? subsection?.title || 'Subsection' : 'Create Subsection'}</h1>
                     </div>
                 </div>
-                <button onClick={handleSave} disabled={isSaving} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 32px', borderRadius: '100px', background: '#ff3b3b', color: 'white', border: 'none', fontWeight: 600, fontSize: '1rem', cursor: 'pointer', opacity: isSaving ? 0.7 : 1 }}>
-                    <Save size={20} /> {isSaving ? 'Saving...' : 'Save'}
+                <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: isMobile ? '10px 20px' : '12px 32px',
+                        borderRadius: '100px',
+                        background: '#ff3b3b',
+                        color: 'white',
+                        border: 'none',
+                        fontWeight: 600,
+                        fontSize: isMobile ? '0.9rem' : '1rem',
+                        cursor: 'pointer',
+                        opacity: isSaving ? 0.7 : 1,
+                        width: isMobile ? '100%' : 'auto',
+                        justifyContent: 'center'
+                    }}
+                >
+                    <Save size={isMobile ? 16 : 20} /> {isSaving ? 'Saving...' : 'Save'}
                 </button>
             </div>
 
-            {/* Two Column Layout in Edit Mode */}
-            <div style={{ display: 'grid', gridTemplateColumns: isEditMode ? '1fr 1fr' : '1fr', gap: '48px' }}>
+            {/* Two Column Layout in Edit Mode - Stack on Mobile */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : (isEditMode ? '1fr 1fr' : '1fr'),
+                gap: isMobile ? '24px' : '48px'
+            }}>
 
                 {/* Left Column: Subsection Details */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#888', marginBottom: '8px' }}>Subsection Details</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '24px' }}>
+                    <h2 style={{ fontSize: isMobile ? '1rem' : '1.1rem', fontWeight: 600, color: '#888', marginBottom: '8px' }}>Subsection Details</h2>
 
                     {/* Cover Image */}
                     <div>
@@ -238,13 +333,23 @@ export function SubsectionEditor() {
                                             width: '50px', height: '50px', borderRadius: '8px',
                                             overflow: 'hidden', background: '#222', flexShrink: 0
                                         }}>
-                                            {post.image ? (
-                                                <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : (
-                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
-                                                    <FileText size={18} />
-                                                </div>
-                                            )}
+                                            {(() => {
+                                                const getFirstImageUrl = (imageField: string | undefined): string | undefined => {
+                                                    if (!imageField) return undefined
+                                                    try {
+                                                        const parsed = JSON.parse(imageField)
+                                                        return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : imageField
+                                                    } catch { return imageField }
+                                                }
+                                                const imageUrl = getFirstImageUrl(post.image)
+                                                return imageUrl ? (
+                                                    <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>
+                                                        <FileText size={18} />
+                                                    </div>
+                                                )
+                                            })()}
                                         </div>
 
                                         {/* Info */}

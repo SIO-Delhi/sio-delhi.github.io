@@ -1,8 +1,22 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText, GripVertical } from 'lucide-react'
+
+// Helper to get the first image URL from a post.image (which may be a JSON array or single URL)
+const getFirstImageUrl = (imageField: string | undefined): string | undefined => {
+    if (!imageField) return undefined
+    try {
+        const parsed = JSON.parse(imageField)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed[0]
+        }
+        return imageField
+    } catch {
+        return imageField // It's a plain URL, not JSON
+    }
+}
 
 export function SectionManager() {
     const { sectionId } = useParams()
@@ -14,6 +28,15 @@ export function SectionManager() {
     const [draggedItem, setDraggedItem] = useState<string | null>(null)
     const [dragOverItem, setDragOverItem] = useState<string | null>(null)
     const [isUpdatingOrder, setIsUpdatingOrder] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
+
+    // Detect screen size
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
 
     const section = sections.find(s => s.id === sectionId)
     // Get posts and ensure they are sorted by order
@@ -94,10 +117,17 @@ export function SectionManager() {
     return (
         <div>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+            <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                marginBottom: isMobile ? '20px' : '32px',
+                gap: isMobile ? '16px' : '0'
+            }}>
                 <div>
-                    <div style={{ fontSize: '0.9rem', color: '#888', marginBottom: '4px' }}>MANAGE SECTION</div>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800 }}>{section.title}</h1>
+                    <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '4px' }}>MANAGE SECTION</div>
+                    <h1 style={{ fontSize: isMobile ? '1.75rem' : '2.5rem', fontWeight: 800, margin: 0 }}>{section.title}</h1>
                 </div>
 
                 {/* Create New Dropdown */}
@@ -106,20 +136,20 @@ export function SectionManager() {
                         onClick={() => setShowCreateMenu(!showCreateMenu)}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '12px 24px', borderRadius: '100px',
+                            padding: isMobile ? '10px 16px' : '12px 24px', borderRadius: '100px',
                             background: '#ff3b3b', color: 'white', border: 'none',
-                            fontWeight: 600, cursor: 'pointer',
+                            fontWeight: 600, cursor: 'pointer', fontSize: isMobile ? '0.9rem' : '1rem',
                             boxShadow: '0 4px 12px rgba(255, 59, 59, 0.3)'
                         }}
                     >
-                        <Plus size={20} />
+                        <Plus size={isMobile ? 16 : 20} />
                         Create New
-                        <ChevronDown size={16} style={{ marginLeft: '4px', transition: 'transform 0.2s', transform: showCreateMenu ? 'rotate(180deg)' : 'rotate(0)' }} />
+                        <ChevronDown size={14} style={{ marginLeft: '4px', transition: 'transform 0.2s', transform: showCreateMenu ? 'rotate(180deg)' : 'rotate(0)' }} />
                     </button>
 
                     {showCreateMenu && (
                         <div style={{
-                            position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+                            position: 'absolute', top: '100%', right: isMobile ? 'auto' : 0, left: isMobile ? 0 : 'auto', marginTop: '8px',
                             background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px',
                             overflow: 'hidden', minWidth: '200px', zIndex: 100,
                             boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
@@ -166,9 +196,9 @@ export function SectionManager() {
             {/* Posts List */}
             {posts.length === 0 ? (
                 <div style={{
-                    padding: '64px', borderRadius: '16px', border: '2px dashed #333',
+                    padding: isMobile ? '40px 20px' : '64px', borderRadius: '16px', border: '2px dashed #333',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
-                    color: '#666'
+                    color: '#666', textAlign: 'center'
                 }}>
                     <Layers size={48} style={{ opacity: 0.5 }} />
                     <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>No posts yet</div>
@@ -177,26 +207,6 @@ export function SectionManager() {
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', opacity: isUpdatingOrder ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                     {posts.map(post => {
-                        // Helper: extract first image from potentially JSON-stringified array
-                        const getFirstImageUrl = (imageString: string | undefined): string | null => {
-                            if (!imageString) return null;
-                            try {
-                                // Check if it looks like a JSON array
-                                if (imageString.trim().startsWith('[') && imageString.trim().endsWith(']')) {
-                                    const parsed = JSON.parse(imageString);
-                                    if (Array.isArray(parsed) && parsed.length > 0) {
-                                        return parsed[0];
-                                    }
-                                    return null;
-                                }
-                                // Not JSON, return as is
-                                return imageString;
-                            } catch (e) {
-                                // Parse error, return original string (likely a direct URL)
-                                return imageString;
-                            }
-                        };
-
                         const displayImage = getFirstImageUrl(post.image);
 
                         return (

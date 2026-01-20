@@ -13,6 +13,20 @@ interface SectionCardProps {
     image?: string
 }
 
+// Helper to get the first image URL from an image field (which may be a JSON array or single URL)
+const getFirstImageUrl = (imageField: string | undefined): string | undefined => {
+    if (!imageField) return undefined
+    try {
+        const parsed = JSON.parse(imageField)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed[0]
+        }
+        return imageField
+    } catch {
+        return imageField // It's a plain URL, not JSON
+    }
+}
+
 export function SectionCard({
     labelColor,
     title,
@@ -23,6 +37,9 @@ export function SectionCard({
     image
 }: SectionCardProps) {
     const cardRef = useRef<HTMLDivElement>(null)
+
+    // Parse image URL (handles JSON array for carousel cover images)
+    const imageUrl = getFirstImageUrl(image)
 
     const formattedDate = publishedDate
         ? new Date(publishedDate).toLocaleDateString('en-US', {
@@ -155,12 +172,12 @@ export function SectionCard({
                 width: '100%',
                 flexShrink: 0,
                 position: 'relative',
-                background: image ? '#000' : 'transparent',
+                background: imageUrl ? '#000' : 'transparent',
                 display: 'block' // Always render container to maintain layout structure/spacing
             }}>
-                {image && (
+                {imageUrl && (
                     <img
-                        src={image}
+                        src={imageUrl}
                         alt=""
                         style={{
                             width: '100%',
