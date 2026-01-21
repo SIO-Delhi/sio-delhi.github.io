@@ -7,11 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SIO Delhi</title>
   <!-- SPA redirect script for GitHub Pages -->
-  <!-- DearFlip Assets -->
-  <link href="https://cdn.jsdelivr.net/npm/dflip/css/dflip.min.css" rel="stylesheet" type="text/css">
-  <link href="https://cdn.jsdelivr.net/npm/dflip/css/themify-icons.min.css" rel="stylesheet" type="text/css">
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dflip/js/dflip.min.js"></script>
+  <!-- PDF.js for rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
   <!-- ResponsiveVoice TTS -->
   <script src="https://code.responsivevoice.org/responsivevoice.js?key=cO5yN7bL"></script>
   <script>
