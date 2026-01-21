@@ -15,6 +15,7 @@ import { SubsectionEditor } from './components/admin/SubsectionEditor'
 import { AdminSections } from './components/admin/AdminSections'
 import { AdminLogin } from './pages/AdminLogin'
 import { ProtectedRoute } from './components/admin/ProtectedRoute'
+import { AdminGarbageCollector } from './components/admin/AdminGarbageCollector'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="sections" element={<AdminSections />} />
+              <Route path="cleaner" element={<AdminGarbageCollector />} />
               <Route path="section/:sectionId" element={<SectionManager />} />
               <Route path="create/:sectionId" element={<PostEditor />} />
               <Route path="create-post/:sectionId" element={<PostEditor />} />

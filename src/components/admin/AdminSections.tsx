@@ -146,18 +146,23 @@ export function AdminSections() {
                 gap: isMobile ? '16px' : '0',
                 marginBottom: '32px'
             }}>
-                <h1 style={{ fontSize: isMobile ? '1.75rem' : '2rem', fontWeight: 700 }}>Manage Sections</h1>
-                <button
-                    onClick={() => setIsCreating(true)}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        background: '#ff3b3b', color: 'white', border: 'none',
-                        padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
-                        width: isMobile ? '100%' : 'auto', justifyContent: 'center'
-                    }}
-                >
-                    <Plus size={20} /> New Section
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <h1 style={{ fontSize: isMobile ? '1.75rem' : '2rem', fontWeight: 700 }}>Manage Sections</h1>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
+                    <button
+                        onClick={() => setIsCreating(true)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            background: '#ff3b3b', color: 'white', border: 'none',
+                            padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
+                            width: isMobile ? '100%' : 'auto', justifyContent: 'center'
+                        }}
+                    >
+                        <Plus size={20} /> New Section
+                    </button>
+                </div>
             </div>
 
             {/* Delete Confirmation Modal */}
