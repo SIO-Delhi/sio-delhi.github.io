@@ -12,6 +12,7 @@ export function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
     const [activeSection, setActiveSection] = useState('home')
     const [isMobile, setIsMobile] = useState(false) // Mobile state check
+    const [hoveredLink, setHoveredLink] = useState<string | null>(null)
 
     const navRef = useRef<HTMLElement>(null)
     const { isDark } = useTheme()
@@ -111,10 +112,7 @@ export function Navbar() {
         return activeSection === sectionId
     }
 
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
-        // Could add toast here
-    }
+
 
     return (
         <>
@@ -194,8 +192,9 @@ export function Navbar() {
                             <span style={{
                                 fontSize: '0.75rem',
                                 fontWeight: 500,
-                                color: isDark ? '#ffffff' : '#111111',
+                                color: '#ffffff',
                                 letterSpacing: '-0.01em',
+                                mixBlendMode: 'difference'
                             }}>
                                 Students Islamic Organization
                             </span>
@@ -244,6 +243,8 @@ export function Navbar() {
                                         e.preventDefault()
                                         scrollToSection(link.href)
                                     }}
+                                    onMouseEnter={() => setHoveredLink(link.href)}
+                                    onMouseLeave={() => setHoveredLink(null)}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -252,9 +253,10 @@ export function Navbar() {
                                         borderRadius: '100px',
                                         fontSize: '14px',
                                         fontWeight: 400,
-                                        color: isActive(link.href)
-                                            ? (isDark ? '#ffffff' : '#111111')
-                                            : (isDark ? '#888888' : '#666666'),
+                                        color: hoveredLink === link.href
+                                            ? '#ff3b3b' // Red on Hover
+                                            : (isActive(link.href) ? (isDark ? '#ffffff' : '#111111') : '#ffffff'),
+                                        mixBlendMode: (hoveredLink === link.href || isActive(link.href)) ? 'normal' : 'difference',
                                         background: 'transparent',
                                         border: isActive(link.href)
                                             ? (isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.15)')
@@ -498,69 +500,7 @@ export function Navbar() {
                         {/* <h2 style={{ fontSize: '2rem', fontWeight: 700, margin: 0, textAlign: 'center' }}>Support Our Cause</h2> */}
                         <p style={{ color: '#888', textAlign: 'center', margin: '-10px 0 10px' }}>Your contribution makes a difference.</p>
 
-                        {/* QR Code */}
-                        <img
-                            src={donateQr}
-                            alt="Donation QR Code"
-                            style={{
-                                width: '200px',
-                                height: 'auto',
-                                display: 'block'
-                            }}
-                        />
-
-                        {/* Bank Details */}
-                        <div style={{
-                            width: '100%',
-                            // background: '#222', // Removed
-                            // borderRadius: '12px', // Removed
-                            // padding: '24px', // Removed to let text flow naturally in parent
-                            fontSize: '0.9rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '12px'
-                        }}>
-                            <div style={{ display: 'grid', gap: '12px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
-                                    <span style={{ color: '#999' }}>Account Name</span>
-                                    <span style={{ fontWeight: 600, textAlign: 'right', maxWidth: '60%' }}>STUDENTS ISLAMIC ORGANISATION OF INDIA-Delhi</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
-                                    <span style={{ color: '#999' }}>Account No</span>
-                                    <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        10128891237
-                                        <button onClick={() => copyToClipboard('10128891237')} style={{ background: 'none', border: 'none', color: '#ff3b3b', cursor: 'pointer', padding: 0 }} title="Copy">
-                                            <Copy size={14} />
-                                        </button>
-                                    </span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
-                                    <span style={{ color: '#999' }}>IFSC</span>
-                                    <span style={{ fontWeight: 600 }}>IDFB0020197</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
-                                    <span style={{ color: '#999' }}>SWIFT</span>
-                                    <span style={{ fontWeight: 600 }}>IDFBINBBMUM</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
-                                    <span style={{ color: '#999' }}>Bank name</span>
-                                    <span style={{ fontWeight: 600, textAlign: 'right' }}>IDFC FIRST Branch: JASOLA, NEW DELHI</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: '#999' }}>UPI ID</span>
-                                    <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        Stude05.07@cmsidfc
-                                        <button onClick={() => copyToClipboard('Stude05.07@cmsidfc')} style={{ background: 'none', border: 'none', color: '#ff3b3b', cursor: 'pointer', padding: 0 }} title="Copy">
-                                            <Copy size={14} />
-                                        </button>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <p style={{ fontSize: '0.8rem', color: '#999', textAlign: 'center', lineHeight: 1.5, background: 'rgba(255, 59, 59, 0.1)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255, 59, 59, 0.2)' }}>
-                            Send your donation details on <span style={{ color: '#ff3b3b', fontWeight: 600 }}>+91 7827378127</span> through WhatsApp to get your receipt.
-                        </p>
+                        <DonationContent />
 
                     </div>
 
@@ -573,5 +513,96 @@ export function Navbar() {
                 </div>
             )}
         </>
+    )
+}
+
+function DonationContent() {
+    const [isLoaded, setIsLoaded] = useState(false)
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+    }
+
+    return (
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '24px',
+            opacity: isLoaded ? 1 : 0,
+            transform: isLoaded ? 'translateY(0)' : 'translateY(10px)',
+            transition: 'opacity 0.5s ease, transform 0.5s ease',
+            width: '100%'
+        }}>
+            {/* QR Code */}
+            <img
+                src={donateQr}
+                alt="Donation QR Code"
+                onLoad={() => setIsLoaded(true)}
+                style={{
+                    width: '200px',
+                    height: 'auto',
+                    display: 'block'
+                }}
+            />
+
+            {/* Bank Details */}
+            <div style={{
+                width: '100%',
+                fontSize: '0.9rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+            }}>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
+                        <span style={{ color: '#999' }}>Account Name</span>
+                        <span style={{ fontWeight: 600, textAlign: 'right', maxWidth: '60%' }}>STUDENTS ISLAMIC ORGANISATION OF INDIA-Delhi</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
+                        <span style={{ color: '#999' }}>Account No</span>
+                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            10128891237
+                            <button onClick={() => copyToClipboard('10128891237')} style={{ background: 'none', border: 'none', color: '#ff3b3b', cursor: 'pointer', padding: 0 }} title="Copy">
+                                <Copy size={14} />
+                            </button>
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
+                        <span style={{ color: '#999' }}>IFSC</span>
+                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            IDFB0020197
+                            <button onClick={() => copyToClipboard('IDFB0020197')} style={{ background: 'none', border: 'none', color: '#ff3b3b', cursor: 'pointer', padding: 0 }} title="Copy">
+                                <Copy size={14} />
+                            </button>
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
+                        <span style={{ color: '#999' }}>SWIFT</span>
+                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            IDFBINBBMUM
+                            <button onClick={() => copyToClipboard('IDFBINBBMUM')} style={{ background: 'none', border: 'none', color: '#ff3b3b', cursor: 'pointer', padding: 0 }} title="Copy">
+                                <Copy size={14} />
+                            </button>
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '8px' }}>
+                        <span style={{ color: '#999' }}>Bank name</span>
+                        <span style={{ fontWeight: 600, textAlign: 'right' }}>IDFC FIRST Branch: JASOLA, NEW DELHI</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#999' }}>UPI ID</span>
+                        <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            Stude05.07@cmsidfc
+                            <button onClick={() => copyToClipboard('Stude05.07@cmsidfc')} style={{ background: 'none', border: 'none', color: '#ff3b3b', cursor: 'pointer', padding: 0 }} title="Copy">
+                                <Copy size={14} />
+                            </button>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
     )
 }
