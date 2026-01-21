@@ -1,7 +1,11 @@
 
 import SectionLayout from '../layout/SectionLayout'
-import { FileText } from 'lucide-react'
+import { FileText, Link, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, Mail } from 'lucide-react'
 import { useContent } from '../../context/ContentContext'
+
+const ICON_MAP: Record<string, any> = {
+    FileText, Link, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Mail, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info
+}
 
 import { useNavigate } from 'react-router-dom'
 
@@ -29,105 +33,92 @@ export function MoreSection() {
         </h1>
     )
 
-    const renderResourceCard = (item: any) => (
-        <div
-            key={item.id}
-            data-cursor="view"
-            style={{
-                background: 'rgba(20, 20, 25, 0.65)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column',
-                width: '300px',
-                height: '400px',
-                flexShrink: 0,
-                transition: 'all 0.3s ease',
-                cursor: 'pointer',
-                zIndex: 5,
-                isolation: 'isolate',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
-                padding: '32px',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center',
-                gap: '24px'
-            }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)'
-                e.currentTarget.style.transform = 'translateY(-4px)'
-                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-                e.currentTarget.style.zIndex = '10'
-                // Colorize icon on hover
-                const icon = e.currentTarget.querySelector('.icon-container') as HTMLElement
-                if (icon) icon.style.borderColor = '#ff3333'
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)'
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
-                e.currentTarget.style.zIndex = '5'
-                // Reset icon color
-                const icon = e.currentTarget.querySelector('.icon-container') as HTMLElement
-                if (icon) icon.style.borderColor = 'rgba(255,255,255,0.1)'
-            }}
-            onClick={() => {
-                navigate(`/resource/${item.id}`)
-            }}
-        >
-            {/* Icon Circle */}
-            <div
-                className="icon-container"
-                style={{
-                    width: '100px',
-                    height: '100px',
-                    borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden', // Ensure image clips to circle
-                    transition: 'border-color 0.3s ease',
-                    marginBottom: '16px'
-                }}
-            >
-                {item.image ? (
-                    <img
-                        src={item.image}
-                        alt={item.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                ) : (
-                    <FileText size={48} color="#ffffff" />
-                )}
-            </div>
+    const renderResourceCard = (item: any) => {
+        console.log('Resource Item:', item.title, 'Icon:', item.icon, 'Mapped:', !!ICON_MAP[item.icon])
+        const IconComponent = item.icon && ICON_MAP[item.icon] ? ICON_MAP[item.icon] : FileText
 
-            {/* Content */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <h3 style={{
-                    margin: 0,
-                    fontSize: '1.5rem',
-                    fontWeight: 700,
-                    color: '#ffffff',
-                    fontFamily: '"Geist", sans-serif'
+        return (
+            <div
+                key={item.id}
+                data-cursor="view"
+                style={{
+                    background: 'rgba(255, 255, 255, 0.03)', // Glass transparent
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '24px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    // width: '300px', // Removed fixed width for responsiveness
+                    minWidth: '220px',
+                    flex: 1,
+                    maxWidth: '360px',
+                    height: '260px', // Smaller height
+                    flexShrink: 0,
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer',
+                    zIndex: 5,
+                    isolation: 'isolate',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                    padding: '32px',
+                    justifyContent: 'center', // Centered alignment
+                    alignItems: 'center', // Center align content items
+                    textAlign: 'center', // Center text
+                    gap: '20px',
+                    position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#ff3b3b'
+                    e.currentTarget.style.transform = 'translateY(-4px)'
+                    e.currentTarget.style.boxShadow = '0 16px 48px rgba(255, 59, 59, 0.15)'
+                    e.currentTarget.style.zIndex = '10'
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(255, 59, 59, 0.1)'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)'
+                    e.currentTarget.style.zIndex = '5'
+                }}
+                onClick={() => navigate(`/resource/${item.id}`)}
+                draggable={false}
+            >
+                {/* Icon */}
+                <div style={{
+                    color: '#ff3b3b',
+                    marginBottom: '8px'
                 }}>
-                    {item.title}
-                </h3>
-                <p style={{
-                    margin: 0,
-                    fontSize: '1rem',
-                    color: 'rgba(255,255,255,0.6)',
-                    lineHeight: 1.5
-                }}>
-                    {item.subtitle}
-                </p>
+                    <IconComponent size={40} strokeWidth={1.5} />
+                </div>
+
+                {/* Content */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                    <h3 style={{
+                        margin: 0,
+                        fontSize: '1.75rem',
+                        fontWeight: 600,
+                        color: '#ffffff',
+                        fontFamily: '"Geist", sans-serif',
+                        lineHeight: 1.2
+                    }}>
+                        {item.title}
+                    </h3>
+                    <p style={{
+                        margin: 0,
+                        fontSize: '1rem',
+                        color: 'rgba(255,255,255,0.5)',
+                        lineHeight: 1.5,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                    }}>
+                        {item.subtitle || 'Read our organizational resource.'}
+                    </p>
+                </div>
             </div>
-        </div>
-    )
+        )
+    }
 
     return (
         <SectionLayout id="more" header={headerContent}>

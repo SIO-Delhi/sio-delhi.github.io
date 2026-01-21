@@ -21,6 +21,7 @@ export interface Post {
     email?: string // Contact email for Leadership
     instagram?: string // Instagram handle/url for Leadership
     tags?: string[] // Dynamic tags for Media/News
+    icon?: string // Icon name for Resources/More section
 }
 
 export interface Section {

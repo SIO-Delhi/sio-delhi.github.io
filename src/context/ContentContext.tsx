@@ -173,7 +173,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 isPublished: row.is_published ?? false,
                 createdAt: new Date(row.created_at).getTime(),
                 updatedAt: new Date(row.updated_at).getTime(),
-                tags: row.tags || [] // Map tags from DB
+                tags: row.tags || [], // Map tags from DB
+                icon: row.icon || undefined // Map icon from DB
             }))
 
             setPosts(mappedPosts)
@@ -255,6 +256,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                     display_order: newPostData.order || null,
                     is_published: newPostData.isPublished ?? false,
                     tags: newPostData.tags || null,
+                    icon: newPostData.icon || null, // Insert icon
                     created_at: newPostData.createdAt ? new Date(newPostData.createdAt).toISOString() : undefined // Allow manual date
                 })
 
@@ -283,6 +285,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             if (updates.parentId !== undefined) dbUpdates.parent_id = updates.parentId || null
             if (updates.isSubsection !== undefined) dbUpdates.is_subsection = updates.isSubsection
             if (updates.tags !== undefined) dbUpdates.tags = updates.tags
+            if (updates.icon !== undefined) dbUpdates.icon = updates.icon || null
             if (updates.createdAt !== undefined) dbUpdates.created_at = new Date(updates.createdAt).toISOString() // Allow manual date update
             dbUpdates.updated_at = new Date().toISOString()
 

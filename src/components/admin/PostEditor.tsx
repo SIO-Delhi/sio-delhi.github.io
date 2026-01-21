@@ -10,7 +10,7 @@ import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 
-import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette } from 'lucide-react'
+import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
@@ -38,6 +38,50 @@ interface EditorBlock {
 // --- Helper Components ---
 
 import { Extension } from '@tiptap/core'
+
+const ICON_OPTIONS = [
+    { name: 'FileText', icon: FileText },
+    { name: 'File', icon: File },
+    { name: 'Folder', icon: Folder },
+    { name: 'Book', icon: Book },
+    { name: 'Link', icon: Link },
+    { name: 'ExternalLink', icon: ExternalLink },
+    { name: 'Download', icon: Download },
+    { name: 'Globe', icon: Globe },
+    { name: 'MapPin', icon: MapPin },
+    { name: 'Phone', icon: Phone },
+    { name: 'Mail', icon: Mail },
+    { name: 'Award', icon: Award },
+    { name: 'Briefcase', icon: Briefcase },
+    { name: 'Calendar', icon: Calendar },
+    { name: 'Clock', icon: Clock },
+    { name: 'Lock', icon: Lock },
+    { name: 'Unlock', icon: Unlock },
+    { name: 'Settings', icon: Settings },
+    { name: 'User', icon: User },
+    { name: 'Users', icon: Users },
+    { name: 'Video', icon: Video },
+    { name: 'Mic', icon: Mic },
+    { name: 'Music', icon: Music },
+    { name: 'Layout', icon: Layout },
+    { name: 'Grid', icon: Grid },
+    { name: 'PieChart', icon: PieChart },
+    { name: 'BarChart', icon: BarChart },
+    { name: 'Heart', icon: Heart },
+    { name: 'Star', icon: Star },
+    { name: 'Zap', icon: Zap },
+    { name: 'Shield', icon: Shield },
+    { name: 'Flag', icon: Flag },
+    { name: 'Bell', icon: Bell },
+    { name: 'Search', icon: Search },
+    { name: 'Home', icon: Home },
+    { name: 'Menu', icon: Menu },
+    { name: 'ArrowRight', icon: ArrowRight },
+    { name: 'ArrowUpRight', icon: ArrowUpRight },
+    { name: 'CheckCircle', icon: CheckCircle },
+    { name: 'AlertTriangle', icon: AlertTriangle },
+    { name: 'Info', icon: Info }
+]
 
 export const FontSize = Extension.create({
     name: 'fontSize',
@@ -1132,6 +1176,7 @@ export function PostEditor() {
     const [instagram, setInstagram] = useState('')
     const [tags, setTags] = useState<string[]>([]) // Tags state
     const [tagInput, setTagInput] = useState('') // Tag input state
+    const [icon, setIcon] = useState('') // New Icon state
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isSubsection, setIsSubsection] = useState(false)
@@ -1195,6 +1240,7 @@ export function PostEditor() {
                 setEmail(post.email || '')
                 setInstagram(post.instagram || '')
                 setTags(post.tags || []) // Load tags
+                setIcon(post.icon || '') // Load icon
 
                 setIsSubsection(post.isSubsection || false)
                 setParentId(post.parentId || '')
@@ -1492,6 +1538,7 @@ export function PostEditor() {
                 email,
                 instagram,
                 tags, // Include tags in save
+                icon, // Include icon in save
                 layout: 'default',
                 order,
                 createdAt: date ? new Date(date).getTime() : (post?.createdAt || Date.now()) // Use selected date or existing/current
@@ -1568,89 +1615,91 @@ export function PostEditor() {
             {/* Document Area */}
             <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '32px' }}>
 
-                {/* 1. Cover Image / Carousel */}
-                <div style={{ position: 'relative' }}>
-                    {images.length > 0 ? (
-                        <div style={{ position: 'relative', width: '100%', height: isMobile ? '200px' : '350px', borderRadius: isMobile ? '12px' : '16px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
-                            <img
-                                src={images[currentCoverIndex] || images[0]}
-                                alt="Cover"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
+                {/* 1. Cover Image / Carousel - Hidden for More/Resources section */}
+                {effectiveSectionId !== 'more' && (
+                    <div style={{ position: 'relative' }}>
+                        {images.length > 0 ? (
+                            <div style={{ position: 'relative', width: '100%', height: isMobile ? '200px' : '350px', borderRadius: isMobile ? '12px' : '16px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+                                <img
+                                    src={images[currentCoverIndex] || images[0]}
+                                    alt="Cover"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
 
-                            {/* Carousel Controls */}
-                            {images.length > 1 && (
-                                <>
-                                    <button
-                                        onClick={() => setCurrentCoverIndex(prev => (prev - 1 + images.length) % images.length)}
-                                        style={{
-                                            position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
-                                            width: '40px', height: '40px', borderRadius: '50%',
-                                            background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)',
-                                            color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10
-                                        }}
-                                    >
-                                        <ChevronLeft size={20} />
-                                    </button>
-                                    <button
-                                        onClick={() => setCurrentCoverIndex(prev => (prev + 1) % images.length)}
-                                        style={{
-                                            position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)',
-                                            width: '40px', height: '40px', borderRadius: '50%',
-                                            background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)',
-                                            color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10
-                                        }}
-                                    >
-                                        <ChevronRight size={20} />
-                                    </button>
-                                    <div style={{
-                                        position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
-                                        background: 'rgba(0,0,0,0.5)', padding: '4px 12px', borderRadius: '12px',
-                                        color: 'white', fontSize: '0.8rem', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.1)'
-                                    }}>
-                                        {currentCoverIndex + 1} / {images.length}
-                                    </div>
-                                </>
-                            )}
+                                {/* Carousel Controls */}
+                                {images.length > 1 && (
+                                    <>
+                                        <button
+                                            onClick={() => setCurrentCoverIndex(prev => (prev - 1 + images.length) % images.length)}
+                                            style={{
+                                                position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
+                                                width: '40px', height: '40px', borderRadius: '50%',
+                                                background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)',
+                                                color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10
+                                            }}
+                                        >
+                                            <ChevronLeft size={20} />
+                                        </button>
+                                        <button
+                                            onClick={() => setCurrentCoverIndex(prev => (prev + 1) % images.length)}
+                                            style={{
+                                                position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)',
+                                                width: '40px', height: '40px', borderRadius: '50%',
+                                                background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)',
+                                                color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10
+                                            }}
+                                        >
+                                            <ChevronRight size={20} />
+                                        </button>
+                                        <div style={{
+                                            position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
+                                            background: 'rgba(0,0,0,0.5)', padding: '4px 12px', borderRadius: '12px',
+                                            color: 'white', fontSize: '0.8rem', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.1)'
+                                        }}>
+                                            {currentCoverIndex + 1} / {images.length}
+                                        </div>
+                                    </>
+                                )}
 
-                            <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px' }}>
-                                <button
-                                    onClick={() => {
-                                        const newImages = images.filter((_, i) => i !== currentCoverIndex)
-                                        setImages(newImages)
-                                        if (currentCoverIndex >= newImages.length) setCurrentCoverIndex(Math.max(0, newImages.length - 1))
-                                    }}
-                                    style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}
-                                >
-                                    <X size={14} /> Remove Slide
-                                </button>
-                                <label style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}>
-                                    {isUploading ? 'Uploading...' : <> <Plus size={14} /> Add Slide </>}
-                                    <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
-                                </label>
+                                <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px' }}>
+                                    <button
+                                        onClick={() => {
+                                            const newImages = images.filter((_, i) => i !== currentCoverIndex)
+                                            setImages(newImages)
+                                            if (currentCoverIndex >= newImages.length) setCurrentCoverIndex(Math.max(0, newImages.length - 1))
+                                        }}
+                                        style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}
+                                    >
+                                        <X size={14} /> Remove Slide
+                                    </button>
+                                    <label style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', backdropFilter: 'blur(4px)' }}>
+                                        {isUploading ? 'Uploading...' : <> <Plus size={14} /> Add Slide </>}
+                                        <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
+                                    </label>
+                                </div>
                             </div>
-                        </div>
-                    ) : (
-                        <label style={{
-                            width: '100%', height: '200px',
-                            background: '#1a1a1a', border: '2px dashed #333', borderRadius: '16px',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
-                            color: '#666', cursor: 'pointer', transition: 'all 0.2s'
-                        }}>
-                            {isUploading ? (
-                                <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: '#666' }} />
-                            ) : (
-                                <>
-                                    <ImageIcon size={32} />
-                                    <span style={{ fontWeight: 500 }}>
-                                        {effectiveSectionId === 'leadership' ? 'Upload Profile Photo' : 'Upload Cover Image / Carousel'}
-                                    </span>
-                                </>
-                            )}
-                            <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
-                        </label>
-                    )}
-                </div>
+                        ) : (
+                            <label style={{
+                                width: '100%', height: '200px',
+                                background: '#1a1a1a', border: '2px dashed #333', borderRadius: '16px',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                                color: '#666', cursor: 'pointer', transition: 'all 0.2s'
+                            }}>
+                                {isUploading ? (
+                                    <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: '#666' }} />
+                                ) : (
+                                    <>
+                                        <ImageIcon size={32} />
+                                        <span style={{ fontWeight: 500 }}>
+                                            {effectiveSectionId === 'leadership' ? 'Upload Profile Photo' : 'Upload Cover Image / Carousel'}
+                                        </span>
+                                    </>
+                                )}
+                                <input type="file" accept="image/*" onChange={handleFileUpload} disabled={isUploading} style={{ display: 'none' }} />
+                            </label>
+                        )}
+                    </div>
+                )}
 
                 {/* 2. Title & Subtitle */}
                 <div>
@@ -1800,6 +1849,52 @@ export function PostEditor() {
                         }}
                     />
                 </div>
+
+                {/* Icon Selector (for More/Resources section) */}
+                {effectiveSectionId === 'more' && (
+                    <div>
+                        <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
+                            ICON (For Resource Card)
+                        </label>
+                        <div style={{
+                            display: 'flex', flexWrap: 'wrap', gap: '8px',
+                            padding: '16px', background: '#1a1a1a', borderRadius: '12px', border: '1px solid #333',
+                            maxHeight: '200px', overflowY: 'auto'
+                        }}>
+                            {ICON_OPTIONS.map((opt) => {
+                                const IconComp = opt.icon
+                                const isSelected = icon === opt.name
+                                return (
+                                    <button
+                                        key={opt.name}
+                                        onClick={() => setIcon(opt.name)}
+                                        title={opt.name}
+                                        style={{
+                                            padding: '10px',
+                                            borderRadius: '8px',
+                                            border: isSelected ? '1px solid #ff3b3b' : '1px solid #333',
+                                            background: isSelected ? '#ff3b3b20' : '#222',
+                                            color: isSelected ? '#ff3b3b' : '#888',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        <IconComp size={20} />
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        {icon && (
+                            <div style={{ marginTop: '8px', color: '#ff3b3b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                Selected: <strong>{icon}</strong>
+                                <button onClick={() => setIcon('')} style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', marginLeft: '8px' }}>Clear</button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* 3. Audio Toggle Section */}
                 <div style={{
