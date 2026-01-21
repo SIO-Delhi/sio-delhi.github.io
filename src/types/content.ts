@@ -20,6 +20,7 @@ export interface Post {
     author?: string
     email?: string // Contact email for Leadership
     instagram?: string // Instagram handle/url for Leadership
+    tags?: string[] // Dynamic tags for Media/News
 }
 
 export interface Section {

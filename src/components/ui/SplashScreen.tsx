@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import gsap from 'gsap'
 import logoImage from '../../assets/logo.png'
 import pngEggImage from '../../assets/pngegg.png'
+import { useContent } from '../../context/ContentContext'
 
 export function SplashScreen() {
     const location = useLocation()
@@ -13,6 +14,7 @@ export function SplashScreen() {
     }
 
     // Check if splash was already seen in this tab session
+    const { setShowDonation } = useContent()
     const alreadySeen = sessionStorage.getItem('sio_splash_seen') === 'true'
     const [isCollapsed, setIsCollapsed] = useState(alreadySeen)
     const [scrollProgress, setScrollProgress] = useState(0)
@@ -49,6 +51,12 @@ export function SplashScreen() {
     }
 
     const handleScrollToTop = () => {
+        // If mobile/tablet (< 1024px), open Donation modal instead
+        if (window.innerWidth < 1024) {
+            setShowDonation(true)
+            return
+        }
+
         if ((window as any).lenis) {
             (window as any).lenis.scrollTo(0, { duration: 1.5 })
         } else {
