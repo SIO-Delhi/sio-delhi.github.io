@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, Loader2, ZoomIn, ZoomOut } from 'lucide-react'
 
 interface PDFFlipbookProps {
     url: string
@@ -6,240 +7,246 @@ interface PDFFlipbookProps {
 
 declare global {
     interface Window {
-        jQuery: any
+        pdfjsLib: any
     }
 }
 
 export function PDFFlipbook({ url }: PDFFlipbookProps) {
+    const [pdfDoc, setPdfDoc] = useState<any>(null)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(0)
+    const [isLoading, setIsLoading] = useState(true)
+    const [isFlipping, setIsFlipping] = useState(false)
+    const [flipDirection, setFlipDirection] = useState<'next' | 'prev'>('next')
+    const [scale, setScale] = useState(1)
+    const [resizeTrigger, setResizeTrigger] = useState(0) // Used to force re-render on resize
+
+
     const containerRef = useRef<HTMLDivElement>(null)
-    const bookInstance = useRef<any>(null)
-    const uniqueId = useRef(`df_book_${Math.random().toString(36).substr(2, 9)}`)
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+    const renderTaskRef = useRef<any>(null)
 
+    // Load PDF
     useEffect(() => {
-        let timeoutId: any = null
-
-        // Wait for jQuery and dFlip to load
-        const initBook = () => {
-            if (window.jQuery && typeof window.jQuery().flipBook === 'function' && containerRef.current) {
-                const $ = window.jQuery
-
-                // CRITICAL: Always empty container before initializing to prevent duplicates (double layer issue)
-                $(containerRef.current).empty()
-
-                // Initialize DearFlip
-                const options = {
-                    source: url,
-                    height: window.innerWidth < 768 ? 400 : 800, // Responsive height
-                    webgl: true, // Enable 3D
-                    // 3D settings
-                    stiffness: 3,
-                    backgroundColor: 'transparent',
-                    pageMode: 'single', // Force single page view
-                    singlePageMode: true, // Force single page mode
-                    // Disable mouse zoom interactions
-                    scrollWheel: false,
-                    zoomRatio: window.innerWidth < 768 ? 1.5 : 1, // Slight zoom on mobile
-                    maxZoom: 1, // Limit max zoom level effectively disabling it
-                    doubleClickZoom: false,
+        const loadPdf = async () => {
+            setIsLoading(true)
+            try {
+                // Ensure PDFUtil is loaded
+                if (!window.pdfjsLib) {
+                    // Retry briefly if script not yet ready
+                    setTimeout(loadPdf, 500)
+                    return
                 }
 
-                bookInstance.current = $(containerRef.current).flipBook(url, options)
-            } else {
-                // Retry if scripts haven't loaded yet
-                timeoutId = setTimeout(initBook, 100)
+                const loadingTask = window.pdfjsLib.getDocument(url)
+                const pdf = await loadingTask.promise
+                setPdfDoc(pdf)
+                setTotalPages(pdf.numPages)
+                setIsLoading(false)
+            } catch (error) {
+                console.error('Error loading PDF:', error)
+                setIsLoading(false)
             }
         }
-
-        initBook()
-
-        // Cleanup
-        return () => {
-            if (timeoutId) clearTimeout(timeoutId)
-            if (window.jQuery && containerRef.current) {
-                window.jQuery(containerRef.current).empty()
-            }
-        }
+        loadPdf()
     }, [url])
+
+    // Render Page
+    useEffect(() => {
+        if (!pdfDoc || !canvasRef.current) return
+
+        const renderPage = async () => {
+            try {
+                // Cancel any pending render
+                if (renderTaskRef.current) {
+                    renderTaskRef.current.cancel()
+                }
+
+                const page = await pdfDoc.getPage(currentPage)
+
+                // Calculate scale to fit container width OR height (object-fit: contain)
+                const containerWidth = containerRef.current?.clientWidth || 800
+                const maxHeight = window.innerHeight - 180 // Subtract space for navbar & controls
+
+                const viewport = page.getViewport({ scale: 1 })
+
+                // Determine scale factors for both dimensions
+                const widthScale = containerWidth / viewport.width
+                const heightScale = maxHeight / viewport.height
+
+                // Use the limiting dimension to ensure the whole page is visible
+                const baseScale = Math.min(widthScale, heightScale)
+                const finalScale = baseScale * scale
+
+                const scaledViewport = page.getViewport({ scale: finalScale })
+
+                const canvas = canvasRef.current
+                const context = canvas?.getContext('2d')
+
+                if (canvas && context) {
+                    canvas.height = scaledViewport.height
+                    canvas.width = scaledViewport.width
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: scaledViewport,
+                    }
+
+                    const renderTask = page.render(renderContext)
+                    renderTaskRef.current = renderTask
+                    await renderTask.promise
+                }
+            } catch (error: any) {
+                if (error.name !== 'RenderingCancelledException') {
+                    console.error('Render error:', error)
+                }
+            }
+        }
+
+        renderPage()
+        renderPage()
+    }, [pdfDoc, currentPage, scale, resizeTrigger])
+
+    // Window resize handler
+    useEffect(() => {
+        const handleResize = () => {
+            setResizeTrigger(prev => prev + 1)
+        }
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+
+
+    const handlePrev = () => {
+        if (currentPage > 1 && !isFlipping) {
+            setFlipDirection('prev')
+            setIsFlipping(true)
+            setTimeout(() => {
+                setCurrentPage(p => p - 1)
+                setIsFlipping(false)
+            }, 300) // Match transition duration
+        }
+    }
+
+    const handleNext = () => {
+        if (currentPage < totalPages && !isFlipping) {
+            setFlipDirection('next')
+            setIsFlipping(true)
+            setTimeout(() => {
+                setCurrentPage(p => p + 1)
+                setIsFlipping(false)
+            }, 300)
+        }
+    }
 
     return (
         <div
+            ref={containerRef}
             style={{
                 width: '100%',
-                // height handled by inner container
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '20px',
                 position: 'relative',
-                background: 'transparent'
+                minHeight: '400px'
             }}
         >
+            {/* Book View */}
+            <div style={{
+                position: 'relative',
+                perspective: '1500px',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                overflow: 'visible', // Allow 3D effect to overflow
+                flex: 1, // Allow taking available space
+                minHeight: '0' // Fix flexbox overflow
+            }}>
+                {isLoading && (
+                    <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666' }}>
+                        <Loader2 size={32} className="animate-spin" />
+                        <span style={{ marginTop: 10, fontSize: '0.9rem' }}>Loading PDF...</span>
+                    </div>
+                )}
+
+                <div
+                    style={{
+                        position: 'relative',
+                        transition: 'transform 0.4s ease-in-out, opacity 0.3s',
+                        transformStyle: 'preserve-3d',
+                        transformOrigin: flipDirection === 'next' ? 'left center' : 'right center',
+                        transform: isFlipping
+                            ? (flipDirection === 'next' ? 'rotateY(-90deg) scale(0.95)' : 'rotateY(90deg) scale(0.95)')
+                            : 'rotateY(0) scale(1)',
+                        opacity: isFlipping ? 0.5 : 1,
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+                    }}
+                >
+                    <canvas
+                        ref={canvasRef}
+                        style={{
+                            maxWidth: '100%',
+                            height: 'auto',
+                            display: 'block',
+                            background: 'white' // Paper color
+                        }}
+                    />
+                </div>
+            </div>
+
+            {/* Controls Overlay - Moved to Bottom */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '12px 24px',
+                background: 'rgba(20, 20, 20, 0.8)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '30px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                zIndex: 10,
+                marginTop: '10px'
+            }}>
+                <button
+                    onClick={handlePrev}
+                    disabled={currentPage <= 1}
+                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', opacity: currentPage <= 1 ? 0.3 : 1 }}
+                >
+                    <ChevronLeft size={24} />
+                </button>
+
+                <span style={{ color: 'white', minWidth: '60px', textAlign: 'center', fontFamily: 'monospace' }}>
+                    {currentPage} / {totalPages}
+                </span>
+
+                <button
+                    onClick={handleNext}
+                    disabled={currentPage >= totalPages}
+                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', opacity: currentPage >= totalPages ? 0.3 : 1 }}
+                >
+                    <ChevronRight size={24} />
+                </button>
+
+                <div style={{ width: '1px', height: '16px', background: '#444', margin: '0 8px' }} />
+
+                <button onClick={() => setScale(s => Math.min(s + 0.1, 2))} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer' }}>
+                    <ZoomIn size={18} />
+                </button>
+                <button onClick={() => setScale(s => Math.max(s - 0.1, 0.5))} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer' }}>
+                    <ZoomOut size={18} />
+                </button>
+            </div>
+
             <style>{`
-                .flipbook-container-wrapper {
-                    height: 850px;
+                .animate-spin {
+                    animation: spin 1s linear infinite;
                 }
-                @media (max-width: 768px) {
-                    .flipbook-container-wrapper {
-                        height: 450px !important;
-                    }
-                }
-            `}</style>
-            <div
-                id={uniqueId.current}
-                ref={containerRef}
-                className="flipbook-container-wrapper"
-                style={{ width: '100%' }}
-            />
-            {/* Customized DearFlip UI Styles */}
-            <style>{`
-                ._df_book-stage { background: transparent !important; }
-                
-                /* Add padding to stage to center book and leave space at bottom */
-                ._df_book-stage { 
-                    height: calc(100% - 120px) !important; /* Force book to end higher for clear gap */
-                    margin-bottom: 120px !important;
-                    padding: 0 20px !important; 
-                    box-sizing: border-box !important;
-                }
-
-                /* Side Navigation Buttons (floating ones, NOT the ones in bottom control bar) */
-                ._df_book-stage > .df-ui-next,
-                ._df_book-stage > .df-ui-prev,
-                .df-container > .df-ui-next,
-                .df-container > .df-ui-prev {
-                    background: rgba(0, 0, 0, 0.6) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-                    border-radius: 50% !important;
-                    width: 48px !important;
-                    height: 48px !important;
-                    color: white !important;
-                    opacity: 0.8 !important;
-                    transition: all 0.2s ease !important;
-                }
-                ._df_book-stage > .df-ui-next:hover,
-                ._df_book-stage > .df-ui-prev:hover,
-                .df-container > .df-ui-next:hover,
-                .df-container > .df-ui-prev:hover {
-                    opacity: 1 !important;
-                    background: rgba(0, 0, 0, 0.8) !important;
-                }
-                ._df_book-stage > .df-ui-prev,
-                .df-container > .df-ui-prev {
-                    left: -60px !important;
-                }
-                ._df_book-stage > .df-ui-next,
-                .df-container > .df-ui-next {
-                    right: -60px !important;
-                }
-
-                /* More Menu & All Popups - Elegant & Compact */
-                .df-ui-popup, 
-                .df-ui-more .more-container, 
-                .more-container,
-                div[class*="popup"] {
-                    background: rgba(15, 15, 15, 0.95) !important;
-                    backdrop-filter: blur(16px) !important;
-                    -webkit-backdrop-filter: blur(16px) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                    border-radius: 12px !important;
-                    color: white !important;
-                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
-                    width: 220px !important; /* Wider to fit text */
-                    padding: 6px !important;
-                    bottom: 60px !important;
-                }
-                
-                /* Triangle/Arrow fix */
-                .df-ui-popup::after, .more-container::after {
-                    border-top-color: rgba(15, 15, 15, 0.95) !important;
-                }
-                
-                /* Hide the More Button (... 3 dots) entirely - Aggressive Targeting */
-                .df-ui-more,
-                .df-ui-btn.df-ui-more,
-                button.df-ui-more,
-                .ti-more, 
-                .ti-more-alt,
-                .df-ui-btn[title="More"],
-                .df-ui-btn:has(.ti-more),
-                .df-ui-btn:has(.ti-more-alt) {
-                    display: none !important;
-                }
-
-                /* Bottom Control Bar - Perfectly Centered & Aligned */
-                .df-ui-controls {
-                    background: rgba(10, 10, 10, 0.95) !important; /* Darker bg */
-                    backdrop-filter: blur(20px) !important;
-                    -webkit-backdrop-filter: blur(20px) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-                    border-radius: 20px !important; /* Capsule shape */
-                    bottom: 10px !important; /* Sit lower at edge */
-                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
-                    padding: 6px 16px !important;
-                    width: auto !important;
-                    max-width: fit-content !important;
-                    /* Center trick */
-                    left: 50% !important;
-                    transform: translateX(-50%) !important;
-                    margin: 0 !important;
-                    display: flex !important;
-                    align-items: center !important; /* Vertical center alignment */
-                    gap: 12px !important;
-                }
-
-                /* Fix alignment for text/inputs inside controls */
-                .df-ui-controls > * {
-                    display: flex !important;
-                    align-items: center !important;
-                    margin: 0 !important;
-                    height: 100% !important;
-                }
-                
-                /* Specific fix for page number input area */
-                input.df-ui-page-input {
-                    background: transparent !important;
-                    border: none !important;
-                    color: white !important;
-                    height: auto !important;
-                    padding: 0 !important;
-                    margin: 0 !important;
-                    line-height: 1 !important;
-                    text-align: center !important;
-                }
-                label.df-ui-page-label {
-                    margin: 0 4px !important;
-                    display: flex !important;
-                    align-items: center !important;
-                }
-
-                /* Control buttons inside bar */
-                .df-ui-btn { 
-                    background: transparent !important;
-                    border-radius: 8px !important;
-                    color: rgba(255, 255, 255, 0.8) !important;
-                    border: none !important;
-                    margin: 0 2px !important;
-                    padding: 8px !important;
-                    width: auto !important;
-                    height: auto !important;
-                    aspect-ratio: 1;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    transition: all 0.2s ease;
-                }
-                .df-ui-btn:hover {
-                    background: rgba(255, 255, 255, 0.1) !important;
-                    color: white !important;
-                    transform: translateY(-2px);
-                }
-                .df-ui-btn.df-ui-active {
-                    color: #ff3b3b !important;
-                }
-                
-                /* Wrapper adjustments */
-                .df-ui-wrapper {
-                     background: transparent !important;
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
             `}</style>
         </div>
     )
 }
-
-
