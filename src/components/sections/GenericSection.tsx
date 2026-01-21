@@ -3,14 +3,16 @@ import { useTheme } from '../../context/ThemeContext'
 import { SectionCard } from '../ui/SectionCard'
 import SectionLayout from '../layout/SectionLayout'
 import { useContent } from '../../context/ContentContext'
+import type { SectionTemplate } from '../../types/content'
 
 interface GenericSectionProps {
     sectionId: string
     title: string
     label: string
+    template?: SectionTemplate
 }
 
-export function GenericSection({ sectionId, title, label }: GenericSectionProps) {
+export function GenericSection({ sectionId, title, label, template }: GenericSectionProps) {
     const { isDark } = useTheme()
     const navigate = useNavigate()
     const { getPostsBySection } = useContent()
@@ -56,6 +58,8 @@ export function GenericSection({ sectionId, title, label }: GenericSectionProps)
                         description={card.subtitle || card.content.replace(/<[^>]+>/g, '').substring(0, 100)}
                         publishedDate={(card as any).publishedDate || card.createdAt}
                         image={(card as any).coverImage || card.image}
+                        icon={card.icon}
+                        variant={template || 'default'}
                         onClick={() => navigate(`/section/${sectionId}/${card.id}`, { state: { post: card } })}
                     />
                 ))

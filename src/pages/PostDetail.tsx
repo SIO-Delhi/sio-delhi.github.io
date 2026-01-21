@@ -508,15 +508,31 @@ export function PostDetail({ sectionType }: PostDetailProps) {
         }
     }
 
+    // Resolve layout template
+    let layoutType = 'standard'
+
+    if (sectionType === 'dynamic' && sectionId) {
+        const dynamicSection = sections.find(s => s.id === sectionId)
+        if (dynamicSection?.template) {
+            layoutType = dynamicSection.template
+        }
+    } else {
+        // Map hardcoded routes to templates
+        if (sectionType === 'leadership') layoutType = 'leadership'
+        else if (sectionType === 'media') layoutType = 'media'
+        else if (sectionType === 'resources') layoutType = 'resource'
+        // 'about' and 'initiatives' stay 'standard'
+    }
+
     // Determine Hero Image validity
     // Media always shows image
     // Show hero for all posts/subsections unless it's leadership (which has own layout)
     const isSubsection = !!post.isSubsection
-    const showHero = post.image && sectionType !== 'leadership'
+    const showHero = post.image && layoutType !== 'leadership'
 
     // Render section-specific content
     const renderContent = () => {
-        switch (sectionType) {
+        switch (layoutType) {
             case 'leadership':
                 return <LeadershipLayout post={post} isDark={isDark} />
             case 'media':
