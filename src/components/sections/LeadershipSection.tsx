@@ -1,9 +1,11 @@
+import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext'
 import SectionLayout from '../layout/SectionLayout'
 import { useContent } from '../../context/ContentContext'
 
 export function LeadershipSection() {
     const { isDark } = useTheme()
+    const navigate = useNavigate()
     const { getPostsBySection } = useContent()
     // Filter for published leadership posts
     const leaders = getPostsBySection('leadership')
@@ -31,6 +33,7 @@ export function LeadershipSection() {
         <div
             key={leader.id}
             data-cursor="view"
+            className="section-card-shine"
             style={{
                 background: 'rgba(20, 20, 25, 0.65)',
                 backdropFilter: 'blur(20px)',
@@ -69,8 +72,9 @@ export function LeadershipSection() {
             }}
             onClick={() => {
                 // Navigate to leader detail page
-                window.location.href = `/leader/${leader.id}`
+                navigate(`/leader/${leader.id}`)
             }}
+            draggable={false}
         >
             {/* Image - Takes majority of space */}
             <div style={{
@@ -87,6 +91,7 @@ export function LeadershipSection() {
                     <img
                         src={leader.image}
                         alt={leader.title}
+                        draggable={false}
                         style={{
                             width: '100%',
                             height: '100%',
