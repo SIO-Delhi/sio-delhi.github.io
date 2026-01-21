@@ -86,9 +86,26 @@ export function MoreSection() {
                 {/* Icon */}
                 <div style={{
                     color: '#ff3b3b',
-                    marginBottom: '8px'
+                    marginBottom: '8px',
+                    display: 'flex', justifyContent: 'center'
                 }}>
-                    <IconComponent size={40} strokeWidth={1.5} />
+                    {IconComponent !== FileText ? (
+                        <IconComponent size={40} strokeWidth={1.5} />
+                    ) : item.icon && (item.icon.includes('/') || item.icon.startsWith('data:')) ? (
+                        <img
+                            src={item.icon}
+                            alt=""
+                            style={{
+                                width: '40px',
+                                height: '40px',
+                                objectFit: 'contain',
+                                filter: 'brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(339deg) brightness(119%) contrast(119%)' // Attempt to tint red or just keep original
+                                // actually, users probably want their original color icon. Let's remove filter for now.
+                            }}
+                        />
+                    ) : (
+                        <FileText size={40} strokeWidth={1.5} />
+                    )}
                 </div>
 
                 {/* Content */}
