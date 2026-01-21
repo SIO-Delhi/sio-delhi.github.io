@@ -45,8 +45,8 @@ export function CustomCursor() {
             })
             // Dot follows cursor center (removed offset)
             gsap.to(cursorDot, {
-                x: e.clientX,
-                y: e.clientY,
+                x: e.clientX + 22,
+                y: e.clientY + 22,
                 xPercent: -50,
                 yPercent: -50,
                 duration: 0.6,

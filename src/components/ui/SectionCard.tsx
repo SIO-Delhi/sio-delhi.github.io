@@ -107,6 +107,7 @@ export function SectionCard({
                     e.currentTarget.style.zIndex = '5'
                 }
             }}
+            draggable={false}
         >
             {/* Header: Date Badge for Media (Top Left Pill) or Standard Dot */}
             < div style={{
@@ -156,7 +157,7 @@ export function SectionCard({
                         border: '1px solid #333'
                     }}>
                         {imageUrl ? (
-                            <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={imageUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                             <div style={{ width: '100%', height: '100%', background: '#222' }} />
                         )}
@@ -206,7 +207,7 @@ export function SectionCard({
                             border: imageUrl ? 'none' : '1px solid rgba(255,255,255,0.05)'
                         }}>
                             {imageUrl ? (
-                                <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                <img src={imageUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                             ) : (
                                 <div style={{ width: '100%', height: '100%', opacity: 0.3 }} />
                             )}

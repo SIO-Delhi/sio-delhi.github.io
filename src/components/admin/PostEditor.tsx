@@ -10,7 +10,7 @@ import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 
-import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette } from 'lucide-react'
+import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
@@ -20,7 +20,7 @@ import { validateImage, compressImage } from '../../lib/imageProcessing'
 // --- Block Types & Interfaces ---
 interface EditorBlock {
     id: string
-    type: 'text' | 'image' | 'pdf' | 'composite' | 'video'
+    type: 'text' | 'image' | 'pdf' | 'composite' | 'video' | 'form'
     content: string // HTML for text, URL for image/pdf
     // Enhanced fields
     caption?: string          // For images
@@ -33,11 +33,56 @@ interface EditorBlock {
     imageUrl?: string         // Image URL for composite blocks
     textContent?: string      // HTML text content for composite blocks
     subtitleColor?: string    // Custom color for subtitle/heading
+
 }
 
 // --- Helper Components ---
 
 import { Extension } from '@tiptap/core'
+
+const ICON_OPTIONS = [
+    { name: 'FileText', icon: FileText },
+    { name: 'File', icon: File },
+    { name: 'Folder', icon: Folder },
+    { name: 'Book', icon: Book },
+    { name: 'Link', icon: Link },
+    { name: 'ExternalLink', icon: ExternalLink },
+    { name: 'Download', icon: Download },
+    { name: 'Globe', icon: Globe },
+    { name: 'MapPin', icon: MapPin },
+    { name: 'Phone', icon: Phone },
+    { name: 'Mail', icon: Mail },
+    { name: 'Award', icon: Award },
+    { name: 'Briefcase', icon: Briefcase },
+    { name: 'Calendar', icon: Calendar },
+    { name: 'Clock', icon: Clock },
+    { name: 'Lock', icon: Lock },
+    { name: 'Unlock', icon: Unlock },
+    { name: 'Settings', icon: Settings },
+    { name: 'User', icon: User },
+    { name: 'Users', icon: Users },
+    { name: 'Video', icon: Video },
+    { name: 'Mic', icon: Mic },
+    { name: 'Music', icon: Music },
+    { name: 'Layout', icon: Layout },
+    { name: 'Grid', icon: Grid },
+    { name: 'PieChart', icon: PieChart },
+    { name: 'BarChart', icon: BarChart },
+    { name: 'Heart', icon: Heart },
+    { name: 'Star', icon: Star },
+    { name: 'Zap', icon: Zap },
+    { name: 'Shield', icon: Shield },
+    { name: 'Flag', icon: Flag },
+    { name: 'Bell', icon: Bell },
+    { name: 'Search', icon: Search },
+    { name: 'Home', icon: Home },
+    { name: 'Menu', icon: Menu },
+    { name: 'ArrowRight', icon: ArrowRight },
+    { name: 'ArrowUpRight', icon: ArrowUpRight },
+    { name: 'CheckCircle', icon: CheckCircle },
+    { name: 'AlertTriangle', icon: AlertTriangle },
+    { name: 'Info', icon: Info }
+]
 
 export const FontSize = Extension.create({
     name: 'fontSize',
@@ -238,6 +283,7 @@ const AddBlockMenu = ({ onAdd }: { onAdd: (type: 'text' | 'image' | 'pdf' | 'com
                         onMouseLeave={e => e.currentTarget.style.borderColor = '#ff3b3b40'}>
                         <Volume2 size={16} /> Video
                     </button>
+
                     <button onClick={() => setIsOpen(false)}
                         style={{ background: 'transparent', border: 'none', color: '#666', padding: '8px', borderRadius: '50%', cursor: 'pointer', marginLeft: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onMouseEnter={e => e.currentTarget.style.color = '#ff3b3b'}
@@ -445,6 +491,8 @@ const ImageBlockEditor = ({
         setIsUploading(true)
         try {
             // Blob is already WebP from getCroppedImg
+            // Blob is WebP
+            // @ts-ignore
             const file = new File([blob], `cropped-block-${Date.now()}.webp`, { type: "image/webp" })
             const uploadedUrl = await uploadImage(file)
             if (isCarousel) {
@@ -904,6 +952,8 @@ const CompositeBlockEditor = ({
         setIsUploading(true)
         try {
             // Blob is already WebP
+            // Blob is WebP
+            // @ts-ignore
             const file = new File([blob], `cropped-composite-${Date.now()}.webp`, { type: "image/webp" })
             const url = await uploadImage(file)
             const newImages = [...images, url]
@@ -1132,6 +1182,7 @@ export function PostEditor() {
     const [instagram, setInstagram] = useState('')
     const [tags, setTags] = useState<string[]>([]) // Tags state
     const [tagInput, setTagInput] = useState('') // Tag input state
+    const [icon, setIcon] = useState('') // New Icon state
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isSubsection, setIsSubsection] = useState(false)
@@ -1195,6 +1246,7 @@ export function PostEditor() {
                 setEmail(post.email || '')
                 setInstagram(post.instagram || '')
                 setTags(post.tags || []) // Load tags
+                setIcon(post.icon || '') // Load icon
 
                 setIsSubsection(post.isSubsection || false)
                 setParentId(post.parentId || '')
@@ -1300,7 +1352,8 @@ export function PostEditor() {
             id: crypto.randomUUID(),
             type,
             content: type === 'text' ? '<p></p>' : '',
-            ...(type === 'composite' && { layout: 'image-left' as const, imageUrl: '', textContent: '<p>Add your text here...</p>' })
+            ...(type === 'composite' && { layout: 'image-left' as const, imageUrl: '', textContent: '<p>Add your text here...</p>' }),
+
         }
         setBlocks(prev => {
             const newBlocks = [...prev]
@@ -1425,6 +1478,8 @@ export function PostEditor() {
         setIsUploading(true)
         try {
             // Blob is WebP
+            // Blob is WebP
+            // @ts-ignore
             const file = new File([blob], `cropped-cover-${Date.now()}.webp`, { type: "image/webp" })
             const url = await uploadImage(file)
             setImages(prev => [...prev, url])
@@ -1433,11 +1488,30 @@ export function PostEditor() {
         } catch (err) { console.error(err) } finally { setIsUploading(false) }
     }
 
+    const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
 
+        try {
+            validateImage(file)
+            setIsUploading(true)
+            const compressed = await compressImage(file)
+            const url = await uploadImage(compressed)
+            setIcon(url)
+        } catch (err: any) {
+            console.error(err)
+            alert(err.message || 'Upload failed')
+        } finally {
+            setIsUploading(false)
+            e.target.value = ''
+        }
+    }
 
     const handleSave = () => {
         if (!title) { alert('Please enter a title'); return }
         setIsSaving(true)
+
+
 
         // Serialize Blocks to HTML
         let finalContent = ''
@@ -1477,6 +1551,7 @@ export function PostEditor() {
                 if (block.textContent) innerContent += `<p style="margin: 16px 0 0 0; color: rgba(255,255,255,0.8); font-size: 0.95rem; line-height: 1.6;">${block.textContent}</p>`
 
                 finalContent += `<div class="siodel-block block-video"${subtitleAttr}${textAttr} style="margin: 32px 0; padding: 20px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 6px rgba(0,0,0,0.1);">${innerContent}</div>`
+
             }
         })
 
@@ -1492,6 +1567,7 @@ export function PostEditor() {
                 email,
                 instagram,
                 tags, // Include tags in save
+                icon, // Include icon in save
                 layout: 'default',
                 order,
                 createdAt: date ? new Date(date).getTime() : (post?.createdAt || Date.now()) // Use selected date or existing/current
@@ -1652,6 +1728,7 @@ export function PostEditor() {
                     )}
                 </div>
 
+
                 {/* 2. Title & Subtitle */}
                 <div>
                     <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
@@ -1801,6 +1878,83 @@ export function PostEditor() {
                     />
                 </div>
 
+                {/* Icon Selector (for More/Resources section) */}
+                {effectiveSectionId === 'more' && (
+                    <div>
+                        <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
+                            ICON (For Resource Card)
+                        </label>
+                        <div style={{
+                            display: 'flex', flexWrap: 'wrap', gap: '8px',
+                            padding: '16px', background: '#1a1a1a', borderRadius: '12px', border: '1px solid #333',
+                            overflowY: 'visible'
+                        }}>
+
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+
+
+                                {ICON_OPTIONS.map((opt) => {
+                                    const IconComp = opt.icon
+                                    const isSelected = icon === opt.name
+                                    return (
+                                        <button
+                                            key={opt.name}
+                                            onClick={() => setIcon(opt.name)}
+                                            title={opt.name}
+                                            style={{
+                                                padding: '10px',
+                                                borderRadius: '8px',
+                                                border: isSelected ? '1px solid #ff3b3b' : '1px solid #333',
+                                                background: isSelected ? '#ff3b3b20' : '#222',
+                                                color: isSelected ? '#ff3b3b' : '#888',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <IconComp size={20} />
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #333' }}>
+                            <label style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                padding: '8px 16px', borderRadius: '8px',
+                                background: '#222', border: '1px solid #333', color: '#888',
+                                fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s',
+                                width: '100%', justifyContent: 'center'
+                            }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#666'; e.currentTarget.style.color = 'white' }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#888' }}
+                            >
+                                {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                                Upload Custom Icon
+                                <input type="file" accept="image/*" onChange={handleIconUpload} disabled={isUploading} style={{ display: 'none' }} />
+                            </label>
+                        </div>
+
+                        {icon && (
+                            <div style={{ marginTop: '8px', color: '#ff3b3b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                Selected:
+                                {icon.includes('/') || icon.startsWith('data:') ? (
+                                    <img src={icon} alt="Icon" style={{ width: '20px', height: '20px', objectFit: 'contain', borderRadius: '4px', background: '#333' }} />
+                                ) : (
+                                    <strong>{icon}</strong>
+                                )}
+                                <button onClick={() => setIcon('')} style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', marginLeft: '8px' }}>Clear</button>
+                            </div>
+                        )}
+                    </div>
+
+                )}
+
+
+
                 {/* 3. Audio Toggle Section */}
                 <div style={{
                     padding: '16px 20px',
@@ -1856,35 +2010,39 @@ export function PostEditor() {
                     2. Subsections exist in this section
                     3. Creating a new post (not editing an existing one) 
                 */}
-                {!urlParentId && effectiveSectionId && getSubsectionsBySection(effectiveSectionId).length > 0 && !isEditMode && (
-                    <div style={{ padding: '16px', background: '#1a1a1a', borderRadius: '12px', border: '1px solid #333' }}>
-                        <div style={{ color: 'white', fontWeight: 600, marginBottom: '8px' }}>Parent Subsection (optional)</div>
-                        <div style={{ color: '#666', fontSize: '0.85rem', marginBottom: '12px' }}>Nest this post inside a subsection</div>
-                        <select
-                            value={parentId}
-                            onChange={(e) => setParentId(e.target.value)}
-                            style={{
-                                width: '100%', padding: '12px', borderRadius: '8px',
-                                background: '#222', border: '1px solid #333', color: 'white',
-                                fontSize: '0.95rem', cursor: 'pointer'
-                            }}
-                        >
-                            <option value="">No parent (top-level post)</option>
-                            {getSubsectionsBySection(effectiveSectionId).map(sub => (
-                                <option key={sub.id} value={sub.id}>{sub.title}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
+                {
+                    !urlParentId && effectiveSectionId && getSubsectionsBySection(effectiveSectionId).length > 0 && !isEditMode && (
+                        <div style={{ padding: '16px', background: '#1a1a1a', borderRadius: '12px', border: '1px solid #333' }}>
+                            <div style={{ color: 'white', fontWeight: 600, marginBottom: '8px' }}>Parent Subsection (optional)</div>
+                            <div style={{ color: '#666', fontSize: '0.85rem', marginBottom: '12px' }}>Nest this post inside a subsection</div>
+                            <select
+                                value={parentId}
+                                onChange={(e) => setParentId(e.target.value)}
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '8px',
+                                    background: '#222', border: '1px solid #333', color: 'white',
+                                    fontSize: '0.95rem', cursor: 'pointer'
+                                }}
+                            >
+                                <option value="">No parent (top-level post)</option>
+                                {getSubsectionsBySection(effectiveSectionId).map(sub => (
+                                    <option key={sub.id} value={sub.id}>{sub.title}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )
+                }
 
                 {/* Info when creating child post from SubsectionEditor */}
-                {urlParentId && getPostById(urlParentId) && (
-                    <div style={{ padding: '16px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '12px', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
-                        <div style={{ color: '#a78bfa', fontWeight: 600, fontSize: '0.9rem' }}>
-                            📁 Adding to: {getPostById(urlParentId)?.title}
+                {
+                    urlParentId && getPostById(urlParentId) && (
+                        <div style={{ padding: '16px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '12px', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                            <div style={{ color: '#a78bfa', fontWeight: 600, fontSize: '0.9rem' }}>
+                                📁 Adding to: {getPostById(urlParentId)?.title}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* PDF is now part of content blocks, no separate section */}
 
@@ -1977,6 +2135,7 @@ export function PostEditor() {
                                 />
                             )}
 
+
                             {/* Add Button Below */}
                             <AddBlockMenu onAdd={(type) => addBlock(type, index)} />
                         </div>
@@ -1992,10 +2151,8 @@ export function PostEditor() {
                     {blocks.length === 0 && <AddBlockMenu onAdd={(type) => addBlock(type)} />}
                 </div>
 
+
             </div>
-
-            {/* PREVIEW MODAL */}
-
         </div>
     )
 }
