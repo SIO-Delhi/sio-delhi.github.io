@@ -78,7 +78,7 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
                     margin: 0,
                     color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)',
                     fontSize: '1rem',
-                    lineHeight: 1.6
+                    lineHeight: 1.4
                 }}>
                     {text}
                 </p>
@@ -287,7 +287,11 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                             <div
                                 className="rich-text-content"
                                 dangerouslySetInnerHTML={{ __html: block.content }}
-                                style={{ textAlign: alignStyle.textAlign }}
+                                style={{
+                                    textAlign: alignStyle.textAlign,
+                                    overflowWrap: 'anywhere',
+                                    wordBreak: 'break-word'
+                                }}
                             />
                         </div>
                     )
@@ -409,7 +413,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                 <div
                                     className="rich-text-content"
                                     style={{
-                                        lineHeight: 1.8,
+                                        lineHeight: 1.4,
                                         fontSize: '1.1rem',
                                         textAlign: (block.alignment as 'left' | 'center' | 'right') || (layout === 'image-top' ? 'center' : 'left')
                                     }}
@@ -873,7 +877,9 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                     fontWeight: 700,
                     color: isDark ? '#ffffff' : '#111111',
                     marginBottom: '16px',
-                    lineHeight: 1.1
+                    lineHeight: 1.1,
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word'
                 }}>
                     {post.title}
                 </h1>
@@ -898,7 +904,7 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                         style={{
                             color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.1rem',
-                            lineHeight: 1.8
+                            lineHeight: 1.4
                         }}
                     >
                         <ContentBlockRenderer content={post.content} isDark={isDark} />
@@ -918,7 +924,10 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                     color: isDark ? '#ffffff' : '#111111',
                     marginBottom: '16px',
                     lineHeight: 1.1,
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
+                    maxWidth: '100%'
                 }}>
                     {post.title}
                 </h1>
@@ -943,7 +952,7 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                         style={{
                             color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.1rem',
-                            lineHeight: 1.8
+                            lineHeight: 1.4
                         }}
                     >
                         <ContentBlockRenderer content={post.content} isDark={isDark} />
@@ -1115,7 +1124,9 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                         fontWeight: 700,
                         color: isDark ? '#ffffff' : '#111111',
                         margin: '0 0 8px 0',
-                        lineHeight: 1.1
+                        lineHeight: 1.1,
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word'
                     }}>
                         {post.title}
                     </h1>
@@ -1167,7 +1178,7 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                             style={{
                                 color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
                                 fontSize: '1.1rem',
-                                lineHeight: 1.8,
+                                lineHeight: 1.4,
                                 textAlign: 'left'
                             }}
                         >
@@ -1196,29 +1207,33 @@ function MediaLayout({ post, isDark }: { post: any; isDark: boolean }) {
     return (
         <>
             {/* News Badge */}
-            <div style={{ marginBottom: '16px' }}>
-                <div
-                    style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 16px',
-                        background: '#3b82f6',
-                        borderRadius: '100px',
-                    }}
-                >
-                    <span
+            {/* Dynamic Tags Badge */}
+            <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {(post.tags && post.tags.length > 0 ? post.tags : ['News']).map((tag: string, index: number) => (
+                    <div
+                        key={index}
                         style={{
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: '#ffffff',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em'
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 16px',
+                            background: '#3b82f6',
+                            borderRadius: '100px',
                         }}
                     >
-                        News
-                    </span>
-                </div>
+                        <span
+                            style={{
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: '#ffffff',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em'
+                            }}
+                        >
+                            {tag}
+                        </span>
+                    </div>
+                ))}
             </div>
 
             <h1 style={{
@@ -1226,7 +1241,10 @@ function MediaLayout({ post, isDark }: { post: any; isDark: boolean }) {
                 fontWeight: 700,
                 color: isDark ? '#ffffff' : '#111111',
                 marginBottom: '16px',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                overflowWrap: 'anywhere',
+                wordBreak: 'break-word',
+                maxWidth: '100%'
             }}>
                 {post.title}
             </h1>
@@ -1254,15 +1272,16 @@ function MediaLayout({ post, isDark }: { post: any; isDark: boolean }) {
 
             {/* Article Content */}
             {post.content && (
-                <article
+                <div
                     className="news-content"
                     style={{
                         color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
                         fontSize: '1.15rem',
-                        lineHeight: 1.9
+                        lineHeight: 1.4
                     }}
-                    dangerouslySetInnerHTML={{ __html: post.content }}
-                />
+                >
+                    <ContentBlockRenderer content={post.content} isDark={isDark} />
+                </div>
             )}
 
             <style>{`
