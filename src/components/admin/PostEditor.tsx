@@ -10,7 +10,7 @@ import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 
-import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
+import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
@@ -42,7 +42,7 @@ import { Extension } from '@tiptap/core'
 
 const ICON_OPTIONS = [
     { name: 'FileText', icon: FileText },
-    { name: 'File', icon: File },
+    { name: 'File', icon: FileIcon },
     { name: 'Folder', icon: Folder },
     { name: 'Book', icon: Book },
     { name: 'Link', icon: Link },
@@ -1167,6 +1167,11 @@ export function PostEditor() {
     const effectiveSectionId = sectionId || post?.sectionId
     const section = sections.find(s => s.id === effectiveSectionId)
 
+    // Template Flags
+    const isLeadership = section?.template === 'leadership'
+    const isResource = section?.template === 'resource'
+    const isMedia = section?.template === 'media'
+
     // Get parentId from URL query (when creating from SubsectionEditor)
     const urlParentId = searchParams.get('parentId') || ''
 
@@ -1730,25 +1735,26 @@ export function PostEditor() {
 
 
                 {/* 2. Title & Subtitle */}
+                {/* 2. Title & Subtitle */}
                 <div>
                     <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
-                        {effectiveSectionId === 'leadership' ? 'NAME' : 'TITLE'}
+                        {isLeadership ? 'NAME' : 'TITLE'}
                     </label>
                     <input
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        placeholder={effectiveSectionId === 'leadership' ? "Leader Name" : "Post Title"}
+                        placeholder={isLeadership ? "Leader Name" : "Post Title"}
                         style={{ width: '100%', background: 'transparent', border: 'none', color: 'white', fontSize: '3.5rem', fontWeight: 800, outline: 'none', lineHeight: 1.1, marginBottom: '16px' }}
                     />
 
                     <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
-                        {effectiveSectionId === 'leadership' ? 'POSITION' : 'SUBTITLE'}
+                        {isLeadership ? 'POSITION / ROLE' : 'SUBTITLE'}
                     </label>
                     <textarea
                         value={subtitle}
                         onChange={(e) => setSubtitle(e.target.value)}
-                        placeholder={effectiveSectionId === 'leadership' ? "Position / Role" : "Summary (shows on card)..."}
+                        placeholder={isLeadership ? "Position (e.g. President, Secretary)" : "Summary (shows on card)..."}
                         rows={3}
                         style={{
                             width: '100%',
@@ -1765,169 +1771,71 @@ export function PostEditor() {
                         }}
                     />
 
-                    {/* Social Links (Leadership only) */}
-                    {effectiveSectionId === 'leadership' && (
-                        <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-                            <div style={{ flex: 1, position: 'relative' }}>
-                                <Mail size={16} color="#666" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                    {/* Template Specific: Leadership Socials */}
+                    {isLeadership && (
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '24px', background: '#1a1a1a', padding: '16px', borderRadius: '12px', border: '1px solid #333' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Mail size={18} color="#666" />
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="Email Address"
-                                    style={{
-                                        width: '100%', padding: '10px 10px 10px 36px', borderRadius: '8px',
-                                        background: '#1a1a1a', border: '1px solid #333', color: 'white',
-                                        fontSize: '0.9rem', outline: 'none'
-                                    }}
+                                    style={{ background: 'transparent', border: 'none', color: 'white', flex: 1, outline: 'none', fontSize: '0.9rem' }}
                                 />
                             </div>
-                            <div style={{ flex: 1, position: 'relative' }}>
-                                <Instagram size={16} color="#666" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                            <div style={{ width: '1px', background: '#333', display: isMobile ? 'none' : 'block' }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Instagram size={18} color="#666" />
                                 <input
                                     type="text"
                                     value={instagram}
                                     onChange={(e) => setInstagram(e.target.value)}
-                                    placeholder="Instagram Handle/URL"
-                                    style={{
-                                        width: '100%', padding: '10px 10px 10px 36px', borderRadius: '8px',
-                                        background: '#1a1a1a', border: '1px solid #333', color: 'white',
-                                        fontSize: '0.9rem', outline: 'none'
-                                    }}
+                                    placeholder="Instagram (@username)"
+                                    style={{ background: 'transparent', border: 'none', color: 'white', flex: 1, outline: 'none', fontSize: '0.9rem' }}
                                 />
                             </div>
                         </div>
                     )}
 
-                    {/* Date and Order Fields */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <label style={{ color: '#666', fontSize: '0.9rem', fontWeight: 500 }}>Publish Date:</label>
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                style={{
-                                    padding: '8px 12px', borderRadius: '8px',
-                                    background: '#1a1a1a', border: '1px solid #333', color: 'white',
-                                    fontSize: '0.9rem', outline: 'none', colorScheme: 'dark'
-                                }}
-                            />
-                        </div>
-                        {effectiveSectionId === 'leadership' && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <label style={{ color: '#666', fontSize: '0.9rem', fontWeight: 500 }}>Card Order:</label>
-                                <input
-                                    type="number"
-                                    value={order}
-                                    onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
-                                    placeholder="0"
-                                    style={{
-                                        width: '80px', padding: '8px 12px', borderRadius: '8px',
-                                        background: '#1a1a1a', border: '1px solid #333', color: 'white',
-                                        fontSize: '0.9rem', outline: 'none'
-                                    }}
-                                />
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Tags Field */}
-                <div>
-                    <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
-                        TAGS
-                    </label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                        {tags.map((tag, index) => (
-                            <span key={index} style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                padding: '4px 12px', borderRadius: '100px',
-                                background: '#3b82f6', color: 'white', fontSize: '0.85rem', fontWeight: 500
+                    {/* Template Specific: Resource Icon */}
+                    {isResource && (
+                        <div style={{ marginBottom: '32px' }}>
+                            <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '12px', fontWeight: 600 }}>RESOURCE ICON</label>
+                            <div style={{
+                                display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px',
+                                background: '#1a1a1a', padding: '16px', borderRadius: '12px', border: '1px solid #333',
+                                maxHeight: '160px', overflowY: 'auto'
                             }}>
-                                {tag}
-                                <button
-                                    onClick={() => setTags(prev => prev.filter((_, i) => i !== index))}
-                                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', display: 'flex' }}
-                                >
-                                    <X size={14} />
-                                </button>
-                            </span>
-                        ))}
-                    </div>
-                    <input
-                        type="text"
-                        value={tagInput}
-                        onChange={(e) => setTagInput(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault()
-                                const trimmed = tagInput.trim()
-                                if (trimmed && !tags.includes(trimmed)) {
-                                    setTags(prev => [...prev, trimmed])
-                                    setTagInput('')
-                                }
-                            }
-                        }}
-                        placeholder="Type tag and press Enter..."
-                        style={{
-                            width: '100%', padding: '10px', borderRadius: '8px',
-                            background: '#1a1a1a', border: '1px solid #333', color: 'white',
-                            fontSize: '0.9rem', outline: 'none'
-                        }}
-                    />
-                </div>
-
-                {/* Icon Selector (for More/Resources section) */}
-                {effectiveSectionId === 'more' && (
-                    <div>
-                        <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
-                            ICON (For Resource Card)
-                        </label>
-                        <div style={{
-                            display: 'flex', flexWrap: 'wrap', gap: '8px',
-                            padding: '16px', background: '#1a1a1a', borderRadius: '12px', border: '1px solid #333',
-                            overflowY: 'visible'
-                        }}>
-
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
-
-
                                 {ICON_OPTIONS.map((opt) => {
-                                    const IconComp = opt.icon
+                                    const IconCmp = opt.icon
                                     const isSelected = icon === opt.name
                                     return (
                                         <button
                                             key={opt.name}
                                             onClick={() => setIcon(opt.name)}
-                                            title={opt.name}
                                             style={{
-                                                padding: '10px',
-                                                borderRadius: '8px',
+                                                padding: '10px', borderRadius: '10px',
                                                 border: isSelected ? '1px solid #ff3b3b' : '1px solid #333',
-                                                background: isSelected ? '#ff3b3b20' : '#222',
-                                                color: isSelected ? '#ff3b3b' : '#888',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
+                                                background: isSelected ? 'rgba(255, 59, 59, 0.1)' : '#111',
+                                                color: isSelected ? '#ff3b3b' : '#666',
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 transition: 'all 0.2s'
                                             }}
+                                            title={opt.name}
                                         >
-                                            <IconComp size={20} />
+                                            <IconCmp size={20} />
                                         </button>
                                     )
                                 })}
                             </div>
-                        </div>
 
-                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #333' }}>
                             <label style={{
                                 display: 'inline-flex', alignItems: 'center', gap: '8px',
                                 padding: '8px 16px', borderRadius: '8px',
                                 background: '#222', border: '1px solid #333', color: '#888',
                                 fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s',
-                                width: '100%', justifyContent: 'center'
+                                width: '100%', justifyContent: 'center', marginBottom: '12px'
                             }}
                                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#666'; e.currentTarget.style.color = 'white' }}
                                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#888' }}
@@ -1936,22 +1844,90 @@ export function PostEditor() {
                                 Upload Custom Icon
                                 <input type="file" accept="image/*" onChange={handleIconUpload} disabled={isUploading} style={{ display: 'none' }} />
                             </label>
-                        </div>
 
-                        {icon && (
-                            <div style={{ marginTop: '8px', color: '#ff3b3b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                Selected:
-                                {icon.includes('/') || icon.startsWith('data:') ? (
+                            {icon && (icon.includes('/') || icon.startsWith('data:')) && (
+                                <div style={{ marginTop: '8px', color: '#ff3b3b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    Selected:
                                     <img src={icon} alt="Icon" style={{ width: '20px', height: '20px', objectFit: 'contain', borderRadius: '4px', background: '#333' }} />
-                                ) : (
-                                    <strong>{icon}</strong>
-                                )}
-                                <button onClick={() => setIcon('')} style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', marginLeft: '8px' }}>Clear</button>
-                            </div>
-                        )}
-                    </div>
+                                    <button onClick={() => setIcon('')} style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer', marginLeft: 'auto' }}>Clear</button>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
+                    {/* Metadata Bar */}
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: '200px', background: '#1a1a1a', padding: '12px', borderRadius: '8px', border: '1px solid #333' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: '#666' }}>
+                                {isLeadership ? 'JOIN DATE' : 'PUBLISH DATE'}
+                            </label>
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={e => setDate(e.target.value)}
+                                style={{ width: '100%', background: 'transparent', border: 'none', color: 'white', fontSize: '0.9rem', colorScheme: 'dark' }}
+                            />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '200px', background: '#1a1a1a', padding: '12px', borderRadius: '8px', border: '1px solid #333' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: '#666' }}>DISPLAY ORDER</label>
+                            <input
+                                type="number"
+                                value={order}
+                                onChange={e => setOrder(parseInt(e.target.value) || 0)}
+                                placeholder="0"
+                                style={{ width: '100%', background: 'transparent', border: 'none', color: 'white', fontSize: '0.9rem' }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tags Field */}
+                {/* Tags Field - Standard/Media only */}
+                {(isMedia || (!isLeadership && !isResource)) && (
+                    <div>
+                        <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
+                            TAGS
+                        </label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                            {tags.map((tag, index) => (
+                                <span key={index} style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    padding: '4px 12px', borderRadius: '100px',
+                                    background: '#3b82f6', color: 'white', fontSize: '0.85rem', fontWeight: 500
+                                }}>
+                                    {tag}
+                                    <button
+                                        onClick={() => setTags(prev => prev.filter((_, i) => i !== index))}
+                                        style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', display: 'flex' }}
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                        <input
+                            placeholder="Add tag and press Enter"
+                            value={tagInput}
+                            onChange={e => setTagInput(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    const trimmed = tagInput.trim()
+                                    if (trimmed && !tags.includes(trimmed)) {
+                                        setTags([...tags, tagInput.trim()])
+                                        setTagInput('')
+                                    }
+                                }
+                            }}
+                            style={{
+                                width: '100%', padding: '12px', borderRadius: '8px',
+                                background: '#1a1a1a', border: '1px solid #333', color: 'white',
+                                outline: 'none', fontSize: '0.9rem'
+                            }}
+                        />
+                    </div>
                 )}
+
 
 
 
@@ -2153,6 +2129,6 @@ export function PostEditor() {
 
 
             </div>
-        </div>
+        </div >
     )
 }

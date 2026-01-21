@@ -69,7 +69,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             description: row.description,
             display_order: row.display_order,
             is_published: row.is_published,
-            type: row.type || 'generic'
+            type: row.type || 'generic',
+            template: row.template // Map template from DB
         }))
         setSections(mapped)
     }, [])
@@ -86,7 +87,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 description: sectionData.description,
                 type: 'generic',
                 display_order: maxOrder + 1,
-                is_published: true
+                is_published: true,
+                template: sectionData.template || 'standard' // Persist template
             }
 
             const { error } = await supabase.from('sections').insert(newSection)
