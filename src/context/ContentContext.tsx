@@ -169,6 +169,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 isPublished: row.is_published ?? false,
                 createdAt: new Date(row.created_at).getTime(),
                 updatedAt: new Date(row.updated_at).getTime(),
+                tags: row.tags || [] // Map tags from DB
             }))
 
             setPosts(mappedPosts)
@@ -249,6 +250,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                     layout: newPostData.layout,
                     display_order: newPostData.order || null,
                     is_published: newPostData.isPublished ?? false,
+                    tags: newPostData.tags || null,
                     created_at: newPostData.createdAt ? new Date(newPostData.createdAt).toISOString() : undefined // Allow manual date
                 })
 
@@ -276,6 +278,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             if (updates.isPublished !== undefined) dbUpdates.is_published = updates.isPublished
             if (updates.parentId !== undefined) dbUpdates.parent_id = updates.parentId || null
             if (updates.isSubsection !== undefined) dbUpdates.is_subsection = updates.isSubsection
+            if (updates.tags !== undefined) dbUpdates.tags = updates.tags
             if (updates.createdAt !== undefined) dbUpdates.created_at = new Date(updates.createdAt).toISOString() // Allow manual date update
             dbUpdates.updated_at = new Date().toISOString()
 
