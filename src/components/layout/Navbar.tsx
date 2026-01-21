@@ -366,19 +366,38 @@ export function Navbar() {
                     <div className={`mobile-menu-overlay ${isOpen ? 'active' : ''}`}>
                         <div className="mobile-menu-content">
                             <ul className="mobile-links">
-                                {navLinks.map((link) => (
-                                    <a
-                                        key={link.href}
-                                        href={link.href}
-                                        className={isActive(link.href) ? 'active' : ''}
-                                        onClick={(e) => {
-                                            e.preventDefault()
-                                            scrollToSection(link.href)
-                                            setIsOpen(false)
-                                        }}
-                                    >
-                                        {link.name}
-                                    </a>
+                                {navLinks.map((link, index) => (
+                                    <div key={link.href} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <a
+                                            href={link.href}
+                                            className={isActive(link.href) ? 'active' : ''}
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                scrollToSection(link.href)
+                                                setIsOpen(false)
+                                            }}
+                                            style={{
+                                                padding: '8px 0',
+                                                display: 'block',
+                                                width: '100%',
+                                                textAlign: 'center',
+                                                fontSize: '1.2rem'
+                                            }}
+                                        >
+                                            {link.name}
+                                        </a>
+                                        {/* Divider (except for last item) */}
+                                        {index < navLinks.length - 1 && (
+                                            <div style={{
+                                                width: '80%', // Relative width for responsiveness
+                                                maxWidth: '200px',
+                                                height: '1px',
+                                                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 59, 59, 0.8) 50%, transparent 100%)', // Sleek gradient
+                                                margin: '0 auto',
+                                                opacity: 0.8
+                                            }} />
+                                        )}
+                                    </div>
                                 ))}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', width: '100%' }}>
                                     {/* Get in touch Button */}
@@ -411,33 +430,6 @@ export function Navbar() {
                                         </a>
                                     </div>
 
-                                    {/* Support Us Button */}
-                                    <div className="shiny-button-container" style={{ width: '100%' }}>
-                                        <button
-                                            onClick={() => {
-                                                setShowDonation(true);
-                                                setIsOpen(false);
-                                            }}
-                                            className="shiny-button"
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                padding: '14px 24px',
-                                                borderRadius: '12px',
-                                                color: '#ff3b3b', // Red Text
-                                                fontSize: '16px',
-                                                fontWeight: 500,
-                                                transition: 'all 0.3s ease',
-                                                cursor: 'pointer',
-                                                width: '100%'
-                                            }}
-                                        >
-                                            <Heart size={18} fill="currentColor" />
-                                            Support Us
-                                        </button>
-                                    </div>
                                 </div>
                             </ul>
                         </div>
