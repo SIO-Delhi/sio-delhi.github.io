@@ -1130,6 +1130,8 @@ export function PostEditor() {
     const [enableAudio, setEnableAudio] = useState(false)
     const [email, setEmail] = useState('')
     const [instagram, setInstagram] = useState('')
+    const [tags, setTags] = useState<string[]>([]) // Tags state
+    const [tagInput, setTagInput] = useState('') // Tag input state
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isSubsection, setIsSubsection] = useState(false)
@@ -1192,6 +1194,7 @@ export function PostEditor() {
                 // Load social links
                 setEmail(post.email || '')
                 setInstagram(post.instagram || '')
+                setTags(post.tags || []) // Load tags
 
                 setIsSubsection(post.isSubsection || false)
                 setParentId(post.parentId || '')
@@ -1488,6 +1491,7 @@ export function PostEditor() {
                 enableAudio,
                 email,
                 instagram,
+                tags, // Include tags in save
                 layout: 'default',
                 order,
                 createdAt: date ? new Date(date).getTime() : (post?.createdAt || Date.now()) // Use selected date or existing/current
@@ -1750,6 +1754,51 @@ export function PostEditor() {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Tags Field */}
+                <div>
+                    <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>
+                        TAGS
+                    </label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                        {tags.map((tag, index) => (
+                            <span key={index} style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                padding: '4px 12px', borderRadius: '100px',
+                                background: '#3b82f6', color: 'white', fontSize: '0.85rem', fontWeight: 500
+                            }}>
+                                {tag}
+                                <button
+                                    onClick={() => setTags(prev => prev.filter((_, i) => i !== index))}
+                                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', display: 'flex' }}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                    <input
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault()
+                                const trimmed = tagInput.trim()
+                                if (trimmed && !tags.includes(trimmed)) {
+                                    setTags(prev => [...prev, trimmed])
+                                    setTagInput('')
+                                }
+                            }
+                        }}
+                        placeholder="Type tag and press Enter..."
+                        style={{
+                            width: '100%', padding: '10px', borderRadius: '8px',
+                            background: '#1a1a1a', border: '1px solid #333', color: 'white',
+                            fontSize: '0.9rem', outline: 'none'
+                        }}
+                    />
                 </div>
 
                 {/* 3. Audio Toggle Section */}
