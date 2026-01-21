@@ -33,7 +33,10 @@ export interface Section {
     display_order: number // mapped from display_order
     is_published: boolean // mapped from is_published
     type: 'custom' | 'generic'
+    template?: SectionTemplate
 }
+
+export type SectionTemplate = 'standard' | 'media' | 'leadership' | 'resource'
 
 export interface Leader {
     id: string

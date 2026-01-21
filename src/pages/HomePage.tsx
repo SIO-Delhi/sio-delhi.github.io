@@ -120,6 +120,7 @@ export function HomePage() {
                             sectionId={section.id}
                             title={section.title}
                             label={section.label}
+                            template={section.template}
                         />
                     )
                 })}
