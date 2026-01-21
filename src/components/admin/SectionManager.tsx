@@ -2,7 +2,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
-import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText, GripVertical } from 'lucide-react'
+import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText, GripVertical, Link as LinkIcon, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, Mail } from 'lucide-react'
+
+const ICON_MAP: Record<string, any> = {
+    FileText, Link: LinkIcon, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Mail, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info
+}
 
 // Helper to get the first image URL from a post.image (which may be a JSON array or single URL)
 const getFirstImageUrl = (imageField: string | undefined): string | undefined => {
@@ -236,9 +240,15 @@ export function SectionManager() {
                                     {/* Thumbnail */}
                                     <div style={{
                                         width: '80px', height: '60px', borderRadius: '8px', overflow: 'hidden',
-                                        background: '#222', flexShrink: 0
+                                        background: '#222', flexShrink: 0,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
                                     }}>
-                                        {displayImage ? (
+                                        {post.icon && ICON_MAP[post.icon] ? (
+                                            (() => {
+                                                const IconComp = ICON_MAP[post.icon]
+                                                return <IconComp size={24} color="#ff3b3b" />
+                                            })()
+                                        ) : displayImage ? (
                                             <img src={displayImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
                                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444' }}>

@@ -26,6 +26,7 @@ interface ParsedBlock {
     textContent?: string
     // Video block pre-calc
     videoSrc?: string
+
 }
 
 // Memoized Video Block to prevent re-renders (looping/refreshing issues)
@@ -164,6 +165,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
             const isPdf = el.classList.contains('block-pdf')
             const isComposite = el.classList.contains('block-composite')
 
+
             let carouselImages: string[] = []
             try {
                 const imagesAttr = el.getAttribute('data-images')
@@ -178,6 +180,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
             else if (isPdf) blockType = 'pdf'
             else if (isImage) blockType = 'image'
             else if (isVideo) blockType = 'video'
+
 
             // Pre-calculate video src if needed
             let videoSrc = ''
@@ -204,7 +207,9 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                 layout: (el.getAttribute('data-layout') || 'image-left') as ParsedBlock['layout'],
                 imageUrl: decodeURIComponent(el.getAttribute('data-image-url') || ''),
                 textContent: decodeURIComponent(el.getAttribute('data-text-content') || ''),
-                videoSrc
+
+                videoSrc,
+
             }
         })
     }, [content])
@@ -254,7 +259,10 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                             isDark={isDark}
                         />
                     )
+
                 }
+
+
 
                 // Text Block with Glass Card
                 if (block.type === 'text') {
@@ -449,9 +457,17 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     const post = id ? getPostById(id) : undefined
 
     // Scroll to top on mount
+    // Scroll to top on mount and ID change
     useEffect(() => {
-        window.scrollTo(0, 0)
-    }, [])
+        // Handle Lenis smooth scroll if active
+        // @ts-ignore
+        if (window.lenis) {
+            // @ts-ignore
+            window.lenis.scrollTo(0, { immediate: true })
+        } else {
+            window.scrollTo(0, 0)
+        }
+    }, [id])
 
     if (loading && !post) {
         return <PostSkeleton isDark={isDark} />
@@ -509,6 +525,8 @@ export function PostDetail({ sectionType }: PostDetailProps) {
                 return <DefaultLayout post={post} isDark={isDark} sectionLabel={currentLabel} posts={posts} />
         }
     }
+
+
 
     return (
         <div style={{ paddingTop: showHero ? '0' : '100px', paddingBottom: '80px', minHeight: '100vh', background: 'transparent' }}>
@@ -963,11 +981,11 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
             {/* Child Cards Grid for Subsection Posts */}
             {isSubsection && childPosts.length > 0 && (
                 <div style={{ marginTop: '64px', width: '100%' }}>
-                    <div style={{
+                    <div className="subsection-grid" style={{
                         display: 'flex',
                         flexWrap: 'wrap',
                         gap: '24px',
-                        justifyContent: 'flex-start'
+                        /* justifyContent handled by media query now */
                     }}>
                         {childPosts.map(child => (
                             <SectionCard
@@ -1057,6 +1075,21 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                     .container {
                         padding-left: 16px !important;
                         padding-right: 16px !important;
+                    }
+                }
+                @media (max-width: 600px) {
+                    .container {
+                        padding-left: 16px !important;
+                        padding-right: 16px !important;
+                    }
+                }
+
+                .subsection-grid {
+                    justify-content: flex-start;
+                }
+                @media (max-width: 900px) {
+                    .subsection-grid {
+                        justify-content: center;
                     }
                 }
             `}</style>
