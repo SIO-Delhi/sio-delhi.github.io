@@ -22,6 +22,9 @@ interface ContentContextType {
     createSection: (section: Omit<Section, 'display_order' | 'is_published' | 'type'>) => Promise<void>
     updateSection: (id: string, updates: Partial<Section>) => Promise<void>
     deleteSection: (id: string) => Promise<void>
+    // UI Actions
+    showDonation: boolean
+    setShowDonation: (show: boolean) => void
 }
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined)
@@ -31,6 +34,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     const [posts, setPosts] = useState<Post[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [showDonation, setShowDonation] = useState(false) // Donation Modal State
 
     // Fetch Sections from Supabase
     const fetchSections = useCallback(async () => {
@@ -341,7 +345,9 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             refreshPosts: fetchPosts,
             createSection,
             updateSection,
-            deleteSection
+            deleteSection,
+            showDonation,
+            setShowDonation
         }}>
             {children}
         </ContentContext.Provider>

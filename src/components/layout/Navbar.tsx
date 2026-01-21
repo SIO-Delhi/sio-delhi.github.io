@@ -11,11 +11,11 @@ import donateQr from '../../assets/donate-sio.svg'
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
     const [activeSection, setActiveSection] = useState('home')
-    const [isMobile, setIsMobile] = useState(false)
-    const [showDonation, setShowDonation] = useState(false)
+    const [isMobile, setIsMobile] = useState(false) // Mobile state check
+
     const navRef = useRef<HTMLElement>(null)
     const { isDark } = useTheme()
-    const { sections } = useContent()
+    const { sections, showDonation, setShowDonation } = useContent()
     const location = useLocation()
     const navigate = useNavigate()
 

@@ -78,7 +78,7 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
                     margin: 0,
                     color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)',
                     fontSize: '1rem',
-                    lineHeight: 1.6
+                    lineHeight: 1.4
                 }}>
                     {text}
                 </p>
@@ -413,7 +413,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                 <div
                                     className="rich-text-content"
                                     style={{
-                                        lineHeight: 1.8,
+                                        lineHeight: 1.4,
                                         fontSize: '1.1rem',
                                         textAlign: (block.alignment as 'left' | 'center' | 'right') || (layout === 'image-top' ? 'center' : 'left')
                                     }}
@@ -904,7 +904,7 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                         style={{
                             color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.1rem',
-                            lineHeight: 1.8
+                            lineHeight: 1.4
                         }}
                     >
                         <ContentBlockRenderer content={post.content} isDark={isDark} />
@@ -952,7 +952,7 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                         style={{
                             color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.1rem',
-                            lineHeight: 1.8
+                            lineHeight: 1.4
                         }}
                     >
                         <ContentBlockRenderer content={post.content} isDark={isDark} />
@@ -1178,7 +1178,7 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                             style={{
                                 color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
                                 fontSize: '1.1rem',
-                                lineHeight: 1.8,
+                                lineHeight: 1.4,
                                 textAlign: 'left'
                             }}
                         >
@@ -1277,7 +1277,7 @@ function MediaLayout({ post, isDark }: { post: any; isDark: boolean }) {
                     style={{
                         color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
                         fontSize: '1.15rem',
-                        lineHeight: 1.9
+                        lineHeight: 1.4
                     }}
                 >
                     <ContentBlockRenderer content={post.content} isDark={isDark} />
