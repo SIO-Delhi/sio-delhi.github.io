@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, Loader2, ZoomIn, ZoomOut } from 'lucide-react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import gsap from 'gsap'
 
@@ -57,18 +58,11 @@ const SceneContent = ({ canvasRef, isFlipping, direction, onMidFlip, onRest, pag
 
     // Drag Logic
     const dragRef = useRef({ active: false, startX: 0, currentRot: 0 })
+    const timelineRef = useRef<gsap.core.Timeline | null>(null)
 
-    const handlePointerDown = (e: any) => {
-        if (isFlipping) return
-        e.stopPropagation()
-        // @ts-ignore
-        e.target.setPointerCapture(e.pointerId)
-        dragRef.current = { active: true, startX: e.clientX, currentRot: 0 }
-    }
-
-    const handlePointerMove = (e: any) => {
-        if (!dragRef.current.active || isFlipping || !meshRef.current) return
-        e.stopPropagation()
+    // Global handlers needed for robust drag (tracking off-mesh)
+    const handleGlobalPointerMove = useCallback((e: PointerEvent) => {
+        if (!dragRef.current.active || !meshRef.current) return
 
         const deltaX = e.clientX - dragRef.current.startX
         // Map delta to rotation
@@ -77,14 +71,16 @@ const SceneContent = ({ canvasRef, isFlipping, direction, onMidFlip, onRest, pag
 
         meshRef.current.rotation.y = rotation
         dragRef.current.currentRot = rotation
-    }
+    }, [])
 
-    const handlePointerUp = (e: any) => {
+    const handleGlobalPointerUp = useCallback(() => {
         if (!dragRef.current.active || !meshRef.current) return
-        e.stopPropagation()
-        // @ts-ignore
-        e.target.releasePointerCapture(e.pointerId)
+
         dragRef.current.active = false
+        // Remove global listeners
+        window.removeEventListener('pointermove', handleGlobalPointerMove)
+        window.removeEventListener('pointerup', handleGlobalPointerUp)
+        window.removeEventListener('pointercancel', handleGlobalPointerUp)
 
         const rot = meshRef.current.rotation.y
         const threshold = Math.PI / 10
@@ -107,6 +103,19 @@ const SceneContent = ({ canvasRef, isFlipping, direction, onMidFlip, onRest, pag
             // Reset
             gsap.to(meshRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out' })
         }
+    }, [handleFlipRequest, handleGlobalPointerMove])
+
+    const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+        if (isFlipping) return
+        e.stopPropagation() // Stop propagation in R3F
+
+        // Start Drag
+        dragRef.current = { active: true, startX: e.clientX, currentRot: 0 }
+
+        // Attach global listeners
+        window.addEventListener('pointermove', handleGlobalPointerMove)
+        window.addEventListener('pointerup', handleGlobalPointerUp)
+        window.addEventListener('pointercancel', handleGlobalPointerUp)
     }
 
     useEffect(() => {
@@ -114,32 +123,49 @@ const SceneContent = ({ canvasRef, isFlipping, direction, onMidFlip, onRest, pag
             const mesh = meshRef.current
 
             // Simple Flip Animation: 
-            // 1. Rotate to 90 degrees (edge on)
             // 2. Flip Content
             // 3. Rotate back from other side (or same side for continuity? simple flip is usually 0 -> 90 -> 0)
 
             const targetAngle = direction === 'next' ? -Math.PI / 2 : Math.PI / 2
 
-            gsap.to(mesh.rotation, {
-                y: targetAngle,
-                duration: 0.25,
-                ease: 'power1.in',
+            // Atomic Flip Sequence
+            // We use a ref to ensure we never start a duplicate timeline if re-renders happen
+            if (dragRef.current.active) return // Don't animate if still likely dragging (safety)
+
+            // 2. Check if timelineRef.current exists. If so, return.
+            if (timelineRef.current) return
+
+            // Only potential race condition: if isFlipping is true but timeline is active?
+            // We don't track timeline active state in ref here yet.
+            // Let's assume GSAP handles concurrent overwrites, but we want ONE Sequence.
+
+            // 3. Use gsap.timeline to sequence the entire flip.
+            const tl = gsap.timeline({
                 onComplete: () => {
-                    onMidFlip()
-                    // Start coming back from the "opposite" side to simulate full rotation?
-                    // Or just rotate back 90 -> 0 for a "card flip" effect.
-                    // For a book page, usually it goes 0 -> -90 (disappear), then New Page comes from +90 -> 0.
-
-                    mesh.rotation.y = direction === 'next' ? Math.PI / 2 : -Math.PI / 2
-
-                    gsap.to(mesh.rotation, {
-                        y: 0,
-                        duration: 0.35,
-                        ease: 'power2.out',
-                        onComplete: onRest
-                    })
+                    onRest()
+                    // 4. Clear timelineRef.current in onComplete of timeline.
+                    timelineRef.current = null
                 }
             })
+
+            tl.to(mesh.rotation, {
+                y: targetAngle,
+                duration: 0.15, // Faster 1st half
+                ease: 'sine.in',
+            })
+                .call(() => {
+                    onMidFlip()
+                    // Instant rotation set for second half
+                    mesh.rotation.y = direction === 'next' ? Math.PI / 2 : -Math.PI / 2
+                })
+                .to(mesh.rotation, {
+                    y: 0,
+                    duration: 0.2, // Faster 2nd half
+                    ease: 'sine.out',
+                })
+
+            // Store the timeline in the ref
+            timelineRef.current = tl
         }
     }, [isFlipping, direction, onMidFlip, onRest])
 
@@ -151,22 +177,18 @@ const SceneContent = ({ canvasRef, isFlipping, direction, onMidFlip, onRest, pag
             <mesh
                 ref={meshRef}
                 onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
             >
                 {/*  Responsive Plane Geometry with max viewport usage */}
                 {(() => {
-                    const aspect = 0.71
-                    // Calculate max dimensions fitting in viewport
-                    const maxWidth = viewport.width * 0.99
-                    const maxHeight = viewport.height * 0.99
+                    const aspect = 0.71 // Standard PDF aspect ratio (e.g., A4)
+                    let w = viewport.width
+                    let h = viewport.height
 
-                    let w = maxWidth
-                    let h = w / aspect
-
-                    if (h > maxHeight) {
-                        h = maxHeight
+                    // Adjust dimensions to fit within viewport while maintaining aspect ratio
+                    if (w / h > aspect) { // Viewport is wider than content
                         w = h * aspect
+                    } else { // Viewport is taller than content
+                        h = w / aspect
                     }
 
                     return <planeGeometry args={[w, h]} />
@@ -236,9 +258,10 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
                 // const viewport = page.getViewport({ scale: 2.0 * zoomLevel }) // Re-render at higher quality if zoomed? No, purely relying on texture scaling is faster.
                 // Actually, let's keep base render high res (2.0) and use mesh scale for zoom to avoid re-rendering cost
 
-                // Pure texture render logic (fixed scale 2.0 for quality)
+                // Pure texture render logic (optimized scale for performance)
                 const page = await pdfDoc.getPage(currentPage)
-                const renderViewport = page.getViewport({ scale: 2.0 })
+                // Reduced scale from 2.0 to 1.5 to prevent frame drops during flip
+                const renderViewport = page.getViewport({ scale: 1.5 })
 
                 const canvas = canvasRef.current
                 if (!canvas) return
@@ -336,17 +359,23 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
             ref={containerRef}
             style={{
                 width: '100%',
-                height: isFullscreen ? '100vh' : '85vh', // Fixed height when inline, full when screen
+                // Adaptive height: Fullscreen gets 100vh. 
+                // Inline gets optimized Aspect Ratio + Max Height.
+                // This ensures tight fit on mobile (A4 ratio) and reasonable limit on Desktop.
+                height: isFullscreen ? '100vh' : 'auto',
+                aspectRatio: isFullscreen ? 'unset' : '0.71', // Mobile A4 fit
+                maxHeight: isFullscreen ? 'unset' : '85vh',   // Desktop limit
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 background: isFullscreen ? '#000' : 'transparent',
-                transition: 'height 0.3s ease'
+                transition: 'all 0.3s ease',
+                position: 'relative' // For overlay adjustments if needed
             }}
         >
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-            <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
+            <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0, touchAction: 'pan-y' }}>
                 <Canvas shadows camera={{ position: [0, 0, 15], fov: 45 }}>
                     <SceneContent
                         canvasRef={canvasRef}
