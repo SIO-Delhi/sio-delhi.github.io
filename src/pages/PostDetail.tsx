@@ -526,8 +526,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
         }
     }
 
-    // Debug Log
-    console.log('[PostDetail Debug]', { id, sectionType, title: post?.title, hasImage: !!post?.image, showHero })
+
 
     return (
         <div style={{ paddingTop: showHero ? '0' : '100px', paddingBottom: '80px', minHeight: '100vh', background: 'transparent' }}>
@@ -982,11 +981,11 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
             {/* Child Cards Grid for Subsection Posts */}
             {isSubsection && childPosts.length > 0 && (
                 <div style={{ marginTop: '64px', width: '100%' }}>
-                    <div style={{
+                    <div className="subsection-grid" style={{
                         display: 'flex',
                         flexWrap: 'wrap',
                         gap: '24px',
-                        justifyContent: 'flex-start'
+                        /* justifyContent handled by media query now */
                     }}>
                         {childPosts.map(child => (
                             <SectionCard
@@ -1076,6 +1075,21 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                     .container {
                         padding-left: 16px !important;
                         padding-right: 16px !important;
+                    }
+                }
+                @media (max-width: 600px) {
+                    .container {
+                        padding-left: 16px !important;
+                        padding-right: 16px !important;
+                    }
+                }
+
+                .subsection-grid {
+                    justify-content: flex-start;
+                }
+                @media (max-width: 900px) {
+                    .subsection-grid {
+                        justify-content: center;
                     }
                 }
             `}</style>
