@@ -1,17 +1,18 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { Grid, Images } from 'lucide-react'
 
 export type GalleryButtonVariant = 'default' | 'outline' | 'pill' | 'card'
 
 interface ViewGalleryButtonProps {
-    onClick: () => void
+    to: string
     isDark: boolean
     variant?: GalleryButtonVariant
     className?: string
     style?: React.CSSProperties
 }
 
-export const ViewGalleryButton = ({ onClick, isDark, variant = 'default', className, style }: ViewGalleryButtonProps) => {
+export const ViewGalleryButton = ({ to, isDark, variant = 'default', className, style }: ViewGalleryButtonProps) => {
 
     // Default Style (Big Round Pill - Standard Post)
     let baseStyle: React.CSSProperties = {
@@ -72,9 +73,9 @@ export const ViewGalleryButton = ({ onClick, isDark, variant = 'default', classN
     const text = variant === 'pill' ? 'Photos' : (variant === 'card' ? 'View Photo Gallery' : 'View Gallery')
 
     return (
-        <button
-            onClick={onClick}
-            style={baseStyle}
+        <Link
+            to={to}
+            style={{ ...baseStyle, textDecoration: 'none' }}
             className={`view-gallery-btn-${variant} ${className || ''}`}
             onMouseEnter={e => {
                 if (variant === 'outline') {
@@ -107,6 +108,6 @@ export const ViewGalleryButton = ({ onClick, isDark, variant = 'default', classN
             }}
         >
             <Icon size={variant === 'pill' || variant === 'outline' ? 16 : 18} /> {text}
-        </button>
+        </Link>
     )
 }

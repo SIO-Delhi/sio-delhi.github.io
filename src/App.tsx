@@ -6,6 +6,7 @@ import { ContentProvider } from './context/ContentContext'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { PostDetail } from './pages/PostDetail'
+import { GalleryPage } from './pages/GalleryPage'
 
 import { AdminLayout } from './components/admin/AdminLayout'
 import { Dashboard } from './components/admin/Dashboard'
@@ -45,12 +46,18 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/about-us/:id" element={<PostDetail sectionType="about" />} />
+                <Route path="/about-us/:id/gallery" element={<GalleryPage />} />
                 <Route path="/initiative/:id" element={<PostDetail sectionType="initiatives" />} />
+                <Route path="/initiative/:id/gallery" element={<GalleryPage />} />
                 <Route path="/media/:id" element={<PostDetail sectionType="media" />} />
+                <Route path="/media/:id/gallery" element={<GalleryPage />} />
                 <Route path="/leader/:id" element={<PostDetail sectionType="leadership" />} />
+                <Route path="/leader/:id/gallery" element={<GalleryPage />} />
                 <Route path="/resource/:id" element={<PostDetail sectionType="resources" />} />
+                <Route path="/resource/:id/gallery" element={<GalleryPage />} />
                 {/* Dynamic Sections Route */}
                 <Route path="/section/:sectionId/:id" element={<PostDetail sectionType="dynamic" />} />
+                <Route path="/section/:sectionId/:id/gallery" element={<GalleryPage />} />
               </Routes>
             </Layout>
           } />

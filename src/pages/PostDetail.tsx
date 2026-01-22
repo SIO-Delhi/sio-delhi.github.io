@@ -6,7 +6,6 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
 import { SectionCard } from '../components/ui/SectionCard'
 import { PostSkeleton } from '../components/ui/PostSkeleton'
-import { GalleryModal } from '../components/ui/GalleryModal'
 import { ViewGalleryButton } from '../components/ui/ViewGalleryButton'
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
@@ -505,7 +504,6 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     const navigate = useNavigate()
 
     const post = id ? getPostById(id) : undefined
-    const [isGalleryOpen, setIsGalleryOpen] = useState(false)
 
     // Scroll to top on mount
     // Scroll to top on mount and ID change
@@ -584,15 +582,30 @@ export function PostDetail({ sectionType }: PostDetailProps) {
 
     const hasGallery = post.galleryImages && post.galleryImages.length > 0
 
+    // Build gallery URL based on current route
+    const galleryUrl = (() => {
+        if (sectionType === 'dynamic' && sectionId) {
+            return `/section/${sectionId}/${id}/gallery`
+        }
+        const sectionPaths: Record<string, string> = {
+            about: 'about-us',
+            initiatives: 'initiative',
+            media: 'media',
+            leadership: 'leader',
+            resources: 'resource'
+        }
+        return `/${sectionPaths[sectionType] || sectionType}/${id}/gallery`
+    })()
+
     // Render section-specific content
     const renderContent = () => {
         switch (layoutType) {
             case 'leadership':
-                return <LeadershipLayout post={post} isDark={isDark} onOpenGallery={() => setIsGalleryOpen(true)} hasGallery={hasGallery} />
+                return <LeadershipLayout post={post} isDark={isDark} galleryUrl={galleryUrl} hasGallery={hasGallery} />
             case 'media':
-                return <MediaLayout post={post} isDark={isDark} onOpenGallery={() => setIsGalleryOpen(true)} hasGallery={hasGallery} />
+                return <MediaLayout post={post} isDark={isDark} galleryUrl={galleryUrl} hasGallery={hasGallery} />
             default:
-                return <DefaultLayout post={post} isDark={isDark} sectionLabel={currentLabel} posts={posts} onOpenGallery={() => setIsGalleryOpen(true)} hasGallery={hasGallery} />
+                return <DefaultLayout post={post} isDark={isDark} sectionLabel={currentLabel} posts={posts} galleryUrl={galleryUrl} hasGallery={hasGallery} />
         }
     }
 
@@ -629,11 +642,6 @@ export function PostDetail({ sectionType }: PostDetailProps) {
 
                 {renderContent()}
             </div>
-
-            {/* Gallery Modal */}
-            {isGalleryOpen && hasGallery && (
-                <GalleryModal images={post.galleryImages || []} onClose={() => setIsGalleryOpen(false)} isDark={isDark} title={post.title} />
-            )}
         </div>
     )
 }
@@ -946,7 +954,7 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
 }
 
 // Default layout for About and Initiatives
-function DefaultLayout({ post, isDark, posts = [], onOpenGallery, hasGallery }: { post: any; isDark: boolean; sectionLabel?: string; posts?: any[], onOpenGallery?: () => void, hasGallery?: boolean }) {
+function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { post: any; isDark: boolean; sectionLabel?: string; posts?: any[], galleryUrl?: string, hasGallery?: boolean }) {
 
     // Simplified layout for subsection child posts (has parentId)
     const isSubsectionChild = !!post.parentId
@@ -982,9 +990,9 @@ function DefaultLayout({ post, isDark, posts = [], onOpenGallery, hasGallery }: 
                 {post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
                 {/* Gallery Button for Subsections */}
-                {hasGallery && (
+                {hasGallery && galleryUrl && (
                     <div style={{ marginBottom: '24px' }}>
-                        <ViewGalleryButton onClick={onOpenGallery!} isDark={isDark} variant="outline" />
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="outline" />
                     </div>
                 )}
 
@@ -1036,9 +1044,9 @@ function DefaultLayout({ post, isDark, posts = [], onOpenGallery, hasGallery }: 
 
 
                 {/* Gallery Button */}
-                {hasGallery && (
+                {hasGallery && galleryUrl && (
                     <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-                        <ViewGalleryButton onClick={onOpenGallery!} isDark={isDark} variant="default" />
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="default" />
                     </div>
                 )}
 
@@ -1192,7 +1200,7 @@ function DefaultLayout({ post, isDark, posts = [], onOpenGallery, hasGallery }: 
 }
 
 // Leadership-specific layout (profile style)
-function LeadershipLayout({ post, isDark, onOpenGallery, hasGallery }: { post: any; isDark: boolean, onOpenGallery?: () => void, hasGallery?: boolean }) {
+function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDark: boolean, galleryUrl?: string, hasGallery?: boolean }) {
     return (
         <div
             className="leadership-card"
@@ -1300,9 +1308,9 @@ function LeadershipLayout({ post, isDark, onOpenGallery, hasGallery }: { post: a
 
 
                 {/* Gallery Button for Leadership */}
-                {hasGallery && (
+                {hasGallery && galleryUrl && (
                     <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
-                        <ViewGalleryButton onClick={onOpenGallery!} isDark={isDark} variant="pill" />
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="pill" />
                     </div>
                 )}
             </div >
@@ -1354,7 +1362,7 @@ function LeadershipLayout({ post, isDark, onOpenGallery, hasGallery }: { post: a
 }
 
 // Media/News-specific layout
-function MediaLayout({ post, isDark, onOpenGallery, hasGallery }: { post: any; isDark: boolean, onOpenGallery?: () => void, hasGallery?: boolean }) {
+function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDark: boolean, galleryUrl?: string, hasGallery?: boolean }) {
     const formattedDate = new Date(post.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -1428,9 +1436,9 @@ function MediaLayout({ post, isDark, onOpenGallery, hasGallery }: { post: any; i
 
             {/* Gallery Button media */}
             {
-                hasGallery && (
+                hasGallery && galleryUrl && (
                     <div style={{ marginBottom: '32px' }}>
-                        <ViewGalleryButton onClick={onOpenGallery!} isDark={isDark} variant="card" />
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="card" />
                     </div>
                 )
             }

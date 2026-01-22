@@ -1,0 +1,449 @@
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
+import { useContent } from '../context/ContentContext'
+import { useTheme } from '../context/ThemeContext'
+import { ArrowLeft, ZoomIn, X, Loader2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+
+// Lazy loading image component with Intersection Observer
+function LazyImage({ src, alt, onClick, isDark }: { src: string; alt: string; onClick: () => void; isDark: boolean }) {
+    const [isInView, setIsInView] = useState(false)
+    const [isLoaded, setIsLoaded] = useState(false)
+    const imgRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const element = imgRef.current
+        if (!element) return
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsInView(true)
+                    observer.disconnect()
+                }
+            },
+            { rootMargin: '200px', threshold: 0.01 }
+        )
+
+        observer.observe(element)
+        return () => observer.disconnect()
+    }, [])
+
+    return (
+        <div
+            ref={imgRef}
+            className="gallery-item"
+            onClick={onClick}
+            style={{
+                minHeight: isLoaded ? 'auto' : '200px',
+                background: isDark 
+                    ? 'linear-gradient(135deg, rgba(255,59,59,0.08), rgba(40,40,40,0.5))' 
+                    : 'linear-gradient(135deg, rgba(255,59,59,0.05), rgba(200,200,200,0.3))'
+            }}
+        >
+            {isInView ? (
+                <>
+                    <img
+                        src={src}
+                        alt={alt}
+                        draggable={false}
+                        onLoad={() => setIsLoaded(true)}
+                        style={{
+                            opacity: isLoaded ? 1 : 0,
+                            transition: 'opacity 0.4s ease'
+                        }}
+                    />
+                    {!isLoaded && (
+                        <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <Loader2 size={24} color="rgba(255,59,59,0.5)" style={{ animation: 'spin 1s linear infinite' }} />
+                        </div>
+                    )}
+                </>
+            ) : (
+                <div style={{ minHeight: '200px' }} />
+            )}
+            <div className="gallery-overlay">
+                <ZoomIn size={24} color="white" />
+            </div>
+        </div>
+    )
+}
+
+// Lightbox component with loading state
+function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
+    const [isLoaded, setIsLoaded] = useState(false)
+
+    return (
+        <div
+            style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 1001,
+                background: 'rgba(0,0,0,0.95)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px'
+            }}
+            onClick={onClose}
+            onContextMenu={(e) => e.preventDefault()}
+        >
+            <button
+                onClick={onClose}
+                style={{
+                    position: 'absolute',
+                    top: '20px',
+                    right: '20px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: 'none',
+                    color: 'white',
+                    cursor: 'pointer',
+                    padding: '12px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.2s',
+                    zIndex: 10
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#ff3b3b'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+            >
+                <X size={24} />
+            </button>
+            
+            {/* Loading spinner */}
+            {!isLoaded && (
+                <div style={{
+                    position: 'absolute',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '16px'
+                }}>
+                    <Loader2 size={40} color="#ff3b3b" style={{ animation: 'spin 1s linear infinite' }} />
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>Loading full image...</span>
+                </div>
+            )}
+            
+            <img
+                src={src}
+                alt="Full size"
+                draggable={false}
+                onLoad={() => setIsLoaded(true)}
+                onContextMenu={(e) => e.preventDefault()}
+                style={{
+                    maxWidth: '95vw',
+                    maxHeight: '90vh',
+                    objectFit: 'contain',
+                    borderRadius: '8px',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                    userSelect: 'none',
+                    pointerEvents: 'auto',
+                    opacity: isLoaded ? 1 : 0,
+                    transition: 'opacity 0.3s ease'
+                }}
+                onClick={(e) => e.stopPropagation()}
+            />
+        </div>
+    )
+}
+
+export function GalleryPage() {
+    const { id } = useParams()
+    const { isDark } = useTheme()
+    const { getPostById, loading } = useContent()
+    const navigate = useNavigate()
+    const location = useLocation()
+    
+    const post = id ? getPostById(id) : undefined
+    const [selectedImage, setSelectedImage] = useState<string | null>(null)
+
+    const images = post?.galleryImages || []
+
+    // Build back URL based on current path
+    const getBackUrl = () => {
+        if (!post || !id) return '/'
+        // Remove /gallery from the end of the path
+        const currentPath = location.pathname
+        return currentPath.replace(/\/gallery$/, '')
+    }
+
+    if (loading && !post) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isDark ? '#0a0a0a' : '#fafafa',
+                color: isDark ? 'white' : 'black'
+            }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        width: 48, height: 48, border: '3px solid #ff3b3b',
+                        borderTopColor: 'transparent', borderRadius: '50%',
+                        animation: 'spin 1s linear infinite', margin: '0 auto 16px'
+                    }} />
+                    <p>Loading gallery...</p>
+                </div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        )
+    }
+
+    if (!post) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isDark ? '#0a0a0a' : '#fafafa',
+                color: isDark ? 'white' : 'black',
+                gap: 16
+            }}>
+                <h1>Post Not Found</h1>
+                <button
+                    onClick={() => navigate(-1)}
+                    style={{
+                        color: '#ff3b3b',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '16px'
+                    }}
+                >
+                    Go Back
+                </button>
+            </div>
+        )
+    }
+
+    if (images.length === 0) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isDark ? '#0a0a0a' : '#fafafa',
+                color: isDark ? 'white' : 'black',
+                gap: 16
+            }}>
+                <h1>No Gallery Images</h1>
+                <p style={{ opacity: 0.6 }}>This post doesn't have any gallery images.</p>
+                <Link
+                    to={getBackUrl()}
+                    style={{
+                        color: '#ff3b3b',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}
+                >
+                    <ArrowLeft size={18} /> Back to Post
+                </Link>
+            </div>
+        )
+    }
+
+    return (
+        <div style={{
+            minHeight: '100vh',
+            paddingTop: '100px',
+            paddingBottom: '60px',
+            background: isDark ? '#0a0a0a' : '#fafafa',
+            color: isDark ? 'white' : 'black'
+        }}>
+            {/* Simple Title */}
+            <div style={{ 
+                maxWidth: '1400px', 
+                margin: '0 auto', 
+                padding: '0 24px 32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '16px'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <Link
+                        to={getBackUrl()}
+                        style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: isDark ? 'white' : 'black',
+                            textDecoration: 'none',
+                            transition: 'all 0.2s',
+                            flexShrink: 0
+                        }}
+                    >
+                        <ArrowLeft size={20} />
+                    </Link>
+                    <h1 style={{ 
+                        fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', 
+                        fontWeight: 700, 
+                        margin: 0 
+                    }}>
+                        {post.title || 'Event'} <span style={{ color: '#ff3b3b' }}>Gallery</span>
+                    </h1>
+                </div>
+                <span style={{
+                    background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    fontSize: '0.9rem',
+                    fontWeight: 600
+                }}>
+                    {images.length} Photos
+                </span>
+            </div>
+
+            {/* Masonry Gallery */}
+            <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
+                <div className="gallery-masonry">
+                    {images.map((img: string, idx: number) => (
+                        <LazyImage
+                            key={idx}
+                            src={img}
+                            alt={`Gallery ${idx + 1}`}
+                            onClick={() => setSelectedImage(img)}
+                            isDark={isDark}
+                        />
+                    ))}
+                </div>
+            </main>
+
+            {/* Lightbox */}
+            {selectedImage && (
+                <LightboxImage 
+                    src={selectedImage} 
+                    onClose={() => setSelectedImage(null)} 
+                />
+            )}
+
+            <style>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                
+                /* CSS Masonry using columns */
+                .gallery-masonry {
+                    column-count: 4;
+                    column-gap: 16px;
+                }
+
+                .gallery-item {
+                    break-inside: avoid;
+                    margin-bottom: 16px;
+                    position: relative;
+                    overflow: hidden;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    cursor: pointer;
+                }
+
+                .gallery-item:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+                }
+
+                .gallery-item img {
+                    width: 100%;
+                    display: block;
+                    border-radius: 12px;
+                }
+
+                .gallery-overlay {
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 50%, transparent 100%);
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 12px;
+                }
+
+                .gallery-item:hover .gallery-overlay {
+                    opacity: 1;
+                }
+
+                /* Medium screens - 3 columns */
+                @media (max-width: 1024px) {
+                    .gallery-masonry {
+                        column-count: 3;
+                        column-gap: 14px;
+                    }
+                    .gallery-item {
+                        margin-bottom: 14px;
+                    }
+                }
+
+                /* Small screens - 2 columns */
+                @media (max-width: 768px) {
+                    .gallery-masonry {
+                        column-count: 2;
+                        column-gap: 12px;
+                    }
+                    .gallery-item {
+                        margin-bottom: 12px;
+                        border-radius: 10px;
+                    }
+                    .gallery-item img {
+                        border-radius: 10px;
+                    }
+                    .gallery-overlay {
+                        border-radius: 10px;
+                    }
+                }
+
+                /* Extra small screens */
+                @media (max-width: 480px) {
+                    .gallery-masonry {
+                        column-count: 2;
+                        column-gap: 10px;
+                    }
+                    .gallery-item {
+                        margin-bottom: 10px;
+                        border-radius: 8px;
+                    }
+                    .gallery-item img {
+                        border-radius: 8px;
+                    }
+                    .gallery-overlay {
+                        border-radius: 8px;
+                    }
+                }
+
+                /* Very large screens - 5 columns */
+                @media (min-width: 1400px) {
+                    .gallery-masonry {
+                        column-count: 5;
+                        column-gap: 20px;
+                    }
+                    .gallery-item {
+                        margin-bottom: 20px;
+                    }
+                }
+            `}</style>
+        </div>
+    )
+}
