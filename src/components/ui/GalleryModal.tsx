@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Grid, X, ZoomIn } from 'lucide-react'
 
 interface GalleryModalProps {
