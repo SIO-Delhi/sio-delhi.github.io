@@ -197,7 +197,7 @@ export function SectionCard({
                     background: 'rgba(255, 255, 255, 0.03)',
                     backdropFilter: 'blur(10px)',
                     WebkitBackdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: '24px',
                     overflow: 'hidden',
                     display: 'flex',
