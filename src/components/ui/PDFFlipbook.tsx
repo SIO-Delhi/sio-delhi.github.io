@@ -116,6 +116,15 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
 
     const [inputPage, setInputPage] = useState("1")
     const [zoom, setZoom] = useState(1)
+    const [isFullscreen, setIsFullscreen] = useState(false)
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement)
+        }
+        document.addEventListener('fullscreenchange', handleFullscreenChange)
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }, [])
 
     // Zoom & Container Logic
     const [containerWidth, setContainerWidth] = useState(800)
@@ -140,7 +149,7 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
         updateSize()
         window.addEventListener('resize', updateSize)
         return () => window.removeEventListener('resize', updateSize)
-    }, [])
+    }, [isFullscreen])
 
     // Sync input page when book flips
     const onFlip = useCallback((e: any) => {
@@ -154,6 +163,8 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
             flipBookRef.current.pageFlip().flip(page - 1)
         }
     }
+
+
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement && containerRef.current) {
@@ -208,7 +219,19 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
     const pageHeight = bookHeight
 
     return (
-        <div ref={containerRef} style={{ width: '100%', height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'transparent', position: 'relative' }}>
+        <div
+            ref={containerRef}
+            style={{
+                width: '100%',
+                height: isFullscreen ? '100vh' : 'calc(100vh - 120px)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                background: isFullscreen ? '#1a1a1a' : 'transparent',
+                position: 'relative',
+                transition: 'background 0.3s, height 0.3s',
+            }}
+        >
 
             {/* Loading Overlay */}
             {isLoading && (
@@ -265,24 +288,11 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
             </div>
 
             {/* Controls */}
-            <div style={{
-                height: '50px',
-                background: 'rgba(20, 20, 20, 0.9)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '30px',
-                border: '1px solid rgba(255,255,255,0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '16px',
-                zIndex: 20,
-                padding: '0 20px',
-                marginBottom: '10px'
-            }}>
+            <div className="control-panel">
                 {/* Navigation */}
                 <button
                     onClick={prevBtn}
-                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', display: 'flex' }}
+                    className="control-btn"
                 >
                     <ChevronLeft size={20} />
                 </button>
@@ -293,46 +303,157 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
                         type="text"
                         value={inputPage}
                         onChange={(e) => setInputPage(e.target.value)}
-                        style={{ width: '40px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', textAlign: 'center', padding: '4px', fontSize: '0.9rem' }}
+                        className="page-input"
                     />
-                    <span style={{ color: '#ccc', fontSize: '0.8rem' }}>/ {totalPages}</span>
+                    <span className="page-total">/ {totalPages}</span>
                 </form>
 
                 <button
                     onClick={nextBtn}
-                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', display: 'flex' }}
+                    className="control-btn"
                 >
                     <ChevronRight size={20} />
                 </button>
 
-                <div style={{ width: '1px', height: '16px', background: '#444' }} />
+                <div className="separator" />
 
                 {/* Zoom */}
-                <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.5))} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', display: 'flex' }}>
-                    <ZoomOut size={16} />
-                </button>
-                <button onClick={() => setZoom(1)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', minWidth: '36px' }}>
-                    {Math.round(zoom * 100)}%
-                </button>
-                <button onClick={() => setZoom(z => Math.min(z + 0.1, 2))} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', display: 'flex' }}>
-                    <ZoomIn size={16} />
-                </button>
+                <div className="zoom-controls">
+                    <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.5))} className="control-btn-icon">
+                        <ZoomOut size={16} />
+                    </button>
+                    <button onClick={() => setZoom(1)} className="zoom-text">
+                        {Math.round(zoom * 100)}%
+                    </button>
+                    <button onClick={() => setZoom(z => Math.min(z + 0.1, 2))} className="control-btn-icon">
+                        <ZoomIn size={16} />
+                    </button>
+                </div>
 
-                <div style={{ width: '1px', height: '16px', background: '#444' }} />
+                <div className="separator desktop-only" />
 
                 {/* Extras */}
-                <button onClick={toggleFullscreen} title="Fullscreen" style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', display: 'flex' }}>
-                    <Maximize size={16} />
-                </button>
-                <a href={url} download target="_blank" rel="noopener noreferrer" title="Download PDF" style={{ color: '#ccc', display: 'flex', alignItems: 'center' }}>
-                    <Download size={16} />
-                </a>
+                <div className="extra-controls">
+                    <button onClick={toggleFullscreen} title="Fullscreen" className="control-btn-icon">
+                        <Maximize size={16} />
+                    </button>
+                    <a href={url} download target="_blank" rel="noopener noreferrer" title="Download PDF" className="control-btn-icon">
+                        <Download size={16} />
+                    </a>
+                </div>
             </div>
 
             <style>{`
                 .animate-spin { animation: spin 1s linear infinite; }
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 .demoPage { box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+
+                /* Control Panel Styles */
+                .control-panel {
+                    height: 50px;
+                    background: rgba(20, 20, 20, 0.9);
+                    backdrop-filter: blur(10px);
+                    border-radius: 30px;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 16px;
+                    z-index: 20;
+                    padding: 0 20px;
+                    margin-bottom: 20px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+                    transition: all 0.3s ease;
+                    max-width: 90%;
+                }
+
+                .control-btn {
+                    background: transparent;
+                    border: none;
+                    color: white;
+                    cursor: pointer;
+                    display: flex;
+                    padding: 4px;
+                    border-radius: 50%;
+                    transition: background 0.2s;
+                }
+                .control-btn:hover { background: rgba(255,255,255,0.1); }
+
+                .control-btn-icon {
+                    background: none;
+                    border: none;
+                    color: #ccc;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    padding: 4px;
+                    border-radius: 4px;
+                    transition: color 0.2s;
+                }
+                .control-btn-icon:hover { color: white; }
+
+                .page-input {
+                    width: 40px;
+                    background: rgba(255,255,255,0.1);
+                    border: none;
+                    border-radius: 4px;
+                    color: white;
+                    text-align: center;
+                    padding: 4px;
+                    font-size: 0.9rem;
+                }
+                .page-total {
+                    color: #ccc;
+                    font-size: 0.8rem;
+                    white-space: nowrap;
+                }
+
+                .separator {
+                    width: 1px;
+                    height: 16px;
+                    background: #444;
+                }
+
+                .zoom-controls, .extra-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .zoom-text {
+                    background: none;
+                    border: none;
+                    color: #ccc;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    min-width: 36px;
+                }
+
+                /* Mobile Responsive */
+                @media (max-width: 640px) {
+                    .control-panel {
+                        gap: 8px;
+                        padding: 0 12px;
+                        height: 44px;
+                    }
+                    .zoom-text { display: none; }
+                    .desktop-only { display: none; }
+                    
+                    /* Hide Zoom Controls on very small screens if needed, 
+                       or just make them compact */
+                }
+                
+                @media (max-width: 480px) {
+                   .control-panel {
+                        bottom: 150px; /* Move up slightly if needed */
+                        max-width: 95%;
+                        flex-wrap: nowrap; /* keep single line */
+                        overflow-x: auto; /* allow scroll if absolutely necessary */
+                   }
+                   .extra-controls {
+                       gap: 4px;
+                   }
+                }
             `}</style>
         </div>
     )
