@@ -152,7 +152,6 @@ export function LeadershipSection() {
         <SectionLayout
             id="leadership"
             header={headerContent}
-            subtitle="Meet the team leading SIO Delhi"
         >
             {hasContent ? (
                 leaders.map(renderLeaderCard)
