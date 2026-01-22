@@ -100,10 +100,13 @@ const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { imag
         return () => clearInterval(interval)
     }, [images.length])
 
+    const goNext = () => setCurrentIndex(prev => (prev + 1) % images.length)
+    const goPrev = () => setCurrentIndex(prev => (prev - 1 + images.length) % images.length)
+
     const currentImage = images[currentIndex]
 
     return (
-        <div style={{ position: 'relative', width: '100%', ...containerStyle }}>
+        <div style={{ position: 'relative', width: '100%', ...containerStyle }} className="group">
             <img
                 src={currentImage}
                 alt="Carousel Slide"
@@ -116,27 +119,69 @@ const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { imag
                 }}
             />
             {images.length > 1 && (
-                <div style={{
-                    position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
-                    display: 'flex', gap: '6px', zIndex: 10
-                }}>
-                    {images.map((_: string, i: number) => (
-                        <div
-                            key={i}
-                            style={{
-                                width: '6px', height: '6px', borderRadius: '50%',
-                                background: i === currentIndex ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
-                                transition: 'background 0.2s',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                            }}
-                        />
-                    ))}
-                </div>
+                <>
+                    {/* Navigation Buttons */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                        style={{
+                            position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)',
+                            zIndex: 20, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none',
+                            width: '36px', height: '36px', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                            opacity: 0, transition: 'opacity 0.2s'
+                        }}
+                        className="carousel-nav-btn"
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.5)'}
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); goNext(); }}
+                        style={{
+                            position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)',
+                            zIndex: 20, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none',
+                            width: '36px', height: '36px', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                            opacity: 0, transition: 'opacity 0.2s'
+                        }}
+                        className="carousel-nav-btn"
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.5)'}
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+
+                    {/* Dots */}
+                    <div style={{
+                        position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
+                        display: 'flex', gap: '6px', zIndex: 10
+                    }}>
+                        {images.map((_: string, i: number) => (
+                            <div
+                                key={i}
+                                onClick={(e) => { e.stopPropagation(); setCurrentIndex(i); }}
+                                style={{
+                                    width: '6px', height: '6px', borderRadius: '50%',
+                                    background: i === currentIndex ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
+                                    transition: 'background 0.2s',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        ))}
+                    </div>
+
+                    <style>{`
+                        .group:hover .carousel-nav-btn {
+                            opacity: 1 !important;
+                        }
+                    `}</style>
+                </>
             )}
         </div>
     )
 })
-
 function ContentBlockRenderer({ content, isDark }: { content: string; isDark: boolean }) {
     // Parse content into blocks
     const blocks: ParsedBlock[] = useMemo(() => {

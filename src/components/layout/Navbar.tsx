@@ -497,8 +497,7 @@ export function Navbar() {
                         overflowY: 'auto'
                     }}>
 
-                        {/* <h2 style={{ fontSize: '2rem', fontWeight: 700, margin: 0, textAlign: 'center' }}>Support Our Cause</h2> */}
-                        <p style={{ color: '#888', textAlign: 'center', margin: '-10px 0 10px' }}>Your contribution makes a difference.</p>
+
 
                         <DonationContent />
 
@@ -534,6 +533,8 @@ function DonationContent() {
             transition: 'opacity 0.5s ease, transform 0.5s ease',
             width: '100%'
         }}>
+            <p style={{ color: '#888', textAlign: 'center', margin: 0 }}>Your contribution makes a difference.</p>
+
             {/* QR Code */}
             <img
                 src={donateQr}
