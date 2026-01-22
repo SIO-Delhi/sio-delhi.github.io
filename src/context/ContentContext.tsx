@@ -176,7 +176,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 createdAt: new Date(row.created_at).getTime(),
                 updatedAt: new Date(row.updated_at).getTime(),
                 tags: row.tags || [], // Map tags from DB
-                icon: row.icon || undefined // Map icon from DB
+                icon: row.icon || undefined, // Map icon from DB
+                galleryImages: row.gallery_images || [] // Map gallery images from DB
             }))
 
             setPosts(mappedPosts)
@@ -259,6 +260,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                     is_published: newPostData.isPublished ?? false,
                     tags: newPostData.tags || null,
                     icon: newPostData.icon || null, // Insert icon
+                    gallery_images: newPostData.galleryImages || null, // Insert gallery images
                     created_at: newPostData.createdAt ? new Date(newPostData.createdAt).toISOString() : undefined // Allow manual date
                 })
 
@@ -288,6 +290,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             if (updates.isSubsection !== undefined) dbUpdates.is_subsection = updates.isSubsection
             if (updates.tags !== undefined) dbUpdates.tags = updates.tags
             if (updates.icon !== undefined) dbUpdates.icon = updates.icon || null
+            if (updates.galleryImages !== undefined) dbUpdates.gallery_images = updates.galleryImages || null
             if (updates.createdAt !== undefined) dbUpdates.created_at = new Date(updates.createdAt).toISOString() // Allow manual date update
             dbUpdates.updated_at = new Date().toISOString()
 

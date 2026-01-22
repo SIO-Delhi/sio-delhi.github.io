@@ -1188,6 +1188,7 @@ export function PostEditor() {
     const [date, setDate] = useState('') // New Date State
     const [order, setOrder] = useState<number>(0) // Order for Leadership/etc
     const [images, setImages] = useState<string[]>([]) // Cover image
+    const [galleryImages, setGalleryImages] = useState<string[]>([]) // Gallery images
     const [pdfUrl, setPdfUrl] = useState('')
     const [enableAudio, setEnableAudio] = useState(false)
     const [email, setEmail] = useState('')
@@ -1258,6 +1259,7 @@ export function PostEditor() {
                 setEmail(post.email || '')
                 setInstagram(post.instagram || '')
                 setTags(post.tags || []) // Load tags
+                setGalleryImages(post.galleryImages || []) // Load gallery images
                 setIcon(post.icon || '') // Load icon
 
                 setIsSubsection(post.isSubsection || false)
@@ -1579,6 +1581,7 @@ export function PostEditor() {
                 email,
                 instagram,
                 tags, // Include tags in save
+                galleryImages, // Include gallery images
                 icon, // Include icon in save
                 layout: 'default',
                 order,
@@ -1885,6 +1888,67 @@ export function PostEditor() {
                                 style={{ width: '100%', background: 'transparent', border: 'none', color: 'white', fontSize: '0.9rem' }}
                             />
                         </div>
+                    </div>
+                </div>
+
+                {/* POST GALLERY SECTION */}
+                <div style={{ marginBottom: '32px' }}>
+                    <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '12px', fontWeight: 600 }}>
+                        POST GALLERY
+                    </label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                        {galleryImages.map((img, idx) => (
+                            <div key={idx} style={{ position: 'relative', width: '100px', height: '100px' }}>
+                                <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                                <button
+                                    onClick={() => setGalleryImages(prev => prev.filter((_, i) => i !== idx))}
+                                    style={{
+                                        position: 'absolute', top: '4px', right: '4px',
+                                        background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none',
+                                        width: '24px', height: '24px', borderRadius: '50%',
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ))}
+                        <label style={{
+                            width: '100px', height: '100px',
+                            background: '#1a1a1a', border: '2px dashed #333', borderRadius: '8px',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: '#666'
+                        }}>
+                            {isUploading ? <Loader2 size={24} className="animate-spin" /> : <Plus size={24} />}
+                            <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>Add Photos</span>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={async (e) => {
+                                    const files = e.target.files
+                                    if (!files || files.length === 0) return
+                                    setIsUploading(true)
+                                    try {
+                                        const newUrls: string[] = []
+                                        for (const file of Array.from(files)) {
+                                            validateImage(file)
+                                            const compressed = await compressImage(file)
+                                            const url = await uploadImage(compressed)
+                                            newUrls.push(url)
+                                        }
+                                        setGalleryImages(prev => [...prev, ...newUrls])
+                                    } catch (err: any) {
+                                        alert(err.message || 'Upload failed')
+                                    } finally {
+                                        setIsUploading(false)
+                                        e.target.value = ''
+                                    }
+                                }}
+                                disabled={isUploading}
+                                style={{ display: 'none' }}
+                            />
+                        </label>
                     </div>
                 </div>
 
