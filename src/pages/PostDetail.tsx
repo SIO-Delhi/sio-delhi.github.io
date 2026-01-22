@@ -6,7 +6,8 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
 import { SectionCard } from '../components/ui/SectionCard'
 import { PostSkeleton } from '../components/ui/PostSkeleton'
-
+import { GalleryModal } from '../components/ui/GalleryModal'
+import { ViewGalleryButton } from '../components/ui/ViewGalleryButton'
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 interface ParsedBlock {
@@ -100,10 +101,13 @@ const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { imag
         return () => clearInterval(interval)
     }, [images.length])
 
+    const goNext = () => setCurrentIndex(prev => (prev + 1) % images.length)
+    const goPrev = () => setCurrentIndex(prev => (prev - 1 + images.length) % images.length)
+
     const currentImage = images[currentIndex]
 
     return (
-        <div style={{ position: 'relative', width: '100%', ...containerStyle }}>
+        <div style={{ position: 'relative', width: '100%', ...containerStyle }} className="group">
             <img
                 src={currentImage}
                 alt="Carousel Slide"
@@ -116,27 +120,69 @@ const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { imag
                 }}
             />
             {images.length > 1 && (
-                <div style={{
-                    position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
-                    display: 'flex', gap: '6px', zIndex: 10
-                }}>
-                    {images.map((_: string, i: number) => (
-                        <div
-                            key={i}
-                            style={{
-                                width: '6px', height: '6px', borderRadius: '50%',
-                                background: i === currentIndex ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
-                                transition: 'background 0.2s',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                            }}
-                        />
-                    ))}
-                </div>
+                <>
+                    {/* Navigation Buttons */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                        style={{
+                            position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)',
+                            zIndex: 20, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none',
+                            width: '36px', height: '36px', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                            opacity: 0, transition: 'opacity 0.2s'
+                        }}
+                        className="carousel-nav-btn"
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.5)'}
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); goNext(); }}
+                        style={{
+                            position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)',
+                            zIndex: 20, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none',
+                            width: '36px', height: '36px', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                            opacity: 0, transition: 'opacity 0.2s'
+                        }}
+                        className="carousel-nav-btn"
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.5)'}
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+
+                    {/* Dots */}
+                    <div style={{
+                        position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
+                        display: 'flex', gap: '6px', zIndex: 10
+                    }}>
+                        {images.map((_: string, i: number) => (
+                            <div
+                                key={i}
+                                onClick={(e) => { e.stopPropagation(); setCurrentIndex(i); }}
+                                style={{
+                                    width: '6px', height: '6px', borderRadius: '50%',
+                                    background: i === currentIndex ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
+                                    transition: 'background 0.2s',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        ))}
+                    </div>
+
+                    <style>{`
+                        .group:hover .carousel-nav-btn {
+                            opacity: 1 !important;
+                        }
+                    `}</style>
+                </>
             )}
         </div>
     )
 })
-
 function ContentBlockRenderer({ content, isDark }: { content: string; isDark: boolean }) {
     // Parse content into blocks
     const blocks: ParsedBlock[] = useMemo(() => {
@@ -450,6 +496,8 @@ interface PostDetailProps {
     sectionType: 'about' | 'initiatives' | 'media' | 'leadership' | 'resources' | 'dynamic'
 }
 
+
+
 export function PostDetail({ sectionType }: PostDetailProps) {
     const { id, sectionId } = useParams()
     const { isDark } = useTheme()
@@ -457,6 +505,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     const navigate = useNavigate()
 
     const post = id ? getPostById(id) : undefined
+    const [isGalleryOpen, setIsGalleryOpen] = useState(false)
 
     // Scroll to top on mount
     // Scroll to top on mount and ID change
@@ -471,6 +520,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
         }
     }, [id])
 
+    // Early returns MUST come after all hooks are called
     if (loading && !post) {
         return <PostSkeleton isDark={isDark} />
     }
@@ -532,15 +582,17 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     const isSubsection = !!post.isSubsection
     const showHero = post.image && layoutType !== 'leadership'
 
+    const hasGallery = post.galleryImages && post.galleryImages.length > 0
+
     // Render section-specific content
     const renderContent = () => {
         switch (layoutType) {
             case 'leadership':
-                return <LeadershipLayout post={post} isDark={isDark} />
+                return <LeadershipLayout post={post} isDark={isDark} onOpenGallery={() => setIsGalleryOpen(true)} hasGallery={hasGallery} />
             case 'media':
-                return <MediaLayout post={post} isDark={isDark} />
+                return <MediaLayout post={post} isDark={isDark} onOpenGallery={() => setIsGalleryOpen(true)} hasGallery={hasGallery} />
             default:
-                return <DefaultLayout post={post} isDark={isDark} sectionLabel={currentLabel} posts={posts} />
+                return <DefaultLayout post={post} isDark={isDark} sectionLabel={currentLabel} posts={posts} onOpenGallery={() => setIsGalleryOpen(true)} hasGallery={hasGallery} />
         }
     }
 
@@ -577,6 +629,11 @@ export function PostDetail({ sectionType }: PostDetailProps) {
 
                 {renderContent()}
             </div>
+
+            {/* Gallery Modal */}
+            {isGalleryOpen && hasGallery && (
+                <GalleryModal images={post.galleryImages || []} onClose={() => setIsGalleryOpen(false)} isDark={isDark} title={post.title} />
+            )}
         </div>
     )
 }
@@ -889,7 +946,8 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
 }
 
 // Default layout for About and Initiatives
-function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolean; sectionLabel?: string; posts?: any[] }) {
+function DefaultLayout({ post, isDark, posts = [], onOpenGallery, hasGallery }: { post: any; isDark: boolean; sectionLabel?: string; posts?: any[], onOpenGallery?: () => void, hasGallery?: boolean }) {
+
     // Simplified layout for subsection child posts (has parentId)
     const isSubsectionChild = !!post.parentId
     // Check if this post IS a subsection (parent with children)
@@ -922,6 +980,13 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
 
                 {/* Audio Player - Only show if enabled */}
                 {post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
+
+                {/* Gallery Button for Subsections */}
+                {hasGallery && (
+                    <div style={{ marginBottom: '24px' }}>
+                        <ViewGalleryButton onClick={onOpenGallery!} isDark={isDark} variant="outline" />
+                    </div>
+                )}
 
                 {/* PDF Flipbook (main content for subsection posts) */}
                 {/* STRICT CHECK: If content uses new block system (siodel-block) OR explicitly has a PDF block (block-pdf), we assume PDF is managed content. */}
@@ -968,6 +1033,15 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                     {post.title}
                 </h1>
 
+
+
+                {/* Gallery Button */}
+                {hasGallery && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+                        <ViewGalleryButton onClick={onOpenGallery!} isDark={isDark} variant="default" />
+                    </div>
+                )}
+
                 {/* Read Article Button - Only show for non-subsection posts with audio enabled */}
                 {!isSubsection && post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
@@ -994,45 +1068,47 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                         <ContentBlockRenderer content={post.content} isDark={isDark} />
                     </div>
                 )}
-            </div>
+            </div >
 
             {/* Child Cards Grid for Subsection Posts */}
-            {isSubsection && childPosts.length > 0 && (
-                <div style={{ marginTop: '64px', width: '100%' }}>
-                    <div className="subsection-grid" style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '24px',
-                        /* justifyContent handled by media query now */
-                    }}>
-                        {childPosts.map(child => (
-                            <SectionCard
-                                key={child.id}
-                                label=""
-                                labelColor="#ff3b3b"
-                                title={child.title}
-                                subtitle={child.subtitle || ''}
-                                description=""
-                                publishedDate={child.createdAt}
-                                image={child.image}
+            {
+                isSubsection && childPosts.length > 0 && (
+                    <div style={{ marginTop: '64px', width: '100%' }}>
+                        <div className="subsection-grid" style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '24px',
+                            /* justifyContent handled by media query now */
+                        }}>
+                            {childPosts.map(child => (
+                                <SectionCard
+                                    key={child.id}
+                                    label=""
+                                    labelColor="#ff3b3b"
+                                    title={child.title}
+                                    subtitle={child.subtitle || ''}
+                                    description=""
+                                    publishedDate={child.createdAt}
+                                    image={child.image}
 
 
-                                onClick={() => {
-                                    // Map sectionId to correct route path
-                                    const routeMap: Record<string, string> = {
-                                        'about': 'about-us',
-                                        'initiatives': 'initiative',
-                                        'media': 'media',
-                                        'leadership': 'leader'
-                                    }
-                                    const routePath = routeMap[post.sectionId] || 'about-us'
-                                    window.location.href = `/${routePath}/${child.id}`
-                                }}
-                            />
-                        ))}
+                                    onClick={() => {
+                                        // Map sectionId to correct route path
+                                        const routeMap: Record<string, string> = {
+                                            'about': 'about-us',
+                                            'initiatives': 'initiative',
+                                            'media': 'media',
+                                            'leadership': 'leader'
+                                        }
+                                        const routePath = routeMap[post.sectionId] || 'about-us'
+                                        window.location.href = `/${routePath}/${child.id}`
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <style>{`
                 .post-content h1, .post-content h2 {
@@ -1116,7 +1192,7 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
 }
 
 // Leadership-specific layout (profile style)
-function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
+function LeadershipLayout({ post, isDark, onOpenGallery, hasGallery }: { post: any; isDark: boolean, onOpenGallery?: () => void, hasGallery?: boolean }) {
     return (
         <div
             className="leadership-card"
@@ -1221,10 +1297,19 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                     )
                     }
                 </div >
+
+
+                {/* Gallery Button for Leadership */}
+                {hasGallery && (
+                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
+                        <ViewGalleryButton onClick={onOpenGallery!} isDark={isDark} variant="pill" />
+                    </div>
+                )}
             </div >
 
+
             {/* Right Column: Bio Content */}
-            < div style={{ flex: 1, minWidth: '0', maxWidth: '100%' }}>
+            <div style={{ flex: 1, minWidth: '0', maxWidth: '100%' }}>
                 {
                     post.content && (
                         <div
@@ -1269,7 +1354,7 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
 }
 
 // Media/News-specific layout
-function MediaLayout({ post, isDark }: { post: any; isDark: boolean }) {
+function MediaLayout({ post, isDark, onOpenGallery, hasGallery }: { post: any; isDark: boolean, onOpenGallery?: () => void, hasGallery?: boolean }) {
     const formattedDate = new Date(post.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -1340,21 +1425,33 @@ function MediaLayout({ post, isDark }: { post: any; isDark: boolean }) {
                 </div>
             </div>
 
+
+            {/* Gallery Button media */}
+            {
+                hasGallery && (
+                    <div style={{ marginBottom: '32px' }}>
+                        <ViewGalleryButton onClick={onOpenGallery!} isDark={isDark} variant="card" />
+                    </div>
+                )
+            }
+
             {/* Cover Image moved to Hero */}
 
             {/* Article Content */}
-            {post.content && (
-                <div
-                    className="news-content"
-                    style={{
-                        color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
-                        fontSize: '1.15rem',
-                        lineHeight: 1.4
-                    }}
-                >
-                    <ContentBlockRenderer content={post.content} isDark={isDark} />
-                </div>
-            )}
+            {
+                post.content && (
+                    <div
+                        className="news-content"
+                        style={{
+                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            fontSize: '1.15rem',
+                            lineHeight: 1.4
+                        }}
+                    >
+                        <ContentBlockRenderer content={post.content} isDark={isDark} />
+                    </div>
+                )
+            }
 
             <style>{`
                 .news-content h1, .news-content h2 {
