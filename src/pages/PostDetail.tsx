@@ -78,8 +78,8 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
                 <p style={{
                     margin: 0,
                     color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)',
-                    fontSize: '1rem',
-                    lineHeight: 1.4
+                    fontSize: '1.1rem',
+                    lineHeight: 1.6
                 }}>
                     {text}
                 </p>
@@ -298,7 +298,9 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                 style={{
                                     textAlign: alignStyle.textAlign,
                                     overflowWrap: 'anywhere',
-                                    wordBreak: 'break-word'
+                                    wordBreak: 'break-word',
+                                    fontSize: '1.1rem',
+                                    lineHeight: 1.6
                                 }}
                             />
                         </div>
@@ -421,8 +423,8 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                 <div
                                     className="rich-text-content"
                                     style={{
-                                        lineHeight: 1.4,
                                         fontSize: '1.1rem',
+                                        lineHeight: 1.6,
                                         textAlign: (block.alignment as 'left' | 'center' | 'right') || (layout === 'image-top' ? 'center' : 'left')
                                     }}
                                     dangerouslySetInnerHTML={{ __html: block.textContent || '' }}

@@ -210,25 +210,26 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Alignment */}
-            <button onClick={() => editor.chain().focus().setTextAlign('left').run()} style={buttonStyle(editor.isActive({ textAlign: 'left' }))}><AlignLeft size={16} /></button>
-            <button onClick={() => editor.chain().focus().setTextAlign('center').run()} style={buttonStyle(editor.isActive({ textAlign: 'center' }))}><AlignCenter size={16} /></button>
-            <button onClick={() => editor.chain().focus().setTextAlign('right').run()} style={buttonStyle(editor.isActive({ textAlign: 'right' }))}><AlignRight size={16} /></button>
-            <button onClick={() => editor.chain().focus().setTextAlign('justify').run()} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))}><AlignJustify size={16} /></button>
+            {/* Alignment */}
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))}><AlignLeft size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))}><AlignCenter size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))}><AlignRight size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('justify').run() }} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))}><AlignJustify size={16} /></button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Headings - Kept for structure */}
-            <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} style={buttonStyle(editor.isActive('heading', { level: 1 }))}>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))}>
                 <Heading1 size={16} />
             </button>
-            <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} style={buttonStyle(editor.isActive('heading', { level: 2 }))}>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))}>
                 <Heading2 size={16} />
             </button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Lists */}
-            <button onClick={() => editor.chain().focus().toggleBulletList().run()} style={buttonStyle(editor.isActive('bulletList'))}><List size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))}><List size={16} /></button>
         </div>
     )
 }
@@ -901,6 +902,7 @@ const CompositeBlockEditor = ({
         extensions: [
             StarterKit,
             Underline,
+            TextAlign.configure({ types: ['heading', 'paragraph'] }),
             TextStyle,
             Color,
             FontSize
@@ -908,6 +910,11 @@ const CompositeBlockEditor = ({
         content: textContent || '<p>Add your text here...</p>',
         onUpdate: ({ editor }) => {
             onTextChange?.(editor.getHTML())
+        },
+        editorProps: {
+            attributes: {
+                class: 'prose prose-invert max-w-none focus:outline-none',
+            },
         },
         onFocus: () => setIsFocused(true),
         onBlur: () => setIsFocused(false),
@@ -1136,7 +1143,7 @@ const CompositeBlockEditor = ({
                         </div>
                     </div>
 
-                    {editor && isFocused && <EditorToolbar editor={editor} />}
+                    {editor && <EditorToolbar editor={editor} />}
                     <div style={{ textAlign: (alignment as any) || 'left' }}>
                         <EditorContent
                             editor={editor}
