@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage } from '../../lib/storage'
-import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff, GripVertical } from 'lucide-react'
+import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff, GripVertical, Images } from 'lucide-react'
 import { ImageCropper } from './ImageCropper'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
+import { BlockEditor, blocksToHtml, htmlToBlocks } from './BlockEditor'
+import type { EditorBlock } from './BlockEditor'
 
 
 export function SubsectionEditor() {
@@ -30,8 +32,11 @@ export function SubsectionEditor() {
     const [subtitle, setSubtitle] = useState('')
     const [date, setDate] = useState('') // New Date State
     const [coverImage, setCoverImage] = useState('')
+    const [galleryImages, setGalleryImages] = useState<string[]>([]) // Gallery images
+    const [blocks, setBlocks] = useState<EditorBlock[]>([]) // Content blocks
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
+    const [isGalleryUploading, setIsGalleryUploading] = useState(false)
 
     // Crop State
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
@@ -45,6 +50,9 @@ export function SubsectionEditor() {
                 setTitle(post.title)
                 setSubtitle(post.subtitle || '')
                 setCoverImage(post.image || '')
+                setGalleryImages(post.galleryImages || [])
+                // Parse content into blocks
+                setBlocks(htmlToBlocks(post.content || ''))
                 // Set date from createdAt
                 if (post.createdAt) {
                     setDate(new Date(post.createdAt).toISOString().split('T')[0])
@@ -113,15 +121,19 @@ export function SubsectionEditor() {
         if (!title) { alert('Please enter a title'); return }
         setIsSaving(true)
 
+        // Serialize blocks to HTML
+        const finalContent = blocksToHtml(blocks)
+
         try {
             const postData = {
                 title,
                 subtitle,
-                content: '', // Subsections don't have content
+                content: finalContent, // Serialize blocks to HTML
                 image: coverImage,
                 pdfUrl: '',
                 layout: 'custom',
                 isSubsection: true, // This is a subsection!
+                galleryImages, // Include gallery images
                 createdAt: date ? new Date(date).getTime() : undefined, // Pass date
             }
 
@@ -136,6 +148,28 @@ export function SubsectionEditor() {
             alert('Failed to save')
         } finally {
             setIsSaving(false)
+        }
+    }
+
+    // Gallery upload handler
+    const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files
+        if (!files || files.length === 0) return
+        setIsGalleryUploading(true)
+        try {
+            const newUrls: string[] = []
+            for (const file of Array.from(files)) {
+                validateImage(file)
+                const compressed = await compressImage(file)
+                const url = await uploadImage(compressed)
+                newUrls.push(url)
+            }
+            setGalleryImages(prev => [...prev, ...newUrls])
+        } catch (err: any) {
+            alert(err.message || 'Upload failed')
+        } finally {
+            setIsGalleryUploading(false)
+            e.target.value = ''
         }
     }
 
@@ -356,6 +390,68 @@ export function SubsectionEditor() {
                                 fontSize: '0.95rem', outline: 'none'
                             }}
                         />
+                    </div>
+
+                    {/* Gallery Images */}
+                    <div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 500 }}>
+                            <Images size={14} /> Gallery Images
+                            {galleryImages.length > 0 && (
+                                <span style={{ background: '#ff3b3b', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem' }}>
+                                    {galleryImages.length}
+                                </span>
+                            )}
+                        </label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                            {galleryImages.map((img, idx) => (
+                                <div key={idx} style={{ position: 'relative', width: '80px', height: '80px' }}>
+                                    <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} alt={`Gallery ${idx + 1}`} />
+                                    <button
+                                        onClick={() => setGalleryImages(prev => prev.filter((_, i) => i !== idx))}
+                                        style={{
+                                            position: 'absolute', top: '4px', right: '4px',
+                                            background: 'rgba(0,0,0,0.7)', color: 'white', border: 'none',
+                                            width: '20px', height: '20px', borderRadius: '50%',
+                                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            ))}
+                            <label style={{
+                                width: '80px', height: '80px',
+                                background: '#1a1a1a', border: '2px dashed #333', borderRadius: '8px',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                cursor: isGalleryUploading ? 'wait' : 'pointer', color: '#555'
+                            }}>
+                                {isGalleryUploading ? (
+                                    <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                                ) : (
+                                    <>
+                                        <Plus size={20} />
+                                        <span style={{ fontSize: '0.6rem', marginTop: '2px' }}>Add</span>
+                                    </>
+                                )}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleGalleryUpload}
+                                    disabled={isGalleryUploading}
+                                    style={{ display: 'none' }}
+                                />
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Content Blocks */}
+                    <div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '0.8rem', marginBottom: '12px', fontWeight: 500 }}>
+                            <FileText size={14} /> Content Blocks
+                        </label>
+                        <BlockEditor blocks={blocks} onChange={setBlocks} />
                     </div>
                 </div>
 
