@@ -35,7 +35,7 @@ export function Navbar() {
 
     useEffect(() => {
         const checkMobile = () => {
-            setIsMobile(window.innerWidth < 1024)
+            setIsMobile(window.innerWidth < 1200)
         }
         checkMobile()
         window.addEventListener('resize', checkMobile)

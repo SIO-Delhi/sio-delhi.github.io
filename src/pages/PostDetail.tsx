@@ -1118,26 +1118,28 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
 // Leadership-specific layout (profile style)
 function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
     return (
-        <div style={{
-            padding: '40px',
-            borderRadius: '24px',
-            background: isDark
-                ? 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)'
-                : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
-            backdropFilter: 'blur(12px)',
-            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
-            // Enhanced shadow for "gradient under card" effect
-            boxShadow: isDark
-                ? '0 30px 80px -20px rgba(255, 59, 59, 0.15), 0 0 0 1px rgba(255,255,255,0.05)'
-                : '0 20px 40px -10px rgba(0,0,0,0.1)',
-            position: 'relative',
-            zIndex: 1,
-            display: 'flex',
-            flexDirection: 'row',
-            gap: '48px',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap'
-        }}>
+        <div
+            className="leadership-card"
+            style={{
+                padding: '40px',
+                borderRadius: '24px',
+                background: isDark
+                    ? 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)'
+                    : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
+                backdropFilter: 'blur(12px)',
+                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                // Enhanced shadow for "gradient under card" effect
+                boxShadow: isDark
+                    ? '0 30px 80px -20px rgba(255, 59, 59, 0.15), 0 0 0 1px rgba(255,255,255,0.05)'
+                    : '0 20px 40px -10px rgba(0,0,0,0.1)',
+                position: 'relative',
+                zIndex: 1,
+                display: 'flex',
+                flexDirection: 'row',
+                gap: '48px',
+                alignItems: 'flex-start',
+                flexWrap: 'wrap'
+            }}>
             {/* Left Column: Profile */}
             <div style={{
                 flexShrink: 0,
@@ -1147,7 +1149,8 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                 flexDirection: 'column',
                 gap: '24px',
                 alignItems: 'center',
-                textAlign: 'center'
+                textAlign: 'center',
+                margin: '0 auto' // Center on mobile wrap
             }}>
                 {/* Photo */}
                 {post.image && (
@@ -1221,7 +1224,7 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
             </div >
 
             {/* Right Column: Bio Content */}
-            < div style={{ flex: 1, minWidth: '280px', maxWidth: '100%' }}>
+            < div style={{ flex: 1, minWidth: '0', maxWidth: '100%' }}>
                 {
                     post.content && (
                         <div
@@ -1243,6 +1246,24 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                     )
                 }
             </div >
+            <style>{`
+                @media (max-width: 768px) {
+                    .leadership-card {
+                        padding: 24px !important;
+                        gap: 32px !important;
+                    }
+                }
+                @media (max-width: 480px) {
+                    .leadership-card {
+                        padding: 16px !important;
+                        gap: 24px !important;
+                    }
+                    /* Ensure content doesn't get too squished */
+                    .leader-bio {
+                        font-size: 1rem !important;
+                    }
+                }
+            `}</style>
         </div >
     )
 }
