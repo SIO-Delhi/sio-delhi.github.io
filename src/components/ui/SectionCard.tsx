@@ -379,11 +379,11 @@ export function SectionCard({
                 )}
             </div>
 
-            {/* Media Image (Middle Square) */}
+            {/* Media Image */}
             {isMedia && (
                 <div style={{
                     width: '100%',
-                    aspectRatio: '1/1',
+                    aspectRatio: '16/9',
                     background: '#1a1a1a',
                     borderRadius: '8px',
                     overflow: 'hidden',
