@@ -51,7 +51,7 @@ export function MoreSection() {
                     display: 'flex',
                     flexDirection: 'column',
                     // width: '300px', // Removed fixed width for responsiveness
-                    minWidth: '220px',
+                    minWidth: '280px',
                     flex: 1,
                     maxWidth: '360px',
                     height: '260px', // Smaller height
@@ -61,7 +61,7 @@ export function MoreSection() {
                     zIndex: 5,
                     isolation: 'isolate',
                     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                    padding: '32px',
+                    padding: '24px',
                     justifyContent: 'center', // Centered alignment
                     alignItems: 'center', // Center align content items
                     textAlign: 'center', // Center text
@@ -112,17 +112,22 @@ export function MoreSection() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
                     <h3 style={{
                         margin: 0,
-                        fontSize: '1.75rem',
+                        fontSize: '1.5rem',
                         fontWeight: 600,
                         color: '#ffffff',
                         fontFamily: '"Geist", sans-serif',
-                        lineHeight: 1.2
+                        lineHeight: 1.2,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
                     }}>
                         {item.title}
                     </h3>
                     <p style={{
                         margin: 0,
-                        fontSize: '1rem',
+                        fontSize: '0.9rem',
                         color: 'rgba(255,255,255,0.5)',
                         lineHeight: 1.5,
                         display: '-webkit-box',
