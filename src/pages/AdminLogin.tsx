@@ -9,11 +9,35 @@ export function AdminLogin() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'radial-gradient(circle at 50% 100%, rgba(255, 59, 59, 0.2) 0%, #000000 60%)',
+            background: 'radial-gradient(circle at 50% 100%, rgba(220, 38, 38, 0.45) 0%, #000000 75%)',
             backgroundColor: '#000', // Fallback
             fontFamily: '"Geist", sans-serif',
             padding: '20px',
         }}>
+            {/* Custom Styles for Glossy/Glassy Look */}
+            <style>{`
+                .cl-card {
+                    background: rgba(10, 10, 10, 0.5) !important;
+                    backdrop-filter: blur(24px) !important;
+                    border: 1px solid rgba(255,255,255,0.08) !important;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
+                }
+                .cl-headerTitle {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    color: white;
+                }
+                .cl-headerSubtitle {
+                    color: #888;
+                }
+                .cl-footerActionLink {
+                    color: #ff3b3b !important;
+                }
+                .cl-footer {
+                    display: none !important;
+                }
+            `}</style>
+
             <div style={{
                 width: '100%',
                 maxWidth: '430px', // Slightly wider for Clerk card
@@ -33,7 +57,7 @@ export function AdminLogin() {
                         baseTheme: dark,
                         variables: {
                             colorPrimary: '#ff3b3b',
-                            colorBackground: '#0a0a0a',
+                            colorBackground: 'transparent', // Let CSS handle it
                             colorInputBackground: '#111',
                             colorInputText: '#fff',
                             colorText: '#fff',
@@ -41,20 +65,11 @@ export function AdminLogin() {
                             borderRadius: '16px',
                         },
                         elements: {
-                            card: {
-                                border: '1px solid #222',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                                padding: '32px'
-                            },
-                            headerTitle: { fontSize: '1.5rem', fontWeight: 700 }, // Adjust Clerk's title
-                            headerSubtitle: { color: '#888' },
                             formButtonPrimary: {
                                 fontSize: '1rem',
                                 textTransform: 'none',
                                 fontWeight: 600
-                            },
-                            footerActionLink: { color: '#ff3b3b' },
-                            footer: { display: 'none' } // Hide sign up and watermark footer
+                            }
                         }
                     }}
                     forceRedirectUrl="/admin/dashboard"
