@@ -1,10 +1,14 @@
-
 import { Navigate, Outlet } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
 
 export function ProtectedRoute() {
-    const isAuthenticated = sessionStorage.getItem('sio_admin_auth') === 'true'
+    const { isSignedIn, isLoaded } = useAuth()
 
-    if (!isAuthenticated) {
+    if (!isLoaded) {
+        return null // Or a loading spinner
+    }
+
+    if (!isSignedIn) {
         return <Navigate to="/admin/login" replace />
     }
 
