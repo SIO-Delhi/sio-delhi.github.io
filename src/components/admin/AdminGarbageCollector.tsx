@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useContent } from '../../context/ContentContext'
 import { supabase } from '../../lib/supabase'
-import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, FileText, Music, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, FileText, Music, Loader2 } from 'lucide-react'
 
 interface StorageFile {
     name: string
@@ -18,7 +18,7 @@ export function AdminGarbageCollector() {
     const { posts, sections } = useContent()
     const [loading, setLoading] = useState(false)
     const [analyzing, setAnalyzing] = useState(false)
-    const [files, setFiles] = useState<StorageFile[]>([])
+    // const [files, setFiles] = useState<StorageFile[]>([]) // Unused
     const [orphans, setOrphans] = useState<StorageFile[]>([])
     const [selected, setSelected] = useState<Set<string>>(new Set())
     const [deleting, setDeleting] = useState(false)
@@ -72,13 +72,13 @@ export function AdminGarbageCollector() {
             fetchBucketFiles('post-audios')
         ]).then(([images, pdfs, audios]) => {
             const allFiles = [...images, ...pdfs, ...audios]
-            setFiles(allFiles)
+            // setFiles(allFiles)
 
             // 2. Collect all Used URLs from DB
             const usedUrls = new Set<string>()
 
             // Sections
-            sections.forEach(s => {
+            sections.forEach(_s => {
                 // If sections had images/icons, add here. Currently only text/template, but flexible.
             })
 

@@ -890,7 +890,7 @@ const CompositeBlockEditor = ({
     onAlignmentChange?: (alignment: 'left' | 'center' | 'right' | 'justify') => void
 }) => {
     const [isUploading, setIsUploading] = useState(false)
-    const [isFocused, setIsFocused] = useState(false)
+    // const [isFocused, setIsFocused] = useState(false)
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
     const [pendingFile, setPendingFile] = useState<File | null>(null)
     const currentLayout = layout || 'image-left'
@@ -916,8 +916,8 @@ const CompositeBlockEditor = ({
                 class: 'prose prose-invert max-w-none focus:outline-none',
             },
         },
-        onFocus: () => setIsFocused(true),
-        onBlur: () => setIsFocused(false),
+        // onFocus: () => setIsFocused(true),
+        // onBlur: () => setIsFocused(false),
     })
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
