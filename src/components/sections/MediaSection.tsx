@@ -32,7 +32,6 @@ export function MediaSection() {
         <SectionLayout
             id="media"
             header={headerContent}
-            subtitle="Stay updated with our latest news and media coverage"
         >
             {hasContent ? (
                 cards.map((card) => (
