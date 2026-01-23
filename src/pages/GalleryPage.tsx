@@ -35,8 +35,8 @@ function LazyImage({ src, alt, onClick, isDark }: { src: string; alt: string; on
             onClick={onClick}
             style={{
                 minHeight: isLoaded ? 'auto' : '200px',
-                background: isDark 
-                    ? 'linear-gradient(135deg, rgba(255,59,59,0.08), rgba(40,40,40,0.5))' 
+                background: isDark
+                    ? 'linear-gradient(135deg, rgba(255,59,59,0.08), rgba(40,40,40,0.5))'
                     : 'linear-gradient(135deg, rgba(255,59,59,0.05), rgba(200,200,200,0.3))'
             }}
         >
@@ -77,6 +77,42 @@ function LazyImage({ src, alt, onClick, isDark }: { src: string; alt: string; on
 // Lightbox component with loading state
 function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
     const [isLoaded, setIsLoaded] = useState(false)
+    const [isDownloading, setIsDownloading] = useState(false)
+
+    // Download image directly without redirecting
+    const handleDownload = async (e: React.MouseEvent) => {
+        e.stopPropagation()
+        setIsDownloading(true)
+
+        try {
+            // Fetch the image as blob
+            const response = await fetch(src)
+            const blob = await response.blob()
+
+            // Create a temporary URL for the blob
+            const blobUrl = URL.createObjectURL(blob)
+
+            // Create a hidden anchor element and trigger download
+            const link = document.createElement('a')
+            link.href = blobUrl
+            // Extract filename from URL or use default
+            const urlParts = src.split('/')
+            const filename = urlParts[urlParts.length - 1].split('?')[0] || 'gallery-image.jpg'
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+
+            // Clean up the blob URL
+            URL.revokeObjectURL(blobUrl)
+        } catch (error) {
+            console.error('Download failed:', error)
+            // Fallback: open in new tab
+            window.open(src, '_blank')
+        } finally {
+            setIsDownloading(false)
+        }
+    }
 
     return (
         <div
@@ -86,9 +122,11 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
                 zIndex: 1001,
                 background: 'rgba(0,0,0,0.95)',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '20px'
+                padding: '20px',
+                gap: '16px'
             }}
             onClick={onClose}
             onContextMenu={(e) => e.preventDefault()}
@@ -116,7 +154,7 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
             >
                 <X size={24} />
             </button>
-            
+
             {/* Loading spinner */}
             {!isLoaded && (
                 <div style={{
@@ -130,7 +168,7 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
                     <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>Loading full image...</span>
                 </div>
             )}
-            
+
             <img
                 src={src}
                 alt="Full size"
@@ -139,7 +177,7 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
                 onContextMenu={(e) => e.preventDefault()}
                 style={{
                     maxWidth: '95vw',
-                    maxHeight: '90vh',
+                    maxHeight: '80vh',
                     objectFit: 'contain',
                     borderRadius: '8px',
                     boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
@@ -150,6 +188,52 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
                 }}
                 onClick={(e) => e.stopPropagation()}
             />
+
+            {/* Download Button - Sleek Glassy Design */}
+            {isLoaded && (
+                <button
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '10px 18px',
+                        background: 'rgba(255,255,255,0.1)',
+                        backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '8px',
+                        color: 'rgba(255,255,255,0.9)',
+                        fontSize: '0.85rem',
+                        fontWeight: 500,
+                        cursor: isDownloading ? 'wait' : 'pointer',
+                        transition: 'all 0.2s ease',
+                        opacity: isDownloading ? 0.6 : 1
+                    }}
+                    onMouseEnter={e => {
+                        if (!isDownloading) {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.18)'
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'
+                        }
+                    }}
+                    onMouseLeave={e => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+                    }}
+                >
+                    {isDownloading ? (
+                        <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                    )}
+                    {isDownloading ? 'Downloading...' : 'Download'}
+                </button>
+            )}
         </div>
     )
 }
@@ -160,7 +244,7 @@ export function GalleryPage() {
     const { getPostById, loading } = useContent()
     const navigate = useNavigate()
     const location = useLocation()
-    
+
     const post = id ? getPostById(id) : undefined
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
@@ -265,9 +349,9 @@ export function GalleryPage() {
             color: isDark ? 'white' : 'black'
         }}>
             {/* Simple Title */}
-            <div style={{ 
-                maxWidth: '1400px', 
-                margin: '0 auto', 
+            <div style={{
+                maxWidth: '1400px',
+                margin: '0 auto',
                 padding: '0 24px 32px',
                 display: 'flex',
                 alignItems: 'center',
@@ -294,10 +378,10 @@ export function GalleryPage() {
                     >
                         <ArrowLeft size={20} />
                     </Link>
-                    <h1 style={{ 
-                        fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', 
-                        fontWeight: 700, 
-                        margin: 0 
+                    <h1 style={{
+                        fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+                        fontWeight: 700,
+                        margin: 0
                     }}>
                         {post.title || 'Event'} <span style={{ color: '#ff3b3b' }}>Gallery</span>
                     </h1>
@@ -330,9 +414,9 @@ export function GalleryPage() {
 
             {/* Lightbox */}
             {selectedImage && (
-                <LightboxImage 
-                    src={selectedImage} 
-                    onClose={() => setSelectedImage(null)} 
+                <LightboxImage
+                    src={selectedImage}
+                    onClose={() => setSelectedImage(null)}
                 />
             )}
 
