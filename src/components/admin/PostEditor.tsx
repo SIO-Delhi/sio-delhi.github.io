@@ -10,7 +10,7 @@ import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 
-import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
+import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Facebook, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
@@ -782,18 +782,91 @@ const VideoBlockEditor = ({
     onSubtitleChange?: (val: string) => void,
     onTextChange?: (val: string) => void
 }) => {
+    // Detect platform from URL
+    const detectPlatform = (link: string): 'youtube' | 'vimeo' | 'instagram' | 'facebook' | 'unknown' => {
+        if (!link) return 'unknown'
+        if (link.includes('youtube.com') || link.includes('youtu.be')) return 'youtube'
+        if (link.includes('vimeo.com')) return 'vimeo'
+        if (link.includes('instagram.com')) return 'instagram'
+        if (link.includes('facebook.com') || link.includes('fb.watch')) return 'facebook'
+        return 'unknown'
+    }
+
+    const platform = detectPlatform(url)
+
+    // Convert URLs to embed format
+    const getEmbedUrl = (link: string): string => {
+        if (!link) return ''
+
+        // YouTube
+        if (link.includes('youtube.com/watch')) {
+            return link.replace('watch?v=', 'embed/').split('&')[0]
+        }
+        if (link.includes('youtu.be/')) {
+            const videoId = link.split('youtu.be/')[1]?.split('?')[0]
+            return `https://www.youtube.com/embed/${videoId}`
+        }
+
+        // Vimeo
+        if (link.includes('vimeo.com/')) {
+            const videoId = link.split('vimeo.com/')[1]?.split('?')[0]
+            return `https://player.vimeo.com/video/${videoId}`
+        }
+
+        // Instagram (posts, reels)
+        if (link.includes('instagram.com/')) {
+            // Extract post ID from various Instagram URL formats
+            const match = link.match(/instagram\.com\/(?:p|reel|reels)\/([a-zA-Z0-9_-]+)/)
+            if (match) {
+                return `https://www.instagram.com/p/${match[1]}/embed`
+            }
+        }
+
+        // Facebook videos/reels
+        if (link.includes('facebook.com/') || link.includes('fb.watch')) {
+            // Facebook requires special encoding for embed
+            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(link)}&show_text=false`
+        }
+
+        return link
+    }
+
+    const platformInfo: Record<string, { icon: React.ReactNode, color: string, label: string }> = {
+        youtube: { icon: <Volume2 size={24} />, color: '#ff0000', label: 'YouTube' },
+        vimeo: { icon: <Volume2 size={24} />, color: '#1ab7ea', label: 'Vimeo' },
+        instagram: { icon: <Instagram size={24} />, color: '#E4405F', label: 'Instagram' },
+        facebook: { icon: <Facebook size={24} />, color: '#1877F2', label: 'Facebook' },
+        unknown: { icon: <Volume2 size={24} />, color: '#ff3b3b', label: 'Video/Social' }
+    }
+
+    const currentPlatform = platformInfo[platform] || platformInfo.unknown
+
     return (
         <div style={{ background: '#111', borderRadius: '12px', padding: '16px', border: '1px solid #333' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <Volume2 size={24} color="#ff3b3b" />
-                <span style={{ fontSize: '1rem', fontWeight: 600, color: '#eee' }}>Video Embed</span>
+                <span style={{ color: currentPlatform.color }}>{currentPlatform.icon}</span>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: '#eee' }}>
+                    {currentPlatform.label} Embed
+                </span>
+                {url && platform !== 'unknown' && (
+                    <span style={{
+                        fontSize: '0.75rem',
+                        padding: '2px 8px',
+                        background: `${currentPlatform.color}20`,
+                        color: currentPlatform.color,
+                        borderRadius: '4px',
+                        fontWeight: 600
+                    }}>
+                        {platform.toUpperCase()}
+                    </span>
+                )}
             </div>
 
             <input
                 type="text"
                 value={url}
                 onChange={(e) => onChange(e.target.value)}
-                placeholder="Paste YouTube or Vimeo link here..."
+                placeholder="Paste YouTube, Vimeo, Instagram, or Facebook link..."
                 style={{
                     width: '100%',
                     padding: '12px',
@@ -806,18 +879,30 @@ const VideoBlockEditor = ({
                 }}
             />
 
+            {/* Platform hints */}
+            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <span>Supports:</span>
+                <span style={{ color: '#ff0000' }}>YouTube</span>
+                <span>•</span>
+                <span style={{ color: '#1ab7ea' }}>Vimeo</span>
+                <span>•</span>
+                <span style={{ color: '#E4405F' }}>Instagram Posts/Reels</span>
+                <span>•</span>
+                <span style={{ color: '#1877F2' }}>Facebook Videos</span>
+            </div>
+
             <input
                 type="text"
                 value={subtitle || ''}
                 onChange={(e) => onSubtitleChange?.(e.target.value)}
-                placeholder="Video Title (Optional)"
+                placeholder="Title (Optional)"
                 style={{
                     width: '100%',
                     padding: '8px 12px',
                     background: 'transparent',
                     borderBottom: '1px solid #333',
                     borderTop: 'none', borderLeft: 'none', borderRight: 'none',
-                    color: '#ff8080',
+                    color: currentPlatform.color,
                     fontSize: '1rem',
                     fontWeight: 600,
                     marginBottom: '8px',
@@ -844,18 +929,34 @@ const VideoBlockEditor = ({
             />
 
             {url && (
-                <div style={{ marginTop: '16px', borderRadius: '8px', overflow: 'hidden', position: 'relative', paddingTop: '56.25%', background: '#000' }}>
+                <div style={{
+                    marginTop: '16px',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    paddingTop: platform === 'instagram' ? '125%' : '56.25%', // Instagram is taller
+                    background: '#000'
+                }}>
                     <iframe
-                        src={url.replace('watch?v=', 'embed/').split('&')[0]}
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                        src={getEmbedUrl(url)}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            border: 'none'
+                        }}
                         allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
+                        loading="lazy"
                     />
                 </div>
             )}
         </div>
     )
 }
+
 
 // --- Composite Block Editor: Image + Text with Layout Options ---
 const CompositeBlockEditor = ({

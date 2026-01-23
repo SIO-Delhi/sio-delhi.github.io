@@ -88,13 +88,16 @@ export function AdminGarbageCollector() {
                 if (p.pdfUrl) usedUrls.add(p.pdfUrl)
                 if (p.icon) usedUrls.add(p.icon) // if icon is a URL (some implementations use icon name, some might use custom upload)
 
+                // Gallery images - critical for orphan detection!
+                if (p.galleryImages && p.galleryImages.length > 0) {
+                    p.galleryImages.forEach(url => usedUrls.add(url))
+                }
+
                 // Content (HTML)
                 if (p.content) {
                     const contentUrls = extractUrlsFromHtml(p.content)
                     contentUrls.forEach(u => usedUrls.add(u))
                 }
-
-                // Check potentially other fields if schema evolves (e.g. carousel images encoded in content or separate field)
             })
 
             // 3. Find Orphans
