@@ -52,6 +52,7 @@ export function Navbar() {
                         if (activeSection !== section) {
                             setActiveSection(section)
                             // Update URL hash using replaceState to avoid history stack pollution or router triggers
+                            // Only use section ID, strip any cardId portion since user has scrolled
                             if (window.history.replaceState) {
                                 window.history.replaceState(null, '', `#${section === 'home' ? '' : section}`)
                             }

@@ -20,6 +20,7 @@ interface SectionCardProps {
     icon?: string
     width?: string
     variant?: 'default' | 'media' | 'leadership' | 'resource' | 'standard' // 'standard' alias for default
+    cardId?: string // Used for DOM ID to enable scroll restoration
 }
 
 // Helper to get the first image URL from an image field
@@ -47,7 +48,8 @@ export function SectionCard({
     image,
     icon,
     width,
-    variant = 'default'
+    variant = 'default',
+    cardId
 }: SectionCardProps) {
     const cardRef = useRef<HTMLDivElement>(null)
 
@@ -75,6 +77,7 @@ export function SectionCard({
         return (
             <div
                 ref={cardRef}
+                id={cardId}
                 className={`section-card-shine ${className || ''}`}
                 data-cursor="view"
                 onClick={onClick}
@@ -191,6 +194,7 @@ export function SectionCard({
         return (
             <div
                 ref={cardRef}
+                id={cardId}
                 className={`section-card-shine ${className || ''}`}
                 data-cursor="view"
                 onClick={onClick}
@@ -300,6 +304,7 @@ export function SectionCard({
     return (
         <div
             ref={cardRef}
+            id={cardId}
             className={`${className || ''} section-card-shine cursor-view`}
             data-cursor="view"
             onClick={onClick}

@@ -1340,7 +1340,23 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any;
                 }
             </div >
             <style>{`
-                @media (max-width: 768px) {
+                /* Force single-column stacking on mobile/small screens */
+                @media (max-width: 640px) {
+                    .leadership-card {
+                        flex-direction: column !important;
+                        padding: 24px !important;
+                        gap: 32px !important;
+                        align-items: center !important;
+                    }
+                    .leadership-card > div:first-child {
+                        max-width: 100% !important;
+                        width: 100% !important;
+                    }
+                    .leadership-card > div:last-child {
+                        width: 100% !important;
+                    }
+                }
+                @media (max-width: 768px) and (min-width: 641px) {
                     .leadership-card {
                         padding: 24px !important;
                         gap: 32px !important;

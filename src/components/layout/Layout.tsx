@@ -76,18 +76,48 @@ export function Layout({ children }: LayoutProps) {
             const hash = location.hash
             if (!hash) return
 
-            const targetId = hash.replace('#', '')
+            // Parse composed hash format: #section:cardId or #section
+            const hashContent = hash.replace('#', '')
+            const [sectionId, cardId] = hashContent.includes(':')
+                ? hashContent.split(':')
+                : [hashContent, null]
+
+            // Target the card element if present, otherwise fallback to section
+            const targetId = cardId ? `card-${cardId}` : sectionId
             const offset = -100
 
             // Helper to find and scroll to element
             const attemptScroll = () => {
-                const targetElement = document.getElementById(targetId)
+                let targetElement = document.getElementById(targetId)
+
+                // If card not found, fallback to section
+                if (!targetElement && cardId) {
+                    targetElement = document.getElementById(sectionId)
+                }
+
                 if (targetElement) {
                     const lenis = (window as any).lenis
                     if (lenis) {
                         // Force resize to ensure Lenis knows the new page height
                         lenis.resize()
-                        lenis.scrollTo(targetElement, { offset, immediate: false })
+
+                        // If we found the actual card element (not section fallback),
+                        // scroll it into view horizontally within its container first
+                        if (cardId && targetElement.id === targetId) {
+                            // Scroll horizontally within the container
+                            targetElement.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'nearest',  // Don't change vertical position yet
+                                inline: 'center'   // Center horizontally in viewport
+                            })
+                            // Then use Lenis for smooth vertical scroll with offset
+                            setTimeout(() => {
+                                lenis.scrollTo(targetElement, { offset, immediate: false })
+                            }, 150)
+                        } else {
+                            // Section-only scroll
+                            lenis.scrollTo(targetElement, { offset, immediate: false })
+                        }
                         return true
                     }
                     return false
