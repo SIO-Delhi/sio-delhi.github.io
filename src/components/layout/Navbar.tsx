@@ -433,6 +433,35 @@ export function Navbar() {
                                         </a>
                                     </div>
 
+                                    {/* Support Us Button */}
+                                    <div className="shiny-button-container" style={{ width: '100%' }}>
+                                        <button
+                                            onClick={() => {
+                                                setIsOpen(false)
+                                                setShowDonation(true)
+                                            }}
+                                            className="shiny-button"
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                padding: '14px 24px',
+                                                borderRadius: '12px',
+                                                color: '#ff3b3b',
+                                                fontSize: '16px',
+                                                fontWeight: 500,
+                                                transition: 'all 0.3s ease',
+                                                cursor: 'pointer',
+                                                width: '100%',
+                                                textAlign: 'center',
+                                                border: 'none',
+                                                background: 'inherit'
+                                            }}
+                                        >
+                                            Support Us
+                                        </button>
+                                    </div>
+
                                 </div>
                             </ul>
                         </div>
