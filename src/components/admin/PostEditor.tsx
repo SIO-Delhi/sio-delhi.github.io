@@ -1656,13 +1656,52 @@ export function PostEditor() {
                 const imagesAttr = block.carouselImages && block.carouselImages.length > 0 ? ` data-images='${JSON.stringify(block.carouselImages)}'` : ''
                 finalContent += `<div class="siodel-block block-composite"${layoutAttr}${imageAttr}${textAttr}${subtitleAttr}${subtitleColorAttr}${alignAttr}${imagesAttr}></div>`
             } else if (block.type === 'video' && block.content) {
-                const embedUrl = block.content.replace('watch?v=', 'embed/').split('&')[0]
+                // Convert URL to embed format for all platforms
+                const getEmbedUrl = (link: string): string => {
+                    if (!link) return ''
+
+                    // YouTube
+                    if (link.includes('youtube.com/watch')) {
+                        return link.replace('watch?v=', 'embed/').split('&')[0]
+                    }
+                    if (link.includes('youtu.be/')) {
+                        const videoId = link.split('youtu.be/')[1]?.split('?')[0]
+                        return `https://www.youtube.com/embed/${videoId}`
+                    }
+
+                    // Vimeo
+                    if (link.includes('vimeo.com/')) {
+                        const videoId = link.split('vimeo.com/')[1]?.split('?')[0]
+                        return `https://player.vimeo.com/video/${videoId}`
+                    }
+
+                    // Instagram (posts, reels)
+                    if (link.includes('instagram.com/')) {
+                        const match = link.match(/instagram\.com\/(?:p|reel|reels)\/([a-zA-Z0-9_-]+)/)
+                        if (match) {
+                            return `https://www.instagram.com/p/${match[1]}/embed`
+                        }
+                    }
+
+                    // Facebook videos/reels
+                    if (link.includes('facebook.com/') || link.includes('fb.watch')) {
+                        return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(link)}&show_text=false`
+                    }
+
+                    return link
+                }
+
+                // Detect platform for aspect ratio
+                const isInstagram = block.content.includes('instagram.com')
+                const aspectRatio = isInstagram ? '125%' : '56.25%' // Instagram is taller
+
+                const embedUrl = getEmbedUrl(block.content)
                 const subtitleAttr = block.subtitle ? ` data-subtitle="${encodeURIComponent(block.subtitle)}"` : ''
                 const textAttr = block.textContent ? ` data-text-content="${encodeURIComponent(block.textContent)}"` : ''
 
                 let innerContent = ''
                 if (block.subtitle) innerContent += `<h3 style="margin: 0 0 12px 0; color: #ff3b3b; font-size: 1.1rem; font-weight: 600;">${block.subtitle}</h3>`
-                innerContent += `<div style="border-radius: 12px; overflow: hidden; position: relative; width: 100%; height: 0; padding-bottom: 56.25%; background: #000;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+                innerContent += `<div style="border-radius: 12px; overflow: hidden; position: relative; width: 100%; height: 0; padding-bottom: ${aspectRatio}; background: #000;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
                 if (block.textContent) innerContent += `<p style="margin: 16px 0 0 0; color: rgba(255,255,255,0.8); font-size: 0.95rem; line-height: 1.6;">${block.textContent}</p>`
 
                 finalContent += `<div class="siodel-block block-video"${subtitleAttr}${textAttr} style="margin: 32px 0; padding: 20px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 6px rgba(0,0,0,0.1);">${innerContent}</div>`

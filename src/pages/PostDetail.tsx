@@ -31,6 +31,10 @@ interface ParsedBlock {
 
 // Memoized Video Block to prevent re-renders (looping/refreshing issues)
 const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: { src: string, subtitle?: string, subtitleColor?: string, text?: string, isDark: boolean }) => {
+    // Detect platform from embed URL for proper aspect ratio
+    const isInstagram = src.includes('instagram.com')
+    const aspectRatio = isInstagram ? '125%' : '56.25%' // Instagram posts/reels are taller
+
     return (
         <div style={{
             margin: '32px 0',
@@ -62,7 +66,7 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
                 position: 'relative',
                 width: '100%',
                 height: 0,
-                paddingBottom: '56.25%',
+                paddingBottom: aspectRatio,
                 background: '#000',
                 marginBottom: text ? '16px' : '0'
             }}>
@@ -71,6 +75,7 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
                     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
+                    loading="lazy"
                 />
             </div>
 
@@ -87,6 +92,7 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
         </div>
     )
 })
+
 
 // Self-contained Carousel Component via props
 const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { images: string[], containerStyle?: any, imageStyle?: any }) => {
