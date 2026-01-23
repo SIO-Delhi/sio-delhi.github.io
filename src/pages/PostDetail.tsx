@@ -34,7 +34,6 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
     // Detect platform from embed URL
     const isInstagram = src.includes('instagram.com')
     const isFacebook = src.includes('facebook.com')
-    const isYouTubeOrVimeo = src.includes('youtube.com') || src.includes('vimeo.com') || src.includes('youtu.be')
 
     // Load Instagram embed script when needed
     useEffect(() => {
