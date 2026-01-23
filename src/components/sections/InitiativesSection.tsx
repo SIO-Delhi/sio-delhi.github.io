@@ -37,13 +37,17 @@ export function InitiativesSection() {
                 cards.map((card) => (
                     <SectionCard
                         key={card.id}
+                        cardId={`card-${card.id}`}
                         {...card}
                         label="INITIATIVES"
                         labelColor="#FF3333"
                         description={card.subtitle || card.content.replace(/<[^>]+>/g, '').substring(0, 100)}
                         publishedDate={(card as any).publishedDate || card.createdAt}
                         image={(card as any).coverImage || card.image}
-                        onClick={() => navigate(`/initiative/${card.id}`, { state: { post: card } })}
+                        onClick={() => {
+                            window.history.replaceState(null, '', `#initiatives:${card.id}`)
+                            navigate(`/initiative/${card.id}`, { state: { post: card } })
+                        }}
                     />
                 ))
             ) : (

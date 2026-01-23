@@ -52,6 +52,7 @@ export function GenericSection({ sectionId, title, label, template }: GenericSec
                 cards.map((card) => (
                     <SectionCard
                         key={card.id}
+                        cardId={`card-${card.id}`}
                         {...card}
                         label={label}
                         labelColor="#FF3333"
@@ -60,7 +61,10 @@ export function GenericSection({ sectionId, title, label, template }: GenericSec
                         image={(card as any).coverImage || card.image}
                         icon={card.icon}
                         variant={template || 'default'}
-                        onClick={() => navigate(`/section/${sectionId}/${card.id}`, { state: { post: card } })}
+                        onClick={() => {
+                            window.history.replaceState(null, '', `#${sectionId}:${card.id}`)
+                            navigate(`/section/${sectionId}/${card.id}`, { state: { post: card } })
+                        }}
                     />
                 ))
             ) : (

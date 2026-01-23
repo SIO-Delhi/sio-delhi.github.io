@@ -37,13 +37,18 @@ export function AboutSection() {
                 cards.map((card) => (
                     <SectionCard
                         key={card.id}
+                        cardId={`card-${card.id}`}
                         {...card}
                         label="About Us"
                         labelColor="#FF3333"
                         description={card.subtitle || card.content.replace(/<[^>]+>/g, '').substring(0, 100)}
                         publishedDate={(card as any).publishedDate || card.createdAt}
                         image={(card as any).coverImage || card.image}
-                        onClick={() => navigate(`/about-us/${card.id}`, { state: { post: card } })}
+                        onClick={() => {
+                            // Update hash with section:cardId for scroll restoration
+                            window.history.replaceState(null, '', `#about:${card.id}`)
+                            navigate(`/about-us/${card.id}`, { state: { post: card } })
+                        }}
                     />
                 ))
             ) : (
