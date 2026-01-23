@@ -31,9 +31,127 @@ interface ParsedBlock {
 
 // Memoized Video Block to prevent re-renders (looping/refreshing issues)
 const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: { src: string, subtitle?: string, subtitleColor?: string, text?: string, isDark: boolean }) => {
-    // Detect platform from embed URL for proper aspect ratio
+    // Detect platform from embed URL
     const isInstagram = src.includes('instagram.com')
-    const aspectRatio = isInstagram ? '125%' : '56.25%' // Instagram posts/reels are taller
+    const isFacebook = src.includes('facebook.com')
+    const isYouTubeOrVimeo = src.includes('youtube.com') || src.includes('vimeo.com') || src.includes('youtu.be')
+
+    // Load Instagram embed script when needed
+    useEffect(() => {
+        if (isInstagram) {
+            // Load Instagram embed.js if not already loaded
+            if (!document.querySelector('script[src*="instagram.com/embed.js"]')) {
+                const script = document.createElement('script')
+                script.src = 'https://www.instagram.com/embed.js'
+                script.async = true
+                document.body.appendChild(script)
+            } else {
+                // Re-process embeds if script already exists
+                // @ts-ignore
+                if (window.instgrm?.Embeds?.process) {
+                    // @ts-ignore
+                    window.instgrm.Embeds.process()
+                }
+            }
+        }
+
+        if (isFacebook) {
+            // Load Facebook SDK if not already loaded
+            if (!document.querySelector('script[src*="connect.facebook.net"]')) {
+                const script = document.createElement('script')
+                script.src = 'https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v18.0'
+                script.async = true
+                script.defer = true
+                script.crossOrigin = 'anonymous'
+                document.body.appendChild(script)
+            } else {
+                // Re-parse FB embeds
+                // @ts-ignore
+                if (window.FB?.XFBML?.parse) {
+                    // @ts-ignore
+                    window.FB.XFBML.parse()
+                }
+            }
+        }
+    }, [isInstagram, isFacebook, src])
+
+    // For Instagram - extract post ID and use blockquote embed
+    const getInstagramPostId = (url: string) => {
+        const match = url.match(/instagram\.com\/(?:p|reel|reels)\/([a-zA-Z0-9_-]+)/)
+        return match ? match[1] : null
+    }
+
+    // Render different content based on platform
+    const renderEmbed = () => {
+        if (isInstagram) {
+            const postId = getInstagramPostId(src)
+            if (postId) {
+                return (
+                    <div
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            minHeight: '450px'
+                        }}
+                        dangerouslySetInnerHTML={{
+                            __html: `
+                                <blockquote 
+                                    class="instagram-media" 
+                                    data-instgrm-permalink="https://www.instagram.com/p/${postId}/"
+                                    data-instgrm-version="14"
+                                    style="background:#FFF; border:0; border-radius:12px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 0 auto; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);">
+                                </blockquote>
+                            `
+                        }}
+                    />
+                )
+            }
+        }
+
+        if (isFacebook) {
+            // Decode the URL from the plugins/video.php format
+            const decodedUrl = decodeURIComponent(src.replace('https://www.facebook.com/plugins/video.php?href=', '').split('&')[0])
+            return (
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        minHeight: '300px'
+                    }}
+                    dangerouslySetInnerHTML={{
+                        __html: `
+                            <div class="fb-video" 
+                                data-href="${decodedUrl}" 
+                                data-width="500" 
+                                data-show-text="false">
+                            </div>
+                        `
+                    }}
+                />
+            )
+        }
+
+        // YouTube, Vimeo, and other iframes
+        return (
+            <div style={{
+                borderRadius: '12px',
+                overflow: 'hidden',
+                position: 'relative',
+                width: '100%',
+                height: 0,
+                paddingBottom: '56.25%',
+                background: '#000'
+            }}>
+                <iframe
+                    src={src}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    loading="lazy"
+                />
+            </div>
+        )
+    }
 
     return (
         <div style={{
@@ -60,23 +178,8 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
                 </h3>
             )}
 
-            <div style={{
-                borderRadius: '12px',
-                overflow: 'hidden',
-                position: 'relative',
-                width: '100%',
-                height: 0,
-                paddingBottom: aspectRatio,
-                background: '#000',
-                marginBottom: text ? '16px' : '0'
-            }}>
-                <iframe
-                    src={src}
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    loading="lazy"
-                />
+            <div style={{ marginBottom: text ? '16px' : '0' }}>
+                {renderEmbed()}
             </div>
 
             {text && (
