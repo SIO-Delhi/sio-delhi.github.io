@@ -46,3 +46,11 @@ export interface Leader {
     image: string
     bio?: string
 }
+
+export interface Popup {
+    id: string
+    image: string
+    isActive: boolean
+    createdAt: number
+    updatedAt: number
+}

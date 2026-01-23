@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { ReactNode } from 'react'
-import type { Post, Section } from '../types/content'
+import type { Post, Section, Popup } from '../types/content'
 import { supabase } from '../lib/supabase'
 
 
@@ -25,6 +25,11 @@ interface ContentContextType {
     // UI Actions
     showDonation: boolean
     setShowDonation: (show: boolean) => void
+    // Popup Actions
+    popup: Popup | null
+    fetchPopup: () => Promise<void>
+    savePopup: (image: string, isActive: boolean) => Promise<void>
+    deletePopup: () => Promise<void>
 }
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined)
@@ -35,6 +40,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showDonation, setShowDonation] = useState(false) // Donation Modal State
+    const [popup, setPopup] = useState<Popup | null>(null) // Popup State
 
     // Fetch Sections from Supabase
     const fetchSections = useCallback(async () => {
@@ -144,6 +150,97 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         }
     }
 
+    // Fetch Popup from Supabase
+    const fetchPopup = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('popups')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(1)
+
+            if (error) {
+                console.error('Error fetching popup:', error)
+                setPopup(null)
+                return
+            }
+
+            // Check if we got any results
+            if (!data || data.length === 0) {
+                setPopup(null)
+                return
+            }
+
+            const row = data[0]
+            setPopup({
+                id: row.id,
+                image: row.image,
+                isActive: row.is_active,
+                createdAt: new Date(row.created_at).getTime(),
+                updatedAt: new Date(row.updated_at).getTime()
+            })
+        } catch (err) {
+            console.error('Error fetching popup:', err)
+            setPopup(null)
+        }
+    }, [])
+
+    const savePopup = async (image: string, isActive: boolean) => {
+        try {
+            // Check if popup exists
+            const { data: existingData } = await supabase
+                .from('popups')
+                .select('id')
+                .limit(1)
+
+            const existing = existingData && existingData.length > 0 ? existingData[0] : null
+
+            if (existing) {
+                // Update existing
+                const { error } = await supabase
+                    .from('popups')
+                    .update({
+                        image,
+                        is_active: isActive,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', existing.id)
+
+                if (error) throw error
+            } else {
+                // Insert new
+                const { error } = await supabase
+                    .from('popups')
+                    .insert({
+                        image,
+                        is_active: isActive
+                    })
+
+                if (error) throw error
+            }
+
+            await fetchPopup()
+        } catch (err) {
+            console.error('Error saving popup:', err)
+            throw err
+        }
+    }
+
+    const deletePopup = async () => {
+        try {
+            const { error } = await supabase
+                .from('popups')
+                .delete()
+                .neq('id', '') // Delete all popups
+
+            if (error) throw error
+            setPopup(null)
+        } catch (err) {
+            console.error('Error deleting popup:', err)
+            throw err
+        }
+    }
+
     // Fetch posts from Supabase
     const fetchPosts = useCallback(async () => {
         setLoading(prev => prev && true) // partial loading
@@ -194,11 +291,11 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         // Run both
         const load = async () => {
             setLoading(true)
-            await Promise.all([fetchSections(), fetchPosts()])
+            await Promise.all([fetchSections(), fetchPosts(), fetchPopup()])
             setLoading(false)
         }
         load()
-    }, [fetchSections, fetchPosts])
+    }, [fetchSections, fetchPosts, fetchPopup])
 
     const getPostsBySection = (sectionId: string) => {
         // Only return top-level posts (no parent) for section view
@@ -355,7 +452,11 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             updateSection,
             deleteSection,
             showDonation,
-            setShowDonation
+            setShowDonation,
+            popup,
+            fetchPopup,
+            savePopup,
+            deletePopup
         }}>
             {children}
         </ContentContext.Provider>
