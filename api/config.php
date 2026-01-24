@@ -34,8 +34,8 @@ define('DB_USER', env('DB_USER', 'siodelhi_adnan'));
 define('DB_PASS', env('DB_PASS', ''));
 
 // Upload Configuration
-define('UPLOAD_DIR', __DIR__ . '/../uploads/');
-define('BASE_URL', env('BASE_URL', 'https://siodelhi.org'));
+define('UPLOAD_DIR', __DIR__ . '/uploads/');
+define('BASE_URL', env('BASE_URL', 'https://api.siodelhi.org'));
 
 // CORS - Your GitHub Pages URL
 define('CORS_ORIGIN', env('CORS_ORIGIN', 'https://sio-delhi.github.io'));

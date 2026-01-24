@@ -38,6 +38,28 @@ export function AdminGarbageCollector() {
         while ((match = hrefRegex.exec(html)) !== null) {
             urls.push(match[1])
         }
+        // Match data-images='[...]' (composite block carousel images)
+        const dataImagesRegex = /data-images='([^']+)'/g
+        while ((match = dataImagesRegex.exec(html)) !== null) {
+            try {
+                const parsed = JSON.parse(match[1])
+                if (Array.isArray(parsed)) {
+                    parsed.forEach(url => urls.push(url))
+                }
+            } catch { /* ignore parse errors */ }
+        }
+        // Match data-image-url="..." (composite block main image - URL encoded)
+        const dataImageUrlRegex = /data-image-url=["']([^"']+)["']/g
+        while ((match = dataImageUrlRegex.exec(html)) !== null) {
+            try {
+                urls.push(decodeURIComponent(match[1]))
+            } catch { urls.push(match[1]) }
+        }
+        // Match data-pdf-url="..." (PDF blocks)
+        const dataPdfUrlRegex = /data-pdf-url=["']([^"']+)["']/g
+        while ((match = dataPdfUrlRegex.exec(html)) !== null) {
+            urls.push(match[1])
+        }
         return urls
     }
 

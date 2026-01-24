@@ -80,6 +80,11 @@ $routes = [
     'POST /upload/pdf' => 'routes/upload.php@uploadPdf',
     'POST /upload/audio' => 'routes/upload.php@uploadAudio',
     'DELETE /upload/([^/]+)/([^/]+)' => 'routes/upload.php@deleteFile',
+
+    // Stats
+    'GET /stats' => 'routes/stats.php@getAllStats',
+    'GET /stats/storage' => 'routes/stats.php@getStorageStats',
+    'GET /stats/database' => 'routes/stats.php@getDatabaseStats',
 ];
 
 // Find matching route
