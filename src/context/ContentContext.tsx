@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { ReactNode } from 'react'
-import type { Post, Section, Popup } from '../types/content'
+import type { Post, Section, Popup, SectionTemplate } from '../types/content'
 import { api } from '../lib/api'
 
 
@@ -67,7 +67,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             display_order: row.displayOrder ?? 0,
             is_published: row.isPublished ?? true,
             type: (row.type || 'generic') as 'custom' | 'generic',
-            template: row.template // Map template from API
+            template: row.template as SectionTemplate | undefined
         }))
         setSections(mapped)
     }, [])
