@@ -225,13 +225,13 @@ export function SectionCard({
                     position: 'relative'
                 }}
                 onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#ff3b3b'
+                    e.currentTarget.style.borderColor = '#ff3333'
                     e.currentTarget.style.transform = 'translateY(-4px)'
-                    e.currentTarget.style.boxShadow = '0 16px 48px rgba(255, 59, 59, 0.15)'
+                    e.currentTarget.style.boxShadow = '0 16px 48px rgba(255, 51, 51, 0.15)'
                     e.currentTarget.style.zIndex = '10'
                 }}
                 onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(255, 59, 59, 0.1)'
+                    e.currentTarget.style.borderColor = 'rgba(255, 51, 51, 0.1)'
                     e.currentTarget.style.transform = 'translateY(0)'
                     e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)'
                     e.currentTarget.style.zIndex = '5'
@@ -239,7 +239,7 @@ export function SectionCard({
             >
                 {/* Icon or Logo */}
                 <div style={{
-                    color: '#ff3b3b',
+                    color: '#ff3333',
                     marginBottom: '8px',
                     display: 'flex', 
                     justifyContent: 'center',
@@ -254,7 +254,7 @@ export function SectionCard({
                                 width: '52px',
                                 height: '52px',
                                 objectFit: 'contain',
-                                filter: 'brightness(0) saturate(100%) invert(31%) sepia(93%) saturate(7471%) hue-rotate(355deg) brightness(101%) contrast(107%)'
+                                filter: 'brightness(0) saturate(100%) invert(34%) sepia(84%) saturate(2985%) hue-rotate(342deg) brightness(100%) contrast(103%)'
                             }}
                             loading="lazy"
                         />
