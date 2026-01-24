@@ -3,13 +3,12 @@ import { X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 
-const POPUP_SHOWN_KEY = 'popup_shown_this_tab'
-
 export function EventPopup() {
     const { popup } = useContent()
     const location = useLocation()
     const [isVisible, setIsVisible] = useState(false)
     const [isClosing, setIsClosing] = useState(false)
+    const [hasShownThisLoad, setHasShownThisLoad] = useState(false)
 
     useEffect(() => {
         // Don't show popup on admin pages
@@ -18,19 +17,29 @@ export function EventPopup() {
         // Check if popup should be shown
         if (!popup?.isActive || !popup.image) return
 
-        // Check if popup was already shown in this tab (using sessionStorage)
-        const alreadyShown = sessionStorage.getItem(POPUP_SHOWN_KEY)
-        if (alreadyShown) return
+        // Don't show again if already shown this page load
+        if (hasShownThisLoad) return
 
-        // Show popup after 3 seconds
-        const timer = setTimeout(() => {
-            setIsVisible(true)
-            // Mark as shown for this tab
-            sessionStorage.setItem(POPUP_SHOWN_KEY, 'true')
-        }, 3000)
+        // Wait for splash screen to be dismissed before showing popup
+        const checkSplashAndShow = () => {
+            const splashSeen = sessionStorage.getItem('sio_splash_seen') === 'true'
+            if (splashSeen) {
+                // Splash is done, show popup after a short delay
+                const timer = setTimeout(() => {
+                    setIsVisible(true)
+                    setHasShownThisLoad(true)
+                }, 1500)
+                return () => clearTimeout(timer)
+            } else {
+                // Splash not done yet, check again in 500ms
+                const checkTimer = setTimeout(checkSplashAndShow, 500)
+                return () => clearTimeout(checkTimer)
+            }
+        }
 
-        return () => clearTimeout(timer)
-    }, [popup, location.pathname])
+        const cleanup = checkSplashAndShow()
+        return cleanup
+    }, [popup, location.pathname, hasShownThisLoad])
 
     const handleClose = () => {
         setIsClosing(true)
