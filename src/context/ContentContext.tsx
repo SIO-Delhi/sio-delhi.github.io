@@ -84,7 +84,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 description: sectionData.description,
                 type: 'generic',
                 displayOrder: maxOrder + 1,
-                isPublished: true
+                isPublished: true,
+                template: sectionData.template || 'standard'
             }
 
             const result = await api.sections.create(newSection)
