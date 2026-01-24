@@ -160,7 +160,7 @@ export function Footer() {
                     {/* Development Credits */}
                     <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
                         <p style={{ color: '#999', fontSize: '14px', margin: 0 }}> {/* Lighter Credits */}
-                            Development by <a href="https://www.0x-adnan.com" target="_blank" rel="noopener noreferrer" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>0xAdnan</a>
+                            Development by <a href="mailto:dev@siodelhi.org" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>0xAdnan</a>
                         </p>
                         {/* <button
                             onClick={() => setShowCredits(true)}
