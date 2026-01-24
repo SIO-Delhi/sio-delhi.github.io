@@ -1,0 +1,34 @@
+# Enable URL rewriting
+RewriteEngine On
+
+# If the request is for a real file or directory, serve it directly
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route all other requests to index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Set PHP settings (if allowed by your host)
+<IfModule mod_php.c>
+    php_value upload_max_filesize 16M
+    php_value post_max_size 16M
+    php_value max_execution_time 300
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
+# Prevent access to sensitive files
+<FilesMatch "^(config|db)\.php$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Block access to .env file
+<Files ".env">
+    Order Allow,Deny
+    Deny from all
+</Files>

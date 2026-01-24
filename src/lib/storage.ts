@@ -1,168 +1,112 @@
-import { supabase } from './supabase'
-
-const BUCKET_NAME = 'post-images'
+import { api } from './api'
 
 /**
- * Upload an image to Supabase Storage
+ * Upload an image to the server
  * @param file - File or base64 data URL
- * @param filename - Optional custom filename
+ * @param filename - Optional custom filename (not used with API, kept for compatibility)
  * @returns Public URL of the uploaded image
  */
-export async function uploadImage(file: File | string, filename?: string): Promise<string> {
-    let fileToUpload: File
-    let finalFilename: string
+export async function uploadImage(file: File | string, _filename?: string): Promise<string> {
+    let fileToUpload: File | Blob
 
     // Handle base64 data URL
     if (typeof file === 'string' && file.startsWith('data:')) {
         const response = await fetch(file)
         const blob = await response.blob()
-        const extension = file.split(';')[0].split('/')[1] || 'png'
-        finalFilename = filename || `${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`
-        fileToUpload = new File([blob], finalFilename, { type: blob.type })
+        fileToUpload = blob
     } else if (file instanceof File) {
-        finalFilename = filename || `${Date.now()}-${file.name}`
         fileToUpload = file
     } else {
         throw new Error('Invalid file input')
     }
 
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(finalFilename, fileToUpload, {
-            cacheControl: '3600',
-            upsert: false
-        })
+    const result = await api.upload.image(fileToUpload)
 
-    if (error) {
-        console.error('Upload error:', error)
-        throw error
+    if (result.error) {
+        console.error('Upload error:', result.error)
+        throw new Error(result.error)
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(data.path)
-
-    return urlData.publicUrl
+    return result.data!.url
 }
 
 /**
- * Delete an image from Supabase Storage
+ * Delete an image from the server
  * @param url - Public URL of the image
  */
 export async function deleteImage(url: string): Promise<void> {
-    // Extract path from URL
-    const bucketPath = url.split(`${BUCKET_NAME}/`)[1]
-    if (!bucketPath) return
+    // Extract filename from URL
+    const filename = url.split('/').pop()
+    if (!filename) return
 
-    const { error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .remove([bucketPath])
+    const result = await api.upload.deleteFile('images', filename)
 
-    if (error) {
-        console.error('Delete error:', error)
-        throw error
+    if (result.error) {
+        console.error('Delete error:', result.error)
+        throw new Error(result.error)
     }
 }
 
-const PDF_BUCKET = 'post-pdfs'
-
 /**
- * Upload a PDF to Supabase Storage
+ * Upload a PDF to the server
  * @param file - PDF File
  * @returns Public URL of the uploaded PDF
  */
 export async function uploadPdf(file: File): Promise<string> {
-    const finalFilename = `${Date.now()}-${file.name}`
+    const result = await api.upload.pdf(file)
 
-    const { data, error } = await supabase.storage
-        .from(PDF_BUCKET)
-        .upload(finalFilename, file, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: 'application/pdf'
-        })
-
-    if (error) {
-        console.error('PDF upload error:', error)
-        throw error
+    if (result.error) {
+        console.error('PDF upload error:', result.error)
+        throw new Error(result.error)
     }
 
-    const { data: urlData } = supabase.storage
-        .from(PDF_BUCKET)
-        .getPublicUrl(data.path)
-
-    return urlData.publicUrl
+    return result.data!.url
 }
 
 /**
- * Delete a PDF from Supabase Storage
+ * Delete a PDF from the server
  * @param url - Public URL of the PDF
  */
 export async function deletePdf(url: string): Promise<void> {
-    const bucketPath = url.split(`${PDF_BUCKET}/`)[1]
-    if (!bucketPath) return
+    const filename = url.split('/').pop()
+    if (!filename) return
 
-    const { error } = await supabase.storage
-        .from(PDF_BUCKET)
-        .remove([bucketPath])
+    const result = await api.upload.deleteFile('pdfs', filename)
 
-    if (error) {
-        console.error('PDF delete error:', error)
-        throw error
+    if (result.error) {
+        console.error('PDF delete error:', result.error)
+        throw new Error(result.error)
     }
 }
 
-const AUDIO_BUCKET = 'post-audios'
-
 /**
- * Upload an Audio file to Supabase Storage
+ * Upload an Audio file to the server
  * @param file - Audio File or Blob
  * @returns Public URL of the uploaded Audio
  */
 export async function uploadAudio(file: File | Blob): Promise<string> {
-    const finalFilename = `${Date.now()}-audio.mp3`
+    const result = await api.upload.audio(file)
 
-    // Try uploading to 'post-audio', fallback to 'post-pdfs' if strictly needed, 
-    // but for now we assume 'post-audio' or we'll catch error.
-    // Actually, let's use a bucket we know mostly works or try audio.
-    // User plan said "attempt to use a bucket named post-audio".
-
-    const { data, error } = await supabase.storage
-        .from(AUDIO_BUCKET)
-        .upload(finalFilename, file, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: 'audio/mpeg'
-        })
-
-    if (error) {
-        console.error('Audio upload error:', error)
-        throw error
+    if (result.error) {
+        console.error('Audio upload error:', result.error)
+        throw new Error(result.error)
     }
 
-    const { data: urlData } = supabase.storage
-        .from(AUDIO_BUCKET)
-        .getPublicUrl(data.path)
-
-    return urlData.publicUrl
+    return result.data!.url
 }
 
 /**
- * Delete an Audio file from Supabase Storage
+ * Delete an Audio file from the server
  * @param url - Public URL of the Audio
  */
 export async function deleteAudio(url: string): Promise<void> {
-    const bucketPath = url.split(`${AUDIO_BUCKET}/`)[1]
-    if (!bucketPath) return
+    const filename = url.split('/').pop()
+    if (!filename) return
 
-    const { error } = await supabase.storage
-        .from(AUDIO_BUCKET)
-        .remove([bucketPath])
+    const result = await api.upload.deleteFile('audio', filename)
 
-    if (error) {
-        console.error('Audio delete error:', error)
-        throw error
+    if (result.error) {
+        console.error('Audio delete error:', result.error)
+        throw new Error(result.error)
     }
 }
