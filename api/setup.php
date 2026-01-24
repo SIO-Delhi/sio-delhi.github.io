@@ -73,6 +73,58 @@ try {
     ");
     echo "<p>✅ Created 'popups' table</p>";
 
+    // Create forms table
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS forms (
+            id VARCHAR(36) PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            slug VARCHAR(100) UNIQUE,
+            is_published TINYINT(1) DEFAULT 0,
+            accept_responses TINYINT(1) DEFAULT 1,
+            success_message TEXT,
+            response_limit INT DEFAULT NULL,
+            expires_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    echo "<p>✅ Created 'forms' table</p>";
+
+    // Create form_fields table
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS form_fields (
+            id VARCHAR(36) PRIMARY KEY,
+            form_id VARCHAR(36) NOT NULL,
+            type VARCHAR(50) NOT NULL,
+            label VARCHAR(255) NOT NULL,
+            placeholder VARCHAR(255),
+            help_text VARCHAR(500),
+            is_required TINYINT(1) DEFAULT 0,
+            options JSON,
+            validation_rules JSON,
+            display_order INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    echo "<p>✅ Created 'form_fields' table</p>";
+
+    // Create form_responses table
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS form_responses (
+            id VARCHAR(36) PRIMARY KEY,
+            form_id VARCHAR(36) NOT NULL,
+            response_data JSON NOT NULL,
+            submitter_ip VARCHAR(45),
+            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE,
+            INDEX idx_form_responses_form_id (form_id),
+            INDEX idx_form_responses_submitted_at (submitted_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    echo "<p>✅ Created 'form_responses' table</p>";
+
     // Insert default sections
     $defaultSections = [
         ['about', 'About SIO Delhi', 'ABOUT US', 'custom', 1],
