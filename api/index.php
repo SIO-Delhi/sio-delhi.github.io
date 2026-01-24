@@ -7,8 +7,10 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 
-// Handle CORS - allow multiple origins (localhost for dev, GitHub Pages for prod)
+// Handle CORS - allow multiple origins (localhost for dev, production domains)
 $allowedOrigins = [
+    'https://siodelhi.org',
+    'https://www.siodelhi.org',
     'https://sio-delhi.github.io'
 ];
 
