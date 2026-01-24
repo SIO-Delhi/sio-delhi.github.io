@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 
@@ -46,7 +45,7 @@ export function EventPopup() {
 
     const handleClose = () => {
         setIsClosing(true)
-        
+
         // Wait for animation to complete before hiding
         setTimeout(() => {
             setIsVisible(false)
@@ -96,31 +95,7 @@ export function EventPopup() {
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Close Button */}
-                <button
-                    onClick={handleClose}
-                    style={{
-                        position: 'absolute',
-                        top: '-12px',
-                        right: '-12px',
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        background: '#fff',
-                        border: 'none',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1,
-                        transition: 'transform 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                    aria-label="Close popup"
-                >
-                    <X size={20} color="#111" />
-                </button>
+
 
                 {/* Popup Image */}
                 <img
