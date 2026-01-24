@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useContent } from '../../context/ContentContext'
 import { Link } from 'react-router-dom'
-import { Layers, Plus, HardDrive, Image, FileText, Loader2, ChevronDown, ChevronUp, Trash2, ExternalLink } from 'lucide-react'
+import { Layers, Plus, HardDrive, Image, FileText, Loader2, ChevronDown, ChevronUp, Trash2, ExternalLink, Search, X } from 'lucide-react'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 
@@ -34,6 +34,7 @@ export function Dashboard() {
         { name: 'pdfs', displayName: 'PDFs', icon: <FileText size={20} />, color: '#10b981', fileCount: 0, totalSize: 0, loading: true, files: [], expanded: false },
     ])
     const [deletingFile, setDeletingFile] = useState<string | null>(null)
+    const [fileSearchTerms, setFileSearchTerms] = useState<Record<string, string>>({})
 
     // Detect screen size
     useEffect(() => {
@@ -373,15 +374,86 @@ export function Dashboard() {
                                         borderRadius: '0 0 12px 12px',
                                         border: '1px solid rgba(255, 255, 255, 0.05)',
                                         borderTop: 'none',
-                                        maxHeight: '300px',
+                                        maxHeight: '350px',
                                         overflowY: 'auto'
                                     }}>
+                                        {/* Search Input */}
+                                        {bucket.files.length > 0 && (
+                                            <div style={{
+                                                padding: '12px 16px',
+                                                borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                                position: 'sticky',
+                                                top: 0,
+                                                background: 'rgba(15, 15, 20, 0.98)',
+                                                backdropFilter: 'blur(8px)',
+                                                zIndex: 1
+                                            }}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '10px',
+                                                    padding: '8px 12px',
+                                                    background: 'rgba(255, 255, 255, 0.05)',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                                                }}>
+                                                    <Search size={16} color="#666" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search files..."
+                                                        value={fileSearchTerms[bucket.name] || ''}
+                                                        onChange={(e) => setFileSearchTerms(prev => ({ ...prev, [bucket.name]: e.target.value }))}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        style={{
+                                                            flex: 1,
+                                                            background: 'transparent',
+                                                            border: 'none',
+                                                            outline: 'none',
+                                                            color: '#fff',
+                                                            fontSize: '0.85rem',
+                                                            fontFamily: 'inherit'
+                                                        }}
+                                                    />
+                                                    {fileSearchTerms[bucket.name] && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setFileSearchTerms(prev => ({ ...prev, [bucket.name]: '' }))
+                                                            }}
+                                                            style={{
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                padding: '2px',
+                                                                display: 'flex',
+                                                                alignItems: 'center'
+                                                            }}
+                                                        >
+                                                            <X size={14} color="#666" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                         {bucket.files.length === 0 ? (
                                             <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>
                                                 No files in this folder
                                             </div>
-                                        ) : (
-                                            bucket.files.map((file, fileIdx) => (
+                                        ) : (() => {
+                                            const filteredFiles = bucket.files.filter(file => {
+                                                const searchTerm = fileSearchTerms[bucket.name]?.toLowerCase() || ''
+                                                return !searchTerm || file.name.toLowerCase().includes(searchTerm)
+                                            })
+
+                                            if (filteredFiles.length === 0) {
+                                                return (
+                                                    <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>
+                                                        No files matching "{fileSearchTerms[bucket.name]}"
+                                                    </div>
+                                                )
+                                            }
+
+                                            return filteredFiles.map((file, fileIdx) => (
                                                 <div 
                                                     key={file.name}
                                                     style={{
@@ -389,7 +461,7 @@ export function Dashboard() {
                                                         alignItems: 'center',
                                                         justifyContent: 'space-between',
                                                         padding: '10px 16px',
-                                                        borderBottom: fileIdx < bucket.files.length - 1 ? '1px solid rgba(255, 255, 255, 0.03)' : 'none',
+                                                        borderBottom: fileIdx < filteredFiles.length - 1 ? '1px solid rgba(255, 255, 255, 0.03)' : 'none',
                                                         transition: 'background 0.15s',
                                                     }}
                                                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'}
@@ -462,7 +534,7 @@ export function Dashboard() {
                                                     </div>
                                                 </div>
                                             ))
-                                        )}
+                                        })()}
                                     </div>
                                 )}
                             </div>
