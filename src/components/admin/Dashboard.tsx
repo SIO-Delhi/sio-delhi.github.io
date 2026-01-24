@@ -50,13 +50,13 @@ export function Dashboard() {
             try {
                 const response = await fetch(`${API_BASE}/stats/storage`)
                 if (!response.ok) throw new Error('Failed to fetch stats')
-                
+
                 const data = await response.json()
-                
+
                 if (data.maxStorage) {
                     setMaxStorage(data.maxStorage)
                 }
-                
+
                 setBucketStats(prev => prev.map(bucket => {
                     const stats = data.buckets?.[bucket.name] || { fileCount: 0, totalSize: 0, files: [] }
                     return {
@@ -90,8 +90,8 @@ export function Dashboard() {
     }
 
     const toggleBucketExpanded = (bucketName: string) => {
-        setBucketStats(prev => prev.map(bucket => 
-            bucket.name === bucketName 
+        setBucketStats(prev => prev.map(bucket =>
+            bucket.name === bucketName
                 ? { ...bucket, expanded: !bucket.expanded }
                 : bucket
         ))
@@ -99,15 +99,24 @@ export function Dashboard() {
 
     const handleDeleteFile = async (bucketName: string, fileName: string) => {
         if (!confirm(`Are you sure you want to delete "${fileName}"?`)) return
-        
+
         setDeletingFile(fileName)
         try {
             const response = await fetch(`${API_BASE}/upload/${bucketName}/${encodeURIComponent(fileName)}`, {
                 method: 'DELETE'
             })
-            
-            if (!response.ok) throw new Error('Failed to delete file')
-            
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to delete file');
+            }
+
+            // Strictly check for success message
+            if (data.message !== 'File deleted successfully') {
+                throw new Error('Server did not confirm deletion');
+            }
+
             // Remove file from state
             setBucketStats(prev => prev.map(bucket => {
                 if (bucket.name !== bucketName) return bucket
@@ -119,9 +128,9 @@ export function Dashboard() {
                     totalSize: bucket.totalSize - (deletedFile?.size || 0)
                 }
             }))
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error deleting file:', err)
-            alert('Failed to delete file')
+            alert(`Failed to delete file: ${err.message || 'Unknown error'}`)
         } finally {
             setDeletingFile(null)
         }
@@ -296,7 +305,7 @@ export function Dashboard() {
                             <div key={bucket.name} style={{
                                 marginBottom: idx < bucketStats.length - 1 ? '16px' : 0,
                             }}>
-                                <div 
+                                <div
                                     onClick={() => toggleBucketExpanded(bucket.name)}
                                     style={{
                                         padding: '14px 16px',
@@ -366,7 +375,7 @@ export function Dashboard() {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 {/* Expandable File List */}
                                 {bucket.expanded && (
                                     <div style={{
@@ -454,7 +463,7 @@ export function Dashboard() {
                                             }
 
                                             return filteredFiles.map((file, fileIdx) => (
-                                                <div 
+                                                <div
                                                     key={file.name}
                                                     style={{
                                                         display: 'flex',
@@ -468,8 +477,8 @@ export function Dashboard() {
                                                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                                 >
                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{ 
-                                                            fontSize: '0.85rem', 
+                                                        <div style={{
+                                                            fontSize: '0.85rem',
                                                             fontWeight: 500,
                                                             whiteSpace: 'nowrap',
                                                             overflow: 'hidden',
@@ -483,9 +492,9 @@ export function Dashboard() {
                                                         </div>
                                                     </div>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px' }}>
-                                                        <a 
-                                                            href={file.url} 
-                                                            target="_blank" 
+                                                        <a
+                                                            href={file.url}
+                                                            target="_blank"
                                                             rel="noopener noreferrer"
                                                             style={{
                                                                 padding: '6px',
