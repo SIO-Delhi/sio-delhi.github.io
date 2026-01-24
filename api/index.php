@@ -88,6 +88,9 @@ $routes = [
     'GET /stats' => 'routes/stats.php@getAllStats',
     'GET /stats/storage' => 'routes/stats.php@getStorageStats',
     'GET /stats/database' => 'routes/stats.php@getDatabaseStats',
+
+    // Frame Tool
+    'POST /frame/apply-bulk' => 'routes/frame.php@applyFrameBulk',
 ];
 
 // Find matching route
