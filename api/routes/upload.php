@@ -40,6 +40,46 @@ function deleteFile($type, $filename) {
     return ['message' => 'File deleted successfully'];
 }
 
+function downloadFile($type, $filename) {
+    $validTypes = ['images', 'pdfs', 'audio'];
+
+    if (!in_array($type, $validTypes)) {
+        http_response_code(400);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Invalid file type']);
+        exit;
+    }
+
+    // Sanitize filename to prevent directory traversal
+    $filename = basename($filename);
+    $filepath = UPLOAD_DIR . $type . '/' . $filename;
+
+    if (!file_exists($filepath)) {
+        http_response_code(404);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'File not found']);
+        exit;
+    }
+
+    // Get MIME type
+    $mimeType = mime_content_type($filepath);
+    $filesize = filesize($filepath);
+
+    // Clear any previous output
+    ob_clean();
+    
+    // Set headers for download
+    header('Content-Type: ' . $mimeType);
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Length: ' . $filesize);
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Pragma: public');
+    
+    // Output file
+    readfile($filepath);
+    exit;
+}
+
 // Helper function to handle file uploads
 function handleUpload($folder, $allowedExtensions, $maxSize) {
     if (!isset($_FILES['file'])) {

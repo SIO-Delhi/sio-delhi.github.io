@@ -85,26 +85,29 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
         setIsDownloading(true)
 
         try {
-            // Fetch the image as blob
-            const response = await fetch(src)
-            const blob = await response.blob()
-
-            // Create a temporary URL for the blob
-            const blobUrl = URL.createObjectURL(blob)
-
-            // Create a hidden anchor element and trigger download
-            const link = document.createElement('a')
-            link.href = blobUrl
-            // Extract filename from URL or use default
+            // Extract filename from URL
             const urlParts = src.split('/')
             const filename = urlParts[urlParts.length - 1].split('?')[0] || 'gallery-image.jpg'
-            link.download = filename
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-
-            // Clean up the blob URL
-            URL.revokeObjectURL(blobUrl)
+            
+            // Check if it's from our API - use download endpoint
+            if (src.includes('api.siodelhi.org')) {
+                // Use download proxy endpoint
+                const downloadUrl = src.replace('/uploads/images/', '/api/download/images/')
+                window.location.href = downloadUrl
+            } else {
+                // For external images, try fetch with blob
+                const response = await fetch(src, { mode: 'cors' })
+                const blob = await response.blob()
+                const blobUrl = URL.createObjectURL(blob)
+                
+                const link = document.createElement('a')
+                link.href = blobUrl
+                link.download = filename
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                URL.revokeObjectURL(blobUrl)
+            }
         } catch (error) {
             console.error('Download failed:', error)
             // Fallback: open in new tab

@@ -80,6 +80,7 @@ $routes = [
     'POST /upload/pdf' => 'routes/upload.php@uploadPdf',
     'POST /upload/audio' => 'routes/upload.php@uploadAudio',
     'DELETE /upload/([^/]+)/([^/]+)' => 'routes/upload.php@deleteFile',
+    'GET /download/([^/]+)/([^/]+)' => 'routes/upload.php@downloadFile',
 
     // Stats
     'GET /stats' => 'routes/stats.php@getAllStats',

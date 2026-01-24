@@ -155,6 +155,7 @@ export interface SectionDTO {
     displayOrder?: number
     isPublished?: boolean
     description?: string
+    template?: string
     createdAt?: number
     updatedAt?: number
 }
