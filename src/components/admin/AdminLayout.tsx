@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Layers, LogOut, Menu, X, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone } from 'lucide-react'
 import { useClerk } from '@clerk/clerk-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
@@ -141,19 +141,19 @@ export function AdminLayout() {
                     </Link>
 
                     <Link
-                        to="/admin/cleaner"
+                        to="/admin/popup"
                         onClick={() => isMobile && setSidebarOpen(false)}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '12px',
                             padding: '12px', borderRadius: '8px',
-                            background: isActive('/admin/cleaner') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
-                            color: isActive('/admin/cleaner') ? '#ff3b3b' : 'inherit',
+                            background: isActive('/admin/popup') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
+                            color: isActive('/admin/popup') ? '#ff3b3b' : 'inherit',
                             textDecoration: 'none', fontWeight: 500,
                             transition: 'all 0.2s ease'
                         }}
                     >
-                        <Trash2 size={20} />
-                        Garbage Collector
+                        <Megaphone size={20} />
+                        Popup Manager
                     </Link>
 
                     <div style={{ height: '1px', background: isDark ? '#222' : '#eee', margin: '8px 0' }} />

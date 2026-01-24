@@ -2,8 +2,16 @@
 import { useEffect, useState } from 'react'
 import { useContent } from '../../context/ContentContext'
 import { Link } from 'react-router-dom'
-import { Layers, Plus, HardDrive, Image, FileText, Loader2 } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { Layers, Plus, HardDrive, Image, FileText, Loader2, ChevronDown, ChevronUp, Trash2, ExternalLink } from 'lucide-react'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
+
+interface FileInfo {
+    name: string
+    size: number
+    modified: number
+    url: string
+}
 
 interface BucketStats {
     name: string
@@ -13,15 +21,19 @@ interface BucketStats {
     fileCount: number
     totalSize: number
     loading: boolean
+    files: FileInfo[]
+    expanded: boolean
 }
 
 export function Dashboard() {
     const { sections, posts } = useContent()
     const [isMobile, setIsMobile] = useState(false)
+    const [maxStorage, setMaxStorage] = useState(5024 * 1024 * 1024) // 5GB cPanel quota
     const [bucketStats, setBucketStats] = useState<BucketStats[]>([
-        { name: 'post-images', displayName: 'Images', icon: <Image size={20} />, color: '#3b82f6', fileCount: 0, totalSize: 0, loading: true },
-        { name: 'post-pdfs', displayName: 'PDFs', icon: <FileText size={20} />, color: '#10b981', fileCount: 0, totalSize: 0, loading: true },
+        { name: 'images', displayName: 'Images', icon: <Image size={20} />, color: '#3b82f6', fileCount: 0, totalSize: 0, loading: true, files: [], expanded: false },
+        { name: 'pdfs', displayName: 'PDFs', icon: <FileText size={20} />, color: '#10b981', fileCount: 0, totalSize: 0, loading: true, files: [], expanded: false },
     ])
+    const [deletingFile, setDeletingFile] = useState<string | null>(null)
 
     // Detect screen size
     useEffect(() => {
@@ -31,33 +43,36 @@ export function Dashboard() {
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
 
-    // Fetch storage stats
+    // Fetch storage stats from PHP API
     useEffect(() => {
-        const fetchBucketStats = async (bucketName: string) => {
-            try {
-                const { data, error } = await supabase.storage.from(bucketName).list('', { limit: 1000 })
-                if (error) throw error
-
-                const totalSize = (data || []).reduce((acc, file) => acc + (file.metadata?.size || 0), 0)
-                return { fileCount: data?.length || 0, totalSize }
-            } catch (err) {
-                console.error(`Error fetching ${bucketName}:`, err)
-                return { fileCount: 0, totalSize: 0 }
-            }
-        }
-
         const loadStats = async () => {
-            const results = await Promise.all([
-                fetchBucketStats('post-images'),
-                fetchBucketStats('post-pdfs'),
-            ])
-
-            setBucketStats(prev => prev.map((bucket, idx) => ({
-                ...bucket,
-                fileCount: results[idx].fileCount,
-                totalSize: results[idx].totalSize,
-                loading: false
-            })))
+            try {
+                const response = await fetch(`${API_BASE}/stats/storage`)
+                if (!response.ok) throw new Error('Failed to fetch stats')
+                
+                const data = await response.json()
+                
+                if (data.maxStorage) {
+                    setMaxStorage(data.maxStorage)
+                }
+                
+                setBucketStats(prev => prev.map(bucket => {
+                    const stats = data.buckets?.[bucket.name] || { fileCount: 0, totalSize: 0, files: [] }
+                    return {
+                        ...bucket,
+                        fileCount: stats.fileCount,
+                        totalSize: stats.totalSize,
+                        files: stats.files || [],
+                        loading: false
+                    }
+                }))
+            } catch (err) {
+                console.error('Error fetching storage stats:', err)
+                setBucketStats(prev => prev.map(bucket => ({
+                    ...bucket,
+                    loading: false
+                })))
+            }
         }
 
         loadStats()
@@ -73,10 +88,47 @@ export function Dashboard() {
         return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB'
     }
 
+    const toggleBucketExpanded = (bucketName: string) => {
+        setBucketStats(prev => prev.map(bucket => 
+            bucket.name === bucketName 
+                ? { ...bucket, expanded: !bucket.expanded }
+                : bucket
+        ))
+    }
+
+    const handleDeleteFile = async (bucketName: string, fileName: string) => {
+        if (!confirm(`Are you sure you want to delete "${fileName}"?`)) return
+        
+        setDeletingFile(fileName)
+        try {
+            const response = await fetch(`${API_BASE}/upload/${bucketName}/${encodeURIComponent(fileName)}`, {
+                method: 'DELETE'
+            })
+            
+            if (!response.ok) throw new Error('Failed to delete file')
+            
+            // Remove file from state
+            setBucketStats(prev => prev.map(bucket => {
+                if (bucket.name !== bucketName) return bucket
+                const deletedFile = bucket.files.find(f => f.name === fileName)
+                return {
+                    ...bucket,
+                    files: bucket.files.filter(f => f.name !== fileName),
+                    fileCount: bucket.fileCount - 1,
+                    totalSize: bucket.totalSize - (deletedFile?.size || 0)
+                }
+            }))
+        } catch (err) {
+            console.error('Error deleting file:', err)
+            alert('Failed to delete file')
+        } finally {
+            setDeletingFile(null)
+        }
+    }
+
     const totalStorageUsed = bucketStats.reduce((acc, b) => acc + b.totalSize, 0)
     const totalFiles = bucketStats.reduce((acc, b) => acc + b.fileCount, 0)
-    // Supabase free tier: 1GB storage
-    const maxStorage = 1 * 1024 * 1024 * 1024 // 1GB in bytes
+    // cPanel storage limit (fetched from API or default 10GB)
     const usagePercentage = Math.min((totalStorageUsed / maxStorage) * 100, 100)
 
     return (
@@ -135,7 +187,7 @@ export function Dashboard() {
                     </div>
                     <div>
                         <h2 style={{ fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>Storage Usage</h2>
-                        <p style={{ fontSize: '0.75rem', color: '#666', margin: '2px 0 0 0' }}>Supabase Storage • 1 GB Limit</p>
+                        <p style={{ fontSize: '0.75rem', color: '#666', margin: '2px 0 0 0' }}>Server Storage • {formatSize(maxStorage)} Limit</p>
                     </div>
                 </div>
 
@@ -209,7 +261,7 @@ export function Dashboard() {
                             }}>
                                 {usagePercentage.toFixed(1)}%
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 500, marginTop: '2px' }}>of 1 GB</div>
+                            <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 500, marginTop: '2px' }}>of {formatSize(maxStorage)}</div>
                         </div>
                     </div>
 
@@ -242,68 +294,177 @@ export function Dashboard() {
                         {bucketStats.map((bucket, idx) => (
                             <div key={bucket.name} style={{
                                 marginBottom: idx < bucketStats.length - 1 ? '16px' : 0,
-                                padding: '14px 16px',
-                                background: 'rgba(255, 255, 255, 0.02)',
-                                borderRadius: '12px',
-                                border: '1px solid rgba(255, 255, 255, 0.05)',
-                                transition: 'all 0.2s ease'
                             }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <div style={{
-                                            padding: '6px',
-                                            borderRadius: '8px',
-                                            background: `${bucket.color}15`,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}>
-                                            <span style={{ color: bucket.color }}>{bucket.icon}</span>
+                                <div 
+                                    onClick={() => toggleBucketExpanded(bucket.name)}
+                                    style={{
+                                        padding: '14px 16px',
+                                        background: 'rgba(255, 255, 255, 0.02)',
+                                        borderRadius: bucket.expanded ? '12px 12px 0 0' : '12px',
+                                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                                        borderBottom: bucket.expanded ? 'none' : '1px solid rgba(255, 255, 255, 0.05)',
+                                        transition: 'all 0.2s ease',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{
+                                                padding: '6px',
+                                                borderRadius: '8px',
+                                                background: `${bucket.color}15`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                                <span style={{ color: bucket.color }}>{bucket.icon}</span>
+                                            </div>
+                                            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{bucket.displayName}</span>
                                         </div>
-                                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{bucket.displayName}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            {bucket.loading ? (
+                                                <Loader2 size={14} className="animate-spin" style={{ color: '#666' }} />
+                                            ) : (
+                                                <>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>{formatSize(bucket.totalSize)}</span>
+                                                        <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: '8px' }}>{bucket.fileCount} files</span>
+                                                    </div>
+                                                    {bucket.expanded ? <ChevronUp size={18} color="#666" /> : <ChevronDown size={18} color="#666" />}
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                        {bucket.loading ? (
-                                            <Loader2 size={14} className="animate-spin" style={{ color: '#666' }} />
-                                        ) : (
-                                            <>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>{formatSize(bucket.totalSize)}</span>
-                                                    <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: '8px' }}>{bucket.fileCount} files</span>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                                {/* Enhanced Progress bar */}
-                                <div style={{
-                                    height: '8px',
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    borderRadius: '4px',
-                                    overflow: 'hidden',
-                                    position: 'relative'
-                                }}>
+                                    {/* Enhanced Progress bar */}
                                     <div style={{
-                                        height: '100%',
-                                        width: bucket.loading ? '0%' : `${Math.min((bucket.totalSize / maxStorage) * 100, 100)}%`,
-                                        background: `linear-gradient(90deg, ${bucket.color}cc, ${bucket.color})`,
+                                        height: '8px',
+                                        background: 'rgba(255, 255, 255, 0.05)',
                                         borderRadius: '4px',
-                                        transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        boxShadow: `0 0 12px ${bucket.color}40`,
+                                        overflow: 'hidden',
                                         position: 'relative'
                                     }}>
-                                        {/* Shimmer effect */}
                                         <div style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            right: 0,
-                                            bottom: 0,
-                                            background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
-                                            animation: 'shimmer 2s infinite'
-                                        }} />
+                                            height: '100%',
+                                            width: bucket.loading ? '0%' : `${Math.min((bucket.totalSize / maxStorage) * 100, 100)}%`,
+                                            background: `linear-gradient(90deg, ${bucket.color}cc, ${bucket.color})`,
+                                            borderRadius: '4px',
+                                            transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            boxShadow: `0 0 12px ${bucket.color}40`,
+                                            position: 'relative'
+                                        }}>
+                                            {/* Shimmer effect */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+                                                animation: 'shimmer 2s infinite'
+                                            }} />
+                                        </div>
                                     </div>
                                 </div>
+                                
+                                {/* Expandable File List */}
+                                {bucket.expanded && (
+                                    <div style={{
+                                        background: 'rgba(0, 0, 0, 0.3)',
+                                        borderRadius: '0 0 12px 12px',
+                                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                                        borderTop: 'none',
+                                        maxHeight: '300px',
+                                        overflowY: 'auto'
+                                    }}>
+                                        {bucket.files.length === 0 ? (
+                                            <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>
+                                                No files in this folder
+                                            </div>
+                                        ) : (
+                                            bucket.files.map((file, fileIdx) => (
+                                                <div 
+                                                    key={file.name}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        padding: '10px 16px',
+                                                        borderBottom: fileIdx < bucket.files.length - 1 ? '1px solid rgba(255, 255, 255, 0.03)' : 'none',
+                                                        transition: 'background 0.15s',
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ 
+                                                            fontSize: '0.85rem', 
+                                                            fontWeight: 500,
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            maxWidth: isMobile ? '150px' : '300px'
+                                                        }}>
+                                                            {file.name}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
+                                                            {formatSize(file.size)}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px' }}>
+                                                        <a 
+                                                            href={file.url} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            style={{
+                                                                padding: '6px',
+                                                                borderRadius: '6px',
+                                                                background: 'rgba(59, 130, 246, 0.15)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                transition: 'background 0.15s'
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)'}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <ExternalLink size={14} color="#3b82f6" />
+                                                        </a>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleDeleteFile(bucket.name, file.name)
+                                                            }}
+                                                            disabled={deletingFile === file.name}
+                                                            style={{
+                                                                padding: '6px',
+                                                                borderRadius: '6px',
+                                                                background: 'rgba(239, 68, 68, 0.15)',
+                                                                border: 'none',
+                                                                cursor: deletingFile === file.name ? 'wait' : 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                transition: 'background 0.15s',
+                                                                opacity: deletingFile === file.name ? 0.5 : 1
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                if (deletingFile !== file.name) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'
+                                                            }}
+                                                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'}
+                                                        >
+                                                            {deletingFile === file.name ? (
+                                                                <Loader2 size={14} className="animate-spin" color="#ef4444" />
+                                                            ) : (
+                                                                <Trash2 size={14} color="#ef4444" />
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

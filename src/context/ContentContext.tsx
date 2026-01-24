@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { ReactNode } from 'react'
-import type { Post, Section } from '../types/content'
-import { supabase } from '../lib/supabase'
+import type { Post, Section, Popup, SectionTemplate } from '../types/content'
+import { api } from '../lib/api'
 
 
 interface ContentContextType {
@@ -25,6 +25,11 @@ interface ContentContextType {
     // UI Actions
     showDonation: boolean
     setShowDonation: (show: boolean) => void
+    // Popup Actions
+    popup: Popup | null
+    fetchPopup: () => Promise<void>
+    savePopup: (image: string, isActive: boolean) => Promise<void>
+    deletePopup: () => Promise<void>
 }
 
 const ContentContext = createContext<ContentContextType | undefined>(undefined)
@@ -35,22 +40,14 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showDonation, setShowDonation] = useState(false) // Donation Modal State
+    const [popup, setPopup] = useState<Popup | null>(null) // Popup State
 
-    // Fetch Sections from Supabase
+    // Fetch Sections from API
     const fetchSections = useCallback(async () => {
-        const { data, error } = await supabase
-            .from('sections')
-            .select('*')
-            .order('display_order', { ascending: true })
+        const result = await api.sections.getAll()
 
-        if (error) {
-            console.error('Error fetching sections:', error)
-            // Only alert if we suspect it's not just a "creating table" moment
-            if (error.code !== '42P01') { // undefined_table
-                console.warn("Using static fallback due to DB error")
-                alert(`Failed to load sections: ${error.message}`)
-            }
-
+        if (result.error) {
+            console.error('Error fetching sections:', result.error)
             // Fallback for initial migration or error
             setSections([
                 { id: 'about', label: 'ABOUT US', title: 'About SIO Delhi', display_order: 1, is_published: true, type: 'custom' },
@@ -62,15 +59,15 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             return
         }
 
-        const mapped: Section[] = data.map(row => ({
+        const mapped: Section[] = (result.data || []).map(row => ({
             id: row.id,
             title: row.title,
             label: row.label,
             description: row.description,
-            display_order: row.display_order,
-            is_published: row.is_published,
-            type: row.type || 'generic',
-            template: row.template // Map template from DB
+            display_order: row.displayOrder ?? 0,
+            is_published: row.isPublished ?? true,
+            type: (row.type || 'generic') as 'custom' | 'generic',
+            template: row.template as SectionTemplate | undefined
         }))
         setSections(mapped)
     }, [])
@@ -86,13 +83,13 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 label: sectionData.label,
                 description: sectionData.description,
                 type: 'generic',
-                display_order: maxOrder + 1,
-                is_published: true,
-                template: sectionData.template || 'standard' // Persist template
+                displayOrder: maxOrder + 1,
+                isPublished: true,
+                template: sectionData.template || 'standard'
             }
 
-            const { error } = await supabase.from('sections').insert(newSection)
-            if (error) throw error
+            const result = await api.sections.create(newSection)
+            if (result.error) throw new Error(result.error)
             await fetchSections()
         } catch (err) {
             console.error('Error creating section:', err)
@@ -103,17 +100,18 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
     const updateSection = async (id: string, updates: Partial<Section>) => {
         try {
-            const { data, error } = await supabase
-                .from('sections')
-                .update(updates)
-                .eq('id', id)
-                .select()
+            const apiUpdates: Record<string, unknown> = {}
+            if (updates.title !== undefined) apiUpdates.title = updates.title
+            if (updates.label !== undefined) apiUpdates.label = updates.label
+            if (updates.description !== undefined) apiUpdates.description = updates.description
+            if (updates.display_order !== undefined) apiUpdates.displayOrder = updates.display_order
+            if (updates.is_published !== undefined) apiUpdates.isPublished = updates.is_published
+            if (updates.type !== undefined) apiUpdates.type = updates.type
+            if (updates.template !== undefined) apiUpdates.template = updates.template
 
-            if (error) throw error
-            // If data is empty array, it means no row was updated (e.g. ID mismatch or RLS hidden)
-            if (!data || data.length === 0) {
-                throw new Error(`No section found with ID: ${id}.`)
-            }
+            const result = await api.sections.update(id, apiUpdates)
+
+            if (result.error) throw new Error(result.error)
 
             await fetchSections()
         } catch (err) {
@@ -125,16 +123,9 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
     const deleteSection = async (id: string) => {
         try {
-            const { data, error } = await supabase
-                .from('sections')
-                .delete()
-                .eq('id', id)
-                .select()
+            const result = await api.sections.delete(id)
 
-            if (error) throw error
-            if (!data || data.length === 0) {
-                throw new Error(`No section found to delete with ID: ${id}`)
-            }
+            if (result.error) throw new Error(result.error)
 
             await fetchSections()
         } catch (err) {
@@ -144,40 +135,107 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    // Fetch posts from Supabase
+    // Fetch Popup from API
+    const fetchPopup = useCallback(async () => {
+        try {
+            const result = await api.popups.getActive()
+
+            if (result.error) {
+                console.error('Error fetching popup:', result.error)
+                setPopup(null)
+                return
+            }
+
+            if (!result.data) {
+                setPopup(null)
+                return
+            }
+
+            const row = result.data
+            setPopup({
+                id: row.id,
+                image: row.image,
+                isActive: row.isActive ?? true,
+                createdAt: row.createdAt ?? Date.now(),
+                updatedAt: row.updatedAt ?? Date.now()
+            })
+        } catch (err) {
+            console.error('Error fetching popup:', err)
+            setPopup(null)
+        }
+    }, [])
+
+    const savePopup = async (image: string, isActive: boolean) => {
+        try {
+            // Check if popup exists
+            const existingResult = await api.popups.getAll()
+            const existing = existingResult.data && existingResult.data.length > 0 ? existingResult.data[0] : null
+
+            if (existing) {
+                // Update existing
+                const result = await api.popups.update(existing.id, {
+                    image,
+                    isActive
+                })
+                if (result.error) throw new Error(result.error)
+            } else {
+                // Insert new
+                const result = await api.popups.create({
+                    image,
+                    isActive
+                })
+                if (result.error) throw new Error(result.error)
+            }
+
+            await fetchPopup()
+        } catch (err) {
+            console.error('Error saving popup:', err)
+            throw err
+        }
+    }
+
+    const deletePopup = async () => {
+        try {
+            const result = await api.popups.clear()
+            if (result.error) throw new Error(result.error)
+            setPopup(null)
+        } catch (err) {
+            console.error('Error deleting popup:', err)
+            throw err
+        }
+    }
+
+    // Fetch posts from API
     const fetchPosts = useCallback(async () => {
         setLoading(prev => prev && true) // partial loading
         setError(null)
         try {
-            const { data, error: fetchError } = await supabase
-                .from('posts')
-                .select('*')
-                .order('created_at', { ascending: false })
+            const result = await api.posts.getAll()
 
-            if (fetchError) throw fetchError
+            if (result.error) throw new Error(result.error)
 
-            // Map DB columns to our Post interface
-            const mappedPosts: Post[] = (data || []).map(row => ({
+            // Map API response to our Post interface
+            const mappedPosts: Post[] = (result.data || []).map(row => ({
                 id: row.id,
-                sectionId: row.section_id,
-                parentId: row.parent_id || undefined,
-                isSubsection: row.is_subsection ?? false,
+                sectionId: row.sectionId ?? '',
+                parentId: row.parentId || undefined,
+                isSubsection: row.isSubsection ?? false,
                 title: row.title,
                 subtitle: row.subtitle || '',
-                content: row.content,
+                content: row.content ?? '',
                 image: row.image || '',
-                pdfUrl: row.pdf_url || '',
-                enableAudio: row.enable_audio ?? false,
+                pdfUrl: row.pdfUrl || '',
+                enableAudio: row.enableAudio ?? false,
                 email: row.email || '',
                 instagram: row.instagram || '',
-                layout: row.layout,
-                order: row.display_order, // Map from DB
-                isPublished: row.is_published ?? false,
-                createdAt: new Date(row.created_at).getTime(),
-                updatedAt: new Date(row.updated_at).getTime(),
-                tags: row.tags || [], // Map tags from DB
-                icon: row.icon || undefined, // Map icon from DB
-                galleryImages: row.gallery_images || [] // Map gallery images from DB
+                layout: row.layout as Post['layout'],
+                order: row.order,
+                isPublished: row.isPublished ?? false,
+                createdAt: row.createdAt ?? Date.now(),
+                updatedAt: row.updatedAt ?? Date.now(),
+                tags: row.tags || [],
+                icon: row.icon || undefined,
+                galleryImages: row.galleryImages || []
             }))
 
             setPosts(mappedPosts)
@@ -194,11 +252,11 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         // Run both
         const load = async () => {
             setLoading(true)
-            await Promise.all([fetchSections(), fetchPosts()])
+            await Promise.all([fetchSections(), fetchPosts(), fetchPopup()])
             setLoading(false)
         }
         load()
-    }, [fetchSections, fetchPosts])
+    }, [fetchSections, fetchPosts, fetchPopup])
 
     const getPostsBySection = (sectionId: string) => {
         // Only return top-level posts (no parent) for section view
@@ -241,30 +299,27 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
     const addPost = async (newPostData: Omit<Post, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: number }) => {
         try {
-            const { error: insertError } = await supabase
-                .from('posts')
-                .insert({
-                    section_id: newPostData.sectionId,
-                    parent_id: newPostData.parentId || null,
-                    is_subsection: newPostData.isSubsection ?? false,
-                    title: newPostData.title,
-                    subtitle: newPostData.subtitle || null,
-                    content: newPostData.content,
-                    image: newPostData.image || null,
-                    pdf_url: newPostData.pdfUrl || null,
-                    enable_audio: newPostData.enableAudio ?? false,
-                    email: newPostData.email || null,
-                    instagram: newPostData.instagram || null,
-                    layout: newPostData.layout,
-                    display_order: newPostData.order || null,
-                    is_published: newPostData.isPublished ?? false,
-                    tags: newPostData.tags || null,
-                    icon: newPostData.icon || null, // Insert icon
-                    gallery_images: newPostData.galleryImages || null, // Insert gallery images
-                    created_at: newPostData.createdAt ? new Date(newPostData.createdAt).toISOString() : undefined // Allow manual date
-                })
+            const result = await api.posts.create({
+                sectionId: newPostData.sectionId,
+                parentId: newPostData.parentId || undefined,
+                isSubsection: newPostData.isSubsection ?? false,
+                title: newPostData.title,
+                subtitle: newPostData.subtitle || undefined,
+                content: newPostData.content,
+                image: newPostData.image || undefined,
+                pdfUrl: newPostData.pdfUrl || undefined,
+                enableAudio: newPostData.enableAudio ?? false,
+                email: newPostData.email || undefined,
+                instagram: newPostData.instagram || undefined,
+                layout: newPostData.layout,
+                order: newPostData.order,
+                isPublished: newPostData.isPublished ?? false,
+                tags: newPostData.tags || undefined,
+                icon: newPostData.icon || undefined,
+                galleryImages: newPostData.galleryImages || undefined
+            })
 
-            if (insertError) throw insertError
+            if (result.error) throw new Error(result.error)
             await fetchPosts() // Refresh the list
         } catch (err) {
             console.error('Error adding post:', err)
@@ -274,32 +329,27 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
     const updatePost = async (id: string, updates: Partial<Post>) => {
         try {
-            const dbUpdates: Record<string, unknown> = {}
-            if (updates.title !== undefined) dbUpdates.title = updates.title
-            if (updates.subtitle !== undefined) dbUpdates.subtitle = updates.subtitle || null
-            if (updates.content !== undefined) dbUpdates.content = updates.content
-            if (updates.image !== undefined) dbUpdates.image = updates.image || null
-            if (updates.pdfUrl !== undefined) dbUpdates.pdf_url = updates.pdfUrl || null
-            if (updates.enableAudio !== undefined) dbUpdates.enable_audio = updates.enableAudio
-            if (updates.email !== undefined) dbUpdates.email = updates.email || null
-            if (updates.instagram !== undefined) dbUpdates.instagram = updates.instagram || null
-            if (updates.layout !== undefined) dbUpdates.layout = updates.layout
-            if (updates.order !== undefined) dbUpdates.display_order = updates.order
-            if (updates.isPublished !== undefined) dbUpdates.is_published = updates.isPublished
-            if (updates.parentId !== undefined) dbUpdates.parent_id = updates.parentId || null
-            if (updates.isSubsection !== undefined) dbUpdates.is_subsection = updates.isSubsection
-            if (updates.tags !== undefined) dbUpdates.tags = updates.tags
-            if (updates.icon !== undefined) dbUpdates.icon = updates.icon || null
-            if (updates.galleryImages !== undefined) dbUpdates.gallery_images = updates.galleryImages || null
-            if (updates.createdAt !== undefined) dbUpdates.created_at = new Date(updates.createdAt).toISOString() // Allow manual date update
-            dbUpdates.updated_at = new Date().toISOString()
+            const apiUpdates: Record<string, unknown> = {}
+            if (updates.title !== undefined) apiUpdates.title = updates.title
+            if (updates.subtitle !== undefined) apiUpdates.subtitle = updates.subtitle || undefined
+            if (updates.content !== undefined) apiUpdates.content = updates.content
+            if (updates.image !== undefined) apiUpdates.image = updates.image || undefined
+            if (updates.pdfUrl !== undefined) apiUpdates.pdfUrl = updates.pdfUrl || undefined
+            if (updates.enableAudio !== undefined) apiUpdates.enableAudio = updates.enableAudio
+            if (updates.email !== undefined) apiUpdates.email = updates.email || undefined
+            if (updates.instagram !== undefined) apiUpdates.instagram = updates.instagram || undefined
+            if (updates.layout !== undefined) apiUpdates.layout = updates.layout
+            if (updates.order !== undefined) apiUpdates.order = updates.order
+            if (updates.isPublished !== undefined) apiUpdates.isPublished = updates.isPublished
+            if (updates.parentId !== undefined) apiUpdates.parentId = updates.parentId || undefined
+            if (updates.isSubsection !== undefined) apiUpdates.isSubsection = updates.isSubsection
+            if (updates.tags !== undefined) apiUpdates.tags = updates.tags
+            if (updates.icon !== undefined) apiUpdates.icon = updates.icon || undefined
+            if (updates.galleryImages !== undefined) apiUpdates.galleryImages = updates.galleryImages || undefined
 
-            const { error: updateError } = await supabase
-                .from('posts')
-                .update(dbUpdates)
-                .eq('id', id)
+            const result = await api.posts.update(id, apiUpdates)
 
-            if (updateError) throw updateError
+            if (result.error) throw new Error(result.error)
             await fetchPosts() // Refresh the list
         } catch (err) {
             console.error('Error updating post:', err)
@@ -310,22 +360,12 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     const deletePost = async (id: string) => {
         try {
             console.log('Attempting to delete post:', id)
-            const { error: deleteError, count } = await supabase
-                .from('posts')
-                .delete({ count: 'exact' })
-                .eq('id', id)
+            const result = await api.posts.delete(id)
 
-            if (deleteError) {
-                console.error('Supabase delete error:', deleteError)
-                alert(`Delete failed: ${deleteError.message}`)
-                throw deleteError
-            }
-
-            console.log('Deleted rows count:', count)
-            if (count === 0) {
-                alert('Operation successful but 0 posts were deleted. This usually means "Row Level Security" (RLS) is blocking the delete, or the post was already gone.')
-            } else {
-                // alert('Post deleted successfully.') 
+            if (result.error) {
+                console.error('API delete error:', result.error)
+                alert(`Delete failed: ${result.error}`)
+                throw new Error(result.error)
             }
 
             await fetchPosts() // Refresh the list
@@ -355,7 +395,11 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             updateSection,
             deleteSection,
             showDonation,
-            setShowDonation
+            setShowDonation,
+            popup,
+            fetchPopup,
+            savePopup,
+            deletePopup
         }}>
             {children}
         </ContentContext.Provider>

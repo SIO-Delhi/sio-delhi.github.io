@@ -2,6 +2,7 @@ import { Layout } from './components/layout/Layout'
 import { ThemeProvider } from './context/ThemeContext'
 import { CustomCursor } from './components/ui/CustomCursor'
 import { SplashScreen } from './components/ui/SplashScreen'
+import { EventPopup } from './components/ui/EventPopup'
 import { ContentProvider } from './context/ContentContext'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
@@ -16,7 +17,7 @@ import { SubsectionEditor } from './components/admin/SubsectionEditor'
 import { AdminSections } from './components/admin/AdminSections'
 import { AdminLogin } from './pages/AdminLogin'
 import { ProtectedRoute } from './components/admin/ProtectedRoute'
-import { AdminGarbageCollector } from './components/admin/AdminGarbageCollector'
+import { PopupManager } from './components/admin/PopupManager'
 
 function App() {
   return (
@@ -30,7 +31,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="sections" element={<AdminSections />} />
-              <Route path="cleaner" element={<AdminGarbageCollector />} />
+              <Route path="popup" element={<PopupManager />} />
               <Route path="section/:sectionId" element={<SectionManager />} />
               <Route path="create/:sectionId" element={<PostEditor />} />
               <Route path="create-post/:sectionId" element={<PostEditor />} />
@@ -64,6 +65,7 @@ function App() {
         </Routes>
         <CustomCursor />
         <SplashScreen />
+        <EventPopup />
       </ContentProvider>
     </ThemeProvider>
   )
