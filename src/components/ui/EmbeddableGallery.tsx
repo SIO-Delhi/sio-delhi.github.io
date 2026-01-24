@@ -1,8 +1,6 @@
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
-import { useContent } from '../context/ContentContext'
-import { useTheme } from '../context/ThemeContext'
-import { ArrowLeft, ZoomIn, X, Loader2 } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+
+import React, { useState, useRef, useEffect } from 'react'
+import { ZoomIn, X, Loader2 } from 'lucide-react'
 
 // Lazy loading image component with Intersection Observer
 function LazyImage({ src, alt, onClick, isDark }: { src: string; alt: string; onClick: () => void; isDark: boolean }) {
@@ -241,21 +239,18 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
     )
 }
 
-export function GalleryPage() {
-    const { id } = useParams()
-    const { isDark } = useTheme()
-    const { getPostById, loading } = useContent()
-    const navigate = useNavigate()
-    const location = useLocation()
+interface EmbeddableGalleryProps {
+    imagesRaw: any
+    isDark: boolean
+    title?: string
+}
 
-    const post = id ? getPostById(id) : undefined
+export function EmbeddableGallery({ imagesRaw, isDark, title }: EmbeddableGalleryProps) {
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
-
-    const imagesRaw = post?.galleryImages || []
 
     // Normalize to sections
     const gallerySections: { id: string, title: string, images: string[] }[] = (() => {
-        if (imagesRaw.length === 0) return []
+        if (!imagesRaw || imagesRaw.length === 0) return []
 
         // Check if it's the old format (array of strings)
         if (typeof imagesRaw[0] === 'string') {
@@ -269,190 +264,54 @@ export function GalleryPage() {
         return imagesRaw as unknown as { id: string, title: string, images: string[] }[]
     })()
 
-    // Build back URL based on current path
-    const getBackUrl = () => {
-        if (!post || !id) return '/'
-        // Remove /gallery from the end of the path
-        const currentPath = location.pathname
-        return currentPath.replace(/\/gallery$/, '')
-    }
+    if (gallerySections.length === 0) return null
 
-    if (loading && !post) {
-        return (
-            <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: isDark ? '#0a0a0a' : '#fafafa',
-                color: isDark ? 'white' : 'black'
-            }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{
-                        width: 48, height: 48, border: '3px solid #ff3b3b',
-                        borderTopColor: 'transparent', borderRadius: '50%',
-                        animation: 'spin 1s linear infinite', margin: '0 auto 16px'
-                    }} />
-                    <p>Loading gallery...</p>
-                </div>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            </div>
-        )
-    }
-
-    if (!post) {
-        return (
-            <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: isDark ? '#0a0a0a' : '#fafafa',
-                color: isDark ? 'white' : 'black',
-                gap: 16
-            }}>
-                <h1>Post Not Found</h1>
-                <button
-                    onClick={() => navigate(-1)}
-                    style={{
-                        color: '#ff3b3b',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '16px'
-                    }}
-                >
-                    Go Back
-                </button>
-            </div>
-        )
-    }
-
-    if (gallerySections.length === 0) {
-        return (
-            <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: isDark ? '#0a0a0a' : '#fafafa',
-                color: isDark ? 'white' : 'black',
-                gap: 16
-            }}>
-                <h1>No Gallery Images</h1>
-                <p style={{ opacity: 0.6 }}>This post doesn't have any gallery images.</p>
-                <Link
-                    to={getBackUrl()}
-                    style={{
-                        color: '#ff3b3b',
-                        textDecoration: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8
-                    }}
-                >
-                    <ArrowLeft size={18} /> Back to Post
-                </Link>
-            </div>
-        )
-    }
-
-    const totalPhotos = gallerySections.reduce((acc, sec) => acc + sec.images.length, 0)
+    // Calculate total if needed, or iterate
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            paddingTop: '100px',
-            paddingBottom: '60px',
-            background: isDark ? '#0a0a0a' : '#fafafa',
-            color: isDark ? 'white' : 'black'
-        }}>
-            {/* Simple Title */}
-            <div style={{
-                maxWidth: '1400px',
-                margin: '0 auto',
-                padding: '0 24px 32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '16px'
+        <div style={{ marginTop: '30px' }}>
+            <h2 style={{
+                textAlign: 'center',
+                fontSize: '2rem',
+                fontWeight: 700,
+                marginBottom: '40px',
+                color: isDark ? 'white' : 'black'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <Link
-                        to={getBackUrl()}
-                        style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '10px',
-                            background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: isDark ? 'white' : 'black',
-                            textDecoration: 'none',
-                            transition: 'all 0.2s',
-                            flexShrink: 0
-                        }}
-                    >
-                        <ArrowLeft size={20} />
-                    </Link>
-                    <h1 style={{
-                        fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
-                        fontWeight: 700,
-                        margin: 0
-                    }}>
-                        {post.title || 'Event'} <span style={{ color: '#ff3b3b' }}>Gallery</span>
-                    </h1>
-                </div>
-                <span style={{
-                    background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                    padding: '8px 16px',
-                    borderRadius: '20px',
-                    fontSize: '0.9rem',
-                    fontWeight: 600
-                }}>
-                    {totalPhotos} Photos
-                </span>
-            </div>
+                Gallery
+            </h2>
 
-            {/* Masonry Gallery */}
-            <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
-                {gallerySections.map((section, idx) => (
-                    <div key={section.id || idx} style={{ marginBottom: '48px' }}>
-                        {section.title && (
-                            <h2 style={{
-                                fontSize: '1.5rem',
-                                fontWeight: 700,
-                                marginBottom: '24px',
-                                borderBottom: isDark ? '1px solid #333' : '1px solid #eee',
-                                paddingBottom: '12px',
-                                display: 'flex', alignItems: 'center', gap: '12px'
-                            }}>
-                                {section.title}
-                                <span style={{ fontSize: '0.9rem', fontWeight: 500, opacity: 0.5 }}>
-                                    {section.images.length}
-                                </span>
-                            </h2>
-                        )}
-                        <div className="gallery-masonry">
-                            {section.images.map((img: string, imgIdx: number) => (
-                                <LazyImage
-                                    key={`${idx}-${imgIdx}`}
-                                    src={img}
-                                    alt={`Gallery ${imgIdx + 1}`}
-                                    onClick={() => setSelectedImage(img)}
-                                    isDark={isDark}
-                                />
-                            ))}
-                        </div>
+            {gallerySections.map((section, idx) => (
+                <div key={section.id || idx} style={{ marginBottom: '48px' }}>
+                    {section.title && (
+                        <h3 style={{
+                            fontSize: '1.5rem',
+                            fontWeight: 700,
+                            marginBottom: '24px',
+                            borderBottom: isDark ? '1px solid #333' : '1px solid #eee',
+                            paddingBottom: '12px',
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            color: isDark ? '#eee' : '#111'
+                        }}>
+                            {section.title}
+                            <span style={{ fontSize: '0.9rem', fontWeight: 500, opacity: 0.5 }}>
+                                {section.images.length}
+                            </span>
+                        </h3>
+                    )}
+                    <div className="gallery-masonry">
+                        {section.images.map((img: string, imgIdx: number) => (
+                            <LazyImage
+                                key={`${idx}-${imgIdx}`}
+                                src={img}
+                                alt={`Gallery ${imgIdx + 1}`}
+                                onClick={() => setSelectedImage(img)}
+                                isDark={isDark}
+                            />
+                        ))}
                     </div>
-                ))}
-            </main>
+                </div>
+            ))}
 
-            {/* Lightbox */}
             {selectedImage && (
                 <LightboxImage
                     src={selectedImage}

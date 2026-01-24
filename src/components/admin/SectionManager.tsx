@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
-import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText, GripVertical, Link as LinkIcon, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, Mail } from 'lucide-react'
+import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText, GripVertical, Link as LinkIcon, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, Mail, Images } from 'lucide-react'
 
 const ICON_MAP: Record<string, any> = {
     FileText, Link: LinkIcon, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Mail, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info
@@ -188,8 +188,24 @@ export function SectionManager() {
                             >
                                 <FolderOpen size={18} color="#ff3b3b" />
                                 <div>
-                                    <div style={{ fontWeight: 600 }}>Subsection</div>
                                     <div style={{ fontSize: '0.75rem', color: '#666' }}>Container for posts</div>
+                                </div>
+                            </Link>
+                            <Link
+                                to={`/admin/create-gallery/${section.id}`}
+                                onClick={() => setShowCreateMenu(false)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '12px',
+                                    padding: '14px 20px', textDecoration: 'none', color: 'white',
+                                    transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#222'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                                <Images size={18} color="#3b82f6" />
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>Gallery</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#666' }}>Photo gallery</div>
                                 </div>
                             </Link>
                         </div>
@@ -326,7 +342,13 @@ export function SectionManager() {
                                         {post.isPublished ? 'Unpublish' : 'Publish'}
                                     </button>
                                     <button
-                                        onClick={() => navigate(post.isSubsection ? `/admin/subsection/${post.id}` : `/admin/post/${post.id}`)}
+                                        onClick={() => {
+                                            if (post.layout === 'gallery') {
+                                                navigate(`/admin/gallery-editor/${post.id}`)
+                                            } else {
+                                                navigate(post.isSubsection ? `/admin/subsection/${post.id}` : `/admin/post/${post.id}`)
+                                            }
+                                        }}
                                         title={post.isSubsection ? "Manage Subsection" : "Edit Post"}
                                         style={{
                                             padding: '10px', borderRadius: '8px',

@@ -35,8 +35,8 @@ export async function uploadImage(file: File | string, _filename?: string): Prom
  * @param url - Public URL of the image
  */
 export async function deleteImage(url: string): Promise<void> {
-    // Extract filename from URL
-    const filename = url.split('/').pop()
+    // Extract filename from URL (remove query params if any)
+    const filename = url.split('/').pop()?.split('?')[0]
     if (!filename) return
 
     const result = await api.upload.deleteFile('images', filename)

@@ -18,6 +18,8 @@ import { AdminSections } from './components/admin/AdminSections'
 import { AdminLogin } from './pages/AdminLogin'
 import { ProtectedRoute } from './components/admin/ProtectedRoute'
 import { PopupManager } from './components/admin/PopupManager'
+import { GalleryEditor } from './components/admin/GalleryEditor'
+
 
 function App() {
   return (
@@ -36,8 +38,10 @@ function App() {
               <Route path="create/:sectionId" element={<PostEditor />} />
               <Route path="create-post/:sectionId" element={<PostEditor />} />
               <Route path="create-subsection/:sectionId" element={<SubsectionEditor />} />
+              <Route path="create-gallery/:sectionId" element={<GalleryEditor />} />
               <Route path="post/:id" element={<PostEditor />} />
               <Route path="subsection/:id" element={<SubsectionEditor />} />
+              <Route path="gallery-editor/:id" element={<GalleryEditor />} />
             </Route>
           </Route>
 

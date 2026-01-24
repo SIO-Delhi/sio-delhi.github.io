@@ -2,18 +2,21 @@ import { useState, useRef } from 'react'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage, deleteImage } from '../../lib/storage'
+import { validateImage, compressImage } from '../../lib/imageProcessing'
+import { ImageCropper } from './ImageCropper'
 import { Upload, Trash2, Eye, EyeOff, Save, Image as ImageIcon } from 'lucide-react'
 
 export function PopupManager() {
     const { isDark } = useTheme()
     const { popup, savePopup, deletePopup, fetchPopup } = useContent()
     const fileInputRef = useRef<HTMLInputElement>(null)
-    
+
     const [image, setImage] = useState<string>(popup?.image || '')
     const [isActive, setIsActive] = useState(popup?.isActive ?? true)
     const [uploading, setUploading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [previewOpen, setPreviewOpen] = useState(false)
+    const [croppingFile, setCroppingFile] = useState<string | null>(null)
 
     // Sync state when popup changes
     useState(() => {
@@ -28,14 +31,17 @@ export function PopupManager() {
         if (!file) return
 
         try {
-            setUploading(true)
-            const url = await uploadImage(file)
-            setImage(url)
-        } catch (err) {
-            console.error('Error uploading image:', err)
-            alert('Failed to upload image')
-        } finally {
-            setUploading(false)
+            validateImage(file)
+            const reader = new FileReader()
+            reader.onload = () => {
+                setCroppingFile(reader.result as string)
+            }
+            reader.readAsDataURL(file)
+        } catch (err: any) {
+            console.error('Error selecting file:', err)
+            alert(err.message)
+            // Reset input
+            e.target.value = ''
         }
     }
 
@@ -128,6 +134,38 @@ export function PopupManager() {
                 }}>
                     Popup Image
                 </h2>
+
+                {/* Cropper Modal */}
+                {croppingFile && (
+                    <ImageCropper
+                        imageSrc={croppingFile}
+                        aspectRatio={undefined} // Flexible aspect ratio for popups
+                        onCancel={() => {
+                            setCroppingFile(null)
+                            // Reset input
+                            if (fileInputRef.current) fileInputRef.current.value = ''
+                        }}
+                        onCropComplete={async (croppedBlob) => {
+                            try {
+                                setUploading(true)
+                                setCroppingFile(null) // Close cropper
+
+                                // Convert blob to File and Compress/Convert to WebP
+                                const file = new File([croppedBlob], "popup.webp", { type: 'image/webp' })
+                                const compressed = await compressImage(file) // This ensures WebP and optimization
+
+                                const url = await uploadImage(compressed)
+                                setImage(url)
+                            } catch (err: any) {
+                                console.error('Error uploading cropped image:', err)
+                                alert(`Failed to upload image: ${err.message}`)
+                            } finally {
+                                setUploading(false)
+                                if (fileInputRef.current) fileInputRef.current.value = ''
+                            }
+                        }}
+                    />
+                )}
 
                 {/* Image Preview */}
                 {image ? (
@@ -284,20 +322,7 @@ export function PopupManager() {
                     {saving ? 'Saving...' : 'Save Popup'}
                 </button>
 
-                {popup && (
-                    <button
-                        onClick={handleDelete}
-                        style={{
-                            ...buttonStyle,
-                            background: 'transparent',
-                            border: '1px solid #ef4444',
-                            color: '#ef4444'
-                        }}
-                    >
-                        <Trash2 size={18} />
-                        Delete Popup
-                    </button>
-                )}
+                
             </div>
 
             {/* Preview Modal */}
