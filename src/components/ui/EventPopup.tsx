@@ -11,6 +11,9 @@ export function EventPopup() {
     const [hasShownThisLoad, setHasShownThisLoad] = useState(false)
 
     useEffect(() => {
+        // Only show popup on home page
+        if (location.pathname !== '/') return
+
         // Don't show popup on admin pages
         if (location.pathname.startsWith('/admin')) return
 
