@@ -237,30 +237,29 @@ export function SectionCard({
                     e.currentTarget.style.zIndex = '5'
                 }}
             >
-                {/* Icon */}
+                {/* Icon or Logo */}
                 <div style={{
                     color: '#ff3b3b',
                     marginBottom: '8px',
-                    display: 'flex', justifyContent: 'center'
+                    display: 'flex', 
+                    justifyContent: 'center',
+                    alignItems: 'center'
                 }}>
-                    {IconComponent !== FileText ? (
-                        <IconComponent size={40} strokeWidth={1.5} />
-                    ) : icon && (icon.includes('/') || icon.startsWith('data:')) ? (
-                        <div
+                    {icon && (icon.includes('/') || icon.includes('http') || icon.startsWith('data:')) ? (
+                        <img
+                            src={icon}
+                            alt={title}
+                            draggable={false}
                             style={{
                                 width: '52px',
                                 height: '52px',
-                                backgroundColor: '#ff3b3b',
-                                maskImage: `url(${icon})`,
-                                WebkitMaskImage: `url(${icon})`,
-                                maskSize: 'contain',
-                                WebkitMaskSize: 'contain',
-                                maskRepeat: 'no-repeat',
-                                WebkitMaskRepeat: 'no-repeat',
-                                maskPosition: 'center',
-                                WebkitMaskPosition: 'center'
+                                objectFit: 'contain',
+                                filter: 'brightness(0) saturate(100%) invert(31%) sepia(93%) saturate(7471%) hue-rotate(355deg) brightness(101%) contrast(107%)'
                             }}
+                            loading="lazy"
                         />
+                    ) : IconComponent !== FileText ? (
+                        <IconComponent size={40} strokeWidth={1.5} />
                     ) : (
                         <FileText size={40} strokeWidth={1.5} />
                     )}

@@ -3,7 +3,7 @@ import { X } from 'lucide-react'
 import { useContent } from '../../context/ContentContext'
 
 const POPUP_DISMISSED_KEY = 'popup_dismissed_timestamp'
-const DISMISS_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+const DISMISS_DURATION = 10 * 1000 // 10 seconds for testing (change to 24 * 60 * 60 * 1000 for production)
 
 export function EventPopup() {
     const { popup } = useContent()

@@ -14,6 +14,7 @@ function getAll() {
             'title' => $row['title'],
             'label' => $row['label'],
             'type' => $row['type'],
+            'template' => $row['template'] ?? 'standard',
             'displayOrder' => (int)$row['display_order'],
             'isPublished' => (bool)$row['is_published'],
             'description' => $row['description'],
@@ -39,6 +40,7 @@ function getOne($id) {
         'title' => $row['title'],
         'label' => $row['label'],
         'type' => $row['type'],
+        'template' => $row['template'] ?? 'standard',
         'displayOrder' => (int)$row['display_order'],
         'isPublished' => (bool)$row['is_published'],
         'description' => $row['description'],
@@ -66,8 +68,8 @@ function create() {
     }
 
     $stmt = $db->prepare("
-        INSERT INTO sections (id, title, label, type, display_order, is_published, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sections (id, title, label, type, template, display_order, is_published, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     $stmt->execute([
@@ -75,6 +77,7 @@ function create() {
         $data['title'],
         $data['label'],
         $data['type'] ?? 'generic',
+        $data['template'] ?? 'standard',
         $data['displayOrder'] ?? 0,
         isset($data['isPublished']) ? ($data['isPublished'] ? 1 : 0) : 1,
         $data['description'] ?? null
@@ -111,6 +114,10 @@ function update($id) {
     if (isset($data['type'])) {
         $updates[] = 'type = ?';
         $params[] = $data['type'];
+    }
+    if (isset($data['template'])) {
+        $updates[] = 'template = ?';
+        $params[] = $data['template'];
     }
     if (isset($data['displayOrder'])) {
         $updates[] = 'display_order = ?';
