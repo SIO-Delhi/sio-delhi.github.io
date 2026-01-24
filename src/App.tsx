@@ -19,6 +19,7 @@ import { AdminLogin } from './pages/AdminLogin'
 import { ProtectedRoute } from './components/admin/ProtectedRoute'
 import { PopupManager } from './components/admin/PopupManager'
 import { GalleryEditor } from './components/admin/GalleryEditor'
+import { FrameTool } from './components/admin/FrameTool'
 
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="sections" element={<AdminSections />} />
               <Route path="popup" element={<PopupManager />} />
+              <Route path="frame-tool" element={<FrameTool />} />
               <Route path="section/:sectionId" element={<SectionManager />} />
               <Route path="create/:sectionId" element={<PostEditor />} />
               <Route path="create-post/:sectionId" element={<PostEditor />} />

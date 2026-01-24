@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone } from 'lucide-react'
+import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, Frame } from 'lucide-react'
 import { useClerk } from '@clerk/clerk-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
@@ -154,6 +154,22 @@ export function AdminLayout() {
                     >
                         <Megaphone size={20} />
                         Popup Manager
+                    </Link>
+
+                    <Link
+                        to="/admin/frame-tool"
+                        onClick={() => isMobile && setSidebarOpen(false)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '12px', borderRadius: '8px',
+                            background: isActive('/admin/frame-tool') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
+                            color: isActive('/admin/frame-tool') ? '#ff3b3b' : 'inherit',
+                            textDecoration: 'none', fontWeight: 500,
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        <Frame size={20} />
+                        Frame Tool
                     </Link>
 
                     <div style={{ height: '1px', background: isDark ? '#222' : '#eee', margin: '8px 0' }} />
