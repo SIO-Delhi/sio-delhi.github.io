@@ -245,7 +245,7 @@ interface EmbeddableGalleryProps {
     title?: string
 }
 
-export function EmbeddableGallery({ imagesRaw, isDark, title }: EmbeddableGalleryProps) {
+export function EmbeddableGallery({ imagesRaw, isDark }: EmbeddableGalleryProps) {
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
     // Normalize to sections
