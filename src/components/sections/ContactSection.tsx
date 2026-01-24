@@ -96,7 +96,7 @@ export function ContactSection() {
                         fontWeight: 400,
                         textShadow: '0 2px 4px rgba(0,0,0,0.5)'
                     }}>
-                        Interested in collaborating on research, initiatives, or just want to say hi? We'd love to hear from you.
+                        Interested in collaborating on research, initiatives, or just want to say salam? We'd love to hear from you.
                     </p>
                 </div>
 
