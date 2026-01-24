@@ -955,7 +955,7 @@ export function blocksToHtml(blocks: EditorBlock[]): string {
             const imagesAttr = block.carouselImages?.length ? ` data-images="${encodeURIComponent(JSON.stringify(block.carouselImages))}"` : ''
             html += `<div class="siodel-block block-image"${alignAttr}${captionAttr}${carouselAttr}${imagesAttr} style="margin: 32px 0;"><img src="${block.content}" style="width: 100%; border-radius: 12px; display: block;" /></div>`
         } else if (block.type === 'pdf' && block.content) {
-            html += `<div class="siodel-block block-pdf" data-pdf-url="${block.content}"${alignAttr}></div>`
+            html += `<div class="siodel-block block-pdf" data-pdf-url="${encodeURIComponent(block.content)}"${alignAttr}></div>`
         } else if (block.type === 'video' && block.content) {
             const embedUrl = block.content.replace('watch?v=', 'embed/').split('&')[0]
             const subtitleAttr = block.subtitle ? ` data-subtitle="${encodeURIComponent(block.subtitle)}"` : ''
@@ -1015,7 +1015,7 @@ export function htmlToBlocks(html: string): EditorBlock[] {
                 if (imagesAttr) block.carouselImages = JSON.parse(decodeURIComponent(imagesAttr))
             } catch {}
         } else if (type === 'pdf') {
-            block.content = el.getAttribute('data-pdf-url') || ''
+            block.content = decodeURIComponent(el.getAttribute('data-pdf-url') || '')
         } else if (type === 'video') {
             const iframe = el.querySelector('iframe')
             block.content = iframe?.src?.replace('embed/', 'watch?v=') || ''

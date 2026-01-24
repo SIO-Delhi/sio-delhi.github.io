@@ -19,6 +19,14 @@ RewriteRule ^(.*)$ index.php [QSA,L]
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "SAMEORIGIN"
+    
+    # CORS headers for uploaded files (PDFs, images, audio)
+    # Allow access from your frontend domains
+    <FilesMatch "\.(pdf|jpg|jpeg|png|gif|webp|mp3|wav|ogg)$">
+        Header set Access-Control-Allow-Origin "*"
+        Header set Access-Control-Allow-Methods "GET, OPTIONS"
+        Header set Access-Control-Allow-Headers "Content-Type"
+    </FilesMatch>
 </IfModule>
 
 # Prevent access to sensitive files

@@ -348,7 +348,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
             return {
                 type: blockType,
                 content: isPdf || isComposite ? '' : el.innerHTML,
-                pdfUrl: el.getAttribute('data-pdf-url') || '',
+                pdfUrl: decodeURIComponent(el.getAttribute('data-pdf-url') || ''),
                 alignment: el.getAttribute('data-align') || 'left',
                 subtitle: decodeURIComponent(el.getAttribute('data-subtitle') || ''),
                 subtitleColor: el.getAttribute('data-subtitle-color') || '',
