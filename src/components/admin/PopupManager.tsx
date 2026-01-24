@@ -1,14 +1,14 @@
 import { useState, useRef } from 'react'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
-import { uploadImage, deleteImage } from '../../lib/storage'
+import { uploadImage} from '../../lib/storage'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { ImageCropper } from './ImageCropper'
-import { Upload, Trash2, Eye, EyeOff, Save, Image as ImageIcon } from 'lucide-react'
+import { Upload, Eye, EyeOff, Save, Image as ImageIcon } from 'lucide-react'
 
 export function PopupManager() {
     const { isDark } = useTheme()
-    const { popup, savePopup, deletePopup, fetchPopup } = useContent()
+    const { popup, savePopup, fetchPopup } = useContent()
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const [image, setImage] = useState<string>(popup?.image || '')
@@ -64,27 +64,7 @@ export function PopupManager() {
         }
     }
 
-    const handleDelete = async () => {
-        if (!confirm('Are you sure you want to delete this popup?')) return
 
-        try {
-            // Delete the image from storage if exists
-            if (popup?.image) {
-                try {
-                    await deleteImage(popup.image)
-                } catch (err) {
-                    console.error('Error deleting image from storage:', err)
-                }
-            }
-            await deletePopup()
-            setImage('')
-            setIsActive(true)
-            alert('Popup deleted successfully!')
-        } catch (err) {
-            console.error('Error deleting popup:', err)
-            alert('Failed to delete popup')
-        }
-    }
 
     const cardStyle: React.CSSProperties = {
         background: isDark ? '#111' : '#fff',
