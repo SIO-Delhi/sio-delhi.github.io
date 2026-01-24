@@ -72,7 +72,6 @@ export function ContactSection() {
                         opacity: 0.8,
                         marginLeft: '4px' // Subtle alignment correction
                     }}>
-                        Get in Touch
                     </span>
 
                     <h2 className="animate-up" style={{
@@ -103,7 +102,7 @@ export function ContactSection() {
 
                 {/* Email Button */}
                 <a
-                    href="mailto:contact@sio-delhi.org"
+                    href="mailto:zs.del@sio-india.org"
                     className="animate-up group"
                     style={{
                         display: 'inline-flex',
@@ -139,7 +138,7 @@ export function ContactSection() {
                         e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)'
                     }}
                 >
-                    contact@sio-delhi.org
+                    zs.del@sio-india.org
                     <ArrowUpRight size={24} />
                 </a>
 
