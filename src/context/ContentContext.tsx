@@ -66,7 +66,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             description: row.description,
             display_order: row.displayOrder ?? 0,
             is_published: row.isPublished ?? true,
-            type: (row.type || 'generic') as 'custom' | 'generic'
+            type: (row.type || 'generic') as 'custom' | 'generic',
+            template: row.template // Map template from API
         }))
         setSections(mapped)
     }, [])
@@ -105,6 +106,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             if (updates.display_order !== undefined) apiUpdates.displayOrder = updates.display_order
             if (updates.is_published !== undefined) apiUpdates.isPublished = updates.is_published
             if (updates.type !== undefined) apiUpdates.type = updates.type
+            if (updates.template !== undefined) apiUpdates.template = updates.template
 
             const result = await api.sections.update(id, apiUpdates)
 
