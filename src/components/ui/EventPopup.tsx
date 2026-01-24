@@ -1,40 +1,39 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 
-const POPUP_DISMISSED_KEY = 'popup_dismissed_timestamp'
-const DISMISS_DURATION = 10 * 1000 // 10 seconds for testing (change to 24 * 60 * 60 * 1000 for production)
+const POPUP_SHOWN_KEY = 'popup_shown_this_tab'
 
 export function EventPopup() {
     const { popup } = useContent()
+    const location = useLocation()
     const [isVisible, setIsVisible] = useState(false)
     const [isClosing, setIsClosing] = useState(false)
 
     useEffect(() => {
+        // Don't show popup on admin pages
+        if (location.pathname.startsWith('/admin')) return
+
         // Check if popup should be shown
         if (!popup?.isActive || !popup.image) return
 
-        // Check if user has dismissed the popup recently
-        const dismissedAt = localStorage.getItem(POPUP_DISMISSED_KEY)
-        if (dismissedAt) {
-            const dismissedTime = parseInt(dismissedAt, 10)
-            if (Date.now() - dismissedTime < DISMISS_DURATION) {
-                return // Don't show popup if dismissed within the last 24 hours
-            }
-        }
+        // Check if popup was already shown in this tab (using sessionStorage)
+        const alreadyShown = sessionStorage.getItem(POPUP_SHOWN_KEY)
+        if (alreadyShown) return
 
-        // Show popup after a short delay for better UX
+        // Show popup after 3 seconds
         const timer = setTimeout(() => {
             setIsVisible(true)
-        }, 1500)
+            // Mark as shown for this tab
+            sessionStorage.setItem(POPUP_SHOWN_KEY, 'true')
+        }, 3000)
 
         return () => clearTimeout(timer)
-    }, [popup])
+    }, [popup, location.pathname])
 
     const handleClose = () => {
         setIsClosing(true)
-        // Save dismissal timestamp
-        localStorage.setItem(POPUP_DISMISSED_KEY, Date.now().toString())
         
         // Wait for animation to complete before hiding
         setTimeout(() => {
