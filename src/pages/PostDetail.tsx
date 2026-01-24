@@ -7,6 +7,7 @@ import { PDFFlipbook } from '../components/ui/PDFFlipbook'
 import { SectionCard } from '../components/ui/SectionCard'
 import { PostSkeleton } from '../components/ui/PostSkeleton'
 import { ViewGalleryButton } from '../components/ui/ViewGalleryButton'
+import { EmbeddableGallery } from '../components/ui/EmbeddableGallery'
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 interface ParsedBlock {
@@ -1097,11 +1098,17 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                 {/* Audio Player - Only show if enabled */}
                 {post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
-                {/* Gallery Button for Subsections */}
-                {hasGallery && galleryUrl && (
-                    <div style={{ marginBottom: '24px' }}>
-                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="outline" />
-                    </div>
+                {/* Custom Gallery Component for Subsections */}
+                {hasGallery && (
+                    <>
+                        {post.layout === 'gallery' ? (
+                            <EmbeddableGallery imagesRaw={post.galleryImages} isDark={isDark} />
+                        ) : galleryUrl && (
+                            <div style={{ marginBottom: '24px' }}>
+                                <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="outline" />
+                            </div>
+                        )}
+                    </>
                 )}
 
                 {/* PDF Flipbook (main content for subsection posts) */}
@@ -1149,13 +1156,37 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     {post.title}
                 </h1>
 
-
-
-                {/* Gallery Button */}
-                {hasGallery && galleryUrl && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="default" />
+                {/* Gallery Description (for gallery layout) */}
+                {post.layout === 'gallery' && post.content && (
+                    <div
+                        className="post-content"
+                        style={{
+                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            fontSize: '1.2rem',
+                            lineHeight: 1.5,
+                            textAlign: 'center',
+                            maxWidth: '800px',
+                            margin: '0 auto 32px'
+                        }}
+                    >
+                        {/* Simple text render or block renderer? Let's use simple for description */}
+                        <p>{post.content}</p>
                     </div>
+                )}
+
+
+
+                {/* Gallery Display */}
+                {hasGallery && (
+                    <>
+                        {post.layout === 'gallery' ? (
+                            <EmbeddableGallery imagesRaw={post.galleryImages} isDark={isDark} />
+                        ) : galleryUrl && (
+                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+                                <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="default" />
+                            </div>
+                        )}
+                    </>
                 )}
 
                 {/* Read Article Button - Only show for non-subsection posts with audio enabled */}
@@ -1171,8 +1202,8 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                         </div>
                     )}
 
-                {/* Content */}
-                {post.content && (
+                {/* Content (only if NOT gallery layout) */}
+                {post.content && post.layout !== 'gallery' && (
                     <div
                         className="post-content"
                         style={{
@@ -1415,10 +1446,14 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any;
                 </div >
 
 
-                {/* Gallery Button for Leadership */}
-                {hasGallery && galleryUrl && (
-                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
-                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="pill" />
+                {/* Gallery Display for Leadership */}
+                {hasGallery && (
+                    <div style={{ marginTop: '24px', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                        {post.layout === 'gallery' ? (
+                            <EmbeddableGallery imagesRaw={post.galleryImages} isDark={isDark} />
+                        ) : galleryUrl && (
+                            <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="pill" />
+                        )}
                     </div>
                 )}
             </div >
@@ -1557,21 +1592,40 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
                 </div>
             </div>
 
+            {/* Gallery Description (for gallery layout) */}
+            {post.layout === 'gallery' && post.content && (
+                <div
+                    className="news-content"
+                    style={{
+                        color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                        fontSize: '1.2rem',
+                        lineHeight: 1.5,
+                        marginBottom: '32px'
+                    }}
+                >
+                    <p>{post.content}</p>
+                </div>
+            )}
 
-            {/* Gallery Button media */}
+
+            {/* Gallery Display media */}
             {
-                hasGallery && galleryUrl && (
+                hasGallery && (
                     <div style={{ marginBottom: '32px' }}>
-                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="card" />
+                        {post.layout === 'gallery' ? (
+                            <EmbeddableGallery imagesRaw={post.galleryImages} isDark={isDark} />
+                        ) : galleryUrl && (
+                            <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="card" />
+                        )}
                     </div>
                 )
             }
 
             {/* Cover Image moved to Hero */}
 
-            {/* Article Content */}
+            {/* Article Content (only if NOT gallery layout) */}
             {
-                post.content && (
+                post.content && post.layout !== 'gallery' && (
                     <div
                         className="news-content"
                         style={{

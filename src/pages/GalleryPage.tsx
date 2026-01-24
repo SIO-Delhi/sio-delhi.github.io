@@ -88,7 +88,7 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
             // Extract filename from URL
             const urlParts = src.split('/')
             const filename = urlParts[urlParts.length - 1].split('?')[0] || 'gallery-image.jpg'
-            
+
             // Check if it's from our API - use download endpoint
             if (src.includes('api.siodelhi.org')) {
                 // Use download proxy endpoint
@@ -99,7 +99,7 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
                 const response = await fetch(src, { mode: 'cors' })
                 const blob = await response.blob()
                 const blobUrl = URL.createObjectURL(blob)
-                
+
                 const link = document.createElement('a')
                 link.href = blobUrl
                 link.download = filename
@@ -251,7 +251,23 @@ export function GalleryPage() {
     const post = id ? getPostById(id) : undefined
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
-    const images = post?.galleryImages || []
+    const imagesRaw = post?.galleryImages || []
+
+    // Normalize to sections
+    const gallerySections: { id: string, title: string, images: string[] }[] = (() => {
+        if (imagesRaw.length === 0) return []
+
+        // Check if it's the old format (array of strings)
+        if (typeof imagesRaw[0] === 'string') {
+            return [{
+                id: 'default',
+                title: '',
+                images: imagesRaw as unknown as string[]
+            }]
+        }
+
+        return imagesRaw as unknown as { id: string, title: string, images: string[] }[]
+    })()
 
     // Build back URL based on current path
     const getBackUrl = () => {
@@ -313,7 +329,7 @@ export function GalleryPage() {
         )
     }
 
-    if (images.length === 0) {
+    if (gallerySections.length === 0) {
         return (
             <div style={{
                 minHeight: '100vh',
@@ -342,6 +358,8 @@ export function GalleryPage() {
             </div>
         )
     }
+
+    const totalPhotos = gallerySections.reduce((acc, sec) => acc + sec.images.length, 0)
 
     return (
         <div style={{
@@ -396,23 +414,42 @@ export function GalleryPage() {
                     fontSize: '0.9rem',
                     fontWeight: 600
                 }}>
-                    {images.length} Photos
+                    {totalPhotos} Photos
                 </span>
             </div>
 
             {/* Masonry Gallery */}
             <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
-                <div className="gallery-masonry">
-                    {images.map((img: string, idx: number) => (
-                        <LazyImage
-                            key={idx}
-                            src={img}
-                            alt={`Gallery ${idx + 1}`}
-                            onClick={() => setSelectedImage(img)}
-                            isDark={isDark}
-                        />
-                    ))}
-                </div>
+                {gallerySections.map((section, idx) => (
+                    <div key={section.id || idx} style={{ marginBottom: '48px' }}>
+                        {section.title && (
+                            <h2 style={{
+                                fontSize: '1.5rem',
+                                fontWeight: 700,
+                                marginBottom: '24px',
+                                borderBottom: isDark ? '1px solid #333' : '1px solid #eee',
+                                paddingBottom: '12px',
+                                display: 'flex', alignItems: 'center', gap: '12px'
+                            }}>
+                                {section.title}
+                                <span style={{ fontSize: '0.9rem', fontWeight: 500, opacity: 0.5 }}>
+                                    {section.images.length}
+                                </span>
+                            </h2>
+                        )}
+                        <div className="gallery-masonry">
+                            {section.images.map((img: string, imgIdx: number) => (
+                                <LazyImage
+                                    key={`${idx}-${imgIdx}`}
+                                    src={img}
+                                    alt={`Gallery ${imgIdx + 1}`}
+                                    onClick={() => setSelectedImage(img)}
+                                    isDark={isDark}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                ))}
             </main>
 
             {/* Lightbox */}
