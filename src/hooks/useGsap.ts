@@ -210,7 +210,7 @@ export const useScrollLinkedAnimation = (
 ) => {
     const ref = useRef<HTMLElement>(null)
 
-    const memoizedAnimationFn = useCallback(animationFn, [animationFn])
+    const memoizedAnimationFn = useCallback((progress: number) => animationFn(progress), [animationFn])
 
     useEffect(() => {
         const element = ref.current
