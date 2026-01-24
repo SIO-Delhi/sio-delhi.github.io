@@ -7,15 +7,10 @@ import { useContent } from '../../context/ContentContext'
 
 export function SplashScreen() {
     const location = useLocation()
-
-    // Don't show splash on admin pages
-    if (location.pathname.startsWith('/admin')) {
-        return null
-    }
+    const { setShowDonation } = useContent()
 
     // Check if splash was already seen in this tab session
-    const { setShowDonation } = useContent()
-    const alreadySeen = sessionStorage.getItem('sio_splash_seen') === 'true'
+    const alreadySeen = typeof window !== 'undefined' && sessionStorage.getItem('sio_splash_seen') === 'true'
     const [isCollapsed, setIsCollapsed] = useState(alreadySeen)
     const [scrollProgress, setScrollProgress] = useState(0)
 
@@ -25,6 +20,9 @@ export function SplashScreen() {
 
     // Refs for Persistent Button
     const buttonRef = useRef<HTMLDivElement>(null)
+
+    // Check if we're on admin pages
+    const isAdminPage = location.pathname.startsWith('/admin')
 
     const handleStartExploring = () => {
         if (!splashContainerRef.current) {
@@ -66,6 +64,7 @@ export function SplashScreen() {
 
     // Scroll listener for progress ring
     useEffect(() => {
+        if (isAdminPage) return
         const handleScroll = () => {
             const totalScroll = document.documentElement.scrollTop
             const windowHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight
@@ -75,7 +74,12 @@ export function SplashScreen() {
         }
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
-    }, [])
+    }, [isAdminPage])
+
+    // Don't render on admin pages
+    if (isAdminPage) {
+        return null
+    }
 
     return (
         <>

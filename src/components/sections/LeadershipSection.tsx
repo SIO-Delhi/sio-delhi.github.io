@@ -32,6 +32,7 @@ export function LeadershipSection() {
     const renderLeaderCard = (leader: any) => (
         <div
             key={leader.id}
+            id={`card-${leader.id}`}
             data-cursor="view"
             className="section-card-shine"
             style={{
@@ -71,7 +72,7 @@ export function LeadershipSection() {
                 if (img) img.style.filter = 'grayscale(100%)'
             }}
             onClick={() => {
-                // Navigate to leader detail page
+                window.history.replaceState(null, '', `#leadership:${leader.id}`)
                 navigate(`/leader/${leader.id}`)
             }}
             draggable={false}
@@ -152,7 +153,6 @@ export function LeadershipSection() {
         <SectionLayout
             id="leadership"
             header={headerContent}
-            subtitle="Meet the team leading SIO Delhi"
         >
             {hasContent ? (
                 leaders.map(renderLeaderCard)

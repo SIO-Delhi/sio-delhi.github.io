@@ -32,12 +32,12 @@ export function MediaSection() {
         <SectionLayout
             id="media"
             header={headerContent}
-            subtitle="Stay updated with our latest news and media coverage"
         >
             {hasContent ? (
                 cards.map((card) => (
                     <SectionCard
                         key={card.id}
+                        cardId={`card-${card.id}`}
                         {...card}
                         variant="media"
                         label="MEDIA"
@@ -45,7 +45,10 @@ export function MediaSection() {
                         description={card.subtitle || card.content.replace(/<[^>]+>/g, '').substring(0, 100)}
                         publishedDate={(card as any).publishedDate || card.createdAt}
                         image={(card as any).coverImage || card.image}
-                        onClick={() => navigate(`/media/${card.id}`, { state: { post: card } })}
+                        onClick={() => {
+                            window.history.replaceState(null, '', `#media:${card.id}`)
+                            navigate(`/media/${card.id}`, { state: { post: card } })
+                        }}
                     />
                 ))
             ) : (

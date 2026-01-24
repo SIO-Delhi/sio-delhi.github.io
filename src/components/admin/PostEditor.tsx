@@ -10,7 +10,7 @@ import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 
-import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
+import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Facebook, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
@@ -210,25 +210,26 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Alignment */}
-            <button onClick={() => editor.chain().focus().setTextAlign('left').run()} style={buttonStyle(editor.isActive({ textAlign: 'left' }))}><AlignLeft size={16} /></button>
-            <button onClick={() => editor.chain().focus().setTextAlign('center').run()} style={buttonStyle(editor.isActive({ textAlign: 'center' }))}><AlignCenter size={16} /></button>
-            <button onClick={() => editor.chain().focus().setTextAlign('right').run()} style={buttonStyle(editor.isActive({ textAlign: 'right' }))}><AlignRight size={16} /></button>
-            <button onClick={() => editor.chain().focus().setTextAlign('justify').run()} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))}><AlignJustify size={16} /></button>
+            {/* Alignment */}
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))}><AlignLeft size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))}><AlignCenter size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))}><AlignRight size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('justify').run() }} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))}><AlignJustify size={16} /></button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Headings - Kept for structure */}
-            <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} style={buttonStyle(editor.isActive('heading', { level: 1 }))}>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))}>
                 <Heading1 size={16} />
             </button>
-            <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} style={buttonStyle(editor.isActive('heading', { level: 2 }))}>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))}>
                 <Heading2 size={16} />
             </button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Lists */}
-            <button onClick={() => editor.chain().focus().toggleBulletList().run()} style={buttonStyle(editor.isActive('bulletList'))}><List size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))}><List size={16} /></button>
         </div>
     )
 }
@@ -781,18 +782,91 @@ const VideoBlockEditor = ({
     onSubtitleChange?: (val: string) => void,
     onTextChange?: (val: string) => void
 }) => {
+    // Detect platform from URL
+    const detectPlatform = (link: string): 'youtube' | 'vimeo' | 'instagram' | 'facebook' | 'unknown' => {
+        if (!link) return 'unknown'
+        if (link.includes('youtube.com') || link.includes('youtu.be')) return 'youtube'
+        if (link.includes('vimeo.com')) return 'vimeo'
+        if (link.includes('instagram.com')) return 'instagram'
+        if (link.includes('facebook.com') || link.includes('fb.watch')) return 'facebook'
+        return 'unknown'
+    }
+
+    const platform = detectPlatform(url)
+
+    // Convert URLs to embed format
+    const getEmbedUrl = (link: string): string => {
+        if (!link) return ''
+
+        // YouTube
+        if (link.includes('youtube.com/watch')) {
+            return link.replace('watch?v=', 'embed/').split('&')[0]
+        }
+        if (link.includes('youtu.be/')) {
+            const videoId = link.split('youtu.be/')[1]?.split('?')[0]
+            return `https://www.youtube.com/embed/${videoId}`
+        }
+
+        // Vimeo
+        if (link.includes('vimeo.com/')) {
+            const videoId = link.split('vimeo.com/')[1]?.split('?')[0]
+            return `https://player.vimeo.com/video/${videoId}`
+        }
+
+        // Instagram (posts, reels)
+        if (link.includes('instagram.com/')) {
+            // Extract post ID from various Instagram URL formats
+            const match = link.match(/instagram\.com\/(?:p|reel|reels)\/([a-zA-Z0-9_-]+)/)
+            if (match) {
+                return `https://www.instagram.com/p/${match[1]}/embed`
+            }
+        }
+
+        // Facebook videos/reels
+        if (link.includes('facebook.com/') || link.includes('fb.watch')) {
+            // Facebook requires special encoding for embed
+            return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(link)}&show_text=false`
+        }
+
+        return link
+    }
+
+    const platformInfo: Record<string, { icon: React.ReactNode, color: string, label: string }> = {
+        youtube: { icon: <Volume2 size={24} />, color: '#ff0000', label: 'YouTube' },
+        vimeo: { icon: <Volume2 size={24} />, color: '#1ab7ea', label: 'Vimeo' },
+        instagram: { icon: <Instagram size={24} />, color: '#E4405F', label: 'Instagram' },
+        facebook: { icon: <Facebook size={24} />, color: '#1877F2', label: 'Facebook' },
+        unknown: { icon: <Volume2 size={24} />, color: '#ff3b3b', label: 'Video/Social' }
+    }
+
+    const currentPlatform = platformInfo[platform] || platformInfo.unknown
+
     return (
         <div style={{ background: '#111', borderRadius: '12px', padding: '16px', border: '1px solid #333' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <Volume2 size={24} color="#ff3b3b" />
-                <span style={{ fontSize: '1rem', fontWeight: 600, color: '#eee' }}>Video Embed</span>
+                <span style={{ color: currentPlatform.color }}>{currentPlatform.icon}</span>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: '#eee' }}>
+                    {currentPlatform.label} Embed
+                </span>
+                {url && platform !== 'unknown' && (
+                    <span style={{
+                        fontSize: '0.75rem',
+                        padding: '2px 8px',
+                        background: `${currentPlatform.color}20`,
+                        color: currentPlatform.color,
+                        borderRadius: '4px',
+                        fontWeight: 600
+                    }}>
+                        {platform.toUpperCase()}
+                    </span>
+                )}
             </div>
 
             <input
                 type="text"
                 value={url}
                 onChange={(e) => onChange(e.target.value)}
-                placeholder="Paste YouTube or Vimeo link here..."
+                placeholder="Paste YouTube, Vimeo, Instagram, or Facebook link..."
                 style={{
                     width: '100%',
                     padding: '12px',
@@ -805,18 +879,30 @@ const VideoBlockEditor = ({
                 }}
             />
 
+            {/* Platform hints */}
+            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <span>Supports:</span>
+                <span style={{ color: '#ff0000' }}>YouTube</span>
+                <span>•</span>
+                <span style={{ color: '#1ab7ea' }}>Vimeo</span>
+                <span>•</span>
+                <span style={{ color: '#E4405F' }}>Instagram Posts/Reels</span>
+                <span>•</span>
+                <span style={{ color: '#1877F2' }}>Facebook Videos</span>
+            </div>
+
             <input
                 type="text"
                 value={subtitle || ''}
                 onChange={(e) => onSubtitleChange?.(e.target.value)}
-                placeholder="Video Title (Optional)"
+                placeholder="Title (Optional)"
                 style={{
                     width: '100%',
                     padding: '8px 12px',
                     background: 'transparent',
                     borderBottom: '1px solid #333',
                     borderTop: 'none', borderLeft: 'none', borderRight: 'none',
-                    color: '#ff8080',
+                    color: currentPlatform.color,
                     fontSize: '1rem',
                     fontWeight: 600,
                     marginBottom: '8px',
@@ -843,18 +929,34 @@ const VideoBlockEditor = ({
             />
 
             {url && (
-                <div style={{ marginTop: '16px', borderRadius: '8px', overflow: 'hidden', position: 'relative', paddingTop: '56.25%', background: '#000' }}>
+                <div style={{
+                    marginTop: '16px',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    paddingTop: platform === 'instagram' ? '125%' : '56.25%', // Instagram is taller
+                    background: '#000'
+                }}>
                     <iframe
-                        src={url.replace('watch?v=', 'embed/').split('&')[0]}
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                        src={getEmbedUrl(url)}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            border: 'none'
+                        }}
                         allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
+                        loading="lazy"
                     />
                 </div>
             )}
         </div>
     )
 }
+
 
 // --- Composite Block Editor: Image + Text with Layout Options ---
 const CompositeBlockEditor = ({
@@ -889,7 +991,7 @@ const CompositeBlockEditor = ({
     onAlignmentChange?: (alignment: 'left' | 'center' | 'right' | 'justify') => void
 }) => {
     const [isUploading, setIsUploading] = useState(false)
-    const [isFocused, setIsFocused] = useState(false)
+    // const [isFocused, setIsFocused] = useState(false)
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
     const [pendingFile, setPendingFile] = useState<File | null>(null)
     const currentLayout = layout || 'image-left'
@@ -901,6 +1003,7 @@ const CompositeBlockEditor = ({
         extensions: [
             StarterKit,
             Underline,
+            TextAlign.configure({ types: ['heading', 'paragraph'] }),
             TextStyle,
             Color,
             FontSize
@@ -909,8 +1012,13 @@ const CompositeBlockEditor = ({
         onUpdate: ({ editor }) => {
             onTextChange?.(editor.getHTML())
         },
-        onFocus: () => setIsFocused(true),
-        onBlur: () => setIsFocused(false),
+        editorProps: {
+            attributes: {
+                class: 'prose prose-invert max-w-none focus:outline-none',
+            },
+        },
+        // onFocus: () => setIsFocused(true),
+        // onBlur: () => setIsFocused(false),
     })
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1136,7 +1244,7 @@ const CompositeBlockEditor = ({
                         </div>
                     </div>
 
-                    {editor && isFocused && <EditorToolbar editor={editor} />}
+                    {editor && <EditorToolbar editor={editor} />}
                     <div style={{ textAlign: (alignment as any) || 'left' }}>
                         <EditorContent
                             editor={editor}
@@ -1181,6 +1289,7 @@ export function PostEditor() {
     const [date, setDate] = useState('') // New Date State
     const [order, setOrder] = useState<number>(0) // Order for Leadership/etc
     const [images, setImages] = useState<string[]>([]) // Cover image
+    const [galleryImages, setGalleryImages] = useState<string[]>([]) // Gallery images
     const [pdfUrl, setPdfUrl] = useState('')
     const [enableAudio, setEnableAudio] = useState(false)
     const [email, setEmail] = useState('')
@@ -1251,6 +1360,7 @@ export function PostEditor() {
                 setEmail(post.email || '')
                 setInstagram(post.instagram || '')
                 setTags(post.tags || []) // Load tags
+                setGalleryImages(post.galleryImages || []) // Load gallery images
                 setIcon(post.icon || '') // Load icon
 
                 setIsSubsection(post.isSubsection || false)
@@ -1546,13 +1656,52 @@ export function PostEditor() {
                 const imagesAttr = block.carouselImages && block.carouselImages.length > 0 ? ` data-images='${JSON.stringify(block.carouselImages)}'` : ''
                 finalContent += `<div class="siodel-block block-composite"${layoutAttr}${imageAttr}${textAttr}${subtitleAttr}${subtitleColorAttr}${alignAttr}${imagesAttr}></div>`
             } else if (block.type === 'video' && block.content) {
-                const embedUrl = block.content.replace('watch?v=', 'embed/').split('&')[0]
+                // Convert URL to embed format for all platforms
+                const getEmbedUrl = (link: string): string => {
+                    if (!link) return ''
+
+                    // YouTube
+                    if (link.includes('youtube.com/watch')) {
+                        return link.replace('watch?v=', 'embed/').split('&')[0]
+                    }
+                    if (link.includes('youtu.be/')) {
+                        const videoId = link.split('youtu.be/')[1]?.split('?')[0]
+                        return `https://www.youtube.com/embed/${videoId}`
+                    }
+
+                    // Vimeo
+                    if (link.includes('vimeo.com/')) {
+                        const videoId = link.split('vimeo.com/')[1]?.split('?')[0]
+                        return `https://player.vimeo.com/video/${videoId}`
+                    }
+
+                    // Instagram (posts, reels)
+                    if (link.includes('instagram.com/')) {
+                        const match = link.match(/instagram\.com\/(?:p|reel|reels)\/([a-zA-Z0-9_-]+)/)
+                        if (match) {
+                            return `https://www.instagram.com/p/${match[1]}/embed`
+                        }
+                    }
+
+                    // Facebook videos/reels
+                    if (link.includes('facebook.com/') || link.includes('fb.watch')) {
+                        return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(link)}&show_text=false`
+                    }
+
+                    return link
+                }
+
+                // Detect platform for aspect ratio
+                const isInstagram = block.content.includes('instagram.com')
+                const aspectRatio = isInstagram ? '125%' : '56.25%' // Instagram is taller
+
+                const embedUrl = getEmbedUrl(block.content)
                 const subtitleAttr = block.subtitle ? ` data-subtitle="${encodeURIComponent(block.subtitle)}"` : ''
                 const textAttr = block.textContent ? ` data-text-content="${encodeURIComponent(block.textContent)}"` : ''
 
                 let innerContent = ''
                 if (block.subtitle) innerContent += `<h3 style="margin: 0 0 12px 0; color: #ff3b3b; font-size: 1.1rem; font-weight: 600;">${block.subtitle}</h3>`
-                innerContent += `<div style="border-radius: 12px; overflow: hidden; position: relative; width: 100%; height: 0; padding-bottom: 56.25%; background: #000;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+                innerContent += `<div style="border-radius: 12px; overflow: hidden; position: relative; width: 100%; height: 0; padding-bottom: ${aspectRatio}; background: #000;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
                 if (block.textContent) innerContent += `<p style="margin: 16px 0 0 0; color: rgba(255,255,255,0.8); font-size: 0.95rem; line-height: 1.6;">${block.textContent}</p>`
 
                 finalContent += `<div class="siodel-block block-video"${subtitleAttr}${textAttr} style="margin: 32px 0; padding: 20px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 6px rgba(0,0,0,0.1);">${innerContent}</div>`
@@ -1572,6 +1721,7 @@ export function PostEditor() {
                 email,
                 instagram,
                 tags, // Include tags in save
+                galleryImages, // Include gallery images
                 icon, // Include icon in save
                 layout: 'default',
                 order,
@@ -1878,6 +2028,67 @@ export function PostEditor() {
                                 style={{ width: '100%', background: 'transparent', border: 'none', color: 'white', fontSize: '0.9rem' }}
                             />
                         </div>
+                    </div>
+                </div>
+
+                {/* POST GALLERY SECTION */}
+                <div style={{ marginBottom: '32px' }}>
+                    <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '12px', fontWeight: 600 }}>
+                        POST GALLERY
+                    </label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                        {galleryImages.map((img, idx) => (
+                            <div key={idx} style={{ position: 'relative', width: '100px', height: '100px' }}>
+                                <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                                <button
+                                    onClick={() => setGalleryImages(prev => prev.filter((_, i) => i !== idx))}
+                                    style={{
+                                        position: 'absolute', top: '4px', right: '4px',
+                                        background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none',
+                                        width: '24px', height: '24px', borderRadius: '50%',
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ))}
+                        <label style={{
+                            width: '100px', height: '100px',
+                            background: '#1a1a1a', border: '2px dashed #333', borderRadius: '8px',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: '#666'
+                        }}>
+                            {isUploading ? <Loader2 size={24} className="animate-spin" /> : <Plus size={24} />}
+                            <span style={{ fontSize: '0.7rem', marginTop: '4px' }}>Add Photos</span>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={async (e) => {
+                                    const files = e.target.files
+                                    if (!files || files.length === 0) return
+                                    setIsUploading(true)
+                                    try {
+                                        const newUrls: string[] = []
+                                        for (const file of Array.from(files)) {
+                                            validateImage(file)
+                                            const compressed = await compressImage(file)
+                                            const url = await uploadImage(compressed)
+                                            newUrls.push(url)
+                                        }
+                                        setGalleryImages(prev => [...prev, ...newUrls])
+                                    } catch (err: any) {
+                                        alert(err.message || 'Upload failed')
+                                    } finally {
+                                        setIsUploading(false)
+                                        e.target.value = ''
+                                    }
+                                }}
+                                disabled={isUploading}
+                                style={{ display: 'none' }}
+                            />
+                        </label>
                     </div>
                 </div>
 

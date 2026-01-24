@@ -22,6 +22,7 @@ export interface Post {
     instagram?: string // Instagram handle/url for Leadership
     tags?: string[] // Dynamic tags for Media/News
     icon?: string // Icon name for Resources/More section
+    galleryImages?: string[] // Array of image URLs for the post gallery
 }
 
 export interface Section {
@@ -44,4 +45,12 @@ export interface Leader {
     role: string
     image: string
     bio?: string
+}
+
+export interface Popup {
+    id: string
+    image: string
+    isActive: boolean
+    createdAt: number
+    updatedAt: number
 }

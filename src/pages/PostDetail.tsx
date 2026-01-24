@@ -6,7 +6,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
 import { SectionCard } from '../components/ui/SectionCard'
 import { PostSkeleton } from '../components/ui/PostSkeleton'
-
+import { ViewGalleryButton } from '../components/ui/ViewGalleryButton'
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 interface ParsedBlock {
@@ -31,6 +31,127 @@ interface ParsedBlock {
 
 // Memoized Video Block to prevent re-renders (looping/refreshing issues)
 const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: { src: string, subtitle?: string, subtitleColor?: string, text?: string, isDark: boolean }) => {
+    // Detect platform from embed URL
+    const isInstagram = src.includes('instagram.com')
+    const isFacebook = src.includes('facebook.com')
+
+    // Load Instagram embed script when needed
+    useEffect(() => {
+        if (isInstagram) {
+            // Load Instagram embed.js if not already loaded
+            if (!document.querySelector('script[src*="instagram.com/embed.js"]')) {
+                const script = document.createElement('script')
+                script.src = 'https://www.instagram.com/embed.js'
+                script.async = true
+                document.body.appendChild(script)
+            } else {
+                // Re-process embeds if script already exists
+                // @ts-ignore
+                if (window.instgrm?.Embeds?.process) {
+                    // @ts-ignore
+                    window.instgrm.Embeds.process()
+                }
+            }
+        }
+
+        if (isFacebook) {
+            // Load Facebook SDK if not already loaded
+            if (!document.querySelector('script[src*="connect.facebook.net"]')) {
+                const script = document.createElement('script')
+                script.src = 'https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v18.0'
+                script.async = true
+                script.defer = true
+                script.crossOrigin = 'anonymous'
+                document.body.appendChild(script)
+            } else {
+                // Re-parse FB embeds
+                // @ts-ignore
+                if (window.FB?.XFBML?.parse) {
+                    // @ts-ignore
+                    window.FB.XFBML.parse()
+                }
+            }
+        }
+    }, [isInstagram, isFacebook, src])
+
+    // For Instagram - extract post ID and use blockquote embed
+    const getInstagramPostId = (url: string) => {
+        const match = url.match(/instagram\.com\/(?:p|reel|reels)\/([a-zA-Z0-9_-]+)/)
+        return match ? match[1] : null
+    }
+
+    // Render different content based on platform
+    const renderEmbed = () => {
+        if (isInstagram) {
+            const postId = getInstagramPostId(src)
+            if (postId) {
+                return (
+                    <div
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            minHeight: '450px'
+                        }}
+                        dangerouslySetInnerHTML={{
+                            __html: `
+                                <blockquote 
+                                    class="instagram-media" 
+                                    data-instgrm-permalink="https://www.instagram.com/p/${postId}/"
+                                    data-instgrm-version="14"
+                                    style="background:#FFF; border:0; border-radius:12px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 0 auto; max-width:540px; min-width:326px; padding:0; width:calc(100% - 2px);">
+                                </blockquote>
+                            `
+                        }}
+                    />
+                )
+            }
+        }
+
+        if (isFacebook) {
+            // Decode the URL from the plugins/video.php format
+            const decodedUrl = decodeURIComponent(src.replace('https://www.facebook.com/plugins/video.php?href=', '').split('&')[0])
+            return (
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        minHeight: '300px'
+                    }}
+                    dangerouslySetInnerHTML={{
+                        __html: `
+                            <div class="fb-video" 
+                                data-href="${decodedUrl}" 
+                                data-width="500" 
+                                data-show-text="false">
+                            </div>
+                        `
+                    }}
+                />
+            )
+        }
+
+        // YouTube, Vimeo, and other iframes
+        return (
+            <div style={{
+                borderRadius: '12px',
+                overflow: 'hidden',
+                position: 'relative',
+                width: '100%',
+                height: 0,
+                paddingBottom: '56.25%',
+                background: '#000'
+            }}>
+                <iframe
+                    src={src}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    loading="lazy"
+                />
+            </div>
+        )
+    }
+
     return (
         <div style={{
             margin: '32px 0',
@@ -56,30 +177,16 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
                 </h3>
             )}
 
-            <div style={{
-                borderRadius: '12px',
-                overflow: 'hidden',
-                position: 'relative',
-                width: '100%',
-                height: 0,
-                paddingBottom: '56.25%',
-                background: '#000',
-                marginBottom: text ? '16px' : '0'
-            }}>
-                <iframe
-                    src={src}
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                />
+            <div style={{ marginBottom: text ? '16px' : '0' }}>
+                {renderEmbed()}
             </div>
 
             {text && (
                 <p style={{
                     margin: 0,
                     color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)',
-                    fontSize: '1rem',
-                    lineHeight: 1.4
+                    fontSize: '1.1rem',
+                    lineHeight: 1.6
                 }}>
                     {text}
                 </p>
@@ -87,6 +194,7 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
         </div>
     )
 })
+
 
 // Self-contained Carousel Component via props
 const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { images: string[], containerStyle?: any, imageStyle?: any }) => {
@@ -100,10 +208,13 @@ const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { imag
         return () => clearInterval(interval)
     }, [images.length])
 
+    const goNext = () => setCurrentIndex(prev => (prev + 1) % images.length)
+    const goPrev = () => setCurrentIndex(prev => (prev - 1 + images.length) % images.length)
+
     const currentImage = images[currentIndex]
 
     return (
-        <div style={{ position: 'relative', width: '100%', ...containerStyle }}>
+        <div style={{ position: 'relative', width: '100%', ...containerStyle }} className="group">
             <img
                 src={currentImage}
                 alt="Carousel Slide"
@@ -116,27 +227,69 @@ const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { imag
                 }}
             />
             {images.length > 1 && (
-                <div style={{
-                    position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
-                    display: 'flex', gap: '6px', zIndex: 10
-                }}>
-                    {images.map((_: string, i: number) => (
-                        <div
-                            key={i}
-                            style={{
-                                width: '6px', height: '6px', borderRadius: '50%',
-                                background: i === currentIndex ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
-                                transition: 'background 0.2s',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                            }}
-                        />
-                    ))}
-                </div>
+                <>
+                    {/* Navigation Buttons */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                        style={{
+                            position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)',
+                            zIndex: 20, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none',
+                            width: '36px', height: '36px', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                            opacity: 0, transition: 'opacity 0.2s'
+                        }}
+                        className="carousel-nav-btn"
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.5)'}
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); goNext(); }}
+                        style={{
+                            position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)',
+                            zIndex: 20, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none',
+                            width: '36px', height: '36px', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                            opacity: 0, transition: 'opacity 0.2s'
+                        }}
+                        className="carousel-nav-btn"
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.5)'}
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+
+                    {/* Dots */}
+                    <div style={{
+                        position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
+                        display: 'flex', gap: '6px', zIndex: 10
+                    }}>
+                        {images.map((_: string, i: number) => (
+                            <div
+                                key={i}
+                                onClick={(e) => { e.stopPropagation(); setCurrentIndex(i); }}
+                                style={{
+                                    width: '6px', height: '6px', borderRadius: '50%',
+                                    background: i === currentIndex ? '#ff3b3b' : 'rgba(255,255,255,0.5)',
+                                    transition: 'background 0.2s',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        ))}
+                    </div>
+
+                    <style>{`
+                        .group:hover .carousel-nav-btn {
+                            opacity: 1 !important;
+                        }
+                    `}</style>
+                </>
             )}
         </div>
     )
 })
-
 function ContentBlockRenderer({ content, isDark }: { content: string; isDark: boolean }) {
     // Parse content into blocks
     const blocks: ParsedBlock[] = useMemo(() => {
@@ -298,7 +451,9 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                 style={{
                                     textAlign: alignStyle.textAlign,
                                     overflowWrap: 'anywhere',
-                                    wordBreak: 'break-word'
+                                    wordBreak: 'break-word',
+                                    fontSize: '1.1rem',
+                                    lineHeight: 1.6
                                 }}
                             />
                         </div>
@@ -421,8 +576,8 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                 <div
                                     className="rich-text-content"
                                     style={{
-                                        lineHeight: 1.4,
                                         fontSize: '1.1rem',
+                                        lineHeight: 1.6,
                                         textAlign: (block.alignment as 'left' | 'center' | 'right') || (layout === 'image-top' ? 'center' : 'left')
                                     }}
                                     dangerouslySetInnerHTML={{ __html: block.textContent || '' }}
@@ -448,6 +603,8 @@ interface PostDetailProps {
     sectionType: 'about' | 'initiatives' | 'media' | 'leadership' | 'resources' | 'dynamic'
 }
 
+
+
 export function PostDetail({ sectionType }: PostDetailProps) {
     const { id, sectionId } = useParams()
     const { isDark } = useTheme()
@@ -469,6 +626,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
         }
     }, [id])
 
+    // Early returns MUST come after all hooks are called
     if (loading && !post) {
         return <PostSkeleton isDark={isDark} />
     }
@@ -530,15 +688,32 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     const isSubsection = !!post.isSubsection
     const showHero = post.image && layoutType !== 'leadership'
 
+    const hasGallery = post.galleryImages && post.galleryImages.length > 0
+
+    // Build gallery URL based on current route
+    const galleryUrl = (() => {
+        if (sectionType === 'dynamic' && sectionId) {
+            return `/section/${sectionId}/${id}/gallery`
+        }
+        const sectionPaths: Record<string, string> = {
+            about: 'about-us',
+            initiatives: 'initiative',
+            media: 'media',
+            leadership: 'leader',
+            resources: 'resource'
+        }
+        return `/${sectionPaths[sectionType] || sectionType}/${id}/gallery`
+    })()
+
     // Render section-specific content
     const renderContent = () => {
         switch (layoutType) {
             case 'leadership':
-                return <LeadershipLayout post={post} isDark={isDark} />
+                return <LeadershipLayout post={post} isDark={isDark} galleryUrl={galleryUrl} hasGallery={hasGallery} />
             case 'media':
-                return <MediaLayout post={post} isDark={isDark} />
+                return <MediaLayout post={post} isDark={isDark} galleryUrl={galleryUrl} hasGallery={hasGallery} />
             default:
-                return <DefaultLayout post={post} isDark={isDark} sectionLabel={currentLabel} posts={posts} />
+                return <DefaultLayout post={post} isDark={isDark} sectionLabel={currentLabel} posts={posts} galleryUrl={galleryUrl} hasGallery={hasGallery} />
         }
     }
 
@@ -887,7 +1062,8 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
 }
 
 // Default layout for About and Initiatives
-function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolean; sectionLabel?: string; posts?: any[] }) {
+function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { post: any; isDark: boolean; sectionLabel?: string; posts?: any[], galleryUrl?: string, hasGallery?: boolean }) {
+
     // Simplified layout for subsection child posts (has parentId)
     const isSubsectionChild = !!post.parentId
     // Check if this post IS a subsection (parent with children)
@@ -920,6 +1096,13 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
 
                 {/* Audio Player - Only show if enabled */}
                 {post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
+
+                {/* Gallery Button for Subsections */}
+                {hasGallery && galleryUrl && (
+                    <div style={{ marginBottom: '24px' }}>
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="outline" />
+                    </div>
+                )}
 
                 {/* PDF Flipbook (main content for subsection posts) */}
                 {/* STRICT CHECK: If content uses new block system (siodel-block) OR explicitly has a PDF block (block-pdf), we assume PDF is managed content. */}
@@ -966,6 +1149,15 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                     {post.title}
                 </h1>
 
+
+
+                {/* Gallery Button */}
+                {hasGallery && galleryUrl && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="default" />
+                    </div>
+                )}
+
                 {/* Read Article Button - Only show for non-subsection posts with audio enabled */}
                 {!isSubsection && post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
@@ -992,45 +1184,47 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
                         <ContentBlockRenderer content={post.content} isDark={isDark} />
                     </div>
                 )}
-            </div>
+            </div >
 
             {/* Child Cards Grid for Subsection Posts */}
-            {isSubsection && childPosts.length > 0 && (
-                <div style={{ marginTop: '64px', width: '100%' }}>
-                    <div className="subsection-grid" style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '24px',
-                        /* justifyContent handled by media query now */
-                    }}>
-                        {childPosts.map(child => (
-                            <SectionCard
-                                key={child.id}
-                                label=""
-                                labelColor="#ff3b3b"
-                                title={child.title}
-                                subtitle={child.subtitle || ''}
-                                description=""
-                                publishedDate={child.createdAt}
-                                image={child.image}
+            {
+                isSubsection && childPosts.length > 0 && (
+                    <div style={{ marginTop: '64px', width: '100%' }}>
+                        <div className="subsection-grid" style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '24px',
+                            /* justifyContent handled by media query now */
+                        }}>
+                            {childPosts.map(child => (
+                                <SectionCard
+                                    key={child.id}
+                                    label=""
+                                    labelColor="#ff3b3b"
+                                    title={child.title}
+                                    subtitle={child.subtitle || ''}
+                                    description=""
+                                    publishedDate={child.createdAt}
+                                    image={child.image}
 
 
-                                onClick={() => {
-                                    // Map sectionId to correct route path
-                                    const routeMap: Record<string, string> = {
-                                        'about': 'about-us',
-                                        'initiatives': 'initiative',
-                                        'media': 'media',
-                                        'leadership': 'leader'
-                                    }
-                                    const routePath = routeMap[post.sectionId] || 'about-us'
-                                    window.location.href = `/${routePath}/${child.id}`
-                                }}
-                            />
-                        ))}
+                                    onClick={() => {
+                                        // Map sectionId to correct route path
+                                        const routeMap: Record<string, string> = {
+                                            'about': 'about-us',
+                                            'initiatives': 'initiative',
+                                            'media': 'media',
+                                            'leadership': 'leader'
+                                        }
+                                        const routePath = routeMap[post.sectionId] || 'about-us'
+                                        window.location.href = `/${routePath}/${child.id}`
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <style>{`
                 .post-content h1, .post-content h2 {
@@ -1114,28 +1308,30 @@ function DefaultLayout({ post, isDark, posts = [] }: { post: any; isDark: boolea
 }
 
 // Leadership-specific layout (profile style)
-function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
+function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDark: boolean, galleryUrl?: string, hasGallery?: boolean }) {
     return (
-        <div style={{
-            padding: '40px',
-            borderRadius: '24px',
-            background: isDark
-                ? 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)'
-                : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
-            backdropFilter: 'blur(12px)',
-            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
-            // Enhanced shadow for "gradient under card" effect
-            boxShadow: isDark
-                ? '0 30px 80px -20px rgba(255, 59, 59, 0.15), 0 0 0 1px rgba(255,255,255,0.05)'
-                : '0 20px 40px -10px rgba(0,0,0,0.1)',
-            position: 'relative',
-            zIndex: 1,
-            display: 'flex',
-            flexDirection: 'row',
-            gap: '48px',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap'
-        }}>
+        <div
+            className="leadership-card"
+            style={{
+                padding: '40px',
+                borderRadius: '24px',
+                background: isDark
+                    ? 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)'
+                    : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
+                backdropFilter: 'blur(12px)',
+                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                // Enhanced shadow for "gradient under card" effect
+                boxShadow: isDark
+                    ? '0 30px 80px -20px rgba(255, 59, 59, 0.15), 0 0 0 1px rgba(255,255,255,0.05)'
+                    : '0 20px 40px -10px rgba(0,0,0,0.1)',
+                position: 'relative',
+                zIndex: 1,
+                display: 'flex',
+                flexDirection: 'row',
+                gap: '48px',
+                alignItems: 'flex-start',
+                flexWrap: 'wrap'
+            }}>
             {/* Left Column: Profile */}
             <div style={{
                 flexShrink: 0,
@@ -1145,7 +1341,8 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                 flexDirection: 'column',
                 gap: '24px',
                 alignItems: 'center',
-                textAlign: 'center'
+                textAlign: 'center',
+                margin: '0 auto' // Center on mobile wrap
             }}>
                 {/* Photo */}
                 {post.image && (
@@ -1216,10 +1413,19 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                     )
                     }
                 </div >
+
+
+                {/* Gallery Button for Leadership */}
+                {hasGallery && galleryUrl && (
+                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="pill" />
+                    </div>
+                )}
             </div >
 
+
             {/* Right Column: Bio Content */}
-            < div style={{ flex: 1, minWidth: '280px', maxWidth: '100%' }}>
+            <div style={{ flex: 1, minWidth: '0', maxWidth: '100%' }}>
                 {
                     post.content && (
                         <div
@@ -1241,12 +1447,46 @@ function LeadershipLayout({ post, isDark }: { post: any; isDark: boolean }) {
                     )
                 }
             </div >
+            <style>{`
+                /* Force single-column stacking on mobile/small screens */
+                @media (max-width: 640px) {
+                    .leadership-card {
+                        flex-direction: column !important;
+                        padding: 24px !important;
+                        gap: 32px !important;
+                        align-items: center !important;
+                    }
+                    .leadership-card > div:first-child {
+                        max-width: 100% !important;
+                        width: 100% !important;
+                    }
+                    .leadership-card > div:last-child {
+                        width: 100% !important;
+                    }
+                }
+                @media (max-width: 768px) and (min-width: 641px) {
+                    .leadership-card {
+                        padding: 24px !important;
+                        gap: 32px !important;
+                    }
+                }
+                @media (max-width: 480px) {
+                    .leadership-card {
+                        padding: 16px !important;
+                        gap: 24px !important;
+                    }
+                    /* Ensure content doesn't get too squished */
+                    .leader-bio {
+                        font-size: 1rem !important;
+                    }
+                }
+            `}</style>
         </div >
     )
 }
 
 // Media/News-specific layout
-function MediaLayout({ post, isDark }: { post: any; isDark: boolean }) {
+function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDark: boolean, galleryUrl?: string, hasGallery?: boolean }) {
     const formattedDate = new Date(post.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -1317,21 +1557,33 @@ function MediaLayout({ post, isDark }: { post: any; isDark: boolean }) {
                 </div>
             </div>
 
+
+            {/* Gallery Button media */}
+            {
+                hasGallery && galleryUrl && (
+                    <div style={{ marginBottom: '32px' }}>
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="card" />
+                    </div>
+                )
+            }
+
             {/* Cover Image moved to Hero */}
 
             {/* Article Content */}
-            {post.content && (
-                <div
-                    className="news-content"
-                    style={{
-                        color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
-                        fontSize: '1.15rem',
-                        lineHeight: 1.4
-                    }}
-                >
-                    <ContentBlockRenderer content={post.content} isDark={isDark} />
-                </div>
-            )}
+            {
+                post.content && (
+                    <div
+                        className="news-content"
+                        style={{
+                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            fontSize: '1.15rem',
+                            lineHeight: 1.4
+                        }}
+                    >
+                        <ContentBlockRenderer content={post.content} isDark={isDark} />
+                    </div>
+                )
+            }
 
             <style>{`
                 .news-content h1, .news-content h2 {

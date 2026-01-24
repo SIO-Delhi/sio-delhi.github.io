@@ -35,7 +35,7 @@ export function Navbar() {
 
     useEffect(() => {
         const checkMobile = () => {
-            setIsMobile(window.innerWidth < 1024)
+            setIsMobile(window.innerWidth < 1200)
         }
         checkMobile()
         window.addEventListener('resize', checkMobile)
@@ -52,6 +52,7 @@ export function Navbar() {
                         if (activeSection !== section) {
                             setActiveSection(section)
                             // Update URL hash using replaceState to avoid history stack pollution or router triggers
+                            // Only use section ID, strip any cardId portion since user has scrolled
                             if (window.history.replaceState) {
                                 window.history.replaceState(null, '', `#${section === 'home' ? '' : section}`)
                             }
@@ -432,6 +433,35 @@ export function Navbar() {
                                         </a>
                                     </div>
 
+                                    {/* Support Us Button */}
+                                    <div className="shiny-button-container" style={{ width: '100%' }}>
+                                        <button
+                                            onClick={() => {
+                                                setIsOpen(false)
+                                                setShowDonation(true)
+                                            }}
+                                            className="shiny-button"
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                                padding: '14px 24px',
+                                                borderRadius: '12px',
+                                                color: '#ff3b3b',
+                                                fontSize: '16px',
+                                                fontWeight: 500,
+                                                transition: 'all 0.3s ease',
+                                                cursor: 'pointer',
+                                                width: '100%',
+                                                textAlign: 'center',
+                                                border: 'none',
+                                                background: 'inherit'
+                                            }}
+                                        >
+                                            Support Us
+                                        </button>
+                                    </div>
+
                                 </div>
                             </ul>
                         </div>
@@ -497,8 +527,7 @@ export function Navbar() {
                         overflowY: 'auto'
                     }}>
 
-                        {/* <h2 style={{ fontSize: '2rem', fontWeight: 700, margin: 0, textAlign: 'center' }}>Support Our Cause</h2> */}
-                        <p style={{ color: '#888', textAlign: 'center', margin: '-10px 0 10px' }}>Your contribution makes a difference.</p>
+
 
                         <DonationContent />
 
@@ -534,6 +563,8 @@ function DonationContent() {
             transition: 'opacity 0.5s ease, transform 0.5s ease',
             width: '100%'
         }}>
+            <p style={{ color: '#888', textAlign: 'center', margin: 0 }}>Your contribution makes a difference.</p>
+
             {/* QR Code */}
             <img
                 src={donateQr}

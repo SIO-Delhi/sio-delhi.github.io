@@ -20,6 +20,7 @@ interface SectionCardProps {
     icon?: string
     width?: string
     variant?: 'default' | 'media' | 'leadership' | 'resource' | 'standard' // 'standard' alias for default
+    cardId?: string // Used for DOM ID to enable scroll restoration
 }
 
 // Helper to get the first image URL from an image field
@@ -47,7 +48,8 @@ export function SectionCard({
     image,
     icon,
     width,
-    variant = 'default'
+    variant = 'default',
+    cardId
 }: SectionCardProps) {
     const cardRef = useRef<HTMLDivElement>(null)
 
@@ -75,6 +77,7 @@ export function SectionCard({
         return (
             <div
                 ref={cardRef}
+                id={cardId}
                 className={`section-card-shine ${className || ''}`}
                 data-cursor="view"
                 onClick={onClick}
@@ -136,6 +139,7 @@ export function SectionCard({
                                 filter: 'grayscale(100%)',
                                 transition: 'filter 0.3s ease'
                             }}
+                            loading="lazy"
                         />
                     ) : (
                         <div style={{
@@ -190,6 +194,7 @@ export function SectionCard({
         return (
             <div
                 ref={cardRef}
+                id={cardId}
                 className={`section-card-shine ${className || ''}`}
                 data-cursor="view"
                 onClick={onClick}
@@ -197,12 +202,12 @@ export function SectionCard({
                     background: 'rgba(255, 255, 255, 0.03)',
                     backdropFilter: 'blur(10px)',
                     WebkitBackdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: '24px',
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
-                    minWidth: '220px',
+                    minWidth: '280px',
                     flex: 1,
                     maxWidth: width || '360px',
                     height: '260px',
@@ -212,7 +217,7 @@ export function SectionCard({
                     zIndex: 5,
                     isolation: 'isolate',
                     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                    padding: '32px',
+                    padding: '24px',
                     justifyContent: 'center',
                     alignItems: 'center',
                     textAlign: 'center',
@@ -232,30 +237,29 @@ export function SectionCard({
                     e.currentTarget.style.zIndex = '5'
                 }}
             >
-                {/* Icon */}
+                {/* Icon or Logo */}
                 <div style={{
                     color: '#ff3b3b',
                     marginBottom: '8px',
-                    display: 'flex', justifyContent: 'center'
+                    display: 'flex', 
+                    justifyContent: 'center',
+                    alignItems: 'center'
                 }}>
-                    {IconComponent !== FileText ? (
-                        <IconComponent size={40} strokeWidth={1.5} />
-                    ) : icon && (icon.includes('/') || icon.startsWith('data:')) ? (
-                        <div
+                    {icon && (icon.includes('/') || icon.includes('http') || icon.startsWith('data:')) ? (
+                        <img
+                            src={icon}
+                            alt={title}
+                            draggable={false}
                             style={{
                                 width: '52px',
                                 height: '52px',
-                                backgroundColor: '#ff3b3b',
-                                maskImage: `url(${icon})`,
-                                WebkitMaskImage: `url(${icon})`,
-                                maskSize: 'contain',
-                                WebkitMaskSize: 'contain',
-                                maskRepeat: 'no-repeat',
-                                WebkitMaskRepeat: 'no-repeat',
-                                maskPosition: 'center',
-                                WebkitMaskPosition: 'center'
+                                objectFit: 'contain',
+                                filter: 'brightness(0) saturate(100%) invert(31%) sepia(93%) saturate(7471%) hue-rotate(355deg) brightness(101%) contrast(107%)'
                             }}
+                            loading="lazy"
                         />
+                    ) : IconComponent !== FileText ? (
+                        <IconComponent size={40} strokeWidth={1.5} />
                     ) : (
                         <FileText size={40} strokeWidth={1.5} />
                     )}
@@ -265,17 +269,22 @@ export function SectionCard({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
                     <h3 style={{
                         margin: 0,
-                        fontSize: '1.75rem',
+                        fontSize: '1.5rem',
                         fontWeight: 600,
                         color: '#ffffff',
                         fontFamily: '"Geist", sans-serif',
-                        lineHeight: 1.2
+                        lineHeight: 1.2,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
                     }}>
                         {title}
                     </h3>
                     <p style={{
                         margin: 0,
-                        fontSize: '1rem',
+                        fontSize: '0.9rem',
                         color: 'rgba(255,255,255,0.5)',
                         lineHeight: 1.5,
                         display: '-webkit-box',
@@ -294,6 +303,7 @@ export function SectionCard({
     return (
         <div
             ref={cardRef}
+            id={cardId}
             className={`${className || ''} section-card-shine cursor-view`}
             data-cursor="view"
             onClick={onClick}
@@ -379,11 +389,11 @@ export function SectionCard({
                 )}
             </div>
 
-            {/* Media Image (Middle Square) */}
+            {/* Media Image */}
             {isMedia && (
                 <div style={{
                     width: '100%',
-                    aspectRatio: '1/1',
+                    aspectRatio: '16/9',
                     background: '#1a1a1a',
                     borderRadius: '8px',
                     overflow: 'hidden',
@@ -391,7 +401,7 @@ export function SectionCard({
                     border: '1px solid #333'
                 }}>
                     {imageUrl ? (
-                        <img src={imageUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={imageUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
                     ) : (
                         <div style={{ width: '100%', height: '100%', background: '#222' }} />
                     )}
@@ -439,7 +449,7 @@ export function SectionCard({
                         border: imageUrl ? 'none' : '1px solid rgba(255,255,255,0.05)'
                     }}>
                         {imageUrl ? (
-                            <img src={imageUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                            <img src={imageUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
                         ) : (
                             <div style={{ width: '100%', height: '100%', opacity: 0.3 }} />
                         )}
