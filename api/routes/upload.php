@@ -3,19 +3,23 @@
  * File Upload API Routes
  */
 
-function uploadImage() {
+function uploadImage()
+{
     return handleUpload('images', ALLOWED_IMAGE_EXT, MAX_IMAGE_SIZE);
 }
 
-function uploadPdf() {
+function uploadPdf()
+{
     return handleUpload('pdfs', ALLOWED_PDF_EXT, MAX_PDF_SIZE);
 }
 
-function uploadAudio() {
+function uploadAudio()
+{
     return handleUpload('audio', ALLOWED_AUDIO_EXT, MAX_AUDIO_SIZE);
 }
 
-function deleteFile($type, $filename) {
+function deleteFile($type, $filename)
+{
     $validTypes = ['images', 'pdfs', 'audio'];
 
     if (!in_array($type, $validTypes)) {
@@ -23,8 +27,8 @@ function deleteFile($type, $filename) {
         return ['error' => 'Invalid file type'];
     }
 
-    // Sanitize filename to prevent directory traversal
-    $filename = basename($filename);
+    // Decode URL-encoded filename and sanitize to prevent directory traversal
+    $filename = basename(urldecode($filename));
     $filepath = UPLOAD_DIR . $type . '/' . $filename;
 
     if (!file_exists($filepath)) {
@@ -32,15 +36,19 @@ function deleteFile($type, $filename) {
         return ['error' => 'File not found'];
     }
 
+    // Attempt to delete
     if (!unlink($filepath)) {
+        $error = error_get_last();
+        error_log("Failed to delete file $filepath: " . ($error['message'] ?? 'Unknown error'));
         http_response_code(500);
-        return ['error' => 'Failed to delete file'];
+        return ['error' => 'Failed to delete file: ' . ($error['message'] ?? 'Unknown error')];
     }
 
     return ['message' => 'File deleted successfully'];
 }
 
-function downloadFile($type, $filename) {
+function downloadFile($type, $filename)
+{
     $validTypes = ['images', 'pdfs', 'audio'];
 
     if (!in_array($type, $validTypes)) {
@@ -67,21 +75,22 @@ function downloadFile($type, $filename) {
 
     // Clear any previous output
     ob_clean();
-    
+
     // Set headers for download
     header('Content-Type: ' . $mimeType);
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     header('Content-Length: ' . $filesize);
     header('Cache-Control: no-cache, must-revalidate');
     header('Pragma: public');
-    
+
     // Output file
     readfile($filepath);
     exit;
 }
 
 // Helper function to handle file uploads
-function handleUpload($folder, $allowedExtensions, $maxSize) {
+function handleUpload($folder, $allowedExtensions, $maxSize)
+{
     if (!isset($_FILES['file'])) {
         http_response_code(400);
         return ['error' => 'No file provided'];
@@ -132,7 +141,8 @@ function handleUpload($folder, $allowedExtensions, $maxSize) {
     ];
 }
 
-function getUploadErrorMessage($errorCode) {
+function getUploadErrorMessage($errorCode)
+{
     switch ($errorCode) {
         case UPLOAD_ERR_INI_SIZE:
             return 'File exceeds upload_max_filesize directive';
@@ -153,7 +163,8 @@ function getUploadErrorMessage($errorCode) {
     }
 }
 
-function formatBytes($bytes) {
+function formatBytes($bytes)
+{
     if ($bytes >= 1048576) {
         return round($bytes / 1048576, 2) . ' MB';
     }
