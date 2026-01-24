@@ -88,6 +88,19 @@ $routes = [
     'GET /stats' => 'routes/stats.php@getAllStats',
     'GET /stats/storage' => 'routes/stats.php@getStorageStats',
     'GET /stats/database' => 'routes/stats.php@getDatabaseStats',
+
+    // Forms
+    'GET /forms' => 'routes/forms.php@getAllForms',
+    'GET /forms/public/([^/]+)' => 'routes/forms.php@getPublicForm',
+    'GET /forms/([^/]+)/responses' => 'routes/forms.php@getFormResponses',
+    'GET /forms/([^/]+)/export' => 'routes/forms.php@exportFormResponses',
+    'GET /forms/([^/]+)' => 'routes/forms.php@getFormById',
+    'POST /forms' => 'routes/forms.php@createForm',
+    'POST /forms/([^/]+)/submit' => 'routes/forms.php@submitFormResponse',
+    'PUT /forms/([^/]+)/fields' => 'routes/forms.php@updateFormFields',
+    'PUT /forms/([^/]+)' => 'routes/forms.php@updateForm',
+    'DELETE /forms/([^/]+)/responses/([^/]+)' => 'routes/forms.php@deleteFormResponse',
+    'DELETE /forms/([^/]+)' => 'routes/forms.php@deleteForm',
 ];
 
 // Find matching route
