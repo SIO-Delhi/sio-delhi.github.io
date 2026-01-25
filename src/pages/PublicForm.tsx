@@ -543,6 +543,16 @@ export function PublicForm() {
                     textAlign: 'center',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}>
+                    <img
+                        src={sioLogo}
+                        alt="SIO Delhi"
+                        style={{
+                            height: '60px',
+                            width: 'auto',
+                            margin: '0 auto 32px',
+                            display: 'block'
+                        }}
+                    />
                     <div style={{
                         width: '64px', height: '64px', borderRadius: '50%',
                         background: '#f0fdf4',
