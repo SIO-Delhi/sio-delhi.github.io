@@ -250,7 +250,7 @@ export function FormList() {
                                     </div>
 
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>{form.title}</h3>
+                                        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>{form.title?.replace(/<[^>]*>/g, '') || 'Untitled Form'}</h3>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px', flexWrap: 'wrap' }}>
                                             <span style={{ fontSize: '0.8rem', color: '#71717a' }}>/{form.slug}</span>
                                             <span style={{

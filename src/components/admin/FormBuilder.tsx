@@ -346,18 +346,15 @@ export function FormBuilder() {
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                 Form Title *
                             </label>
-                            <input
+                            <RichTextEditor
                                 value={form.title || ''}
-                                onChange={e => setForm({ ...form, title: e.target.value })}
+                                onChange={(content) => setForm({ ...form, title: content })}
                                 placeholder="Enter form title..."
-                                style={{
-                                    width: '100%', padding: '16px', borderRadius: '12px',
-                                    background: '#18181b', border: '1px solid #27272a',
-                                    color: 'white', fontSize: '1.25rem', fontWeight: 600, outline: 'none',
-                                    boxSizing: 'border-box'
-                                }}
+                                minHeight="100px"
                             />
                         </div>
+
+
 
                         <div>
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -704,18 +701,20 @@ export function FormBuilder() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         {/* Form Title (Quick Edit) */}
                         <div>
-                            <input
-                                value={form.title || ''}
-                                onChange={e => setForm({ ...form, title: e.target.value })}
-                                placeholder="Untitled Form"
+                            <div
                                 style={{
-                                    width: '100%', padding: '0', background: 'transparent',
-                                    border: 'none', borderBottom: '2px solid transparent',
-                                    color: 'white', fontSize: '2rem', fontWeight: 700, outline: 'none',
-                                    boxSizing: 'border-box'
+                                    marginBottom: '16px',
+                                    fontSize: '2rem',
+                                    fontWeight: 700,
+                                    color: 'white',
+                                    borderBottom: '1px solid #27272a', /* Added subtle divider to mimic input/section */
+                                    paddingBottom: '8px',
+                                    cursor: 'pointer'
                                 }}
-                                onFocus={e => e.target.style.borderBottomColor = '#ff3b3b'}
-                                onBlur={e => e.target.style.borderBottomColor = 'transparent'}
+                                onClick={() => setActiveTab('settings')}
+                                title="Click to edit in Settings"
+                                dangerouslySetInnerHTML={{ __html: form.title || 'Untitled Form' }}
+                                className="prose prose-invert prose-lg max-w-none prose-headings:m-0 prose-p:m-0"
                             />
                             {form.description && (
                                 <div

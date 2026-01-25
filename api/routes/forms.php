@@ -6,7 +6,8 @@
 
 // === FORMS CRUD ===
 
-function getAllForms() {
+function getAllForms()
+{
     $db = getDB();
 
     // Get forms with response counts
@@ -22,7 +23,8 @@ function getAllForms() {
     return array_map('mapForm', $forms);
 }
 
-function getFormById($id) {
+function getFormById($id)
+{
     $db = getDB();
     $stmt = $db->prepare("SELECT * FROM forms WHERE id = ? OR slug = ?");
     $stmt->execute([$id, $id]);
@@ -45,11 +47,12 @@ function getFormById($id) {
 
     $result = mapForm($form);
     $result['fields'] = array_map('mapFormField', $fields);
-    $result['responseCount'] = (int)$responseCount;
+    $result['responseCount'] = (int) $responseCount;
     return $result;
 }
 
-function getPublicForm($slugOrId) {
+function getPublicForm($slugOrId)
+{
     $db = getDB();
     $stmt = $db->prepare("SELECT * FROM forms WHERE (id = ? OR slug = ?) AND is_published = 1");
     $stmt->execute([$slugOrId, $slugOrId]);
@@ -92,7 +95,8 @@ function getPublicForm($slugOrId) {
     return $result;
 }
 
-function createForm() {
+function createForm()
+{
     $data = json_decode(file_get_contents('php://input'), true);
 
     if (empty($data['title'])) {
@@ -134,7 +138,8 @@ function createForm() {
     return getFormById($id);
 }
 
-function updateForm($id) {
+function updateForm($id)
+{
     $data = json_decode(file_get_contents('php://input'), true);
     $db = getDB();
 
@@ -159,8 +164,26 @@ function updateForm($id) {
         'isPublished' => 'is_published',
         'acceptResponses' => 'accept_responses',
         'successMessage' => 'success_message',
-        'responseLimit' => 'response_limit'
+        'responseLimit' => 'response_limit',
+        'slug' => 'slug'
     ];
+
+    // Handle slug uniqueness if changed
+    if (isset($data['slug']) && $data['slug'] !== ($form['slug'] ?? '')) {
+        $newSlug = preg_replace('/[^a-z0-9]+/', '-', strtolower($data['slug']));
+        $newSlug = trim($newSlug, '-');
+        if (empty($newSlug))
+            $newSlug = 'form';
+
+        // Check if taken by another form
+        $checkStmt = $db->prepare("SELECT id FROM forms WHERE slug = ? AND id != ?");
+        $checkStmt->execute([$newSlug, $id]);
+        if ($checkStmt->fetch()) {
+            http_response_code(400);
+            return ['error' => 'URL slug is already taken'];
+        }
+        $data['slug'] = $newSlug; // Use sanitized slug
+    }
 
     foreach ($fieldMap as $jsKey => $dbKey) {
         if (array_key_exists($jsKey, $data)) {
@@ -191,7 +214,8 @@ function updateForm($id) {
     return getFormById($id);
 }
 
-function deleteForm($id) {
+function deleteForm($id)
+{
     $db = getDB();
 
     $stmt = $db->prepare("SELECT id FROM forms WHERE id = ?");
@@ -209,7 +233,8 @@ function deleteForm($id) {
 
 // === FORM FIELDS ===
 
-function updateFormFields($formId) {
+function updateFormFields($formId)
+{
     $data = json_decode(file_get_contents('php://input'), true);
     $fields = $data['fields'] ?? [];
 
@@ -253,7 +278,8 @@ function updateFormFields($formId) {
 
 // === RESPONSES ===
 
-function getFormResponses($formId) {
+function getFormResponses($formId)
+{
     $db = getDB();
 
     // Get form to check it exists
@@ -265,8 +291,8 @@ function getFormResponses($formId) {
     }
 
     // Get responses with pagination
-    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-    $limit = isset($_GET['limit']) ? min((int)$_GET['limit'], 100) : 50;
+    $page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+    $limit = isset($_GET['limit']) ? min((int) $_GET['limit'], 100) : 50;
     $offset = ($page - 1) * $limit;
 
     $countStmt = $db->prepare("SELECT COUNT(*) FROM form_responses WHERE form_id = ?");
@@ -290,13 +316,14 @@ function getFormResponses($formId) {
         'pagination' => [
             'page' => $page,
             'limit' => $limit,
-            'total' => (int)$total,
-            'totalPages' => (int)ceil($total / $limit)
+            'total' => (int) $total,
+            'totalPages' => (int) ceil($total / $limit)
         ]
     ];
 }
 
-function submitFormResponse($formId) {
+function submitFormResponse($formId)
+{
     $data = json_decode(file_get_contents('php://input'), true);
     $db = getDB();
 
@@ -381,7 +408,8 @@ function submitFormResponse($formId) {
     ];
 }
 
-function getFormResponse($formId, $responseId) {
+function getFormResponse($formId, $responseId)
+{
     $db = getDB();
 
     $stmt = $db->prepare("SELECT * FROM form_responses WHERE id = ? AND form_id = ?");
@@ -396,7 +424,8 @@ function getFormResponse($formId, $responseId) {
     return mapFormResponse($response);
 }
 
-function updateFormResponse($formId, $responseId) {
+function updateFormResponse($formId, $responseId)
+{
     $data = json_decode(file_get_contents('php://input'), true);
     $db = getDB();
 
@@ -415,7 +444,8 @@ function updateFormResponse($formId, $responseId) {
     return getFormResponse($formId, $responseId);
 }
 
-function deleteFormResponse($formId, $responseId) {
+function deleteFormResponse($formId, $responseId)
+{
     $db = getDB();
 
     $stmt = $db->prepare("SELECT id FROM form_responses WHERE id = ? AND form_id = ?");
@@ -431,7 +461,8 @@ function deleteFormResponse($formId, $responseId) {
     return ['message' => 'Response deleted successfully'];
 }
 
-function exportFormResponses($formId) {
+function exportFormResponses($formId)
+{
     $format = $_GET['format'] ?? 'csv';
     $db = getDB();
 
@@ -469,7 +500,8 @@ function exportFormResponses($formId) {
 
 // === HELPER FUNCTIONS ===
 
-function mapForm($row) {
+function mapForm($row)
+{
     $result = [
         'id' => $row['id'],
         'title' => $row['title'],
@@ -479,10 +511,10 @@ function mapForm($row) {
         'themePrimaryColor' => $row['theme_primary_color'] ?? '#ff3b3b',
         'themeBackground' => $row['theme_background'] ?? '#fafafa',
         'themeBackgroundImage' => $row['theme_background_image'] ?? null,
-        'isPublished' => (bool)$row['is_published'],
-        'acceptResponses' => (bool)$row['accept_responses'],
+        'isPublished' => (bool) $row['is_published'],
+        'acceptResponses' => (bool) $row['accept_responses'],
         'successMessage' => $row['success_message'],
-        'responseLimit' => $row['response_limit'] ? (int)$row['response_limit'] : null,
+        'responseLimit' => $row['response_limit'] ? (int) $row['response_limit'] : null,
         'expiresAt' => $row['expires_at'] ? strtotime($row['expires_at']) * 1000 : null,
         'createdAt' => $row['created_at'] ? strtotime($row['created_at']) * 1000 : null,
         'updatedAt' => $row['updated_at'] ? strtotime($row['updated_at']) * 1000 : null
@@ -490,13 +522,14 @@ function mapForm($row) {
 
     // Include response count if available
     if (isset($row['response_count'])) {
-        $result['responseCount'] = (int)$row['response_count'];
+        $result['responseCount'] = (int) $row['response_count'];
     }
 
     return $result;
 }
 
-function mapFormField($row) {
+function mapFormField($row)
+{
     return [
         'id' => $row['id'],
         'formId' => $row['form_id'],
@@ -504,14 +537,15 @@ function mapFormField($row) {
         'label' => $row['label'],
         'placeholder' => $row['placeholder'],
         'helpText' => $row['help_text'],
-        'isRequired' => (bool)$row['is_required'],
+        'isRequired' => (bool) $row['is_required'],
         'options' => $row['options'] ? json_decode($row['options'], true) : null,
         'validationRules' => $row['validation_rules'] ? json_decode($row['validation_rules'], true) : null,
-        'displayOrder' => (int)$row['display_order']
+        'displayOrder' => (int) $row['display_order']
     ];
 }
 
-function mapFormResponse($row) {
+function mapFormResponse($row)
+{
     return [
         'id' => $row['id'],
         'formId' => $row['form_id'],
@@ -520,17 +554,23 @@ function mapFormResponse($row) {
     ];
 }
 
-function generateFormUUID() {
-    return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-        mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+function generateFormUUID()
+{
+    return sprintf(
+        '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
         mt_rand(0, 0xffff),
         mt_rand(0, 0x0fff) | 0x4000,
         mt_rand(0, 0x3fff) | 0x8000,
-        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff)
     );
 }
 
-function createFormSlug($title, $db) {
+function createFormSlug($title, $db)
+{
     $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($title));
     $slug = trim($slug, '-');
 
@@ -544,13 +584,15 @@ function createFormSlug($title, $db) {
     while (true) {
         $stmt = $db->prepare("SELECT id FROM forms WHERE slug = ?");
         $stmt->execute([$slug]);
-        if (!$stmt->fetch()) break;
+        if (!$stmt->fetch())
+            break;
         $slug = $baseSlug . '-' . $counter++;
     }
     return $slug;
 }
 
-function exportAsCSV($form, $fields, $responses) {
+function exportAsCSV($form, $fields, $responses)
+{
     // Clear any previous output
     ob_clean();
 
@@ -562,7 +604,7 @@ function exportAsCSV($form, $fields, $responses) {
     $output = fopen('php://output', 'w');
 
     // Add BOM for Excel UTF-8 compatibility
-    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+    fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
     // Header row
     $headers = ['Submitted At'];

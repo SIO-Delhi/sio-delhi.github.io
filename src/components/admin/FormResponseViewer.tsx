@@ -113,7 +113,7 @@ export function FormResponseViewer() {
                     </button>
                     <div>
                         <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>
-                            {form?.title} - Responses
+                            {form?.title?.replace(/<[^>]*>/g, '')} - Responses
                         </h1>
                         <p style={{ margin: 0, fontSize: '0.85rem', color: '#71717a' }}>
                             {pagination.total} total response{pagination.total !== 1 ? 's' : ''}

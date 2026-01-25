@@ -188,7 +188,6 @@ try {
         ['initiatives', 'Our Initiatives', 'INITIATIVES', 'custom', 2],
         ['media', 'Press & Media', 'MEDIA', 'custom', 3],
         ['leadership', 'Our Leadership', 'LEADERSHIP', 'custom', 4],
-        ['more', 'More Resources', 'resources', 'custom', 5]
     ];
 
     $stmt = $db->prepare("

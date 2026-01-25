@@ -357,11 +357,86 @@ export function PublicForm() {
     if (loading) {
         return (
             <div style={{
-                minHeight: '100vh',
+                position: 'fixed',
+                inset: 0,
                 background: backgroundColor,
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '24px',
+                zIndex: 9999
             }}>
-                <Loader2 size={40} className="animate-spin" style={{ color: primaryColor }} />
+                <div style={{ animation: 'float 3s ease-in-out infinite' }}>
+                    <img
+                        src={sioLogo}
+                        alt="SIO Delhi"
+                        style={{ height: '80px', width: 'auto' }}
+                    />
+                </div>
+
+                {/* Newton's Cradle Loader */}
+                <div className="newtons-cradle">
+                    <div className="newtons-cradle__dot"></div>
+                    <div className="newtons-cradle__dot"></div>
+                    <div className="newtons-cradle__dot"></div>
+                    <div className="newtons-cradle__dot"></div>
+                </div>
+
+                <style>{`
+                    @keyframes float {
+                        0%, 100% { transform: translateY(0); }
+                        50% { transform: translateY(-10px); }
+                    }
+
+                    .newtons-cradle {
+                        position: relative;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 70px;
+                        height: 70px;
+                    }
+
+                    .newtons-cradle__dot {
+                        position: relative;
+                        display: flex;
+                        align-items: center;
+                        height: 100%;
+                        width: 25%;
+                        transform-origin: center top;
+                    }
+
+                    .newtons-cradle__dot::after {
+                        content: '';
+                        display: block;
+                        width: 100%;
+                        height: 25%;
+                        border-radius: 50%;
+                        background-color: ${primaryColor};
+                    }
+
+                    .newtons-cradle__dot:first-child {
+                        animation: swing 1.2s linear infinite;
+                    }
+
+                    .newtons-cradle__dot:last-child {
+                        animation: swing2 1.2s linear infinite;
+                    }
+
+                    @keyframes swing {
+                        0% { transform: rotate(0deg); animation-timing-function: ease-out; }
+                        25% { transform: rotate(70deg); animation-timing-function: ease-in; }
+                        50% { transform: rotate(0deg); animation-timing-function: linear; }
+                    }
+
+                    @keyframes swing2 {
+                        0% { transform: rotate(0deg); animation-timing-function: linear; }
+                        50% { transform: rotate(0deg); animation-timing-function: ease-out; }
+                        75% { transform: rotate(-70deg); animation-timing-function: ease-in; }
+                        100% { transform: rotate(0deg); animation-timing-function: linear; }
+                    }
+                `}</style>
             </div>
         )
     }
@@ -476,9 +551,11 @@ export function PublicForm() {
                     borderTop: form?.bannerImage ? 'none' : `6px solid ${primaryColor}`,
                     boxShadow: form?.bannerImage ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#1a1a1a', margin: '0 0 8px' }}>
-                        {form?.title}
-                    </h1>
+                    <h1
+                        style={{ fontSize: '2rem', fontWeight: 700, color: '#1a1a1a', margin: '0 0 8px' }}
+                        className="prose prose-lg max-w-none prose-headings:m-0 prose-p:m-0"
+                        dangerouslySetInnerHTML={{ __html: form?.title || '' }}
+                    />
                     {form?.description && (
                         <div
                             style={{ color: '#6b7280', margin: 0, lineHeight: 1.6 }}

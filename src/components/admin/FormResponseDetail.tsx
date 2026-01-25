@@ -311,7 +311,7 @@ export function FormResponseDetail() {
                             View Response
                         </h1>
                         <p style={{ margin: 0, fontSize: '0.85rem', color: '#71717a' }}>
-                            {form?.title}
+                            {form?.title?.replace(/<[^>]*>/g, '') || 'Untitled Form'}
                         </p>
                     </div>
                 </div>
