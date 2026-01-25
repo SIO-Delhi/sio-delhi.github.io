@@ -30,6 +30,16 @@ function getActive() {
     return mapPopup($row);
 }
 
+function getOne($id) {
+    $popup = getPopupById($id);
+    if (!$popup) {
+        http_response_code(404);
+        return ['error' => 'Popup not found'];
+    }
+
+    return $popup;
+}
+
 function create() {
     $data = json_decode(file_get_contents('php://input'), true);
 
@@ -48,11 +58,17 @@ function create() {
     }
 
     $stmt = $db->prepare("
-        INSERT INTO popups (id, image, is_active)
-        VALUES (?, ?, ?)
+        INSERT INTO popups (id, image, is_active, button_text, button_link)
+        VALUES (?, ?, ?, ?, ?)
     ");
 
-    $stmt->execute([$id, $data['image'], $isActive]);
+    $stmt->execute([
+        $id,
+        $data['image'],
+        $isActive,
+        $data['buttonText'] ?? null,
+        $data['buttonLink'] ?? null
+    ]);
 
     http_response_code(201);
     return getPopupById($id);
@@ -88,6 +104,14 @@ function update($id) {
     if (isset($data['isActive'])) {
         $updates[] = 'is_active = ?';
         $params[] = $data['isActive'] ? 1 : 0;
+    }
+    if (array_key_exists('buttonText', $data)) {
+        $updates[] = 'button_text = ?';
+        $params[] = $data['buttonText'];
+    }
+    if (array_key_exists('buttonLink', $data)) {
+        $updates[] = 'button_link = ?';
+        $params[] = $data['buttonLink'];
     }
 
     if (empty($updates)) {
@@ -143,6 +167,8 @@ function mapPopup($row) {
         'id' => $row['id'],
         'image' => $row['image'],
         'isActive' => (bool)$row['is_active'],
+        'buttonText' => $row['button_text'] ?? null,
+        'buttonLink' => $row['button_link'] ?? null,
         'createdAt' => $row['created_at'] ? strtotime($row['created_at']) * 1000 : null,
         'updatedAt' => $row['updated_at'] ? strtotime($row['updated_at']) * 1000 : null
     ];
