@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import type { FormDTO, FormFieldDTO } from '../lib/api'
 import { Loader2, CheckCircle, AlertCircle, Star } from 'lucide-react'
+import sioLogo from '../assets/siodel_logo.png'
 
 export function PublicForm() {
     const { formId } = useParams()
@@ -107,6 +108,10 @@ export function PublicForm() {
         setIsSubmitting(false)
     }
 
+    // Theme colors with defaults
+    const primaryColor = form?.themePrimaryColor || '#ff3b3b'
+    const backgroundColor = form?.themeBackground || '#fafafa'
+
     const renderField = (field: FormFieldDTO) => {
         const hasError = !!errors[field.id]
         const baseInputStyle: React.CSSProperties = {
@@ -192,7 +197,7 @@ export function PublicForm() {
                                     value={opt}
                                     checked={values[field.id] === opt}
                                     onChange={() => handleChange(field.id, opt)}
-                                    style={{ width: '20px', height: '20px', accentColor: '#ff3b3b' }}
+                                    style={{ width: '20px', height: '20px', accentColor: primaryColor }}
                                 />
                                 <span style={{ color: '#374151', fontSize: '1rem' }}>{opt}</span>
                             </label>
@@ -209,7 +214,7 @@ export function PublicForm() {
                                     type="checkbox"
                                     checked={((values[field.id] as string[]) || []).includes(opt)}
                                     onChange={e => handleCheckboxChange(field.id, opt, e.target.checked)}
-                                    style={{ width: '20px', height: '20px', accentColor: '#ff3b3b' }}
+                                    style={{ width: '20px', height: '20px', accentColor: primaryColor }}
                                 />
                                 <span style={{ color: '#374151', fontSize: '1rem' }}>{opt}</span>
                             </label>
@@ -278,10 +283,10 @@ export function PublicForm() {
         return (
             <div style={{
                 minHeight: '100vh',
-                background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
+                background: backgroundColor,
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-                <Loader2 size={40} className="animate-spin" style={{ color: '#ff3b3b' }} />
+                <Loader2 size={40} className="animate-spin" style={{ color: primaryColor }} />
             </div>
         )
     }
@@ -290,7 +295,7 @@ export function PublicForm() {
         return (
             <div style={{
                 minHeight: '100vh',
-                background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
+                background: backgroundColor,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
             }}>
                 <div style={{
@@ -324,7 +329,7 @@ export function PublicForm() {
         return (
             <div style={{
                 minHeight: '100vh',
-                background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
+                background: backgroundColor,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
             }}>
                 <div style={{
@@ -357,7 +362,7 @@ export function PublicForm() {
     return (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
+            background: backgroundColor,
             padding: '40px 24px'
         }}>
             <form
@@ -367,13 +372,34 @@ export function PublicForm() {
                     margin: '0 auto'
                 }}
             >
+                {/* Banner Image */}
+                {form?.bannerImage && (
+                    <div style={{
+                        width: '100%',
+                        aspectRatio: '3/1',
+                        borderRadius: '20px 20px 0 0',
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}>
+                        <img
+                            src={form.bannerImage}
+                            alt=""
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                            }}
+                        />
+                    </div>
+                )}
+
                 {/* Form Header */}
                 <div style={{
                     background: 'white',
-                    borderRadius: '20px 20px 0 0',
+                    borderRadius: form?.bannerImage ? '0' : '20px 20px 0 0',
                     padding: '32px',
-                    borderTop: '6px solid #ff3b3b',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    borderTop: form?.bannerImage ? 'none' : `6px solid ${primaryColor}`,
+                    boxShadow: form?.bannerImage ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}>
                     <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#1a1a1a', margin: '0 0 8px' }}>
                         {form?.title}
@@ -393,7 +419,7 @@ export function PublicForm() {
                             data-error={!!errors[field.id]}
                             style={{
                                 background: 'white',
-                                padding: '24px 32px',
+                                padding: '16px 24px',
                                 borderTop: '1px solid #f3f4f6',
                                 boxShadow: idx === (form.fields?.length || 0) - 1 ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
                                 borderRadius: idx === (form.fields?.length || 0) - 1 ? '0 0 20px 20px' : '0'
@@ -426,7 +452,7 @@ export function PublicForm() {
                         type="submit"
                         disabled={isSubmitting}
                         style={{
-                            background: '#ff3b3b',
+                            background: primaryColor,
                             color: 'white',
                             border: 'none',
                             padding: '16px 32px',
@@ -439,17 +465,17 @@ export function PublicForm() {
                             alignItems: 'center',
                             gap: '8px',
                             transition: 'transform 0.1s, box-shadow 0.2s',
-                            boxShadow: '0 2px 4px rgba(255, 59, 59, 0.3)'
+                            boxShadow: `0 2px 4px ${primaryColor}4D`
                         }}
                         onMouseEnter={e => {
                             if (!isSubmitting) {
                                 e.currentTarget.style.transform = 'translateY(-1px)'
-                                e.currentTarget.style.boxShadow = '0 4px 8px rgba(255, 59, 59, 0.4)'
+                                e.currentTarget.style.boxShadow = `0 4px 8px ${primaryColor}66`
                             }
                         }}
                         onMouseLeave={e => {
                             e.currentTarget.style.transform = 'translateY(0)'
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(255, 59, 59, 0.3)'
+                            e.currentTarget.style.boxShadow = `0 2px 4px ${primaryColor}4D`
                         }}
                     >
                         {isSubmitting && <Loader2 size={18} className="animate-spin" />}
@@ -457,10 +483,38 @@ export function PublicForm() {
                     </button>
                 </div>
 
-                {/* Footer */}
-                <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem', marginTop: '32px' }}>
-                    Powered by SIO Delhi
-                </p>
+                {/* Footer Branding */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginTop: '40px',
+                    paddingTop: '24px'
+                }}>
+                    <a
+                        href="https://siodelhi.org"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            textDecoration: 'none',
+                            transition: 'opacity 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                    >
+                        <img
+                            src={sioLogo}
+                            alt="SIO Delhi"
+                            style={{
+                                height: '48px',
+                                width: 'auto'
+                            }}
+                        />
+                    </a>
+                </div>
             </form>
 
             <style>{`

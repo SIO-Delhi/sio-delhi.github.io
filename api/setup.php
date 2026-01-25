@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 /**
  * Database Setup Script
  * Run this once to create the required tables
@@ -80,6 +84,10 @@ try {
             title VARCHAR(255) NOT NULL,
             description TEXT,
             slug VARCHAR(100) UNIQUE,
+            banner_image VARCHAR(500),
+            theme_primary_color VARCHAR(20) DEFAULT '#ff3b3b',
+            theme_background VARCHAR(100) DEFAULT '#fafafa',
+            theme_background_image VARCHAR(500),
             is_published TINYINT(1) DEFAULT 0,
             accept_responses TINYINT(1) DEFAULT 1,
             success_message TEXT,
@@ -90,6 +98,31 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
     echo "<p>✅ Created 'forms' table</p>";
+
+    // Add missing columns to forms table (for existing installations)
+    $columnsToAdd = [
+        ['banner_image', "ALTER TABLE forms ADD COLUMN banner_image VARCHAR(500)"],
+        ['theme_primary_color', "ALTER TABLE forms ADD COLUMN theme_primary_color VARCHAR(20) DEFAULT '#ff3b3b'"],
+        ['theme_background', "ALTER TABLE forms ADD COLUMN theme_background VARCHAR(200) DEFAULT '#fafafa'"],
+        ['theme_background_image', "ALTER TABLE forms ADD COLUMN theme_background_image VARCHAR(500)"]
+    ];
+
+    foreach ($columnsToAdd as $column) {
+        $colName = $column[0];
+        $sql = $column[1];
+        try {
+            // Check if column exists first
+            $checkStmt = $db->query("SHOW COLUMNS FROM forms LIKE '$colName'");
+            if ($checkStmt->rowCount() == 0) {
+                $db->exec($sql);
+                echo "<p>✅ Added '$colName' column to forms table</p>";
+            } else {
+                echo "<p>ℹ️ '$colName' column already exists</p>";
+            }
+        } catch (PDOException $e) {
+            echo "<p>⚠️ Error with '$colName': " . htmlspecialchars($e->getMessage()) . "</p>";
+        }
+    }
 
     // Create form_fields table
     $db->exec("

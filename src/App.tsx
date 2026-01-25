@@ -22,6 +22,7 @@ import { GalleryEditor } from './components/admin/GalleryEditor'
 import { FormList } from './components/admin/FormList'
 import { FormBuilder } from './components/admin/FormBuilder'
 import { FormResponseViewer } from './components/admin/FormResponseViewer'
+import { FormResponseDetail } from './components/admin/FormResponseDetail'
 import { PublicForm } from './pages/PublicForm'
 
 
@@ -50,11 +51,12 @@ function App() {
               <Route path="forms/new" element={<FormBuilder />} />
               <Route path="forms/:id" element={<FormBuilder />} />
               <Route path="forms/:formId/responses" element={<FormResponseViewer />} />
+              <Route path="forms/:formId/responses/:responseId" element={<FormResponseDetail />} />
             </Route>
           </Route>
 
           {/* Public Form Route - outside admin, no main layout */}
-          <Route path="/form/:formId" element={<PublicForm />} />
+          <Route path="/f/:formId" element={<PublicForm />} />
 
           {/* Main Site Routes - wildcard catch-all wrapped in Layout */}
           <Route path="/*" element={
