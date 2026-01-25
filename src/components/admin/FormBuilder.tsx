@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import type { FormDTO, FormFieldDTO, FormFieldType } from '../../lib/api'
+import { uploadImage } from '../../lib/storage'
+import { validateImage, compressImage } from '../../lib/imageProcessing'
+import { ImageCropper } from './ImageCropper'
 import {
     ArrowLeft, Save, Plus, Trash2, GripVertical, Loader2, Settings,
     Type, AlignLeft, Hash, Mail, Phone, ChevronDown, CheckSquare, Circle,
-    Calendar, Upload, Star, Copy, Check, X
+    Calendar, Upload, Star, Copy, Check, X, Image as ImageIcon
 } from 'lucide-react'
 
 const FIELD_TYPES: { type: FormFieldType; label: string; icon: React.ReactNode }[] = [
@@ -31,7 +34,9 @@ export function FormBuilder() {
         description: '',
         isPublished: false,
         acceptResponses: true,
-        successMessage: 'Thank you for your submission!'
+        successMessage: 'Thank you for your submission!',
+        themePrimaryColor: '#ff3b3b',
+        themeBackground: '#fafafa'
     })
     const [fields, setFields] = useState<FormFieldDTO[]>([])
     const [isSaving, setIsSaving] = useState(false)
@@ -43,6 +48,8 @@ export function FormBuilder() {
     const [dragOverField, setDragOverField] = useState<string | null>(null)
     const [copiedLink, setCopiedLink] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
+    const [bannerCropSrc, setBannerCropSrc] = useState<string | null>(null)
+    const [isUploadingBanner, setIsUploadingBanner] = useState(false)
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -164,7 +171,7 @@ export function FormBuilder() {
 
     const copyFormLink = () => {
         if (form.slug) {
-            const url = `${window.location.origin}/form/${form.slug}`
+            const url = `${window.location.origin}/f/${form.slug}`
             navigator.clipboard.writeText(url)
             setCopiedLink(true)
             setTimeout(() => setCopiedLink(false), 2000)
@@ -195,6 +202,49 @@ export function FormBuilder() {
         }
     }
 
+    const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        try {
+            validateImage(file)
+            setBannerCropSrc(URL.createObjectURL(file))
+        } catch (err: any) {
+            alert(err.message)
+        }
+        e.target.value = ''
+    }
+
+    const handleBannerCropComplete = async (croppedBlob: Blob) => {
+        setIsUploadingBanner(true)
+        try {
+            const file = new File([croppedBlob], 'banner.webp', { type: 'image/webp' })
+            const compressed = await compressImage(file)
+            const url = await uploadImage(compressed)
+            setForm({ ...form, bannerImage: url })
+        } catch (err: any) {
+            console.error('Banner upload failed:', err)
+            alert('Failed to upload banner: ' + err.message)
+        } finally {
+            setIsUploadingBanner(false)
+            if (bannerCropSrc) {
+                URL.revokeObjectURL(bannerCropSrc)
+            }
+            setBannerCropSrc(null)
+        }
+    }
+
+    const handleBannerCropCancel = () => {
+        if (bannerCropSrc) {
+            URL.revokeObjectURL(bannerCropSrc)
+        }
+        setBannerCropSrc(null)
+    }
+
+    const removeBanner = () => {
+        setForm({ ...form, bannerImage: null })
+    }
+
     if (loading) {
         return (
             <div style={{ padding: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
@@ -205,6 +255,16 @@ export function FormBuilder() {
 
     return (
         <div style={{ minHeight: '100vh', background: '#09090b', color: 'white', paddingBottom: '100px' }}>
+            {/* Banner Cropper Modal */}
+            {bannerCropSrc && (
+                <ImageCropper
+                    imageSrc={bannerCropSrc}
+                    aspectRatio={3}
+                    onCancel={handleBannerCropCancel}
+                    onCropComplete={handleBannerCropComplete}
+                />
+            )}
+
             {/* Header */}
             <div style={{
                 position: 'sticky', top: 0, zIndex: 50,
@@ -316,6 +376,236 @@ export function FormBuilder() {
                             />
                         </div>
 
+                        {/* Banner Image */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Banner Image
+                            </label>
+                            <p style={{ fontSize: '0.8rem', color: '#71717a', marginBottom: '12px' }}>
+                                Recommended size: 1200 x 400 pixels (3:1 ratio). Displays at the top of your form.
+                            </p>
+                            <div style={{
+                                position: 'relative',
+                                width: '100%',
+                                aspectRatio: '3/1',
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                background: '#18181b',
+                                border: form.bannerImage ? 'none' : '2px dashed #27272a',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                                {form.bannerImage ? (
+                                    <>
+                                        <img
+                                            src={form.bannerImage}
+                                            alt="Form banner"
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 8,
+                                            right: 8,
+                                            display: 'flex',
+                                            gap: '8px'
+                                        }}>
+                                            <label style={{
+                                                background: 'rgba(0,0,0,0.6)',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                padding: '8px 12px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.85rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px'
+                                            }}>
+                                                <Upload size={14} />
+                                                Change
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleBannerSelect}
+                                                    style={{ display: 'none' }}
+                                                />
+                                            </label>
+                                            <button
+                                                onClick={removeBanner}
+                                                style={{
+                                                    background: 'rgba(255, 59, 59, 0.8)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    padding: '8px',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <label style={{
+                                        cursor: isUploadingBanner ? 'wait' : 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        color: '#71717a',
+                                        padding: '24px'
+                                    }}>
+                                        {isUploadingBanner ? (
+                                            <Loader2 size={32} className="animate-spin" />
+                                        ) : (
+                                            <ImageIcon size={32} />
+                                        )}
+                                        <span style={{ fontSize: '0.9rem' }}>
+                                            {isUploadingBanner ? 'Uploading...' : 'Click to upload banner image'}
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleBannerSelect}
+                                            disabled={isUploadingBanner}
+                                            style={{ display: 'none' }}
+                                        />
+                                    </label>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Theme Customization */}
+                        <div style={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '12px', padding: '20px' }}>
+                            <h3 style={{ margin: '0 0 16px', fontSize: '1rem', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Theme Customization
+                            </h3>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
+                                {/* Primary Color */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px' }}>
+                                        Primary Color
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                        {['#ff3b3b', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#000000'].map(color => (
+                                            <button
+                                                key={color}
+                                                type="button"
+                                                onClick={() => setForm({ ...form, themePrimaryColor: color })}
+                                                style={{
+                                                    width: '32px', height: '32px', borderRadius: '8px',
+                                                    background: color, border: (form.themePrimaryColor || '#ff3b3b') === color ? '3px solid white' : '1px solid #27272a',
+                                                    cursor: 'pointer', boxShadow: (form.themePrimaryColor || '#ff3b3b') === color ? '0 0 0 2px ' + color : 'none'
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <input
+                                            type="color"
+                                            value={form.themePrimaryColor || '#ff3b3b'}
+                                            onChange={e => setForm({ ...form, themePrimaryColor: e.target.value })}
+                                            style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                                        />
+                                        <input
+                                            type="text"
+                                            value={form.themePrimaryColor || '#ff3b3b'}
+                                            onChange={e => setForm({ ...form, themePrimaryColor: e.target.value })}
+                                            placeholder="#ff3b3b"
+                                            style={{
+                                                flex: 1, padding: '10px 12px', borderRadius: '8px',
+                                                background: '#09090b', border: '1px solid #27272a',
+                                                color: 'white', fontSize: '0.9rem', outline: 'none',
+                                                fontFamily: 'monospace'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Background Color */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px' }}>
+                                        Background
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                        {[
+                                            '#fafafa',
+                                            '#f5f5f5',
+                                            '#e5e5e5',
+                                            '#1a1a1a',
+                                            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                                            'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                                            'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+                                        ].map((bg, idx) => (
+                                            <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() => setForm({ ...form, themeBackground: bg })}
+                                                style={{
+                                                    width: '32px', height: '32px', borderRadius: '8px',
+                                                    background: bg, border: (form.themeBackground || '#fafafa') === bg ? '3px solid white' : '1px solid #27272a',
+                                                    cursor: 'pointer', boxShadow: (form.themeBackground || '#fafafa') === bg ? '0 0 0 2px #ff3b3b' : 'none'
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <input
+                                            type="color"
+                                            value={form.themeBackground?.startsWith('#') ? form.themeBackground : '#fafafa'}
+                                            onChange={e => setForm({ ...form, themeBackground: e.target.value })}
+                                            style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                                        />
+                                        <input
+                                            type="text"
+                                            value={form.themeBackground || '#fafafa'}
+                                            onChange={e => setForm({ ...form, themeBackground: e.target.value })}
+                                            placeholder="#fafafa or linear-gradient(...)"
+                                            style={{
+                                                flex: 1, padding: '10px 12px', borderRadius: '8px',
+                                                background: '#09090b', border: '1px solid #27272a',
+                                                color: 'white', fontSize: '0.9rem', outline: 'none',
+                                                fontFamily: 'monospace'
+                                            }}
+                                        />
+                                    </div>
+                                    <span style={{ fontSize: '0.75rem', color: '#52525b', marginTop: '4px', display: 'block' }}>
+                                        Supports hex colors or CSS gradients
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Preview */}
+                            <div style={{ marginTop: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px' }}>
+                                    Preview
+                                </label>
+                                <div style={{
+                                    padding: '24px', borderRadius: '12px',
+                                    background: form.themeBackground || '#fafafa',
+                                    display: 'flex', flexDirection: 'column', gap: '12px'
+                                }}>
+                                    <div style={{ background: 'white', padding: '16px', borderRadius: '8px', borderTop: `4px solid ${form.themePrimaryColor || '#ff3b3b'}` }}>
+                                        <p style={{ margin: 0, color: '#374151', fontWeight: 600, fontSize: '0.9rem' }}>Sample Question</p>
+                                        <div style={{ height: '36px', background: '#f3f4f6', borderRadius: '6px', marginTop: '8px' }} />
+                                    </div>
+                                    <button style={{
+                                        background: form.themePrimaryColor || '#ff3b3b', color: 'white',
+                                        border: 'none', padding: '10px 20px', borderRadius: '8px',
+                                        fontWeight: 600, fontSize: '0.85rem', alignSelf: 'flex-start'
+                                    }}>
+                                        Submit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div>
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                 Success Message
@@ -363,7 +653,15 @@ export function FormBuilder() {
                                 </label>
                                 <input
                                     type="datetime-local"
-                                    value={form.expiresAt ? new Date(form.expiresAt).toISOString().slice(0, 16) : ''}
+                                    value={form.expiresAt ? (() => {
+                                        const d = new Date(form.expiresAt)
+                                        const year = d.getFullYear()
+                                        const month = String(d.getMonth() + 1).padStart(2, '0')
+                                        const day = String(d.getDate()).padStart(2, '0')
+                                        const hours = String(d.getHours()).padStart(2, '0')
+                                        const minutes = String(d.getMinutes()).padStart(2, '0')
+                                        return `${year}-${month}-${day}T${hours}:${minutes}`
+                                    })() : ''}
                                     onChange={e => setForm({ ...form, expiresAt: e.target.value ? new Date(e.target.value).getTime() : null })}
                                     style={{
                                         width: '100%', padding: '16px', borderRadius: '12px',
@@ -372,6 +670,9 @@ export function FormBuilder() {
                                         boxSizing: 'border-box'
                                     }}
                                 />
+                                <span style={{ fontSize: '0.8rem', color: '#71717a', marginTop: '4px', display: 'block' }}>
+                                    Leave empty for no expiration
+                                </span>
                             </div>
                         </div>
 

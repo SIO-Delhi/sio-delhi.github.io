@@ -54,14 +54,14 @@ export function FormList() {
     }
 
     const copyFormLink = (form: FormDTO) => {
-        const url = `${window.location.origin}/form/${form.slug}`
+        const url = `${window.location.origin}/f/${form.slug}`
         navigator.clipboard.writeText(url)
         setCopiedId(form.id)
         setTimeout(() => setCopiedId(null), 2000)
     }
 
     const openFormPreview = (form: FormDTO) => {
-        window.open(`/form/${form.slug}`, '_blank')
+        window.open(`/f/${form.slug}`, '_blank')
     }
 
     if (loading) {

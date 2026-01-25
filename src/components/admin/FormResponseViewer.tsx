@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import type { FormDTO, FormResponseDTO, FormFieldDTO } from '../../lib/api'
-import { ArrowLeft, Download, RefreshCw, ChevronLeft, ChevronRight, Trash2, Loader2 } from 'lucide-react'
+import { ArrowLeft, Download, RefreshCw, ChevronLeft, ChevronRight, Trash2, Loader2, Eye } from 'lucide-react'
 
 export function FormResponseViewer() {
     const { formId } = useParams()
@@ -185,10 +185,15 @@ export function FormResponseViewer() {
                                     {responses.map((response, idx) => (
                                         <tr
                                             key={response.id}
+                                            onClick={() => navigate(`/admin/forms/${formId}/responses/${response.id}`)}
                                             style={{
                                                 background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
-                                                borderTop: '1px solid #27272a'
+                                                borderTop: '1px solid #27272a',
+                                                cursor: 'pointer',
+                                                transition: 'background 0.15s'
                                             }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)'}
                                         >
                                             <td style={{ padding: '16px', fontSize: '0.9rem', color: '#a1a1aa', whiteSpace: 'nowrap' }}>
                                                 {formatDate(response.submittedAt)}
@@ -198,21 +203,34 @@ export function FormResponseViewer() {
                                                     {getFieldValue(response, field)}
                                                 </td>
                                             ))}
-                                            <td style={{ padding: '16px', textAlign: 'center' }}>
-                                                <button
-                                                    onClick={() => handleDeleteResponse(response.id)}
-                                                    disabled={deletingId === response.id}
-                                                    style={{
-                                                        background: 'transparent', border: 'none',
-                                                        color: '#ff3b3b', cursor: 'pointer', padding: '4px'
-                                                    }}
-                                                >
-                                                    {deletingId === response.id ? (
-                                                        <Loader2 size={16} className="animate-spin" />
-                                                    ) : (
-                                                        <Trash2 size={16} />
-                                                    )}
-                                                </button>
+                                            <td style={{ padding: '16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                                    <button
+                                                        onClick={() => navigate(`/admin/forms/${formId}/responses/${response.id}`)}
+                                                        style={{
+                                                            background: 'transparent', border: 'none',
+                                                            color: '#71717a', cursor: 'pointer', padding: '4px'
+                                                        }}
+                                                        title="View & Edit"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteResponse(response.id)}
+                                                        disabled={deletingId === response.id}
+                                                        style={{
+                                                            background: 'transparent', border: 'none',
+                                                            color: '#ff3b3b', cursor: 'pointer', padding: '4px'
+                                                        }}
+                                                        title="Delete"
+                                                    >
+                                                        {deletingId === response.id ? (
+                                                            <Loader2 size={16} className="animate-spin" />
+                                                        ) : (
+                                                            <Trash2 size={16} />
+                                                        )}
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

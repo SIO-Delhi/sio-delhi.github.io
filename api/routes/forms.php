@@ -105,8 +105,8 @@ function createForm() {
     $slug = createFormSlug($data['title'], $db);
 
     $stmt = $db->prepare("
-        INSERT INTO forms (id, title, description, slug, is_published, accept_responses, success_message, response_limit, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO forms (id, title, description, slug, banner_image, theme_primary_color, theme_background, theme_background_image, is_published, accept_responses, success_message, response_limit, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     $expiresAt = null;
@@ -119,6 +119,10 @@ function createForm() {
         $data['title'],
         $data['description'] ?? null,
         $slug,
+        $data['bannerImage'] ?? null,
+        $data['themePrimaryColor'] ?? '#ff3b3b',
+        $data['themeBackground'] ?? '#fafafa',
+        $data['themeBackgroundImage'] ?? null,
         isset($data['isPublished']) ? ($data['isPublished'] ? 1 : 0) : 0,
         isset($data['acceptResponses']) ? ($data['acceptResponses'] ? 1 : 0) : 1,
         $data['successMessage'] ?? 'Thank you for your submission!',
@@ -148,6 +152,10 @@ function updateForm($id) {
     $fieldMap = [
         'title' => 'title',
         'description' => 'description',
+        'bannerImage' => 'banner_image',
+        'themePrimaryColor' => 'theme_primary_color',
+        'themeBackground' => 'theme_background',
+        'themeBackgroundImage' => 'theme_background_image',
         'isPublished' => 'is_published',
         'acceptResponses' => 'accept_responses',
         'successMessage' => 'success_message',
@@ -373,6 +381,40 @@ function submitFormResponse($formId) {
     ];
 }
 
+function getFormResponse($formId, $responseId) {
+    $db = getDB();
+
+    $stmt = $db->prepare("SELECT * FROM form_responses WHERE id = ? AND form_id = ?");
+    $stmt->execute([$responseId, $formId]);
+    $response = $stmt->fetch();
+
+    if (!$response) {
+        http_response_code(404);
+        return ['error' => 'Response not found'];
+    }
+
+    return mapFormResponse($response);
+}
+
+function updateFormResponse($formId, $responseId) {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $db = getDB();
+
+    $stmt = $db->prepare("SELECT id FROM form_responses WHERE id = ? AND form_id = ?");
+    $stmt->execute([$responseId, $formId]);
+    if (!$stmt->fetch()) {
+        http_response_code(404);
+        return ['error' => 'Response not found'];
+    }
+
+    $responseData = $data['responseData'] ?? [];
+
+    $stmt = $db->prepare("UPDATE form_responses SET response_data = ? WHERE id = ?");
+    $stmt->execute([json_encode($responseData), $responseId]);
+
+    return getFormResponse($formId, $responseId);
+}
+
 function deleteFormResponse($formId, $responseId) {
     $db = getDB();
 
@@ -433,6 +475,10 @@ function mapForm($row) {
         'title' => $row['title'],
         'description' => $row['description'],
         'slug' => $row['slug'],
+        'bannerImage' => $row['banner_image'] ?? null,
+        'themePrimaryColor' => $row['theme_primary_color'] ?? '#ff3b3b',
+        'themeBackground' => $row['theme_background'] ?? '#fafafa',
+        'themeBackgroundImage' => $row['theme_background_image'] ?? null,
         'isPublished' => (bool)$row['is_published'],
         'acceptResponses' => (bool)$row['accept_responses'],
         'successMessage' => $row['success_message'],
