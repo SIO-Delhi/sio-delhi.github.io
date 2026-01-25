@@ -10,6 +10,7 @@ import {
     Type, AlignLeft, Hash, Mail, Phone, ChevronDown, CheckSquare, Circle,
     Calendar, Upload, Star, Copy, Check, X, Image as ImageIcon
 } from 'lucide-react'
+import { RichTextEditor } from './RichTextEditor'
 
 const FIELD_TYPES: { type: FormFieldType; label: string; icon: React.ReactNode }[] = [
     { type: 'text', label: 'Short Text', icon: <Type size={18} /> },
@@ -362,17 +363,11 @@ export function FormBuilder() {
                             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                 Description
                             </label>
-                            <textarea
+                            <RichTextEditor
                                 value={form.description || ''}
-                                onChange={e => setForm({ ...form, description: e.target.value })}
+                                onChange={(content) => setForm({ ...form, description: content })}
                                 placeholder="Optional description shown to users..."
-                                style={{
-                                    width: '100%', padding: '16px', borderRadius: '12px',
-                                    background: '#18181b', border: '1px solid #27272a',
-                                    color: 'white', fontSize: '1rem', outline: 'none',
-                                    minHeight: '100px', resize: 'vertical', fontFamily: 'inherit',
-                                    boxSizing: 'border-box'
-                                }}
+                                minHeight="200px"
                             />
                         </div>
 
@@ -723,7 +718,11 @@ export function FormBuilder() {
                                 onBlur={e => e.target.style.borderBottomColor = 'transparent'}
                             />
                             {form.description && (
-                                <p style={{ color: '#71717a', marginTop: '8px', fontSize: '1rem' }}>{form.description}</p>
+                                <div
+                                    style={{ color: '#71717a', marginTop: '8px', fontSize: '1rem' }}
+                                    dangerouslySetInnerHTML={{ __html: form.description }}
+                                    className="prose prose-invert prose-sm max-w-none"
+                                />
                             )}
                         </div>
 

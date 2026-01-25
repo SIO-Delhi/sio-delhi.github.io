@@ -405,9 +405,11 @@ export function PublicForm() {
                         {form?.title}
                     </h1>
                     {form?.description && (
-                        <p style={{ color: '#6b7280', margin: 0, lineHeight: 1.6 }}>
-                            {form.description}
-                        </p>
+                        <div
+                            style={{ color: '#6b7280', margin: 0, lineHeight: 1.6 }}
+                            className="prose prose-sm max-w-none prose-p:my-2 prose-headings:my-3 prose-ul:my-2"
+                            dangerouslySetInnerHTML={{ __html: form.description }}
+                        />
                     )}
                 </div>
 
