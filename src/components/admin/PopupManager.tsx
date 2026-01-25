@@ -13,6 +13,8 @@ export function PopupManager() {
 
     const [image, setImage] = useState<string>(popup?.image || '')
     const [isActive, setIsActive] = useState(popup?.isActive ?? true)
+    const [buttonText, setButtonText] = useState<string>(popup?.buttonText || '')
+    const [buttonLink, setButtonLink] = useState<string>(popup?.buttonLink || '')
     const [uploading, setUploading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [previewOpen, setPreviewOpen] = useState(false)
@@ -23,6 +25,8 @@ export function PopupManager() {
         if (popup) {
             setImage(popup.image)
             setIsActive(popup.isActive)
+            setButtonText(popup.buttonText || '')
+            setButtonLink(popup.buttonLink || '')
         }
     })
 
@@ -53,7 +57,7 @@ export function PopupManager() {
 
         try {
             setSaving(true)
-            await savePopup(image, isActive)
+            await savePopup(image, isActive, buttonText || undefined, buttonLink || undefined)
             await fetchPopup()
             alert('Popup saved successfully!')
         } catch (err) {
@@ -244,7 +248,8 @@ export function PopupManager() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '12px 0'
+                    padding: '12px 0',
+                    borderBottom: isDark ? '1px solid #222' : '1px solid #eee'
                 }}>
                     <div>
                         <div style={{
@@ -279,6 +284,97 @@ export function PopupManager() {
                         {isActive ? <Eye size={16} /> : <EyeOff size={16} />}
                         {isActive ? 'Active' : 'Inactive'}
                     </button>
+                </div>
+
+                {/* Action Button Settings */}
+                <div style={{ paddingTop: '16px' }}>
+                    <div style={{
+                        fontWeight: 500,
+                        color: isDark ? '#fff' : '#111',
+                        marginBottom: '4px'
+                    }}>
+                        Action Button (Optional)
+                    </div>
+                    <div style={{
+                        fontSize: '0.85rem',
+                        color: isDark ? '#888' : '#666',
+                        marginBottom: '16px'
+                    }}>
+                        Add a button below the popup image to link to a registration form or page.
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div>
+                            <label style={{
+                                display: 'block',
+                                fontSize: '0.85rem',
+                                fontWeight: 500,
+                                color: isDark ? '#aaa' : '#555',
+                                marginBottom: '6px'
+                            }}>
+                                Button Text
+                            </label>
+                            <input
+                                type="text"
+                                value={buttonText}
+                                onChange={(e) => setButtonText(e.target.value)}
+                                placeholder="e.g., Register Now, View Details, Learn More"
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: isDark ? '1px solid #333' : '1px solid #ddd',
+                                    background: isDark ? '#0a0a0a' : '#fafafa',
+                                    color: isDark ? '#fff' : '#111',
+                                    fontSize: '0.95rem',
+                                    outline: 'none',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        <div>
+                            <label style={{
+                                display: 'block',
+                                fontSize: '0.85rem',
+                                fontWeight: 500,
+                                color: isDark ? '#aaa' : '#555',
+                                marginBottom: '6px'
+                            }}>
+                                Button Link
+                            </label>
+                            <input
+                                type="url"
+                                value={buttonLink}
+                                onChange={(e) => setButtonLink(e.target.value)}
+                                placeholder="https://example.com/register"
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '8px',
+                                    border: isDark ? '1px solid #333' : '1px solid #ddd',
+                                    background: isDark ? '#0a0a0a' : '#fafafa',
+                                    color: isDark ? '#fff' : '#111',
+                                    fontSize: '0.95rem',
+                                    outline: 'none',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        {buttonText && (
+                            <div style={{
+                                padding: '12px',
+                                background: isDark ? '#0a0a0a' : '#f5f5f5',
+                                borderRadius: '8px',
+                                fontSize: '0.85rem',
+                                color: isDark ? '#888' : '#666'
+                            }}>
+                                Preview: A "{buttonText}" button will appear below the popup
+                                {buttonLink && <> linking to <code style={{ color: '#ff3b3b' }}>{buttonLink}</code></>}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 

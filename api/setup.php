@@ -71,11 +71,35 @@ try {
             id VARCHAR(36) PRIMARY KEY,
             image VARCHAR(500) NOT NULL,
             is_active TINYINT(1) DEFAULT 1,
+            button_text VARCHAR(100),
+            button_link VARCHAR(500),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
     echo "<p>✅ Created 'popups' table</p>";
+
+    // Add missing columns to popups table (for existing installations)
+    $popupColumnsToAdd = [
+        ['button_text', "ALTER TABLE popups ADD COLUMN button_text VARCHAR(100)"],
+        ['button_link', "ALTER TABLE popups ADD COLUMN button_link VARCHAR(500)"]
+    ];
+
+    foreach ($popupColumnsToAdd as $column) {
+        $colName = $column[0];
+        $sql = $column[1];
+        try {
+            $checkStmt = $db->query("SHOW COLUMNS FROM popups LIKE '$colName'");
+            if ($checkStmt->rowCount() == 0) {
+                $db->exec($sql);
+                echo "<p>✅ Added '$colName' column to popups table</p>";
+            } else {
+                echo "<p>ℹ️ '$colName' column already exists in popups</p>";
+            }
+        } catch (PDOException $e) {
+            echo "<p>⚠️ Error with '$colName': " . htmlspecialchars($e->getMessage()) . "</p>";
+        }
+    }
 
     // Create forms table
     $db->exec("
