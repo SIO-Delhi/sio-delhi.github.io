@@ -236,7 +236,8 @@ export function FormResponseDetail() {
                 )
 
             case 'file':
-                const isUrl = (value as string)?.startsWith('http')
+                const strValue = String(value || '').trim()
+                const isUrl = strValue.startsWith('http') || strValue.startsWith('/')
                 return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {isUrl && (
@@ -253,7 +254,7 @@ export function FormResponseDetail() {
                                 }}
                             >
                                 <FileText size={16} />
-                                Download / View File
+                                View File
                                 <ExternalLink size={14} />
                             </a>
                         )}

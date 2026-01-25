@@ -105,7 +105,7 @@ export function PublicForm() {
                     value === '' ||
                     (Array.isArray(value) && value.length === 0)
                 if (isEmpty) {
-                    newErrors[field.id] = `${field.label || 'This field'} is required`
+                    newErrors[field.id] = 'This field is required'
                 }
             }
         })
