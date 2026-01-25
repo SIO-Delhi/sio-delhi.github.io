@@ -19,7 +19,7 @@ export function PublicForm() {
     const [loadError, setLoadError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [currentPageIndex, setCurrentPageIndex] = useState(0)
-    const [isNavigating, setIsNavigating] = useState(false)
+    const isNavigating = useRef(false)
 
     // Helper to get ordered pages
     const pages = form?.pages?.sort((a, b) => a.displayOrder - b.displayOrder) || []
@@ -134,25 +134,25 @@ export function PublicForm() {
     }
 
     const handleNext = () => {
-        if (isNavigating) return
+        if (isNavigating.current) return
         console.log('handleNext called. Current Page:', currentPageIndex, 'Total Pages:', pages.length)
         if (validateCurrentPage()) {
             console.log('Validation passed. Advancing page.')
-            setIsNavigating(true)
+            isNavigating.current = true
             setCurrentPageIndex(prev => prev + 1)
             window.scrollTo({ top: 0, behavior: 'smooth' })
-            setTimeout(() => setIsNavigating(false), 500)
+            setTimeout(() => { isNavigating.current = false }, 500)
         } else {
             console.log('Validation failed.')
         }
     }
 
     const handleBack = () => {
-        if (isNavigating) return
-        setIsNavigating(true)
+        if (isNavigating.current) return
+        isNavigating.current = true
         setCurrentPageIndex(prev => prev - 1)
         window.scrollTo({ top: 0, behavior: 'smooth' })
-        setTimeout(() => setIsNavigating(false), 500)
+        setTimeout(() => { isNavigating.current = false }, 500)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {

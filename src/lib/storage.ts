@@ -32,7 +32,21 @@ export async function uploadImage(file: File | string, _filename?: string, formI
     return result.data!.url
 }
 
-// ... deleteImage ...
+/**
+ * Delete an image from the server
+ * @param url - Public URL of the image
+ */
+export async function deleteImage(url: string): Promise<void> {
+    const filename = url.split('/').pop()
+    if (!filename) return
+
+    const result = await api.upload.deleteFile('images', filename)
+
+    if (result.error) {
+        console.error('Delete error:', result.error)
+        throw new Error(result.error)
+    }
+}
 
 /**
  * Upload a PDF to the server
