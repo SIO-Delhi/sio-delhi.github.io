@@ -86,6 +86,10 @@ export interface FormDTO {
     title: string
     description?: string
     slug: string
+    bannerImage?: string | null
+    themePrimaryColor?: string
+    themeBackground?: string
+    themeBackgroundImage?: string | null
     isPublished: boolean
     acceptResponses: boolean
     successMessage?: string
@@ -287,6 +291,12 @@ export const api = {
         },
         async submit(formId: string, responses: Record<string, unknown>) {
             return api.post<{ success: boolean; message: string }>(`/api/forms/${formId}/submit`, { responses })
+        },
+        async getResponse(formId: string, responseId: string) {
+            return api.get<FormResponseDTO>(`/api/forms/${formId}/responses/${responseId}`)
+        },
+        async updateResponse(formId: string, responseId: string, responseData: Record<string, unknown>) {
+            return api.put<FormResponseDTO>(`/api/forms/${formId}/responses/${responseId}`, { responseData })
         },
         async deleteResponse(formId: string, responseId: string) {
             return api.delete(`/api/forms/${formId}/responses/${responseId}`)
