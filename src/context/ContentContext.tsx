@@ -54,7 +54,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 { id: 'initiatives', label: 'INITIATIVES', title: 'Our Initiatives', display_order: 2, is_published: true, type: 'custom' },
                 { id: 'media', label: 'MEDIA', title: 'Press & Media', display_order: 3, is_published: true, type: 'custom' },
                 { id: 'leadership', label: 'LEADERSHIP', title: 'Our Leadership', display_order: 4, is_published: true, type: 'custom' },
-                { id: 'more', label: 'resources', title: 'More Resources', display_order: 5, is_published: true, type: 'custom' },
+                { id: 'more', label: 'resources', title: 'More Resources', display_order: 5, is_published: false, type: 'custom' },
             ])
             return
         }
