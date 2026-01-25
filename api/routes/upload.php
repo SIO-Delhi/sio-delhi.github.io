@@ -5,17 +5,29 @@
 
 function uploadImage()
 {
-    return handleUpload('images', ALLOWED_IMAGE_EXT, MAX_IMAGE_SIZE);
+    $folder = isset($_POST['formId']) ? 'forms/' . preg_replace('/[^a-z0-9-]/i', '', $_POST['formId']) : 'images';
+    if (isset($_POST['userName']) && isset($_POST['formId'])) {
+        $name = preg_replace('/[^a-z0-9-]/i', '_', $_POST['userName']); // Sanitize heavily
+        $folder .= '/' . $name;
+    }
+    return handleUpload($folder, ALLOWED_IMAGE_EXT, MAX_IMAGE_SIZE);
 }
 
 function uploadPdf()
 {
-    return handleUpload('pdfs', ALLOWED_PDF_EXT, MAX_PDF_SIZE);
+    $folder = isset($_POST['formId']) ? 'forms/' . preg_replace('/[^a-z0-9-]/i', '', $_POST['formId']) : 'pdfs';
+    if (isset($_POST['userName']) && isset($_POST['formId'])) {
+        $name = preg_replace('/[^a-z0-9-]/i', '_', $_POST['userName']);
+        $folder .= '/' . $name;
+    }
+    return handleUpload($folder, ALLOWED_PDF_EXT, MAX_PDF_SIZE);
 }
 
 function uploadAudio()
 {
-    return handleUpload('audio', ALLOWED_AUDIO_EXT, MAX_AUDIO_SIZE);
+    // Audio usually global, but support formId just in case
+    $folder = isset($_POST['formId']) ? 'forms/' . preg_replace('/[^a-z0-9-]/i', '', $_POST['formId']) : 'audio';
+    return handleUpload($folder, ALLOWED_AUDIO_EXT, MAX_AUDIO_SIZE);
 }
 
 function deleteFile($type, $filename)

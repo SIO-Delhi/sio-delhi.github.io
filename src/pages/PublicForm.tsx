@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import type { FormDTO, FormFieldDTO } from '../lib/api'
@@ -19,6 +19,7 @@ export function PublicForm() {
     const [loadError, setLoadError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [currentPageIndex, setCurrentPageIndex] = useState(0)
+    const [isNavigating, setIsNavigating] = useState(false)
 
     // Helper to get ordered pages
     const pages = form?.pages?.sort((a, b) => a.displayOrder - b.displayOrder) || []
@@ -133,24 +134,30 @@ export function PublicForm() {
     }
 
     const handleNext = () => {
+        if (isNavigating) return
         console.log('handleNext called. Current Page:', currentPageIndex, 'Total Pages:', pages.length)
         if (validateCurrentPage()) {
             console.log('Validation passed. Advancing page.')
+            setIsNavigating(true)
             setCurrentPageIndex(prev => prev + 1)
             window.scrollTo({ top: 0, behavior: 'smooth' })
+            setTimeout(() => setIsNavigating(false), 500)
         } else {
             console.log('Validation failed.')
         }
     }
 
     const handleBack = () => {
+        if (isNavigating) return
+        setIsNavigating(true)
         setCurrentPageIndex(prev => prev - 1)
         window.scrollTo({ top: 0, behavior: 'smooth' })
+        setTimeout(() => setIsNavigating(false), 500)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (isNavigating) return // Block double submits during transition
+        if (isNavigating.current) return // Block double submits during transition
         console.log('handleSubmit called. Current Page:', currentPageIndex, 'isLastPage:', currentPageIndex === pages.length - 1)
 
         // If not on the last page, treat Enter/Submit as "Next"
@@ -677,6 +684,7 @@ export function PublicForm() {
                 <div style={{ marginTop: '24px', display: 'flex', gap: '16px', justifyContent: 'space-between' }}>
                     {currentPageIndex > 0 && (
                         <button
+                            key="btn-back"
                             type="button"
                             onClick={handleBack}
                             style={{
@@ -696,6 +704,7 @@ export function PublicForm() {
 
                     {currentPageIndex < pages.length - 1 ? (
                         <button
+                            key="btn-next"
                             type="button"
                             onClick={handleNext}
                             style={{
@@ -715,6 +724,7 @@ export function PublicForm() {
                         </button>
                     ) : (
                         <button
+                            key="btn-submit"
                             type="submit"
                             disabled={isSubmitting}
                             style={{

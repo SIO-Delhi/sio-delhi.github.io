@@ -35,19 +35,13 @@ function getFormById($id)
         return ['error' => 'Form not found'];
     }
 
-    // Also fetch fields
-    $fieldStmt = $db->prepare("SELECT * FROM form_fields WHERE form_id = ? ORDER BY display_order ASC");
-    $fieldStmt->execute([$form['id']]);
-    $fields = $fieldStmt->fetchAll();
+    $result = getFormWithPages($form);
 
     // Get response count
     $countStmt = $db->prepare("SELECT COUNT(*) FROM form_responses WHERE form_id = ?");
     $countStmt->execute([$form['id']]);
-    $responseCount = $countStmt->fetchColumn();
+    $result['responseCount'] = (int) $countStmt->fetchColumn();
 
-    $result = mapForm($form);
-    $result['fields'] = array_map('mapFormField', $fields);
-    $result['responseCount'] = (int) $responseCount;
     return $result;
 }
 
@@ -76,8 +70,10 @@ function getPublicForm($slugOrId)
 
     // Check expiry
     // Force UTC interpretation of the stored date to match storage format
+    // Check expiry
+    // Interpret stored date as IST (Asia/Kolkata)
     if ($form['expires_at']) {
-        $expiryTimestamp = strtotime($form['expires_at'] . ' UTC');
+        $expiryTimestamp = strtotime($form['expires_at'] . ' Asia/Kolkata');
         if ($expiryTimestamp < time()) {
             http_response_code(403);
             return ['error' => 'This form has expired'];
@@ -89,14 +85,7 @@ function getPublicForm($slugOrId)
         return ['error' => 'This form is not accepting responses'];
     }
 
-    // Fetch fields
-    $fieldStmt = $db->prepare("SELECT * FROM form_fields WHERE form_id = ? ORDER BY display_order ASC");
-    $fieldStmt->execute([$form['id']]);
-    $fields = $fieldStmt->fetchAll();
-
-    $result = mapForm($form);
-    $result['fields'] = array_map('mapFormField', $fields);
-    return $result;
+    return getFormWithPages($form);
 }
 
 function createForm()
@@ -119,7 +108,10 @@ function createForm()
 
     $expiresAt = null;
     if (!empty($data['expiresAt'])) {
-        $expiresAt = gmdate('Y-m-d H:i:s', $data['expiresAt'] / 1000);
+        $dt = new DateTime();
+        $dt->setTimestamp($data['expiresAt'] / 1000);
+        $dt->setTimezone(new DateTimeZone('Asia/Kolkata'));
+        $expiresAt = $dt->format('Y-m-d H:i:s');
     }
 
     $stmt->execute([
@@ -137,6 +129,11 @@ function createForm()
         $data['responseLimit'] ?? null,
         $expiresAt
     ]);
+
+    // Create default page
+    $pageId = generateFormUUID();
+    $pageStmt = $db->prepare("INSERT INTO form_pages (id, form_id, title, display_order) VALUES (?, ?, ?, ?)");
+    $pageStmt->execute([$pageId, $id, 'Page 1', 0]);
 
     http_response_code(201);
     return getFormById($id);
@@ -203,7 +200,14 @@ function updateForm($id)
     // Handle expiresAt separately (timestamp conversion)
     if (array_key_exists('expiresAt', $data)) {
         $updates[] = 'expires_at = ?';
-        $params[] = $data['expiresAt'] ? gmdate('Y-m-d H:i:s', $data['expiresAt'] / 1000) : null;
+        if ($data['expiresAt']) {
+            $dt = new DateTime();
+            $dt->setTimestamp($data['expiresAt'] / 1000);
+            $dt->setTimezone(new DateTimeZone('Asia/Kolkata'));
+            $params[] = $dt->format('Y-m-d H:i:s');
+        } else {
+            $params[] = null;
+        }
     }
 
     if (empty($updates)) {
@@ -240,7 +244,16 @@ function deleteForm($id)
 function updateFormFields($formId)
 {
     $data = json_decode(file_get_contents('php://input'), true);
-    $fields = $data['fields'] ?? [];
+
+    // Support two modes: 
+    // 1. 'pages' array (New Multi-page)
+    // 2. 'fields' array (Legacy Single-page)
+    $pages = $data['fields']['pages'] ?? ($data['pages'] ?? []);
+    // Note: The frontend might send { fields: ... } or { pages: ... }. 
+    // Ideally update frontend to send { pages: [...] } to a new endpoint, but reusing this one.
+    // If 'fields' is strictly a list of fields (old format), we wrap it in a default page.
+    $rawFields = $data['fields'] ?? [];
+    $isLegacyFormat = is_array($rawFields) && !isset($rawFields['pages']) && empty($pages);
 
     $db = getDB();
 
@@ -252,32 +265,88 @@ function updateFormFields($formId)
         return ['error' => 'Form not found'];
     }
 
-    // Delete existing fields
-    $deleteStmt = $db->prepare("DELETE FROM form_fields WHERE form_id = ?");
-    $deleteStmt->execute([$formId]);
+    try {
+        $db->beginTransaction();
 
-    // Insert new fields
-    $insertStmt = $db->prepare("
-        INSERT INTO form_fields (id, form_id, type, label, placeholder, help_text, is_required, options, validation_rules, display_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ");
+        // 1. Clear existing structure (Cascade Delete on pages will kill linked fields if setup correctly, 
+        // but fields might be orphan or linked to form directly. Safe to delete all fields first or depend on FK)
+        // Our constraint on form_fields.page_id is SET NULL, but form_fields.form_id is CASCADE on form delete.
+        // We want to replace structure.
 
-    foreach ($fields as $index => $field) {
-        $insertStmt->execute([
-            $field['id'] ?? generateFormUUID(),
-            $formId,
-            $field['type'],
-            $field['label'],
-            $field['placeholder'] ?? null,
-            $field['helpText'] ?? null,
-            isset($field['isRequired']) ? ($field['isRequired'] ? 1 : 0) : 0,
-            isset($field['options']) ? json_encode($field['options']) : null,
-            isset($field['validationRules']) ? json_encode($field['validationRules']) : null,
-            $index
-        ]);
+        $db->prepare("DELETE FROM form_fields WHERE form_id = ?")->execute([$formId]);
+        $db->prepare("DELETE FROM form_pages WHERE form_id = ?")->execute([$formId]);
+
+        // 2. Prepare statements
+        $pageInsert = $db->prepare("
+            INSERT INTO form_pages (id, form_id, title, display_order, routing_rules)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+
+        $fieldInsert = $db->prepare("
+            INSERT INTO form_fields (id, form_id, page_id, type, label, placeholder, help_text, is_required, options, validation_rules, display_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        if ($isLegacyFormat) {
+            // Create 1 default page
+            $pageId = generateFormUUID();
+            $pageInsert->execute([$pageId, $formId, 'Page 1', 0, null]);
+
+            foreach ($rawFields as $index => $field) {
+                $fieldInsert->execute([
+                    $field['id'] ?? generateFormUUID(),
+                    $formId,
+                    $pageId,
+                    $field['type'],
+                    $field['label'],
+                    $field['placeholder'] ?? null,
+                    $field['helpText'] ?? null,
+                    isset($field['isRequired']) ? ($field['isRequired'] ? 1 : 0) : 0,
+                    isset($field['options']) ? json_encode($field['options']) : null,
+                    isset($field['validationRules']) ? json_encode($field['validationRules']) : null,
+                    $index
+                ]);
+            }
+        } else {
+            // Multi-page format
+            foreach ($pages as $pIndex => $page) {
+                $pageId = $page['id'] ?? generateFormUUID();
+                $pageInsert->execute([
+                    $pageId,
+                    $formId,
+                    $page['title'] ?? "Page " . ($pIndex + 1),
+                    $pIndex,
+                    isset($page['routingRules']) ? json_encode($page['routingRules']) : null
+                ]);
+
+                if (!empty($page['fields'])) {
+                    foreach ($page['fields'] as $fIndex => $field) {
+                        $fieldInsert->execute([
+                            $field['id'] ?? generateFormUUID(),
+                            $formId,
+                            $pageId,
+                            $field['type'],
+                            $field['label'],
+                            $field['placeholder'] ?? null,
+                            $field['helpText'] ?? null,
+                            isset($field['isRequired']) ? ($field['isRequired'] ? 1 : 0) : 0,
+                            isset($field['options']) ? json_encode($field['options']) : null,
+                            isset($field['validationRules']) ? json_encode($field['validationRules']) : null,
+                            $fIndex
+                        ]);
+                    }
+                }
+            }
+        }
+
+        $db->commit();
+        return getFormById($formId);
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        http_response_code(500);
+        return ['error' => 'Failed to save form structure: ' . $e->getMessage()];
     }
-
-    return getFormById($formId);
 }
 
 // === RESPONSES ===
@@ -391,8 +460,17 @@ function submitFormResponse($formId)
         return ['error' => 'Validation failed', 'fieldErrors' => $errors];
     }
 
-    // Store response
+    // Check for custom response ID (generated by frontend for consistency with uploads)
     $id = generateFormUUID();
+    if (isset($responseData['_responseId'])) {
+        // Validate UUID format
+        if (preg_match('/^[a-f\d]{8}(-[a-f\d]{4}){3}-[a-f\d]{12}$/i', $responseData['_responseId'])) {
+            $id = $responseData['_responseId'];
+        }
+        unset($responseData['_responseId']); // Don't store it in the JSON blob
+    }
+
+    // Store response
     $stmt = $db->prepare("
         INSERT INTO form_responses (id, form_id, response_data, submitter_ip)
         VALUES (?, ?, ?, ?)
@@ -537,6 +615,7 @@ function mapFormField($row)
     return [
         'id' => $row['id'],
         'formId' => $row['form_id'],
+        'pageId' => $row['page_id'],
         'type' => $row['type'],
         'label' => $row['label'],
         'placeholder' => $row['placeholder'],
@@ -593,6 +672,89 @@ function createFormSlug($title, $db)
         $slug = $baseSlug . '-' . $counter++;
     }
     return $slug;
+}
+
+function mapFormPage($row)
+{
+    return [
+        'id' => $row['id'],
+        'formId' => $row['form_id'],
+        'title' => $row['title'],
+        'displayOrder' => (int) $row['display_order'],
+        'routingRules' => $row['routing_rules'] ? json_decode($row['routing_rules'], true) : null
+    ];
+}
+
+function getFormWithPages($form)
+{
+    $db = getDB();
+
+    // Fetch pages
+    $pageStmt = $db->prepare("SELECT * FROM form_pages WHERE form_id = ? ORDER BY display_order ASC");
+    $pageStmt->execute([$form['id']]);
+    $pages = $pageStmt->fetchAll();
+
+    // Fetch all fields
+    $fieldStmt = $db->prepare("SELECT * FROM form_fields WHERE form_id = ? ORDER BY display_order ASC");
+    $fieldStmt->execute([$form['id']]);
+    $fields = $fieldStmt->fetchAll();
+
+    // AUTO-MIGRATION: If we have fields but NO pages, create Page 1 and assign fields
+    if (empty($pages) && !empty($fields)) {
+        // Create new Page
+        $pageId = sprintf(
+            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff)
+        );
+
+        $insertPage = $db->prepare("INSERT INTO form_pages (id, form_id, title, display_order) VALUES (?, ?, 'Page 1', 0)");
+        $insertPage->execute([$pageId, $form['id']]);
+
+        // Update fields
+        $updateFields = $db->prepare("UPDATE form_fields SET page_id = ? WHERE form_id = ?");
+        $updateFields->execute([$pageId, $form['id']]);
+
+        // Refresh pages & fields from DB to get clean state
+        return getFormWithPages($form);
+    }
+
+    $result = mapForm($form);
+    $mappedPages = array_map('mapFormPage', $pages);
+    $mappedFields = array_map('mapFormField', $fields);
+
+    // Distribute fields to pages
+    foreach ($mappedPages as &$page) {
+        $page['fields'] = array_values(array_filter($mappedFields, function ($f) use ($page) {
+            return $f['pageId'] === $page['id'];
+        }));
+    }
+
+    // Handle orphan fields (legacy support: assign to first page or extra list)
+    $orphanFields = array_values(array_filter($mappedFields, function ($f) {
+        return empty($f['pageId']);
+    }));
+
+    // Assign orphans to first page if exists
+    if (!empty($orphanFields) && !empty($mappedPages)) {
+        foreach ($orphanFields as $orphan) {
+            $mappedPages[0]['fields'][] = $orphan;
+        }
+    }
+
+    $result['pages'] = $mappedPages;
+
+    // We also treat the flat 'fields' list for backward compat if needed, 
+    // but primarily we want 'pages'
+    $result['fields'] = $mappedFields;
+
+    return $result;
 }
 
 function exportAsCSV($form, $fields, $responses)

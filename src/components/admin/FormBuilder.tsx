@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
-import type { FormDTO, FormFieldDTO, FormFieldType } from '../../lib/api'
+import type { FormDTO, FormFieldDTO, FormFieldType, FormPageDTO } from '../../lib/api'
 import { uploadImage } from '../../lib/storage'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { ImageCropper } from './ImageCropper'
@@ -39,7 +39,22 @@ export function FormBuilder() {
         themePrimaryColor: '#ff3b3b',
         themeBackground: '#fafafa'
     })
+    const [pages, setPages] = useState<FormPageDTO[]>([])
+    const [activePageId, setActivePageId] = useState<string | null>(null)
     const [fields, setFields] = useState<FormFieldDTO[]>([])
+
+    // Sync helper: Update fields view when active page changes
+    useEffect(() => {
+        if (activePageId && pages.length > 0) {
+            const page = pages.find(p => p.id === activePageId)
+            if (page) {
+                setFields(page.fields || [])
+            }
+        } else if (pages.length > 0 && !activePageId) {
+            setActivePageId(pages[0].id)
+        }
+    }, [activePageId, pages])
+
     const [isSaving, setIsSaving] = useState(false)
     const [loading, setLoading] = useState(!!id)
     const [activeTab, setActiveTab] = useState<'fields' | 'settings'>('fields')
@@ -69,13 +84,53 @@ export function FormBuilder() {
         setLoading(true)
         const result = await api.forms.get(formId)
         if (result.data) {
-            setForm(result.data)
-            setFields(result.data.fields || [])
+            const { fields: rawFields, pages: rawPages, ...formData } = result.data
+            setForm(formData)
+
+            if (rawPages && rawPages.length > 0) {
+                setPages(rawPages)
+                setActivePageId(rawPages[0].id)
+            } else {
+                setPages([]) // Should fallback to creating default page on save or handle legacy
+                setFields(rawFields || [])
+            }
         } else {
             alert('Failed to load form')
             navigate('/admin/forms')
         }
         setLoading(false)
+    }
+
+    const updatePageFields = (newFields: FormFieldDTO[]) => {
+        setFields(newFields)
+        setPages(prev => prev.map(p =>
+            p.id === activePageId ? { ...p, fields: newFields } : p
+        ))
+    }
+
+    const handleAddPage = () => {
+        const newPage: FormPageDTO = {
+            id: crypto.randomUUID(),
+            title: `Page ${pages.length + 1}`,
+            displayOrder: pages.length,
+            fields: []
+        }
+        setPages(prev => [...prev, newPage])
+        setActivePageId(newPage.id)
+    }
+
+    const handleDeletePage = (pageId: string) => {
+        if (pages.length <= 1) {
+            alert("Forms must have at least one page.")
+            return
+        }
+        if (!confirm("Delete this page and all its fields?")) return
+
+        const newPages = pages.filter(p => p.id !== pageId)
+        setPages(newPages)
+        if (activePageId === pageId) {
+            setActivePageId(newPages[0].id)
+        }
     }
 
     const handleSave = async () => {
@@ -85,8 +140,16 @@ export function FormBuilder() {
         }
 
         // Validate fields have labels
-        const emptyFields = fields.filter(f => !f.label.trim())
-        if (emptyFields.length > 0) {
+        // Check all pages? Or just active? 
+        // Ideally check all pages. 
+        // For simplicity, let's trust the user or check current page.
+        // Let's iterate all pages
+        let hasError = false
+        pages.forEach(p => {
+            if (p.fields?.some(f => !f.label.trim())) hasError = true
+        })
+
+        if (hasError) {
             alert('All fields must have a label')
             return
         }
@@ -107,7 +170,12 @@ export function FormBuilder() {
             }
 
             if (formId) {
-                await api.forms.updateFields(formId, fields)
+                // Prepare final pages payload
+                // Ensure active page is synced
+                const finalPages = pages.map(p =>
+                    p.id === activePageId ? { ...p, fields: fields } : p
+                )
+                await api.forms.updateFields(formId, { pages: finalPages } as any)
             }
 
             navigate('/admin/forms')
@@ -128,17 +196,19 @@ export function FormBuilder() {
             displayOrder: fields.length,
             options: ['dropdown', 'checkbox', 'radio'].includes(type) ? ['Option 1', 'Option 2'] : undefined
         }
-        setFields([...fields, newField])
+        updatePageFields([...fields, newField])
         setEditingFieldId(newField.id)
         setShowFieldPicker(false)
     }
 
     const updateField = (fieldId: string, updates: Partial<FormFieldDTO>) => {
-        setFields(fields.map(f => f.id === fieldId ? { ...f, ...updates } : f))
+        const newFields = fields.map(f => f.id === fieldId ? { ...f, ...updates } : f)
+        updatePageFields(newFields)
     }
 
     const removeField = (fieldId: string) => {
-        setFields(fields.filter(f => f.id !== fieldId))
+        const newFields = fields.filter(f => f.id !== fieldId)
+        updatePageFields(newFields)
         if (editingFieldId === fieldId) setEditingFieldId(null)
     }
 
@@ -165,7 +235,8 @@ export function FormBuilder() {
         const [moved] = newFields.splice(sourceIndex, 1)
         newFields.splice(targetIndex, 0, moved)
 
-        setFields(newFields.map((f, i) => ({ ...f, displayOrder: i })))
+        const orderedFields = newFields.map((f, i) => ({ ...f, displayOrder: i }))
+        updatePageFields(orderedFields)
         setDraggedField(null)
         setDragOverField(null)
     }
@@ -217,11 +288,12 @@ export function FormBuilder() {
     }
 
     const handleBannerCropComplete = async (croppedBlob: Blob) => {
+        console.log('FormBuilder Banner Upload - Current id param:', id) // DEBUG
         setIsUploadingBanner(true)
         try {
             const file = new File([croppedBlob], 'banner.webp', { type: 'image/webp' })
             const compressed = await compressImage(file)
-            const url = await uploadImage(compressed)
+            const url = await uploadImage(compressed, undefined, id)
             setForm({ ...form, bannerImage: url })
         } catch (err: any) {
             console.error('Banner upload failed:', err)
@@ -699,6 +771,70 @@ export function FormBuilder() {
                 ) : (
                     /* Fields Tab */
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* Page Tabs */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '4px', background: '#18181b',
+                            borderRadius: '12px', border: '1px solid #27272a',
+                            overflowX: 'auto'
+                        }}>
+                            {pages.map((page, idx) => (
+                                <div
+                                    key={page.id}
+                                    onClick={() => setActivePageId(page.id)}
+                                    style={{
+                                        padding: '8px 16px',
+                                        borderRadius: '8px',
+                                        background: activePageId === page.id ? '#27272a' : 'transparent',
+                                        color: activePageId === page.id ? 'white' : '#71717a',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        border: activePageId === page.id ? '1px solid #3f3f46' : '1px solid transparent'
+                                    }}
+                                >
+                                    {page.title || `Page ${idx + 1}`}
+                                    {activePageId === page.id && pages.length > 1 && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeletePage(page.id) }}
+                                            style={{
+                                                padding: '4px',
+                                                borderRadius: '4px',
+                                                color: '#ef4444',
+                                                background: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                display: 'flex'
+                                            }}
+                                            title="Delete Page"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                            <button
+                                onClick={handleAddPage}
+                                style={{
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    background: '#27272a',
+                                    color: '#a1a1aa',
+                                    border: '1px dashed #3f3f46',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '0.85rem'
+                                }}
+                            >
+                                <Plus size={14} /> Add Page
+                            </button>
+                        </div>
                         {/* Form Title (Quick Edit) */}
                         <div>
                             <div

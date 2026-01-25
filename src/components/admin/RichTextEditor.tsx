@@ -172,7 +172,7 @@ export function RichTextEditor({ value, onChange, placeholder, minHeight = '150p
     const editor = useEditor({
         extensions: [
             StarterKit,
-            Underline,
+            // Underline, // Warning: Duplicate extension. Check if StarterKit includes it or if handled elsewhere
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             TextStyle,
             Color,

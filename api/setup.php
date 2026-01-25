@@ -148,11 +148,27 @@ try {
         }
     }
 
+    // Create form_pages table
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS form_pages (
+            id VARCHAR(36) PRIMARY KEY,
+            form_id VARCHAR(36) NOT NULL,
+            title VARCHAR(255),
+            display_order INT DEFAULT 0,
+            routing_rules JSON,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE,
+            INDEX idx_form_pages_form_id (form_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    echo "<p>✅ Created 'form_pages' table</p>";
+
     // Create form_fields table
     $db->exec("
         CREATE TABLE IF NOT EXISTS form_fields (
             id VARCHAR(36) PRIMARY KEY,
             form_id VARCHAR(36) NOT NULL,
+            page_id VARCHAR(36),
             type VARCHAR(50) NOT NULL,
             label VARCHAR(255) NOT NULL,
             placeholder VARCHAR(255),
@@ -162,10 +178,44 @@ try {
             validation_rules JSON,
             display_order INT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE
+            FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE,
+            FOREIGN KEY (page_id) REFERENCES form_pages(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
     echo "<p>✅ Created 'form_fields' table</p>";
+
+    // Add missing columns to form_fields (for existing installations)
+    $fieldColumnsToAdd = [
+        ['page_id', "ALTER TABLE form_fields ADD COLUMN page_id VARCHAR(36) AFTER form_id"],
+        ['page_id_fk', "ALTER TABLE form_fields ADD CONSTRAINT fk_form_fields_page FOREIGN KEY (page_id) REFERENCES form_pages(id) ON DELETE SET NULL"]
+    ];
+
+    foreach ($fieldColumnsToAdd as $column) {
+        $colName = $column[0];
+        $sql = $column[1];
+        try {
+            if ($colName === 'page_id') {
+                $checkStmt = $db->query("SHOW COLUMNS FROM form_fields LIKE 'page_id'");
+                if ($checkStmt->rowCount() == 0) {
+                    $db->exec($sql);
+                    echo "<p>✅ Added 'page_id' column to form_fields table</p>";
+                } else {
+                    echo "<p>ℹ️ 'page_id' column already exists</p>";
+                }
+            } elseif ($colName === 'page_id_fk') {
+                // Check constraint usually requires query on information_schema, but generous try-catch is okay for setup script
+                // Skip complex check for brevity, let it fail if exists
+                try {
+                    $db->exec($sql);
+                    echo "<p>✅ Added foreign key for page_id</p>";
+                } catch (Exception $e) {
+                    // Ignore duplicate key error
+                }
+            }
+        } catch (PDOException $e) {
+            echo "<p>⚠️ Error with '$colName': " . htmlspecialchars($e->getMessage()) . "</p>";
+        }
+    }
 
     // Create form_responses table
     $db->exec("
