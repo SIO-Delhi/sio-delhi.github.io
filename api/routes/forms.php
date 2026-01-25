@@ -75,9 +75,13 @@ function getPublicForm($slugOrId)
     }
 
     // Check expiry
-    if ($form['expires_at'] && strtotime($form['expires_at']) < time()) {
-        http_response_code(403);
-        return ['error' => 'This form has expired'];
+    // Force UTC interpretation of the stored date to match storage format
+    if ($form['expires_at']) {
+        $expiryTimestamp = strtotime($form['expires_at'] . ' UTC');
+        if ($expiryTimestamp < time()) {
+            http_response_code(403);
+            return ['error' => 'This form has expired'];
+        }
     }
 
     if (!$form['accept_responses']) {
@@ -115,7 +119,7 @@ function createForm()
 
     $expiresAt = null;
     if (!empty($data['expiresAt'])) {
-        $expiresAt = date('Y-m-d H:i:s', $data['expiresAt'] / 1000);
+        $expiresAt = gmdate('Y-m-d H:i:s', $data['expiresAt'] / 1000);
     }
 
     $stmt->execute([
@@ -199,7 +203,7 @@ function updateForm($id)
     // Handle expiresAt separately (timestamp conversion)
     if (array_key_exists('expiresAt', $data)) {
         $updates[] = 'expires_at = ?';
-        $params[] = $data['expiresAt'] ? date('Y-m-d H:i:s', $data['expiresAt'] / 1000) : null;
+        $params[] = $data['expiresAt'] ? gmdate('Y-m-d H:i:s', $data['expiresAt'] / 1000) : null;
     }
 
     if (empty($updates)) {

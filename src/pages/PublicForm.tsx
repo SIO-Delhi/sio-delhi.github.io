@@ -11,12 +11,26 @@ export function PublicForm() {
 
     const [form, setForm] = useState<FormDTO | null>(null)
     const [values, setValues] = useState<Record<string, unknown>>({})
+    const [responseId] = useState(() => crypto.randomUUID()) // Generate fixed ID for this session
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
     const [submitMessage, setSubmitMessage] = useState('')
     const [loadError, setLoadError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
+    const [currentPageIndex, setCurrentPageIndex] = useState(0)
+
+    // Helper to get ordered pages
+    const pages = form?.pages?.sort((a, b) => a.displayOrder - b.displayOrder) || []
+    const currentPage = pages[currentPageIndex]
+
+    // If no pages defined (legacy), use all fields
+    const visibleFields = currentPage
+        ? (form?.fields?.filter(f => f.pageId === currentPage.id) || [])
+        : (form?.fields || [])
+
+    // Sort fields by displayOrder
+    visibleFields.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
 
     useEffect(() => {
         if (formId) {
@@ -60,14 +74,16 @@ export function PublicForm() {
     const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({})
 
     const handleFileUpload = async (fieldId: string, file: File) => {
+        const targetFormId = formId || form?.id
+        console.log('PublicForm handleFileUpload - Target formId:', targetFormId) // DEBUG
         setUploadingFields(prev => ({ ...prev, [fieldId]: true }))
         try {
             let url = ''
             if (file.type.startsWith('image/')) {
-                url = await uploadImage(file)
+                // Pass responseId as the "userName" param (for folder structure)
+                url = await uploadImage(file, undefined, targetFormId, responseId)
             } else {
-                // Default to PDF/doc upload for other types
-                url = await uploadPdf(file)
+                url = await uploadPdf(file, targetFormId, responseId)
             }
             handleChange(fieldId, url)
         } catch (err) {
@@ -91,12 +107,9 @@ export function PublicForm() {
         }
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
-        // Client-side validation
+    const validateCurrentPage = () => {
         const newErrors: Record<string, string> = {}
-        form?.fields?.forEach(field => {
+        visibleFields.forEach(field => {
             if (field.isRequired) {
                 const value = values[field.id]
                 const isEmpty =
@@ -112,14 +125,47 @@ export function PublicForm() {
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors)
-            // Scroll to first error
             const firstErrorField = document.querySelector('[data-error="true"]')
             firstErrorField?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            return false
+        }
+        return true
+    }
+
+    const handleNext = () => {
+        console.log('handleNext called. Current Page:', currentPageIndex, 'Total Pages:', pages.length)
+        if (validateCurrentPage()) {
+            console.log('Validation passed. Advancing page.')
+            setCurrentPageIndex(prev => prev + 1)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        } else {
+            console.log('Validation failed.')
+        }
+    }
+
+    const handleBack = () => {
+        setCurrentPageIndex(prev => prev - 1)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (isNavigating) return // Block double submits during transition
+        console.log('handleSubmit called. Current Page:', currentPageIndex, 'isLastPage:', currentPageIndex === pages.length - 1)
+
+        // If not on the last page, treat Enter/Submit as "Next"
+        if (currentPageIndex < pages.length - 1) {
+            console.log('Not last page. Redirecting to handleNext.')
+            handleNext()
             return
         }
 
+        if (!validateCurrentPage()) return
+
+        console.log('Submitting form...')
         setIsSubmitting(true)
-        const result = await api.forms.submit(formId!, values)
+        // Pass the pre-generated responseId so backend links it correctly
+        const result = await api.forms.submit(formId!, { ...values, _responseId: responseId })
 
         if (result.error) {
             if ((result as any).data?.fieldErrors) {
@@ -565,9 +611,36 @@ export function PublicForm() {
                     )}
                 </div>
 
+                {/* Pages Indicator */}
+                {pages.length > 1 && (
+                    <div style={{ marginBottom: '24px', padding: '0 24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: primaryColor }}>
+                                Page {currentPageIndex + 1}
+                            </span>
+                            <span style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
+                                of {pages.length}
+                            </span>
+                        </div>
+                        <div style={{ width: '100%', height: '4px', background: '#e5e5e5', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{
+                                width: `${((currentPageIndex + 1) / pages.length) * 100}%`,
+                                height: '100%',
+                                background: primaryColor,
+                                transition: 'width 0.3s ease'
+                            }} />
+                        </div>
+                        {currentPage && (
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1a1a1a', marginTop: '16px' }}>
+                                {currentPage.title}
+                            </h2>
+                        )}
+                    </div>
+                )}
+
                 {/* Fields */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                    {form?.fields?.map((field, idx) => (
+                    {visibleFields.map((field, idx) => (
                         <div
                             key={field.id}
                             data-error={!!errors[field.id]}
@@ -575,8 +648,8 @@ export function PublicForm() {
                                 background: 'white',
                                 padding: '16px 24px',
                                 borderTop: '1px solid #f3f4f6',
-                                boxShadow: idx === (form.fields?.length || 0) - 1 ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
-                                borderRadius: idx === (form.fields?.length || 0) - 1 ? '0 0 20px 20px' : '0'
+                                boxShadow: idx === visibleFields.length - 1 ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
+                                borderRadius: idx === visibleFields.length - 1 ? '0 0 20px 20px' : '0'
                             }}
                         >
                             <label style={{ display: 'block', marginBottom: '12px' }}>
@@ -600,41 +673,71 @@ export function PublicForm() {
                     ))}
                 </div>
 
-                {/* Submit Button */}
-                <div style={{ marginTop: '24px' }}>
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        style={{
-                            background: primaryColor,
-                            color: 'white',
-                            border: 'none',
-                            padding: '16px 32px',
-                            borderRadius: '10px',
-                            fontSize: '1rem',
-                            fontWeight: 600,
-                            cursor: isSubmitting ? 'wait' : 'pointer',
-                            opacity: isSubmitting ? 0.7 : 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'transform 0.1s, box-shadow 0.2s',
-                            boxShadow: `0 2px 4px ${primaryColor}4D`
-                        }}
-                        onMouseEnter={e => {
-                            if (!isSubmitting) {
-                                e.currentTarget.style.transform = 'translateY(-1px)'
-                                e.currentTarget.style.boxShadow = `0 4px 8px ${primaryColor}66`
-                            }
-                        }}
-                        onMouseLeave={e => {
-                            e.currentTarget.style.transform = 'translateY(0)'
-                            e.currentTarget.style.boxShadow = `0 2px 4px ${primaryColor}4D`
-                        }}
-                    >
-                        {isSubmitting && <Loader2 size={18} className="animate-spin" />}
-                        {isSubmitting ? 'Submitting...' : 'Submit'}
-                    </button>
+                {/* Navigation / Submit Buttons */}
+                <div style={{ marginTop: '24px', display: 'flex', gap: '16px', justifyContent: 'space-between' }}>
+                    {currentPageIndex > 0 && (
+                        <button
+                            type="button"
+                            onClick={handleBack}
+                            style={{
+                                background: 'white',
+                                color: '#374151',
+                                border: '1px solid #d1d5db',
+                                padding: '16px 32px',
+                                borderRadius: '10px',
+                                fontSize: '1rem',
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Back
+                        </button>
+                    )}
+
+                    {currentPageIndex < pages.length - 1 ? (
+                        <button
+                            type="button"
+                            onClick={handleNext}
+                            style={{
+                                background: primaryColor,
+                                color: 'white',
+                                border: 'none',
+                                padding: '16px 32px',
+                                borderRadius: '10px',
+                                fontSize: '1rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                marginLeft: 'auto', // Push to right
+                                display: 'flex', alignItems: 'center', gap: '8px'
+                            }}
+                        >
+                            Next
+                        </button>
+                    ) : (
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            style={{
+                                background: primaryColor,
+                                color: 'white',
+                                border: 'none',
+                                padding: '16px 32px',
+                                borderRadius: '10px',
+                                fontSize: '1rem',
+                                fontWeight: 600,
+                                cursor: isSubmitting ? 'wait' : 'pointer',
+                                opacity: isSubmitting ? 0.7 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                marginLeft: 'auto',
+                                boxShadow: `0 2px 4px ${primaryColor}4D`
+                            }}
+                        >
+                            {isSubmitting && <Loader2 size={18} className="animate-spin" />}
+                            {isSubmitting ? 'Submitting...' : 'Submit'}
+                        </button>
+                    )}
                 </div>
 
                 {/* Footer Branding */}
