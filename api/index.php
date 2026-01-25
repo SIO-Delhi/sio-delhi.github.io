@@ -72,6 +72,7 @@ $routes = [
     // Popups
     'GET /popups' => 'routes/popups.php@getAll',
     'GET /popups/active' => 'routes/popups.php@getActive',
+    'GET /popups/([^/]+)' => 'routes/popups.php@getOne',
     'POST /popups' => 'routes/popups.php@create',
     'PUT /popups/([^/]+)' => 'routes/popups.php@update',
     'DELETE /popups/([^/]+)' => 'routes/popups.php@delete',

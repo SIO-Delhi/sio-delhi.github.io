@@ -51,6 +51,8 @@ export interface Popup {
     id: string
     image: string
     isActive: boolean
+    buttonText?: string
+    buttonLink?: string
     createdAt: number
     updatedAt: number
 }

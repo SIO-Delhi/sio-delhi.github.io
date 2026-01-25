@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import type { FormDTO, FormResponseDTO, FormFieldDTO } from '../../lib/api'
-import { ArrowLeft, Save, Loader2, Trash2, Calendar } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, Trash2, Calendar, FileText, ExternalLink } from 'lucide-react'
 
 export function FormResponseDetail() {
     const { formId, responseId } = useParams()
@@ -236,14 +236,36 @@ export function FormResponseDetail() {
                 )
 
             case 'file':
+                const strValue = String(value || '').trim()
+                const isUrl = strValue.startsWith('http') || strValue.startsWith('/')
                 return (
-                    <input
-                        type="text"
-                        value={(value as string) || ''}
-                        onChange={e => handleFieldChange(field.id, e.target.value)}
-                        placeholder="File name"
-                        style={baseInputStyle}
-                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {isUrl && (
+                            <a
+                                href={value as string}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    color: '#3b82f6', textDecoration: 'none',
+                                    fontSize: '0.9rem', fontWeight: 500,
+                                    padding: '8px 12px', background: 'rgba(59, 130, 246, 0.1)',
+                                    borderRadius: '8px', width: 'fit-content'
+                                }}
+                            >
+                                <FileText size={16} />
+                                View File
+                                <ExternalLink size={14} />
+                            </a>
+                        )}
+                        <input
+                            type="text"
+                            value={(value as string) || ''}
+                            onChange={e => handleFieldChange(field.id, e.target.value)}
+                            placeholder="File URL or name"
+                            style={baseInputStyle}
+                        />
+                    </div>
                 )
 
             default:

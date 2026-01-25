@@ -28,7 +28,7 @@ interface ContentContextType {
     // Popup Actions
     popup: Popup | null
     fetchPopup: () => Promise<void>
-    savePopup: (image: string, isActive: boolean) => Promise<void>
+    savePopup: (image: string, isActive: boolean, buttonText?: string, buttonLink?: string) => Promise<void>
     deletePopup: () => Promise<void>
 }
 
@@ -156,6 +156,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 id: row.id,
                 image: row.image,
                 isActive: row.isActive ?? true,
+                buttonText: row.buttonText,
+                buttonLink: row.buttonLink,
                 createdAt: row.createdAt ?? Date.now(),
                 updatedAt: row.updatedAt ?? Date.now()
             })
@@ -165,25 +167,26 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         }
     }, [])
 
-    const savePopup = async (image: string, isActive: boolean) => {
+    const savePopup = async (image: string, isActive: boolean, buttonText?: string, buttonLink?: string) => {
         try {
             // Check if popup exists
             const existingResult = await api.popups.getAll()
             const existing = existingResult.data && existingResult.data.length > 0 ? existingResult.data[0] : null
 
+            const popupData = {
+                image,
+                isActive,
+                buttonText: buttonText || undefined,
+                buttonLink: buttonLink || undefined
+            }
+
             if (existing) {
                 // Update existing
-                const result = await api.popups.update(existing.id, {
-                    image,
-                    isActive
-                })
+                const result = await api.popups.update(existing.id, popupData)
                 if (result.error) throw new Error(result.error)
             } else {
                 // Insert new
-                const result = await api.popups.create({
-                    image,
-                    isActive
-                })
+                const result = await api.popups.create(popupData)
                 if (result.error) throw new Error(result.error)
             }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
+import { X } from 'lucide-react'
 
 export function EventPopup() {
     const { popup } = useContent()
@@ -8,6 +9,7 @@ export function EventPopup() {
     const [isVisible, setIsVisible] = useState(false)
     const [isClosing, setIsClosing] = useState(false)
     const [hasShownThisLoad, setHasShownThisLoad] = useState(false)
+    const [showCloseButton, setShowCloseButton] = useState(false)
 
     useEffect(() => {
         // Only show popup on home page
@@ -22,26 +24,59 @@ export function EventPopup() {
         // Don't show again if already shown this page load
         if (hasShownThisLoad) return
 
+        let isMounted = true
+
+        // Preload image in background
+        const preloadImage = (src: string): Promise<void> => {
+            return new Promise((resolve, reject) => {
+                const img = new Image()
+                img.src = src
+                img.onload = () => resolve()
+                img.onerror = reject
+            })
+        }
+
         // Wait for splash screen to be dismissed before showing popup
-        const checkSplashAndShow = () => {
+        const checkSplashAndShow = async () => {
             const splashSeen = sessionStorage.getItem('sio_splash_seen') === 'true'
+
             if (splashSeen) {
-                // Splash is done, show popup after a short delay
-                const timer = setTimeout(() => {
+                try {
+                    // Start preloading immediately
+                    await preloadImage(popup.image)
+
+                    if (!isMounted) return
+
+                    // Show immediately after load (plus small buffer for smoothness)
                     setIsVisible(true)
                     setHasShownThisLoad(true)
-                }, 1500)
-                return () => clearTimeout(timer)
+                } catch (err) {
+                    console.error('Failed to preload popup image', err)
+                }
             } else {
                 // Splash not done yet, check again in 500ms
-                const checkTimer = setTimeout(checkSplashAndShow, 500)
-                return () => clearTimeout(checkTimer)
+                setTimeout(checkSplashAndShow, 500)
             }
         }
 
-        const cleanup = checkSplashAndShow()
-        return cleanup
+        checkSplashAndShow()
+
+        return () => {
+            isMounted = false
+        }
     }, [popup, location.pathname, hasShownThisLoad])
+
+    // Show close button after 3 seconds
+    useEffect(() => {
+        if (isVisible) {
+            const timer = setTimeout(() => {
+                setShowCloseButton(true)
+            }, 3000)
+            return () => clearTimeout(timer)
+        } else {
+            setShowCloseButton(false)
+        }
+    }, [isVisible])
 
     const handleClose = () => {
         setIsClosing(true)
@@ -54,7 +89,7 @@ export function EventPopup() {
     }
 
     const handleBackdropClick = (e: React.MouseEvent) => {
-        if (e.target === e.currentTarget) {
+        if (e.target === e.currentTarget && showCloseButton) {
             handleClose()
         }
     }
@@ -69,7 +104,7 @@ export function EventPopup() {
             style={{
                 position: 'fixed',
                 inset: 0,
-                background: 'rgba(0, 0, 0, 0.8)',
+                background: 'rgba(0, 0, 0, 0.85)',
                 backdropFilter: 'blur(8px)',
                 display: 'flex',
                 alignItems: 'center',
@@ -78,7 +113,7 @@ export function EventPopup() {
                 padding: '20px',
                 opacity: isClosing ? 0 : 1,
                 transition: 'opacity 0.3s ease',
-                cursor: 'pointer'
+                cursor: showCloseButton ? 'pointer' : 'default'
             }}
         >
             <div
@@ -90,12 +125,39 @@ export function EventPopup() {
                     transform: isClosing ? 'scale(0.95)' : 'scale(1)',
                     opacity: isClosing ? 0 : 1,
                     transition: 'all 0.3s ease',
-                    animation: !isClosing ? 'popupEnter 0.4s ease' : 'none'
+                    animation: !isClosing ? 'popupEnter 0.4s ease' : 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '16px'
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Close Button */}
-
+                {/* Close Button - appears after 3 seconds */}
+                {showCloseButton && (
+                    <button
+                        onClick={handleClose}
+                        style={{
+                            position: 'absolute',
+                            top: '-12px',
+                            right: '-12px',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: 'rgba(255, 255, 255, 0.95)',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            zIndex: 10,
+                            animation: 'fadeIn 0.3s ease'
+                        }}
+                    >
+                        <X size={20} color="#333" />
+                    </button>
+                )}
 
                 {/* Popup Image */}
                 <img
@@ -103,12 +165,47 @@ export function EventPopup() {
                     alt="Event announcement"
                     style={{
                         maxWidth: '100%',
-                        maxHeight: '85vh',
+                        maxHeight: popup.buttonText ? '75vh' : '85vh',
                         borderRadius: '16px',
                         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
                         display: 'block'
                     }}
                 />
+
+                {/* Action Button - Shiny style like navbar */}
+                {popup.buttonText && (
+                    <div
+                        className="shiny-button-container"
+                        style={{ animation: 'fadeIn 0.4s ease 0.2s both' }}
+                    >
+                        <a
+                            href={popup.buttonLink || '#'}
+                            target={popup.buttonLink?.startsWith('http') ? '_blank' : '_self'}
+                            rel="noopener noreferrer"
+                            className="shiny-button"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '14px 32px',
+                                color: 'white',
+                                borderRadius: '100px',
+                                fontSize: '1rem',
+                                fontWeight: 600,
+                                textDecoration: 'none',
+                                transition: 'transform 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.02)'
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)'
+                            }}
+                        >
+                            {popup.buttonText}
+                        </a>
+                    </div>
+                )}
             </div>
 
             {/* Animation Keyframes */}
@@ -122,6 +219,16 @@ export function EventPopup() {
                         to {
                             opacity: 1;
                             transform: scale(1) translateY(0);
+                        }
+                    }
+                    @keyframes fadeIn {
+                        from {
+                            opacity: 0;
+                            transform: scale(0.8);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: scale(1);
                         }
                     }
                 `}

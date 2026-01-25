@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import type { FormDTO, FormFieldDTO } from '../lib/api'
-import { Loader2, CheckCircle, AlertCircle, Star } from 'lucide-react'
+import { Loader2, CheckCircle, AlertCircle, Star, Upload } from 'lucide-react'
+import { uploadPdf, uploadImage } from '../lib/storage'
 import sioLogo from '../assets/siodel_logo.png'
 
 export function PublicForm() {
@@ -56,6 +57,31 @@ export function PublicForm() {
         }
     }
 
+    const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({})
+
+    const handleFileUpload = async (fieldId: string, file: File) => {
+        setUploadingFields(prev => ({ ...prev, [fieldId]: true }))
+        try {
+            let url = ''
+            if (file.type.startsWith('image/')) {
+                url = await uploadImage(file)
+            } else {
+                // Default to PDF/doc upload for other types
+                url = await uploadPdf(file)
+            }
+            handleChange(fieldId, url)
+        } catch (err) {
+            console.error(err)
+            alert('File upload failed')
+        } finally {
+            setUploadingFields(prev => {
+                const newState = { ...prev }
+                delete newState[fieldId]
+                return newState
+            })
+        }
+    }
+
     const handleCheckboxChange = (fieldId: string, option: string, checked: boolean) => {
         const currentValues = (values[fieldId] as string[]) || []
         if (checked) {
@@ -79,7 +105,7 @@ export function PublicForm() {
                     value === '' ||
                     (Array.isArray(value) && value.length === 0)
                 if (isEmpty) {
-                    newErrors[field.id] = `${field.label || 'This field'} is required`
+                    newErrors[field.id] = 'This field is required'
                 }
             }
         })
@@ -249,21 +275,70 @@ export function PublicForm() {
                 )
 
             case 'file':
+                const isUploading = uploadingFields[field.id]
+                const fileValue = values[field.id] as string
+
                 return (
-                    <input
-                        type="file"
-                        onChange={e => {
-                            const file = e.target.files?.[0]
-                            if (file) {
-                                handleChange(field.id, file.name)
-                            }
-                        }}
-                        style={{
-                            ...baseInputStyle,
-                            padding: '12px',
-                            cursor: 'pointer'
-                        }}
-                    />
+                    <div style={{ position: 'relative' }}>
+                        {!fileValue ? (
+                            <div style={{
+                                ...baseInputStyle,
+                                padding: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                cursor: isUploading ? 'wait' : 'pointer',
+                                position: 'relative'
+                            }}>
+                                {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+                                <span style={{ color: '#6b7280' }}>
+                                    {isUploading ? 'Uploading...' : 'Click to upload file'}
+                                </span>
+                                <input
+                                    type="file"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0]
+                                        if (file) handleFileUpload(field.id, file)
+                                    }}
+                                    disabled={isUploading}
+                                    style={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        opacity: 0,
+                                        cursor: 'pointer'
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div style={{
+                                ...baseInputStyle,
+                                padding: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: '#f0fdf4',
+                                borderColor: '#22c55e'
+                            }}>
+                                <span style={{ color: '#15803d', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    File Uploaded
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleChange(field.id, '')}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#ef4444',
+                                        fontSize: '0.85rem',
+                                        cursor: 'pointer',
+                                        fontWeight: 500
+                                    }}
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 )
 
             default:
@@ -405,9 +480,11 @@ export function PublicForm() {
                         {form?.title}
                     </h1>
                     {form?.description && (
-                        <p style={{ color: '#6b7280', margin: 0, lineHeight: 1.6 }}>
-                            {form.description}
-                        </p>
+                        <div
+                            style={{ color: '#6b7280', margin: 0, lineHeight: 1.6 }}
+                            className="prose prose-sm max-w-none prose-p:my-2 prose-headings:my-3 prose-ul:my-2"
+                            dangerouslySetInnerHTML={{ __html: form.description }}
+                        />
                     )}
                 </div>
 

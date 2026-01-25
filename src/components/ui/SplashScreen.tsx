@@ -21,8 +21,8 @@ export function SplashScreen() {
     // Refs for Persistent Button
     const buttonRef = useRef<HTMLDivElement>(null)
 
-    // Check if we're on admin pages
-    const isAdminPage = location.pathname.startsWith('/admin')
+    // Only show splash screen on the strict home page
+    const isHomePage = location.pathname === '/'
 
     const handleStartExploring = () => {
         if (!splashContainerRef.current) {
@@ -64,7 +64,7 @@ export function SplashScreen() {
 
     // Scroll listener for progress ring
     useEffect(() => {
-        if (isAdminPage) return
+        if (!isHomePage) return
         const handleScroll = () => {
             const totalScroll = document.documentElement.scrollTop
             const windowHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight
@@ -74,10 +74,10 @@ export function SplashScreen() {
         }
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
-    }, [isAdminPage])
+    }, [isHomePage])
 
-    // Don't render on admin pages
-    if (isAdminPage) {
+    // Don't render on non-home pages (forms, admin, etc.)
+    if (!isHomePage) {
         return null
     }
 
