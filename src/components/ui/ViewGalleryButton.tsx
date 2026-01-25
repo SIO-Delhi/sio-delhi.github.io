@@ -107,7 +107,7 @@ export const ViewGalleryButton = ({ to, isDark, variant = 'default', className, 
                 }
             }}
         >
-            <Icon size={variant === 'pill' || variant === 'outline' ? 16 : 18} /> {text}
+            <Icon size={variant === 'pill' || variant === 'outline' ? 16 : 18} color="#ff3b3b" /> {text}
         </Link>
     )
 }
