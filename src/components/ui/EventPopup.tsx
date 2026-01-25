@@ -9,7 +9,7 @@ export function EventPopup() {
     const [isVisible, setIsVisible] = useState(false)
     const [isClosing, setIsClosing] = useState(false)
     const [hasShownThisLoad, setHasShownThisLoad] = useState(false)
-    const [showCloseButton, setShowCloseButton] = useState(false)
+
 
     useEffect(() => {
         // Only show popup on home page
@@ -66,17 +66,7 @@ export function EventPopup() {
         }
     }, [popup, location.pathname, hasShownThisLoad])
 
-    // Show close button after 3 seconds
-    useEffect(() => {
-        if (isVisible) {
-            const timer = setTimeout(() => {
-                setShowCloseButton(true)
-            }, 3000)
-            return () => clearTimeout(timer)
-        } else {
-            setShowCloseButton(false)
-        }
-    }, [isVisible])
+
 
     const handleClose = () => {
         setIsClosing(true)
@@ -89,7 +79,7 @@ export function EventPopup() {
     }
 
     const handleBackdropClick = (e: React.MouseEvent) => {
-        if (e.target === e.currentTarget && showCloseButton) {
+        if (e.target === e.currentTarget) {
             handleClose()
         }
     }
@@ -113,7 +103,7 @@ export function EventPopup() {
                 padding: '20px',
                 opacity: isClosing ? 0 : 1,
                 transition: 'opacity 0.3s ease',
-                cursor: showCloseButton ? 'pointer' : 'default'
+                cursor: 'pointer'
             }}
         >
             <div
@@ -133,31 +123,31 @@ export function EventPopup() {
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Close Button - appears after 3 seconds */}
-                {showCloseButton && (
-                    <button
-                        onClick={handleClose}
-                        style={{
-                            position: 'absolute',
-                            top: '-12px',
-                            right: '-12px',
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '50%',
-                            background: 'rgba(255, 255, 255, 0.95)',
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                            zIndex: 10,
-                            animation: 'fadeIn 0.3s ease'
-                        }}
-                    >
-                        <X size={20} color="#333" />
-                    </button>
-                )}
+                {/* Close Button - Always visible */}
+                <button
+                    onClick={handleClose}
+                    style={{
+                        position: 'absolute',
+                        top: '-48px', // Moved above the card
+                        right: '0',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: 'rgba(255, 255, 255, 0.2)', // Semi-transparent for modern look
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 10,
+                        transition: 'background 0.2s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.4)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                >
+                    <X size={20} color="white" />
+                </button>
 
                 {/* Popup Image */}
                 <img

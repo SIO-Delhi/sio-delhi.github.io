@@ -2,12 +2,13 @@
 import React from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
+
 import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
+import Highlight from '@tiptap/extension-highlight'
 import { Extension } from '@tiptap/core'
-import { Bold, Italic, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify, Heading1, Heading2, List } from 'lucide-react'
+import { Bold, Italic, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify, Heading1, Heading2, List, Highlighter } from 'lucide-react'
 
 // --- Custom Font Size Extension ---
 export const FontSize = Extension.create({
@@ -96,6 +97,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
             <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))}><Bold size={16} /></button>
             <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))}><Italic size={16} /></button>
             <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))}><UnderlineIcon size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHighlight().run() }} style={buttonStyle(editor.isActive('highlight'))}><Highlighter size={16} /></button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
@@ -170,10 +172,13 @@ export function RichTextEditor({ value, onChange, placeholder, minHeight = '150p
     const editor = useEditor({
         extensions: [
             StarterKit,
-            Underline,
+            // Underline, // Warning: Duplicate extension. Check if StarterKit includes it or if handled elsewhere
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             TextStyle,
             Color,
+            Highlight.configure({
+                multicolor: true,
+            }),
             FontSize
         ],
         content: value,

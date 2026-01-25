@@ -73,6 +73,7 @@ export interface FormFieldValidation {
 export interface FormFieldDTO {
     id: string
     formId?: string
+    pageId?: string
     type: FormFieldType
     label: string
     placeholder?: string
@@ -81,6 +82,25 @@ export interface FormFieldDTO {
     options?: string[]
     validationRules?: FormFieldValidation
     displayOrder: number
+}
+
+export interface FormPageRoutingRule {
+    condition: {
+        fieldId: string
+        operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than'
+        value: any
+    }
+    action: 'jump_to_page'
+    targetPageId: string
+}
+
+export interface FormPageDTO {
+    id: string
+    formId?: string
+    title?: string
+    displayOrder: number
+    routingRules?: FormPageRoutingRule[]
+    fields?: FormFieldDTO[]
 }
 
 export interface FormDTO {
@@ -97,6 +117,8 @@ export interface FormDTO {
     successMessage?: string
     responseLimit?: number | null
     expiresAt?: number | null
+    pages?: FormPageDTO[]
+    // Legacy fields array for backward compatibility or flat lists
     fields?: FormFieldDTO[]
     responseCount?: number
     createdAt?: number
@@ -167,8 +189,21 @@ export const api = {
     },
 
     // File upload (multipart/form-data)
-    async uploadFile(path: string, file: File | Blob, fieldName = 'file'): Promise<ApiResponse<{ url: string; filename: string }>> {
+    async uploadFile(path: string, file: File | Blob, fieldName = 'file', formId?: string, userName?: string): Promise<ApiResponse<{ url: string; filename: string }>> {
         const formData = new FormData()
+
+        // Pass formId if provided
+        if (formId) {
+            console.log('UPLOADING for formId:', formId)
+            formData.append('formId', formId)
+        }
+
+        // Pass userName if provided for subfolder organization
+        if (userName) {
+            console.log('UPLOADING for userName:', userName)
+            formData.append('userName', userName)
+        }
+
         formData.append(fieldName, file)
 
         const response = await fetch(`${API_BASE}${path}`, {
@@ -251,14 +286,14 @@ export const api = {
 
     // Upload
     upload: {
-        async image(file: File | Blob) {
-            return api.uploadFile('/api/upload/image', file)
+        async image(file: File | Blob, formId?: string, userName?: string) {
+            return api.uploadFile('/api/upload/image', file, 'file', formId, userName)
         },
-        async pdf(file: File) {
-            return api.uploadFile('/api/upload/pdf', file)
+        async pdf(file: File, formId?: string, userName?: string) {
+            return api.uploadFile('/api/upload/pdf', file, 'file', formId, userName)
         },
-        async audio(file: File | Blob) {
-            return api.uploadFile('/api/upload/audio', file)
+        async audio(file: File | Blob, formId?: string, userName?: string) {
+            return api.uploadFile('/api/upload/audio', file, 'file', formId, userName)
         },
         async deleteFile(type: 'images' | 'pdfs' | 'audio', filename: string) {
             return api.delete(`/api/upload/${type}/${filename}`)
