@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import type { FormDTO, FormFieldDTO } from '../lib/api'
 import { Loader2, CheckCircle, AlertCircle, Star } from 'lucide-react'
+import sioLogo from '../assets/siodel_logo.png'
 
 export function PublicForm() {
     const { formId } = useParams()
@@ -482,10 +483,38 @@ export function PublicForm() {
                     </button>
                 </div>
 
-                {/* Footer */}
-                <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem', marginTop: '32px' }}>
-                    Powered by SIO Delhi
-                </p>
+                {/* Footer Branding */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginTop: '40px',
+                    paddingTop: '24px'
+                }}>
+                    <a
+                        href="https://siodelhi.org"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            textDecoration: 'none',
+                            transition: 'opacity 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                    >
+                        <img
+                            src={sioLogo}
+                            alt="SIO Delhi"
+                            style={{
+                                height: '48px',
+                                width: 'auto'
+                            }}
+                        />
+                    </a>
+                </div>
             </form>
 
             <style>{`

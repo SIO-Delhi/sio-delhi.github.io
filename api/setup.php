@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 /**
  * Database Setup Script
  * Run this once to create the required tables
@@ -103,7 +107,9 @@ try {
         ['theme_background_image', "ALTER TABLE forms ADD COLUMN theme_background_image VARCHAR(500)"]
     ];
 
-    foreach ($columnsToAdd as [$colName, $sql]) {
+    foreach ($columnsToAdd as $column) {
+        $colName = $column[0];
+        $sql = $column[1];
         try {
             // Check if column exists first
             $checkStmt = $db->query("SHOW COLUMNS FROM forms LIKE '$colName'");
