@@ -164,8 +164,17 @@
   font-display: swap;
 }
 
+/* AlQalam Taj Nastaleeq Font */
+@font-face {
+  font-family: 'AlQalam Taj Nastaleeq';
+  src: url('./fonts/AlQalam Taj Nastaleeq Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 .font-urdu {
-  font-family: 'Jameel Noori Nastaleeq Kasheeda', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif;
+  font-family: 'AlQalam Taj Nastaleeq', 'Jameel Noori Nastaleeq Kasheeda', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif;
   direction: rtl;
 }
 

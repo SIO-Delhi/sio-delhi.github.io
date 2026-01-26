@@ -67,7 +67,7 @@ export function InitiativeDetail() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '8px',
-                        color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+                        color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.6)',
                         textDecoration: 'none',
                         marginBottom: '32px',
                         fontSize: '14px',
@@ -157,7 +157,7 @@ export function InitiativeDetail() {
                     <div
                         className="initiative-content"
                         style={{
-                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.1rem',
                             lineHeight: 1.8
                         }}

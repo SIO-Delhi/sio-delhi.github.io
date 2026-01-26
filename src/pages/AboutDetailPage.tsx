@@ -19,7 +19,7 @@ export function AboutDetailPage() {
                             borderLeft: '3px solid #ff3b3b',
                             paddingLeft: '24px',
                             fontStyle: 'italic',
-                            color: isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)'
+                            color: isDark ? '#fdedcb' : 'rgba(0, 0, 0, 0.6)'
                         }}>
                             In order to understand SIO, it is essential to have a good grasp on its views on Islam, student and organization. The Arabic word Islam signifies peace, dedication and absolute submission. In other words it is the path to peace through complete surrender to God.
                         </p>

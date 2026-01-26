@@ -185,7 +185,7 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
             {text && (
                 <p style={{
                     margin: 0,
-                    color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)',
+                    color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.85)',
                     fontSize: '1.1rem',
                     lineHeight: 1.6
                 }}>
@@ -497,7 +497,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                             {block.caption && (
                                 <p style={{
                                     marginTop: '12px',
-                                    color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+                                    color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.5)',
                                     fontSize: '0.9rem',
                                     fontStyle: 'italic',
                                     textAlign: alignStyle.textAlign
@@ -819,7 +819,7 @@ function HeroCarousel({ post }: { post: any }) {
                         onClick={() => setHeroIndex(prev => (prev - 1 + heroImages.length) % heroImages.length)}
                         style={{
                             position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)',
-                            zIndex: 10, background: 'rgba(0,0,0,0.5)', color: 'white', border: '1px solid rgba(255,255,255,0.2)',
+                            zIndex: 10, background: 'rgba(0,0,0,0.5)', color: '#fdedcb', border: '1px solid rgba(255,255,255,0.2)',
                             width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             cursor: 'pointer'
                         }}
@@ -830,7 +830,7 @@ function HeroCarousel({ post }: { post: any }) {
                         onClick={() => setHeroIndex(prev => (prev + 1) % heroImages.length)}
                         style={{
                             position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)',
-                            zIndex: 10, background: 'rgba(0,0,0,0.5)', color: 'white', border: '1px solid rgba(255,255,255,0.2)',
+                            zIndex: 10, background: 'rgba(0,0,0,0.5)', color: '#fdedcb', border: '1px solid rgba(255,255,255,0.2)',
                             width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             cursor: 'pointer'
                         }}
@@ -1003,8 +1003,8 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
                         borderRadius: '50%',
                         background: isPlaying
                             ? 'linear-gradient(135deg, #ff3b3b 0%, #ff6b6b 100%)'
-                            : (isDark ? '#fff' : '#222'),
-                        color: isPlaying ? 'white' : (isDark ? '#000' : '#fff'),
+                            : (isDark ? '#fdedcb' : '#222'),
+                        color: isPlaying ? '#fdedcb' : (isDark ? '#000' : '#fdedcb'),
                         border: 'none',
                         display: 'flex',
                         alignItems: 'center',
@@ -1430,7 +1430,7 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any;
                     {(post.email || post.instagram) && (
                         <div style={{ display: 'flex', gap: '16px', marginTop: '16px', justifyContent: 'center' }}>
                             {post.email && (
-                                <a href={`mailto:${post.email}`} style={{ color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)', transition: 'color 0.2s' }} className="hover:text-[#ff3b3b]">
+                                <a href={`mailto:${post.email}`} style={{ color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.6)', transition: 'color 0.2s' }} className="hover:text-[#ff3b3b]">
                                     <Mail size={20} />
                                 </a>
                             )}
@@ -1584,7 +1584,7 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
                 alignItems: 'center',
                 gap: '24px',
                 marginBottom: '32px',
-                color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.5)',
                 fontSize: '0.9rem'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1660,7 +1660,7 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
                     padding-left: 20px;
                     margin: 32px 0;
                     font-style: italic;
-                    color: ${isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'};
+                    color: ${isDark ? '#fdedcb' : 'rgba(0,0,0,0.6)'};
                 }
             `}</style>
         </>

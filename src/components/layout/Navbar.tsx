@@ -6,7 +6,7 @@ import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
 
 import siodelLogo from '../../assets/logo.svg'
-import donateQr from '../../assets/donate-sio.svg'
+import donateQr from '../../assets/qr-code.svg'
 
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
