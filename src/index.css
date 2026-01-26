@@ -1,147 +1,146 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
 
-/* Geist Font Family */
+/* DM Sans Font Family */
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Thin.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Thin.ttf') format('truetype');
   font-weight: 100;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-ExtraLight.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-ThinItalic.ttf') format('truetype');
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-ExtraLight.ttf') format('truetype');
   font-weight: 200;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Light.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-ExtraLightItalic.ttf') format('truetype');
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Light.ttf') format('truetype');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Regular.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-LightItalic.ttf') format('truetype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Medium.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Medium.ttf') format('truetype');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-SemiBold.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-MediumItalic.ttf') format('truetype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-SemiBold.ttf') format('truetype');
   font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Bold.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-SemiBoldItalic.ttf') format('truetype');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Bold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-ExtraBold.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-ExtraBold.ttf') format('truetype');
   font-weight: 800;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Black.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-ExtraBoldItalic.ttf') format('truetype');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Black.ttf') format('truetype');
   font-weight: 900;
   font-style: normal;
   font-display: swap;
 }
 
-/* Geist Italic variants */
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-ThinItalic.otf') format('opentype');
-  font-weight: 100;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-ExtraLightItalic.otf') format('opentype');
-  font-weight: 200;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-LightItalic.otf') format('opentype');
-  font-weight: 300;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-RegularItalic.otf') format('opentype');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-MediumItalic.otf') format('opentype');
-  font-weight: 500;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-SemiBoldItalic.otf') format('opentype');
-  font-weight: 600;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-BoldItalic.otf') format('opentype');
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-ExtraBoldItalic.otf') format('opentype');
-  font-weight: 800;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-BlackItalic.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-BlackItalic.ttf') format('truetype');
   font-weight: 900;
   font-style: italic;
   font-display: swap;
@@ -230,6 +229,7 @@
 .font-arabic {
   font-family: 'IBM Plex Sans Arabic', sans-serif;
   direction: rtl;
+  color: #efc676;
 }
 
 /* Custom color theme for Tailwind v4 */
@@ -245,7 +245,7 @@
   --color-bg-elevated: #141416;
   --color-bg-surface: #202020;
 
-  --color-text-primary: #ffffff;
+  --color-text-primary: #fdedcb;
   --color-text-secondary: #999999;
   --color-text-muted: #666666;
 
@@ -265,12 +265,13 @@ html {
 }
 
 body {
-  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #000000;
   background-attachment: fixed;
   /* Ensures it stays in place while scrolling */
-  color: #ffffff;
+  color: #fdedcb;
   line-height: 1.6;
+  letter-spacing: -0.06em;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -717,7 +718,7 @@ section {
 
 .mobile-links a.active,
 .mobile-links a:hover {
-  color: #ffffff;
+  color: #fdedcb;
 }
 
 [data-theme="light"] .mobile-links a.active,

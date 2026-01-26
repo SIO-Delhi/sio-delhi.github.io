@@ -142,7 +142,7 @@ export function ScrollProgress() {
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    color: '#ffffff',
+                    color: '#fdedcb',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

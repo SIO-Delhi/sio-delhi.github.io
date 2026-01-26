@@ -51,8 +51,8 @@ export function AdminLayout() {
             display: 'flex',
             minHeight: '100vh',
             background: isDark ? '#000000' : '#f5f5f5',
-            color: isDark ? '#ffffff' : '#111111',
-            fontFamily: '"Geist", sans-serif',
+            color: isDark ? '#fdedcb' : '#111111',
+            fontFamily: '"DM Sans", sans-serif',
         }}>
             {/* Mobile Overlay */}
             {isMobile && sidebarOpen && (
@@ -76,7 +76,7 @@ export function AdminLayout() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '24px',
-                background: isDark ? '#0a0a0a' : '#ffffff',
+                background: isDark ? '#0a0a0a' : '#fdedcb',
                 position: 'fixed',
                 top: 0,
                 bottom: 0,

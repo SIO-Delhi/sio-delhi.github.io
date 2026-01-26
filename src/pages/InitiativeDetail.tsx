@@ -105,7 +105,7 @@ export function InitiativeDetail() {
                             style={{
                                 fontSize: '12px',
                                 fontWeight: 600,
-                                color: isDark ? '#ffffff' : '#111111',
+                                color: isDark ? '#fdedcb' : '#111111',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em'
                             }}
@@ -118,7 +118,7 @@ export function InitiativeDetail() {
                 <h1 style={{
                     fontSize: 'clamp(2.5rem, 5vw, 4rem)',
                     fontWeight: 700,
-                    color: isDark ? '#ffffff' : '#111111',
+                    color: isDark ? '#fdedcb' : '#111111',
                     marginBottom: '24px',
                     lineHeight: 1.1
                 }}>
@@ -171,7 +171,7 @@ export function InitiativeDetail() {
                         font-weight: 600;
                         margin-top: 32px;
                         margin-bottom: 16px;
-                        color: ${isDark ? '#ffffff' : '#111111'};
+                        color: ${isDark ? '#fdedcb' : '#111111'};
                     }
                     .initiative-content p {
                         margin-bottom: 24px;

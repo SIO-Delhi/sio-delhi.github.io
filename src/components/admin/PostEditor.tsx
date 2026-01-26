@@ -198,7 +198,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
                 <input
                     type="color"
                     onChange={handleColorChange}
-                    value={editor.getAttributes('textStyle').color || '#ffffff'}
+                    value={editor.getAttributes('textStyle').color || '#fdedcb'}
                     style={{
                         width: '28px', height: '28px', padding: 0, border: '2px solid #444',
                         borderRadius: '4px', cursor: 'pointer', background: 'transparent'

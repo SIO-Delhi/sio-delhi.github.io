@@ -17,10 +17,10 @@ export function LeadershipSection() {
             style={{
                 fontSize: 'clamp(2.5rem, 5vw, 4rem)',
                 fontWeight: 700,
-                color: '#ffffff',
+                color: '#fdedcb',
                 lineHeight: 1.1,
                 margin: 0,
-                fontFamily: '"Geist", sans-serif',
+                fontFamily: '"DM Sans", sans-serif',
                 letterSpacing: '-0.02em'
             }}
         >
@@ -130,8 +130,8 @@ export function LeadershipSection() {
                     margin: 0,
                     fontSize: '1.4rem',
                     fontWeight: 700,
-                    color: '#ffffff',
-                    fontFamily: '"Geist", sans-serif'
+                    color: '#fdedcb',
+                    fontFamily: '"DM Sans", sans-serif'
                 }}>
                     {leader.title}
                 </h3>

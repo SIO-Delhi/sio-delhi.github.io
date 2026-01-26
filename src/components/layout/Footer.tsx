@@ -147,7 +147,7 @@ export function Footer() {
                                     transition: 'color 0.3s ease',
                                     textDecoration: 'none'
                                 }}
-                                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = '#fdedcb')}
                                 onMouseLeave={(e) => (e.currentTarget.style.color = '#e0e0e0')}
                                 onClick={(e) => {
                                     e.preventDefault()
@@ -183,7 +183,7 @@ export function Footer() {
                                 textDecoration: 'underline',
                                 padding: '4px'
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#fdedcb')}
                             onMouseLeave={(e) => (e.currentTarget.style.color = '#aaa')}
                         >
                             Full credits

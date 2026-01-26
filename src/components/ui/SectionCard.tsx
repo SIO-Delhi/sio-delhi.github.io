@@ -168,8 +168,8 @@ export function SectionCard({
                         margin: 0,
                         fontSize: '1.4rem',
                         fontWeight: 700,
-                        color: '#ffffff',
-                        fontFamily: '"Geist", sans-serif'
+                        color: '#fdedcb',
+                        fontFamily: '"DM Sans", sans-serif'
                     }}>
                         {title}
                     </h3>
@@ -271,8 +271,8 @@ export function SectionCard({
                         margin: 0,
                         fontSize: '1.5rem',
                         fontWeight: 600,
-                        color: '#ffffff',
-                        fontFamily: '"Geist", sans-serif',
+                        color: '#fdedcb',
+                        fontFamily: '"DM Sans", sans-serif',
                         lineHeight: 1.2,
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -364,7 +364,7 @@ export function SectionCard({
             }}>
                 {isMedia ? (
                     <div style={{
-                        background: '#ffffff',
+                        background: '#fdedcb',
                         borderRadius: '6px',
                         padding: '6px 12px',
                         display: 'flex',
@@ -413,9 +413,9 @@ export function SectionCard({
                 fontSize: isMedia ? '1.75rem' : '1.5rem',
                 fontWeight: 700,
                 margin: '0 0 12px 0',
-                fontFamily: '"Geist", sans-serif',
+                fontFamily: '"DM Sans", sans-serif',
                 lineHeight: 1.1,
-                color: isMedia ? '#ff3b3b' : '#ffffff',
+                color: isMedia ? '#ff3b3b' : '#fdedcb',
                 letterSpacing: '-0.02em',
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
@@ -461,9 +461,9 @@ export function SectionCard({
             {isMedia && (
                 <div style={{ position: 'relative' }}>
                     <p style={{
-                        fontSize: '0.85rem', color: '#ffffff', margin: '0 0 4px 0',
+                        fontSize: '0.85rem', color: '#fdedcb', margin: '0 0 4px 0',
                         lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                        fontFamily: '"Geist", sans-serif',
+                        fontFamily: '"DM Sans", sans-serif',
                         textOverflow: 'ellipsis'
                     }}>
                         {description.replace(/<[^>]+>/g, '')}

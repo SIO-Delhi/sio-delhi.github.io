@@ -68,7 +68,7 @@ export function ContactSection() {
                         fontWeight: 600,
                         letterSpacing: '0.2em',
                         textTransform: 'uppercase',
-                        color: isDark ? '#ffffff' : '#000000',
+                        color: isDark ? '#fdedcb' : '#000000',
                         opacity: 0.8,
                         marginLeft: '4px' // Subtle alignment correction
                     }}>
@@ -77,11 +77,11 @@ export function ContactSection() {
                     <h2 className="animate-up" style={{
                         fontSize: 'clamp(2.5rem, 5vw, 4.5rem)', // Matched other sections
                         fontWeight: 700,
-                        color: isDark ? '#ffffff' : '#111111',
+                        color: isDark ? '#fdedcb' : '#111111',
                         margin: 0,
                         lineHeight: 1, // Tighter line height
                         letterSpacing: '-0.02em',
-                        fontFamily: '"Geist", sans-serif',
+                        fontFamily: '"DM Sans", sans-serif',
                         textShadow: '0 4px 12px rgba(0,0,0,0.5)'
                     }}>
                         Connect <span style={{ color: '#ff3333' }}>with us</span>
@@ -112,7 +112,7 @@ export function ContactSection() {
                         borderRadius: '100px',
                         background: 'rgba(20, 20, 20, 0.6)',
                         border: '1px solid rgba(255,255,255,0.15)',
-                        color: '#ffffff',
+                        color: '#fdedcb',
                         fontSize: 'clamp(1rem, 4vw, 1.35rem)', // Responsive font size
                         fontWeight: 500,
                         textDecoration: 'none',
@@ -128,7 +128,7 @@ export function ContactSection() {
                     onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-4px)'
                         e.currentTarget.style.background = 'rgba(30, 30, 30, 0.8)'
-                        e.currentTarget.style.borderColor = '#ffffff'
+                        e.currentTarget.style.borderColor = '#fdedcb'
                         e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)'
                     }}
                     onMouseLeave={(e) => {

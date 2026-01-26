@@ -1086,7 +1086,7 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                 <h1 style={{
                     fontSize: 'clamp(2rem, 4vw, 3rem)',
                     fontWeight: 700,
-                    color: isDark ? '#ffffff' : '#111111',
+                    color: isDark ? '#fdedcb' : '#111111',
                     marginBottom: '16px',
                     lineHeight: 1.1,
                     overflowWrap: 'anywhere',
@@ -1145,7 +1145,7 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                 <h1 style={{
                     fontSize: 'clamp(2.5rem, 5vw, 4rem)',
                     fontWeight: 700,
-                    color: isDark ? '#ffffff' : '#111111',
+                    color: isDark ? '#fdedcb' : '#111111',
                     marginBottom: '16px',
                     lineHeight: 1.1,
                     textAlign: 'center',
@@ -1263,14 +1263,14 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     font-weight: 700;
                     margin-top: 40px;
                     margin-bottom: 16px;
-                    color: ${isDark ? '#ffffff' : '#111111'};
+                    color: ${isDark ? '#fdedcb' : '#111111'};
                 }
                 .post-content h3 {
                     font-size: 1.5rem;
                     font-weight: 600;
                     margin-top: 32px;
                     margin-bottom: 16px;
-                    color: ${isDark ? '#ffffff' : '#111111'};
+                    color: ${isDark ? '#fdedcb' : '#111111'};
                 }
                 .post-content p {
                     margin-bottom: 24px;
@@ -1399,7 +1399,7 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any;
                     <h1 style={{
                         fontSize: '1.75rem',
                         fontWeight: 700,
-                        color: isDark ? '#ffffff' : '#111111',
+                        color: isDark ? '#fdedcb' : '#111111',
                         margin: '0 0 8px 0',
                         lineHeight: 1.1,
                         overflowWrap: 'anywhere',
@@ -1549,7 +1549,7 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
                             style={{
                                 fontSize: '12px',
                                 fontWeight: 600,
-                                color: '#ffffff',
+                                color: '#fdedcb',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em'
                             }}
@@ -1563,7 +1563,7 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
             <h1 style={{
                 fontSize: 'clamp(2rem, 4vw, 3rem)',
                 fontWeight: 700,
-                color: isDark ? '#ffffff' : '#111111',
+                color: isDark ? '#fdedcb' : '#111111',
                 marginBottom: '16px',
                 lineHeight: 1.2,
                 overflowWrap: 'anywhere',
@@ -1645,7 +1645,7 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
                     font-weight: 700;
                     margin-top: 40px;
                     margin-bottom: 16px;
-                    color: ${isDark ? '#ffffff' : '#111111'};
+                    color: ${isDark ? '#fdedcb' : '#111111'};
                 }
                 .news-content p {
                     margin-bottom: 24px;

@@ -128,7 +128,7 @@ export function SplashScreen() {
                             padding: '1rem',
                             maxWidth: 'clamp(300px, 90vw, 700px)',
                             width: '100%',
-                            fontFamily: '"Geist", sans-serif',
+                            fontFamily: '"DM Sans", sans-serif',
                         }}
                     >
                         {/* Decorative Bismillah/Calligraphy */}
@@ -170,9 +170,9 @@ export function SplashScreen() {
                             }}
                         >
                             The mission of the <span style={{ color: '#ff6b6b', fontWeight: 500 }}>Students Islamic Organisation of India (SIO)</span> is to{' '}
-                            "<span style={{ color: '#ffffff', fontWeight: 400 }}>prepare the students and youth</span> for the{' '}
+                            "<span style={{ color: '#fdedcb', fontWeight: 400 }}>prepare the students and youth</span> for the{' '}
                             <span style={{ color: '#ff6b6b', fontWeight: 500 }}>reconstruction of the society</span> in the light of{' '}
-                            <span style={{ color: '#ffffff', fontWeight: 400 }}>Divine Guidance</span>."
+                            <span style={{ color: '#fdedcb', fontWeight: 400 }}>Divine Guidance</span>."
                         </p>
 
                         {/* Shiny Start Exploring Button */}
@@ -247,7 +247,7 @@ export function SplashScreen() {
                     overflow: 'hidden',
                     cursor: 'pointer',
                     transition: 'transform 0.3s ease',
-                    fontFamily: '"Geist", sans-serif',
+                    fontFamily: '"DM Sans", sans-serif',
                 }}
                 onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'scale(1.1)'
@@ -301,7 +301,7 @@ export function SplashScreen() {
                         justifyContent: 'center',
                         gap: 8,
                         color: 'rgba(255, 255, 255, 0.4)',
-                        fontFamily: '"Geist", sans-serif',
+                        fontFamily: '"DM Sans", sans-serif',
                         letterSpacing: '-0.02em',
                         fontSize: 10,
                         opacity: scrollProgress < 0.02 && isCollapsed ? 1 : 0, // Only show if splash is gone

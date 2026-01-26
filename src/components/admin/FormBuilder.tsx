@@ -653,15 +653,15 @@ export function FormBuilder() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <input
                                             type="color"
-                                            value={form.footerTextColor || '#ffffff'}
+                                            value={form.footerTextColor || '#fdedcb'}
                                             onChange={e => setForm({ ...form, footerTextColor: e.target.value })}
                                             style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
                                         />
                                         <input
                                             type="text"
-                                            value={form.footerTextColor || '#ffffff'}
+                                            value={form.footerTextColor || '#fdedcb'}
                                             onChange={e => setForm({ ...form, footerTextColor: e.target.value })}
-                                            placeholder="#ffffff"
+                                            placeholder="#fdedcb"
                                             style={{
                                                 flex: 1, padding: '10px 12px', borderRadius: '8px',
                                                 background: '#09090b', border: '1px solid #27272a',

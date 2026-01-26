@@ -193,7 +193,7 @@ export function Navbar() {
                             <span style={{
                                 fontSize: '0.75rem',
                                 fontWeight: 500,
-                                color: '#ffffff',
+                                color: '#fdedcb',
                                 letterSpacing: '-0.01em',
                                 mixBlendMode: 'difference'
                             }}>
@@ -256,7 +256,7 @@ export function Navbar() {
                                         fontWeight: 400,
                                         color: hoveredLink === link.href
                                             ? '#ff3b3b' // Red on Hover
-                                            : (isActive(link.href) ? (isDark ? '#ffffff' : '#111111') : '#ffffff'),
+                                            : (isActive(link.href) ? (isDark ? '#fdedcb' : '#111111') : '#fdedcb'),
                                         mixBlendMode: (hoveredLink === link.href || isActive(link.href)) ? 'normal' : 'difference',
                                         background: 'transparent',
                                         border: isActive(link.href)
@@ -294,7 +294,7 @@ export function Navbar() {
                                         display: 'inline-block',
                                         padding: '12px 24px',
                                         borderRadius: '100px',
-                                        color: '#ffffff', // Always white because the button is dark
+                                        color: '#fdedcb', // Always white because the button is dark
                                         fontSize: '14px',
                                         fontWeight: 400,
                                         transition: 'all 0.3s ease',
@@ -419,7 +419,7 @@ export function Navbar() {
                                                 alignItems: 'center',
                                                 padding: '14px 24px',
                                                 borderRadius: '12px', // Slightly less rounded for mobile stack look? No, keep it consistent.
-                                                color: '#ffffff',
+                                                color: '#fdedcb',
                                                 fontSize: '16px',
                                                 fontWeight: 500,
                                                 transition: 'all 0.3s ease',

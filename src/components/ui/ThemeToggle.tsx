@@ -22,7 +22,7 @@ export function ThemeToggle() {
                 WebkitBackdropFilter: 'blur(20px)',
                 border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
                 borderRadius: '50%',
-                color: isDark ? '#ffffff' : '#111111',
+                color: isDark ? '#fdedcb' : '#111111',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 boxShadow: isDark
