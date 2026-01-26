@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useLocation, useNavigate } from 'react-router-dom'
 import logo from '../../assets/logo.png'
 import { X, Instagram, Youtube, Facebook } from 'lucide-react'
+
+// ... existing code ...
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -29,6 +32,8 @@ const ThreadsLogo = ({ size = 20, className = "" }: { size?: number, className?:
 export function Footer() {
     const footerRef = useRef<HTMLElement>(null)
     const [showCredits, setShowCredits] = useState(false)
+    const location = useLocation()
+    const navigate = useNavigate()
 
     useEffect(() => {
         const ctx = gsap.context(() => {
@@ -81,6 +86,11 @@ export function Footer() {
     }, [])
 
     const scrollToSection = (sectionId: string) => {
+        if (location.pathname !== '/') {
+            navigate('/', { state: { scrollTo: sectionId } })
+            return
+        }
+
         const el = document.querySelector(sectionId)
         if (el) {
             const lenis = (window as any).lenis
@@ -160,7 +170,7 @@ export function Footer() {
                     {/* Development Credits */}
                     <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
                         <p style={{ color: '#999', fontSize: '14px', margin: 0 }}> {/* Lighter Credits */}
-                            Development by <a href="mailto:dev@siodelhi.org" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>0xAdnan</a>
+                            Development by <a href="https://www.0x-adnan.com" target="_blank" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>0xAdnan</a>
                         </p>
                         {/* <button
                             onClick={() => setShowCredits(true)}
