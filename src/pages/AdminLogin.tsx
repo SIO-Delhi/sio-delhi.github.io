@@ -1,5 +1,5 @@
 import { SignIn } from '@clerk/clerk-react'
-import logo from '../assets/logo.png'
+import logo from '../assets/logo.svg'
 import { dark } from '@clerk/themes'
 
 export function AdminLogin() {

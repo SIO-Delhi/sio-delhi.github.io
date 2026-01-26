@@ -90,7 +90,7 @@ export function ContactSection() {
                     <p className="animate-up" style={{
                         marginTop: '12px',
                         fontSize: '1.2rem',
-                        color: isDark ? '#e0e0e0' : '#333333',
+                        color: isDark ? '#fdedcb' : '#333333',
                         maxWidth: '600px',
                         lineHeight: 1.4, // Reduced line spacing
                         fontWeight: 400,

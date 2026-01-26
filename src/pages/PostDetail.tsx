@@ -1126,7 +1126,7 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     <div
                         className="post-content"
                         style={{
-                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.1rem',
                             lineHeight: 1.4
                         }}
@@ -1161,7 +1161,7 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     <div
                         className="post-content"
                         style={{
-                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.2rem',
                             lineHeight: 1.5,
                             textAlign: 'center',
@@ -1207,7 +1207,7 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     <div
                         className="post-content"
                         style={{
-                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.1rem',
                             lineHeight: 1.4
                         }}
@@ -1471,7 +1471,7 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any;
                         <div
                             className="leader-bio"
                             style={{
-                                color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                                color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
                                 fontSize: '1.1rem',
                                 lineHeight: 1.4,
                                 textAlign: 'left'
@@ -1602,7 +1602,7 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
                 <div
                     className="news-content"
                     style={{
-                        color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                        color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
                         fontSize: '1.2rem',
                         lineHeight: 1.5,
                         marginBottom: '32px'
@@ -1634,7 +1634,7 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
                     <div
                         className="news-content"
                         style={{
-                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.15rem',
                             lineHeight: 1.4
                         }}
