@@ -1086,7 +1086,7 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                 <h1 style={{
                     fontSize: 'clamp(2rem, 4vw, 3rem)',
                     fontWeight: 700,
-                    color: isDark ? '#fdedcb' : '#111111',
+                    color: isDark ? '#efc676' : '#111111',
                     marginBottom: '16px',
                     lineHeight: 1.1,
                     overflowWrap: 'anywhere',
@@ -1145,7 +1145,7 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                 <h1 style={{
                     fontSize: 'clamp(2.5rem, 5vw, 4rem)',
                     fontWeight: 700,
-                    color: isDark ? '#fdedcb' : '#111111',
+                    color: isDark ? '#efc676' : '#111111',
                     marginBottom: '16px',
                     lineHeight: 1.1,
                     textAlign: 'center',
@@ -1265,6 +1265,11 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     margin-bottom: 16px;
                     color: ${isDark ? '#fdedcb' : '#111111'};
                 }
+                /* Override H1 specifically to be gold if it appears in content (rare, but consistent) */
+                .post-content h1 {
+                    color: ${isDark ? '#efc676' : '#111111'};
+                }
+
                 .post-content h3 {
                     font-size: 1.5rem;
                     font-weight: 600;
@@ -1399,7 +1404,7 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any;
                     <h1 style={{
                         fontSize: '1.75rem',
                         fontWeight: 700,
-                        color: isDark ? '#fdedcb' : '#111111',
+                        color: isDark ? '#efc676' : '#111111',
                         margin: '0 0 8px 0',
                         lineHeight: 1.1,
                         overflowWrap: 'anywhere',

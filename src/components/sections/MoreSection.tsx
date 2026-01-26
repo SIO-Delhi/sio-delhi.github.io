@@ -22,7 +22,7 @@ export function MoreSection() {
             style={{
                 fontSize: 'clamp(2.5rem, 5vw, 4rem)',
                 fontWeight: 700,
-                color: '#fdedcb',
+                color: '#efc676',
                 lineHeight: 1.1,
                 margin: 0,
                 fontFamily: '"DM Sans", sans-serif',
@@ -114,7 +114,7 @@ export function MoreSection() {
                         margin: 0,
                         fontSize: '1.5rem',
                         fontWeight: 600,
-                        color: '#fdedcb',
+                        color: '#efc676',
                         fontFamily: '"DM Sans", sans-serif',
                         lineHeight: 1.2,
                         display: '-webkit-box',

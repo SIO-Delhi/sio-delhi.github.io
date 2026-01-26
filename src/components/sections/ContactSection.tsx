@@ -77,7 +77,7 @@ export function ContactSection() {
                     <h2 className="animate-up" style={{
                         fontSize: 'clamp(2.5rem, 5vw, 4.5rem)', // Matched other sections
                         fontWeight: 700,
-                        color: isDark ? '#fdedcb' : '#111111',
+                        color: isDark ? '#efc676' : '#111111',
                         margin: 0,
                         lineHeight: 1, // Tighter line height
                         letterSpacing: '-0.02em',
@@ -112,7 +112,7 @@ export function ContactSection() {
                         borderRadius: '100px',
                         background: 'rgba(20, 20, 20, 0.6)',
                         border: '1px solid rgba(255,255,255,0.15)',
-                        color: '#fdedcb',
+                        color: '#efc676',
                         fontSize: 'clamp(1rem, 4vw, 1.35rem)', // Responsive font size
                         fontWeight: 500,
                         textDecoration: 'none',

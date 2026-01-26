@@ -118,7 +118,7 @@ export function InitiativeDetail() {
                 <h1 style={{
                     fontSize: 'clamp(2.5rem, 5vw, 4rem)',
                     fontWeight: 700,
-                    color: isDark ? '#fdedcb' : '#111111',
+                    color: isDark ? '#efc676' : '#111111',
                     marginBottom: '24px',
                     lineHeight: 1.1
                 }}>
