@@ -19,10 +19,11 @@ function getStorageStats()
             'images' => getDirectoryStats($uploadDir . 'images/'),
             'pdfs' => getDirectoryStats($uploadDir . 'pdfs/'),
             'audio' => getDirectoryStats($uploadDir . 'audio/'),
+            'forms' => getDirectoryStats($uploadDir . 'forms/'),
         ];
 
-        $totalSize = $stats['images']['totalSize'] + $stats['pdfs']['totalSize'] + $stats['audio']['totalSize'];
-        $totalFiles = $stats['images']['fileCount'] + $stats['pdfs']['fileCount'] + $stats['audio']['fileCount'];
+        $totalSize = $stats['images']['totalSize'] + $stats['pdfs']['totalSize'] + $stats['audio']['totalSize'] + $stats['forms']['totalSize'];
+        $totalFiles = $stats['images']['fileCount'] + $stats['pdfs']['fileCount'] + $stats['audio']['fileCount'] + $stats['forms']['fileCount'];
 
         return [
             'buckets' => $stats,
@@ -45,7 +46,7 @@ function getDirectoryStats($path)
     $totalSize = 0;
     $files = [];
 
-    // Extract folder name from path (images, pdfs, audio)
+    // Extract folder name from path (images, pdfs, audio, forms)
     $folderName = basename(rtrim($path, '/'));
     $baseUrl = defined('BASE_URL') ? BASE_URL : 'https://api.siodelhi.org';
 
@@ -60,20 +61,38 @@ function getDirectoryStats($path)
     }
 
     try {
-        $dirFiles = scandir($path);
-        foreach ($dirFiles as $file) {
-            if ($file === '.' || $file === '..')
-                continue;
-            $filePath = $path . $file;
-            if (is_file($filePath)) {
+        // Recursive directory iterator
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            if ($item->isFile()) {
                 $fileCount++;
-                $size = filesize($filePath);
+                $size = $item->getSize();
                 $totalSize += $size;
+
+                // Calculate relative path for URL
+                // $path is absolute path to category root (e.g. .../uploads/forms/)
+                // $item->getPathname() is absolute path to file
+                // We want relative path from uploads root
+
+                // Get path relative to the category root
+                $relativePath = substr($item->getPathname(), strlen($path));
+
+                // Construct URL: base/uploads/category/relative/path
+                // We need to rawurlencode each segment of the relative path
+                $urlSegments = explode('/', $relativePath);
+                $encodedSegments = array_map('rawurlencode', $urlSegments);
+                $encodedPath = implode('/', $encodedSegments);
+
                 $files[] = [
-                    'name' => $file,
+                    'name' => $item->getFilename(), // Just the filename for display
+                    'relativePath' => $folderName . '/' . $relativePath, // For reference
                     'size' => $size,
-                    'modified' => filemtime($filePath),
-                    'url' => $baseUrl . '/uploads/' . $folderName . '/' . rawurlencode($file)
+                    'modified' => $item->getMTime(),
+                    'url' => $baseUrl . '/uploads/' . $folderName . '/' . $encodedPath
                 ];
             }
         }

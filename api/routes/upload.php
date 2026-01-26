@@ -32,7 +32,7 @@ function uploadAudio()
 
 function deleteFile($type, $filename)
 {
-    $validTypes = ['images', 'pdfs', 'audio'];
+    $validTypes = ['images', 'pdfs', 'audio', 'forms'];
 
     if (!in_array($type, $validTypes)) {
         http_response_code(400);
@@ -40,7 +40,13 @@ function deleteFile($type, $filename)
     }
 
     // Decode URL-encoded filename and sanitize to prevent directory traversal
-    $filename = basename(urldecode($filename));
+    $filename = urldecode($filename);
+
+    // Sanitize to prevent directory traversal
+    $filename = str_replace(['..', '.\\', './'], '', $filename);
+    $filename = ltrim($filename, '/'); // Remove leading slash
+
+    // For safety, ensure we are not trying to delete outside the upload dir for that type
     $filepath = UPLOAD_DIR . $type . '/' . $filename;
 
     if (!file_exists($filepath)) {

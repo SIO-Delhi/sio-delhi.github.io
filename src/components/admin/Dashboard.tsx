@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useContent } from '../../context/ContentContext'
 import { Link } from 'react-router-dom'
-import { Layers, Plus, HardDrive, Image, FileText, Loader2, ChevronDown, ChevronUp, Trash2, ExternalLink, Search, X } from 'lucide-react'
+import { Layers, Plus, HardDrive, Image, FileText, Loader2, ChevronDown, ChevronUp, Trash2, ExternalLink, Search, X, FileInput } from 'lucide-react'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 
@@ -32,6 +32,7 @@ export function Dashboard() {
     const [bucketStats, setBucketStats] = useState<BucketStats[]>([
         { name: 'images', displayName: 'Images', icon: <Image size={20} />, color: '#3b82f6', fileCount: 0, totalSize: 0, loading: true, files: [], expanded: false },
         { name: 'pdfs', displayName: 'PDFs', icon: <FileText size={20} />, color: '#10b981', fileCount: 0, totalSize: 0, loading: true, files: [], expanded: false },
+        { name: 'forms', displayName: 'Form Files', icon: <FileInput size={20} />, color: '#8b5cf6', fileCount: 0, totalSize: 0, loading: true, files: [], expanded: false },
     ])
     const [deletingFile, setDeletingFile] = useState<string | null>(null)
     const [fileSearchTerms, setFileSearchTerms] = useState<Record<string, string>>({})
