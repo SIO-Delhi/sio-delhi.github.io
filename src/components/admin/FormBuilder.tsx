@@ -11,6 +11,7 @@ import {
     Calendar, Upload, Star, Copy, Check, X, Image as ImageIcon
 } from 'lucide-react'
 import { RichTextEditor } from './RichTextEditor'
+import { FormFooter } from '../ui/FormFooter'
 
 const FIELD_TYPES: { type: FormFieldType; label: string; icon: React.ReactNode }[] = [
     { type: 'text', label: 'Short Text', icon: <Type size={18} /> },
@@ -643,6 +644,87 @@ export function FormBuilder() {
                                         Supports hex colors or CSS gradients
                                     </span>
                                 </div>
+
+                                {/* Footer Text Color */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px' }}>
+                                        Footer Text Color
+                                    </label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <input
+                                            type="color"
+                                            value={form.footerTextColor || '#ffffff'}
+                                            onChange={e => setForm({ ...form, footerTextColor: e.target.value })}
+                                            style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                                        />
+                                        <input
+                                            type="text"
+                                            value={form.footerTextColor || '#ffffff'}
+                                            onChange={e => setForm({ ...form, footerTextColor: e.target.value })}
+                                            placeholder="#ffffff"
+                                            style={{
+                                                flex: 1, padding: '10px 12px', borderRadius: '8px',
+                                                background: '#09090b', border: '1px solid #27272a',
+                                                color: 'white', fontSize: '0.9rem', outline: 'none',
+                                                fontFamily: 'monospace'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Footer Background Color */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px' }}>
+                                        Footer Background
+                                    </label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <input
+                                            type="color"
+                                            value={form.footerBgColor || '#6a63fe'}
+                                            onChange={e => setForm({ ...form, footerBgColor: e.target.value })}
+                                            style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                                        />
+                                        <input
+                                            type="text"
+                                            value={form.footerBgColor || '#6a63fe'}
+                                            onChange={e => setForm({ ...form, footerBgColor: e.target.value })}
+                                            placeholder="#6a63fe"
+                                            style={{
+                                                flex: 1, padding: '10px 12px', borderRadius: '8px',
+                                                background: '#09090b', border: '1px solid #27272a',
+                                                color: 'white', fontSize: '0.9rem', outline: 'none',
+                                                fontFamily: 'monospace'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Footer Pattern Color */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#a1a1aa', marginBottom: '8px' }}>
+                                        Footer Pattern Color
+                                    </label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <input
+                                            type="color"
+                                            value={form.footerPatternColor || '#6e6ef9'}
+                                            onChange={e => setForm({ ...form, footerPatternColor: e.target.value })}
+                                            style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                                        />
+                                        <input
+                                            type="text"
+                                            value={form.footerPatternColor || '#6e6ef9'}
+                                            onChange={e => setForm({ ...form, footerPatternColor: e.target.value })}
+                                            placeholder="#6e6ef9"
+                                            style={{
+                                                flex: 1, padding: '10px 12px', borderRadius: '8px',
+                                                background: '#09090b', border: '1px solid #27272a',
+                                                color: 'white', fontSize: '0.9rem', outline: 'none',
+                                                fontFamily: 'monospace'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Preview */}
@@ -666,6 +748,15 @@ export function FormBuilder() {
                                     }}>
                                         Submit
                                     </button>
+
+                                    {/* Footer Preview */}
+                                    <div style={{ marginTop: '20px', width: '100%' }}>
+                                        <FormFooter
+                                            bgColor={form.footerBgColor || undefined}
+                                            textColor={form.footerTextColor || undefined}
+                                            patternColor={form.footerPatternColor || undefined}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>

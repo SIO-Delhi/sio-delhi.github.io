@@ -105,8 +105,8 @@ function createForm()
     $slug = createFormSlug($data['title'], $db);
 
     $stmt = $db->prepare("
-        INSERT INTO forms (id, title, description, slug, banner_image, theme_primary_color, theme_background, theme_background_image, is_published, accept_responses, success_message, response_limit, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO forms (id, title, description, slug, banner_image, theme_primary_color, theme_background, theme_background_image, footer_bg_color, footer_text_color, footer_pattern_color, is_published, accept_responses, success_message, response_limit, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     $expiresAt = null;
@@ -126,6 +126,15 @@ function createForm()
         $data['themePrimaryColor'] ?? '#ff3b3b',
         $data['themeBackground'] ?? '#fafafa',
         $data['themeBackgroundImage'] ?? null,
+        isset($data['isPublished']) ? ($data['isPublished'] ? 1 : 0) : 0,
+        isset($data['acceptResponses']) ? ($data['acceptResponses'] ? 1 : 0) : 1,
+        $data['successMessage'] ?? 'Thank you for your submission!',
+        $data['responseLimit'] ?? null,
+        $data['themeBackground'] ?? '#fafafa',
+        $data['themeBackgroundImage'] ?? null,
+        $data['footerBgColor'] ?? null,
+        $data['footerTextColor'] ?? null,
+        $data['footerPatternColor'] ?? null,
         isset($data['isPublished']) ? ($data['isPublished'] ? 1 : 0) : 0,
         isset($data['acceptResponses']) ? ($data['acceptResponses'] ? 1 : 0) : 1,
         $data['successMessage'] ?? 'Thank you for your submission!',
@@ -165,6 +174,9 @@ function updateForm($id)
         'themePrimaryColor' => 'theme_primary_color',
         'themeBackground' => 'theme_background',
         'themeBackgroundImage' => 'theme_background_image',
+        'footerBgColor' => 'footer_bg_color',
+        'footerTextColor' => 'footer_text_color',
+        'footerPatternColor' => 'footer_pattern_color',
         'isPublished' => 'is_published',
         'acceptResponses' => 'accept_responses',
         'successMessage' => 'success_message',
@@ -621,6 +633,9 @@ function mapForm($row)
         'themePrimaryColor' => $row['theme_primary_color'] ?? '#ff3b3b',
         'themeBackground' => $row['theme_background'] ?? '#fafafa',
         'themeBackgroundImage' => $row['theme_background_image'] ?? null,
+        'footerBgColor' => $row['footer_bg_color'] ?? null,
+        'footerTextColor' => $row['footer_text_color'] ?? null,
+        'footerPatternColor' => $row['footer_pattern_color'] ?? null,
         'isPublished' => (bool) $row['is_published'],
         'acceptResponses' => (bool) $row['accept_responses'],
         'successMessage' => $row['success_message'],

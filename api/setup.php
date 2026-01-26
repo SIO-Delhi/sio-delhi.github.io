@@ -112,6 +112,9 @@ try {
             theme_primary_color VARCHAR(20) DEFAULT '#ff3b3b',
             theme_background VARCHAR(100) DEFAULT '#fafafa',
             theme_background_image VARCHAR(500),
+            footer_bg_color VARCHAR(20),
+            footer_text_color VARCHAR(20),
+            footer_pattern_color VARCHAR(20),
             is_published TINYINT(1) DEFAULT 0,
             accept_responses TINYINT(1) DEFAULT 1,
             success_message TEXT,
@@ -128,7 +131,10 @@ try {
         ['banner_image', "ALTER TABLE forms ADD COLUMN banner_image VARCHAR(500)"],
         ['theme_primary_color', "ALTER TABLE forms ADD COLUMN theme_primary_color VARCHAR(20) DEFAULT '#ff3b3b'"],
         ['theme_background', "ALTER TABLE forms ADD COLUMN theme_background VARCHAR(200) DEFAULT '#fafafa'"],
-        ['theme_background_image', "ALTER TABLE forms ADD COLUMN theme_background_image VARCHAR(500)"]
+        ['theme_background_image', "ALTER TABLE forms ADD COLUMN theme_background_image VARCHAR(500)"],
+        ['footer_bg_color', "ALTER TABLE forms ADD COLUMN footer_bg_color VARCHAR(20)"],
+        ['footer_text_color', "ALTER TABLE forms ADD COLUMN footer_text_color VARCHAR(20)"],
+        ['footer_pattern_color', "ALTER TABLE forms ADD COLUMN footer_pattern_color VARCHAR(20)"]
     ];
 
     foreach ($columnsToAdd as $column) {
