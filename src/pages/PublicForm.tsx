@@ -6,6 +6,7 @@ import { Loader2, CheckCircle, AlertCircle, Star, Upload } from 'lucide-react'
 import { uploadPdf, uploadImage } from '../lib/storage'
 import { MAX_FILE_SIZE_BYTES } from '../lib/imageProcessing'
 import sioLogo from '../assets/siodel_logo.png'
+import { FormFooter } from '../components/ui/FormFooter'
 
 export function PublicForm() {
     const { formId } = useParams()
@@ -767,38 +768,14 @@ export function PublicForm() {
                     )}
                 </div>
 
-                {/* Footer Branding */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '8px',
-                    marginTop: '40px',
-                    paddingTop: '24px'
-                }}>
-                    <a
-                        href="https://siodelhi.org"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            textDecoration: 'none',
-                            transition: 'opacity 0.2s'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
-                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                    >
-                        <img
-                            src={sioLogo}
-                            alt="SIO Delhi"
-                            style={{
-                                height: '48px',
-                                width: 'auto'
-                            }}
-                        />
-                    </a>
-                </div>
+                {/* Footer */}
+                <a href="/" style={{ display: 'block', width: '100%', marginTop: '40px', textDecoration: 'none' }}>
+                    <FormFooter
+                        bgColor={form?.footerBgColor || undefined}
+                        textColor={form?.footerTextColor || undefined}
+                        patternColor={form?.footerPatternColor || undefined}
+                    />
+                </a>
             </form>
 
             <style>{`

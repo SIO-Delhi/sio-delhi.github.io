@@ -112,6 +112,9 @@ export interface FormDTO {
     themePrimaryColor?: string
     themeBackground?: string
     themeBackgroundImage?: string | null
+    footerBgColor?: string | null
+    footerTextColor?: string | null
+    footerPatternColor?: string | null
     isPublished: boolean
     acceptResponses: boolean
     successMessage?: string
