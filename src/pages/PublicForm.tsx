@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import type { FormDTO, FormFieldDTO } from '../lib/api'
 import { Loader2, CheckCircle, AlertCircle, Star, Upload } from 'lucide-react'
 import { uploadPdf, uploadImage } from '../lib/storage'
+import { MAX_FILE_SIZE_BYTES } from '../lib/imageProcessing'
 import sioLogo from '../assets/siodel_logo.png'
 
 export function PublicForm() {
@@ -77,6 +78,12 @@ export function PublicForm() {
     const handleFileUpload = async (fieldId: string, file: File) => {
         const targetFormId = formId || form?.id
         console.log('PublicForm handleFileUpload - Target formId:', targetFormId) // DEBUG
+
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            alert(`File size must be less than ${MAX_FILE_SIZE_BYTES / 1024 / 1024}MB`)
+            return
+        }
+
         setUploadingFields(prev => ({ ...prev, [fieldId]: true }))
         try {
             let url = ''
