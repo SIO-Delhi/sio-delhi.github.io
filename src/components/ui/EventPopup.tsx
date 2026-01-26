@@ -24,6 +24,9 @@ export function EventPopup() {
         // Don't show again if already shown this page load
         if (hasShownThisLoad) return
 
+        // Check if already shown in this session (tab)
+        if (sessionStorage.getItem('sio_event_popup_shown')) return
+
         let isMounted = true
 
         // Preload image in background
@@ -41,18 +44,26 @@ export function EventPopup() {
             const splashSeen = sessionStorage.getItem('sio_splash_seen') === 'true'
 
             if (splashSeen) {
-                try {
-                    // Start preloading immediately
-                    await preloadImage(popup.image)
-
+                // Wait 12 seconds before showing
+                setTimeout(async () => {
                     if (!isMounted) return
 
-                    // Show immediately after load (plus small buffer for smoothness)
-                    setIsVisible(true)
-                    setHasShownThisLoad(true)
-                } catch (err) {
-                    console.error('Failed to preload popup image', err)
-                }
+                    try {
+                        // Start preloading
+                        await preloadImage(popup.image!)
+
+                        if (!isMounted) return
+
+                        // Show popup
+                        setIsVisible(true)
+                        setHasShownThisLoad(true)
+
+                        // Mark as shown for this session
+                        sessionStorage.setItem('sio_event_popup_shown', 'true')
+                    } catch (err) {
+                        console.error('Failed to preload popup image', err)
+                    }
+                }, 12000) // 12 seconds delay
             } else {
                 // Splash not done yet, check again in 500ms
                 setTimeout(checkSplashAndShow, 500)
