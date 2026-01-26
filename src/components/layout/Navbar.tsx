@@ -5,7 +5,7 @@ import gsap from 'gsap'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
 
-import siodelLogo from '../../assets/logo.png'
+import siodelLogo from '../../assets/logo.svg'
 import donateQr from '../../assets/donate-sio.svg'
 
 export function Navbar() {
@@ -256,7 +256,7 @@ export function Navbar() {
                                         fontWeight: 400,
                                         color: hoveredLink === link.href
                                             ? '#ff3b3b' // Red on Hover
-                                            : (isActive(link.href) ? (isDark ? '#fdedcb' : '#111111') : '#fdedcb'),
+                                            : (isActive(link.href) ? '#efc676' : '#fdedcb'),
                                         mixBlendMode: (hoveredLink === link.href || isActive(link.href)) ? 'normal' : 'difference',
                                         background: 'transparent',
                                         border: isActive(link.href)
@@ -294,7 +294,7 @@ export function Navbar() {
                                         display: 'inline-block',
                                         padding: '12px 24px',
                                         borderRadius: '100px',
-                                        color: '#fdedcb', // Always white because the button is dark
+                                        color: '#efc676', // Always white because the button is dark
                                         fontSize: '14px',
                                         fontWeight: 400,
                                         transition: 'all 0.3s ease',
@@ -384,7 +384,8 @@ export function Navbar() {
                                                 display: 'block',
                                                 width: '100%',
                                                 textAlign: 'center',
-                                                fontSize: '1.2rem'
+                                                fontSize: '1.2rem',
+                                                color: isActive(link.href) ? '#efc676' : '#fdedcb'
                                             }}
                                         >
                                             {link.name}
@@ -419,7 +420,7 @@ export function Navbar() {
                                                 alignItems: 'center',
                                                 padding: '14px 24px',
                                                 borderRadius: '12px', // Slightly less rounded for mobile stack look? No, keep it consistent.
-                                                color: '#fdedcb',
+                                                color: '#efc676',
                                                 fontSize: '16px',
                                                 fontWeight: 500,
                                                 transition: 'all 0.3s ease',

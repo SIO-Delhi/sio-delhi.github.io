@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useLocation, useNavigate } from 'react-router-dom'
-import logo from '../../assets/logo.png'
+import logo from '../../assets/logo.svg'
 import { X, Instagram, Youtube, Facebook } from 'lucide-react'
 
 // ... existing code ...
@@ -120,12 +120,12 @@ export function Footer() {
 
                     {/* Social Icons */}
                     <div className="footer-socials" style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                        <a href="https://www.instagram.com/siodelhi/?hl=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="Instagram"><Instagram size={20} /></a>
-                        <a href="https://www.facebook.com/delhisio/" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="Facebook"><Facebook size={20} /></a>
-                        <a href="https://youtube.com/c/SIODELHI" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="YouTube"><Youtube size={20} /></a>
-                        <a href="https://x.com/siodelhi?lang=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="X (Twitter)"><XLogo size={18} /></a>
-                        <a href="https://t.me/siodelhi" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="Telegram"><TelegramLogo size={20} /></a>
-                        <a href="https://www.threads.net/@siodelhi" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="Threads"><ThreadsLogo size={20} /></a>
+                        <a href="https://www.instagram.com/siodelhi/?hl=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="Instagram"><Instagram size={20} /></a>
+                        <a href="https://www.facebook.com/delhisio/" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="Facebook"><Facebook size={20} /></a>
+                        <a href="https://youtube.com/c/SIODELHI" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="YouTube"><Youtube size={20} /></a>
+                        <a href="https://x.com/siodelhi?lang=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="X (Twitter)"><XLogo size={18} /></a>
+                        <a href="https://t.me/siodelhi" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="Telegram"><TelegramLogo size={20} /></a>
+                        <a href="https://www.threads.net/@siodelhi" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="Threads"><ThreadsLogo size={20} /></a>
                     </div>
                     <style>{`
                         .social-icon:hover { color: #fff !important; transform: translateY(-2px); }
@@ -139,7 +139,7 @@ export function Footer() {
                                 href={`#${link.toLowerCase()}`}
                                 className="footer-link"
                                 style={{
-                                    color: '#e0e0e0', // Increased brightness
+                                    color: '#fdedcb', // Creamy off-white
                                     fontSize: '0.85rem',
                                     fontWeight: 500,
                                     textTransform: 'uppercase',
@@ -148,7 +148,7 @@ export function Footer() {
                                     textDecoration: 'none'
                                 }}
                                 onMouseEnter={(e) => (e.currentTarget.style.color = '#fdedcb')}
-                                onMouseLeave={(e) => (e.currentTarget.style.color = '#e0e0e0')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = '#fdedcb')}
                                 onClick={(e) => {
                                     e.preventDefault()
                                     scrollToSection(`#${link.toLowerCase()}`)
@@ -161,7 +161,7 @@ export function Footer() {
 
                     {/* Copyright & Description */}
                     <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                        <p style={{ color: '#b0b0b0', fontSize: '14px', lineHeight: 1.6 }}> {/* Lighter grey for copy */}
+                        <p style={{ color: '#fdedcb', fontSize: '14px', lineHeight: 1.6 }}> {/* Creamy off-white for copy */}
                             © {new Date().getFullYear()} Students Islamic Organisation of India - Delhi Zone. <br />
                             All rights reserved.
                         </p>
@@ -169,7 +169,7 @@ export function Footer() {
 
                     {/* Development Credits */}
                     <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
-                        <p style={{ color: '#999', fontSize: '14px', margin: 0 }}> {/* Lighter Credits */}
+                        <p style={{ color: 'rgba(253, 237, 203, 0.7)', fontSize: '14px', margin: 0 }}> {/* Lighter Credits */}
                             Development by <a href="https://www.0x-adnan.com" target="_blank" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>0xAdnan</a>
                         </p>
                         {/* <button

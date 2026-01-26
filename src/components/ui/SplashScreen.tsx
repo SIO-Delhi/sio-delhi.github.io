@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import gsap from 'gsap'
-import logoImage from '../../assets/logo.png'
+import logoImage from '../../assets/logo.svg'
 import pngEggImage from '../../assets/pngegg.png'
 import { useContent } from '../../context/ContentContext'
 

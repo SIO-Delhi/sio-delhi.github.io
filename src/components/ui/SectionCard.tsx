@@ -241,7 +241,7 @@ export function SectionCard({
                 <div style={{
                     color: '#ff3333',
                     marginBottom: '8px',
-                    display: 'flex', 
+                    display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center'
                 }}>
@@ -285,7 +285,7 @@ export function SectionCard({
                     <p style={{
                         margin: 0,
                         fontSize: '0.9rem',
-                        color: 'rgba(255,255,255,0.5)',
+                        color: '#fdedcb',
                         lineHeight: 1.5,
                         display: '-webkit-box',
                         WebkitLineClamp: 3,
@@ -430,14 +430,14 @@ export function SectionCard({
             {!isMedia && (
                 <>
                     <p style={{
-                        fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 16px 0',
+                        fontSize: '0.85rem', color: '#fdedcb', margin: '0 0 16px 0',
                         lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
                     }}>
                         {description.replace(/<[^>]+>/g, '')}
                     </p>
 
                     {onClick && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)', marginBottom: '16px', cursor: 'pointer' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: '#fdedcb', marginBottom: '16px', cursor: 'pointer' }}>
                             <span>Read More</span>
                             <span style={{ color: labelColor, transition: 'transform 0.2s ease' }}>→</span>
                         </div>
