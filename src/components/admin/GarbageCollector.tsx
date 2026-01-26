@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Trash2, Search, X, AlertTriangle, RefreshCw, CheckCircle2, Loader2, ChevronDown, ChevronUp, Eye, FileText, Image as ImageIcon, ExternalLink } from 'lucide-react'
+import { Trash2, Search, X, AlertTriangle, RefreshCw, CheckCircle2, Loader2, ChevronDown, ChevronUp, Eye, FileText, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
