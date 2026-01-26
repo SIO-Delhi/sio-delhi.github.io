@@ -90,6 +90,10 @@ $routes = [
     'GET /stats/storage' => 'routes/stats.php@getStorageStats',
     'GET /stats/database' => 'routes/stats.php@getDatabaseStats',
 
+    // Garbage Collector
+    'GET /garbage' => 'routes/stats.php@getOrphanedFiles',
+    'POST /garbage/cleanup' => 'routes/stats.php@deleteOrphanedFiles',
+
     // Forms
     'GET /forms' => 'routes/forms.php@getAllForms',
     'GET /forms/public/([^/]+)' => 'routes/forms.php@getPublicForm',

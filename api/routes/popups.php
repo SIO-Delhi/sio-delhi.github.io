@@ -3,6 +3,9 @@
  * Popups API Routes
  */
 
+// Include upload helpers for file deletion
+require_once __DIR__ . '/upload.php';
+
 function getAll() {
     $db = getDB();
 
@@ -129,13 +132,22 @@ function update($id) {
 function delete($id) {
     $db = getDB();
 
-    $stmt = $db->prepare("SELECT id FROM popups WHERE id = ?");
+    // Get popup data before deleting (need image URL)
+    $stmt = $db->prepare("SELECT * FROM popups WHERE id = ?");
     $stmt->execute([$id]);
-    if (!$stmt->fetch()) {
+    $popup = $stmt->fetch();
+
+    if (!$popup) {
         http_response_code(404);
         return ['error' => 'Popup not found'];
     }
 
+    // Delete associated image
+    if (!empty($popup['image'])) {
+        deleteFileByUrl($popup['image']);
+    }
+
+    // Delete from database
     $stmt = $db->prepare("DELETE FROM popups WHERE id = ?");
     $stmt->execute([$id]);
 
@@ -144,6 +156,19 @@ function delete($id) {
 
 function clearAll() {
     $db = getDB();
+
+    // Get all popup images before deleting
+    $stmt = $db->query("SELECT image FROM popups WHERE image IS NOT NULL");
+    $popups = $stmt->fetchAll();
+
+    // Delete all popup images
+    foreach ($popups as $popup) {
+        if (!empty($popup['image'])) {
+            deleteFileByUrl($popup['image']);
+        }
+    }
+
+    // Delete all from database
     $db->exec("DELETE FROM popups");
     return ['message' => 'All popups deleted successfully'];
 }
