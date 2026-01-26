@@ -189,7 +189,7 @@ export function EventPopup() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 padding: '14px 32px',
-                                color: 'white',
+                                color: '#efc676',
                                 borderRadius: '100px',
                                 fontSize: '1rem',
                                 fontWeight: 600,
