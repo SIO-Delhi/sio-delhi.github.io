@@ -4,6 +4,9 @@
  * Handles form CRUD, fields management, responses, and export
  */
 
+// Include upload helpers for file deletion
+require_once __DIR__ . '/upload.php';
+
 // === FORMS CRUD ===
 
 function getAllForms()
@@ -226,13 +229,28 @@ function deleteForm($id)
 {
     $db = getDB();
 
-    $stmt = $db->prepare("SELECT id FROM forms WHERE id = ?");
+    // Get form data including image URLs before deleting
+    $stmt = $db->prepare("SELECT * FROM forms WHERE id = ?");
     $stmt->execute([$id]);
-    if (!$stmt->fetch()) {
+    $form = $stmt->fetch();
+
+    if (!$form) {
         http_response_code(404);
         return ['error' => 'Form not found'];
     }
 
+    // Delete banner and background images if they exist
+    if (!empty($form['banner_image'])) {
+        deleteFileByUrl($form['banner_image']);
+    }
+    if (!empty($form['theme_background_image'])) {
+        deleteFileByUrl($form['theme_background_image']);
+    }
+
+    // Delete all files in the form's upload directory (includes all response uploads)
+    deleteFormFiles($id);
+
+    // Delete from database (cascades to pages, fields, and responses)
     $stmt = $db->prepare("DELETE FROM forms WHERE id = ?");
     $stmt->execute([$id]);
 
@@ -530,13 +548,23 @@ function deleteFormResponse($formId, $responseId)
 {
     $db = getDB();
 
-    $stmt = $db->prepare("SELECT id FROM form_responses WHERE id = ? AND form_id = ?");
+    // Get response data before deleting (need file URLs)
+    $stmt = $db->prepare("SELECT * FROM form_responses WHERE id = ? AND form_id = ?");
     $stmt->execute([$responseId, $formId]);
-    if (!$stmt->fetch()) {
+    $response = $stmt->fetch();
+
+    if (!$response) {
         http_response_code(404);
         return ['error' => 'Response not found'];
     }
 
+    // Delete any uploaded files referenced in the response data
+    $responseData = json_decode($response['response_data'], true);
+    if ($responseData) {
+        deleteResponseFiles($responseData);
+    }
+
+    // Delete from database
     $stmt = $db->prepare("DELETE FROM form_responses WHERE id = ?");
     $stmt->execute([$responseId]);
 
