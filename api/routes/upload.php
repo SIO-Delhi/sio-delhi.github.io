@@ -32,7 +32,7 @@ function uploadAudio()
 
 function deleteFile($type, $filename)
 {
-    $validTypes = ['images', 'pdfs', 'audio'];
+    $validTypes = ['images', 'pdfs', 'audio', 'forms'];
 
     if (!in_array($type, $validTypes)) {
         http_response_code(400);
@@ -40,7 +40,13 @@ function deleteFile($type, $filename)
     }
 
     // Decode URL-encoded filename and sanitize to prevent directory traversal
-    $filename = basename(urldecode($filename));
+    $filename = urldecode($filename);
+
+    // Sanitize to prevent directory traversal
+    $filename = str_replace(['..', '.\\', './'], '', $filename);
+    $filename = ltrim($filename, '/'); // Remove leading slash
+
+    // For safety, ensure we are not trying to delete outside the upload dir for that type
     $filepath = UPLOAD_DIR . $type . '/' . $filename;
 
     if (!file_exists($filepath)) {
@@ -184,4 +190,114 @@ function formatBytes($bytes)
         return round($bytes / 1024, 2) . ' KB';
     }
     return $bytes . ' bytes';
+}
+
+/**
+ * Delete a file given its full URL
+ * Extracts the path from the URL and deletes from UPLOAD_DIR
+ * @param string $url The full URL of the file
+ * @return bool True if deleted, false otherwise
+ */
+function deleteFileByUrl($url)
+{
+    if (empty($url)) {
+        return false;
+    }
+
+    // Extract path after /uploads/
+    $pattern = '/\/uploads\/(.+)$/';
+    if (!preg_match($pattern, $url, $matches)) {
+        return false;
+    }
+
+    $relativePath = $matches[1];
+    // Sanitize to prevent directory traversal
+    $relativePath = str_replace('..', '', $relativePath);
+    $filepath = UPLOAD_DIR . $relativePath;
+
+    if (file_exists($filepath) && is_file($filepath)) {
+        return unlink($filepath);
+    }
+
+    return false;
+}
+
+/**
+ * Recursively delete a directory and all its contents
+ * @param string $dir The directory path to delete
+ * @return bool True if deleted, false otherwise
+ */
+function deleteDirectory($dir)
+{
+    if (!is_dir($dir)) {
+        return false;
+    }
+
+    $files = array_diff(scandir($dir), ['.', '..']);
+    foreach ($files as $file) {
+        $path = $dir . '/' . $file;
+        if (is_dir($path)) {
+            deleteDirectory($path);
+        } else {
+            unlink($path);
+        }
+    }
+
+    return rmdir($dir);
+}
+
+/**
+ * Delete all files in a form's upload directory
+ * @param string $formId The form ID
+ * @return bool True if deleted or didn't exist, false on error
+ */
+function deleteFormFiles($formId)
+{
+    if (empty($formId)) {
+        return false;
+    }
+
+    // Sanitize form ID same way as upload
+    $sanitizedFormId = preg_replace('/[^a-z0-9-]/i', '', $formId);
+    $formDir = UPLOAD_DIR . 'forms/' . $sanitizedFormId;
+
+    if (is_dir($formDir)) {
+        return deleteDirectory($formDir);
+    }
+
+    return true; // Directory doesn't exist, nothing to delete
+}
+
+/**
+ * Delete files from a form response's data
+ * Parses the response JSON and deletes any file URLs found
+ * @param array $responseData The decoded response data
+ * @return int Number of files deleted
+ */
+function deleteResponseFiles($responseData)
+{
+    if (!is_array($responseData)) {
+        return 0;
+    }
+
+    $deleted = 0;
+    foreach ($responseData as $value) {
+        if (is_string($value) && strpos($value, '/uploads/') !== false) {
+            // Single file URL
+            if (deleteFileByUrl($value)) {
+                $deleted++;
+            }
+        } elseif (is_array($value)) {
+            // Array of file URLs (e.g., multiple file upload)
+            foreach ($value as $item) {
+                if (is_string($item) && strpos($item, '/uploads/') !== false) {
+                    if (deleteFileByUrl($item)) {
+                        $deleted++;
+                    }
+                }
+            }
+        }
+    }
+
+    return $deleted;
 }

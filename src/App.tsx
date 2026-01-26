@@ -23,6 +23,7 @@ import { FormList } from './components/admin/FormList'
 import { FormBuilder } from './components/admin/FormBuilder'
 import { FormResponseViewer } from './components/admin/FormResponseViewer'
 import { FormResponseDetail } from './components/admin/FormResponseDetail'
+import { GarbageCollector } from './components/admin/GarbageCollector'
 import { PublicForm } from './pages/PublicForm'
 
 
@@ -52,6 +53,7 @@ function App() {
               <Route path="forms/:id" element={<FormBuilder />} />
               <Route path="forms/:formId/responses" element={<FormResponseViewer />} />
               <Route path="forms/:formId/responses/:responseId" element={<FormResponseDetail />} />
+              <Route path="garbage" element={<GarbageCollector />} />
             </Route>
           </Route>
 
