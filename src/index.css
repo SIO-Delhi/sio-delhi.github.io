@@ -173,9 +173,26 @@
   font-display: swap;
 }
 
-.font-urdu {
-  font-family: 'AlQalam Taj Nastaleeq', 'Jameel Noori Nastaleeq Kasheeda', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif;
+.font-urdu,
+:lang(ur),
+[lang="ur"] {
+  font-family: 'AlQalam Taj Nastaleeq', 'Jameel Noori Nastaleeq Kasheeda', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
   direction: rtl;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Adjust spacing for Nastaliq-style Urdu to improve readability */
+.font-urdu,
+:lang(ur),
+[lang="ur"] {
+  /* space between words; tweak value if too wide/narrow */
+  word-spacing: 0.22em !important;
+  /* slightly more line-height for dense Nastaliq text */
+  line-height: 1.6 !important;
+  /* small positive letter-spacing can help some renderers */
+  letter-spacing: 0.01em !important;
+  text-rendering: optimizeLegibility;
 }
 
 /* IBM Plex Sans Arabic Font Family */
