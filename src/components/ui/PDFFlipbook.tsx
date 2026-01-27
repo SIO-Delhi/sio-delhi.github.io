@@ -135,7 +135,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
 
     // Layout State
     const [usePortrait, setUsePortrait] = useState(false)
-    const [scale, setScale] = useState(1.0)
+
 
     // Controls logic
     const [isFullscreen, setIsFullscreen] = useState(false)
@@ -187,7 +187,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
             // 1. Determine Mode based on Window Width (User preference mostly)
             // If explicit fullscreen, we use the screen dimensions
             const windowWidth = window.innerWidth
-            const isMobile = windowWidth < 1024 // Increased threshold for tablet to be single page often better
+            const isMobile = windowWidth < 768 // Standard Tablet/Desktop breakpoint
             setUsePortrait(isMobile)
 
             // 2. Calculate Available Space
@@ -346,7 +346,14 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
 
             {/* FlipBook */}
             {!isLoading && pdf && containerSize.width > 0 && (
-                <div style={{ boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+                <div style={{
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                    // Center the cover when closed (Page 0) on Desktop
+                    // Closed book (cover) is the right half of the spread.
+                    // We translate -25% (half of the right page width relative to total) to move the visual center of the cover to the center of the container.
+                    transform: !usePortrait && currentPageIndex === 0 ? 'translateX(-25%)' : 'translateX(0)',
+                    transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
+                }}>
                     {/* @ts-ignore */}
                     <HTMLFlipBook
                         key={`${usePortrait}-${isFullscreen}`}
