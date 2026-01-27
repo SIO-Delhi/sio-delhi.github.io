@@ -359,7 +359,7 @@ export function Navbar() {
                         <div className="mobile-menu-content">
                             <ul className="mobile-links">
                                 {navLinks.map((link, index) => (
-                                    <div key={link.href} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <div key={link.href} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '6px 0' }}>
                                         <a
                                             href={link.href}
                                             className={isActive(link.href) ? 'active' : ''}
@@ -373,8 +373,9 @@ export function Navbar() {
                                                 display: 'block',
                                                 width: '100%',
                                                 textAlign: 'center',
-                                                fontSize: '1.2rem',
-                                                color: isActive(link.href) ? '#efc676' : '#fdedcb'
+                                                fontSize: '1.18rem',
+                                                color: isActive(link.href) ? '#efc676' : '#fdedcb',
+                                                lineHeight: 1.3
                                             }}
                                         >
                                             {link.name}
@@ -383,11 +384,11 @@ export function Navbar() {
                                         {index < navLinks.length - 1 && (
                                             <div style={{
                                                 width: '80%', // Relative width for responsiveness
-                                                maxWidth: '200px',
-                                                height: '1px',
-                                                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 59, 59, 0.8) 50%, transparent 100%)', // Sleek gradient
-                                                margin: '0 auto',
-                                                opacity: 0.8
+                                                maxWidth: '220px',
+                                                height: '2px',
+                                                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 59, 59, 0.85) 50%, transparent 100%)', // Sleek gradient
+                                                margin: '4px auto 0 auto',
+                                                opacity: 0.9
                                             }} />
                                         )}
                                     </div>

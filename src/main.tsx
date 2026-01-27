@@ -30,3 +30,15 @@ createRoot(document.getElementById('root')!).render(
     </ClerkProvider>
   </StrictMode>,
 )
+
+// Enable shiny animations after the full window load to avoid a bright
+// initial animation frame (reduces the flash-of-brightness on buttons).
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    try {
+      document.documentElement.classList.add('shiny-ready')
+    } catch (e) {
+      // ignore
+    }
+  })
+}
