@@ -104,18 +104,25 @@
             : 'inset 10px 0 20px -10px rgba(0,0,0,0.2)'
 
         return (
-            <div ref={ref} className="page" style={{
-                backgroundColor: 'white',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                overflow: 'hidden',
-                // Reserve explicit layout size to prevent CLS
-                width: width ? `${width}px` : '100%',
-                height: height ? `${height}px` : '100%',
-                // Combine general depth shadow with spine shadow
-                boxShadow: `${spineShadow}, inset 0 0 5px rgba(0,0,0,0.05)`
-            }}>
+                <div ref={ref} className="page" style={{
+                    backgroundColor: 'white',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    overflow: 'hidden',
+                    // Reserve explicit layout size to prevent CLS
+                    width: width ? `${width}px` : '100%',
+                    height: height ? `${height}px` : '100%',
+                    // Combine general depth shadow with spine shadow
+                    boxShadow: `${spineShadow}, inset 0 0 5px rgba(0,0,0,0.05)`,
+                    // Make flips originate from the spine for realistic directionality
+                    transformOrigin: isEven ? 'right center' : 'left center',
+                    // Only animate box-shadow here; the flip library animates transforms directly.
+                    // Also enable GPU acceleration for smoother transforms.
+                    transition: 'box-shadow 220ms ease',
+                    willChange: 'transform',
+                    transform: 'translateZ(0)'
+                }}>
                 {/* Keep canvas mounted if it has ever successfully loaded, just toggle visibility */}
                 {(shouldRender || pageLoaded) ? (
                     <>
@@ -416,7 +423,8 @@
                             maxWidth={1000}
                             minHeight={400}
                             maxHeight={1533}
-                            maxShadowOpacity={0.1}
+                            // Stronger shadow and slightly slower flipping (applies to all sizes now)
+                            maxShadowOpacity={0.45}
                             showCover={true}
                             mobileScrollSupport={true}
                             usePortrait={usePortrait}
@@ -424,7 +432,7 @@
                             className="demo-book"
                             style={{ margin: '0 auto' }}
                             ref={flipBookRef}
-                            flippingTime={600}
+                            flippingTime={750}
                             useMouseEvents={true}
                             swipeDistance={30}
                             onFlip={onFlip}
@@ -493,7 +501,7 @@
                     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
                     /* Pageflip smoothing + gap fixes */
-                    .demo-book { perspective: 2000px; }
+                    .demo-book { perspective: 3500px; }
                     /* Ensure the viewport hides any subpixel hairlines */
                     .demo-book .book-viewport, .demo-book .book { overflow: hidden !important; }
                     .demo-book .page-wrapper, .demo-book .page { margin: 0 !important; box-sizing: border-box; padding: 0 !important; transform-style: preserve-3d; backface-visibility: hidden; will-change: transform, opacity; border: none !important; }
@@ -503,7 +511,10 @@
                     .demo-book .page:last-child, .demo-book .page-wrapper:last-child { margin-right: 0 !important; }
                     /* remove any internal borders/shadows that create the hairline */
                     .demo-book .page, .demo-book .page * { outline: none !important; box-shadow: none !important; }
-                    .demo-book .page-shadow, .demo-book .page__shadow { transition: opacity 0.12s ease; }
+                    .demo-book .page-shadow, .demo-book .page__shadow { transition: opacity 0.22s ease, transform 0.22s ease; }
+
+                    /* Avoid CSS transition on the element the library is animating (prevents jank). */
+                    .demo-book .page-wrapper { will-change: transform; transform: translateZ(0); }
                     /* Ensure the outer wrapper transition matches our translate logic */
                     .demo-book { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
                 `}</style>
