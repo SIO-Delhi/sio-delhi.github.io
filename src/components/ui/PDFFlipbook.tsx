@@ -18,10 +18,12 @@
         pdf: any
         scale?: number
         shouldRender: boolean
+        width?: number
+        height?: number
     }
 
     // Single Page Component
-    const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, shouldRender }, ref) => {
+    const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, shouldRender, width, height }, ref) => {
         const canvasRef = useRef<HTMLCanvasElement>(null)
         const [pageLoaded, setPageLoaded] = useState(false)
         const renderTaskRef = useRef<any>(null)
@@ -48,12 +50,17 @@
                     const page = await pdf.getPage(number)
                     if (isCancelled) return
 
-                    const viewport = page.getViewport({ scale: scale * 1.5 })
+                    const pr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1
+                    // Cap the DPR factor so we don't create huge canvases on very high-DPR displays
+                    const renderScale = scale * Math.min(pr, 1.25)
+                    const viewport = page.getViewport({ scale: renderScale })
                     const canvas = canvasRef.current
 
-                    // Set dimensions
-                    canvas.height = viewport.height
-                    canvas.width = viewport.width
+                    // Set pixel dimensions but also reserve CSS layout size (viewport / pr) to prevent CLS
+                    canvas.width = Math.ceil(viewport.width)
+                    canvas.height = Math.ceil(viewport.height)
+                    canvas.style.width = (canvas.width / pr) + 'px'
+                    canvas.style.height = (canvas.height / pr) + 'px'
 
                     const context = canvas.getContext('2d')
                     if (!context) return
@@ -103,6 +110,9 @@
                 justifyContent: 'center',
                 alignItems: 'center',
                 overflow: 'hidden',
+                // Reserve explicit layout size to prevent CLS
+                width: width ? `${width}px` : '100%',
+                height: height ? `${height}px` : '100%',
                 // Combine general depth shadow with spine shadow
                 boxShadow: `${spineShadow}, inset 0 0 5px rgba(0,0,0,0.05)`
             }}>
@@ -140,7 +150,15 @@
         const [pdf, setPdf] = useState<any>(null)
         const [numPages, setNumPages] = useState(0)
         const [isLoading, setIsLoading] = useState(true)
-        const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+        const [containerSize, setContainerSize] = useState(() => {
+            if (typeof window !== 'undefined') {
+                const w = Math.min(window.innerWidth, 1200)
+                const isMobile = w < 768
+                const h = isMobile ? w * 1.41 : (w / 2) * 1.41
+                return { width: w, height: Math.min(h, window.innerHeight * 0.8) }
+            }
+            return { width: 800, height: 600 }
+        })
         const flipBookRef = useRef<any>(null)
         const containerRef = useRef<HTMLDivElement>(null)
 
@@ -268,8 +286,14 @@
             return () => observer.disconnect()
         }, [isFullscreen]) // Re-calc when fullscreen toggles
 
+        const flipRafRef = useRef<number | null>(null)
+
         const onFlip = useCallback((e: any) => {
-            setCurrentPageIndex(e.data) // data contains the new page index
+            if (flipRafRef.current) cancelAnimationFrame(flipRafRef.current)
+            flipRafRef.current = requestAnimationFrame(() => {
+                setCurrentPageIndex(e.data) // update page index on next frame
+                flipRafRef.current = null
+            })
         }, [])
 
         // Controls
@@ -298,6 +322,9 @@
             const distance = Math.abs(pageIndex - currentPageIndex)
             return distance <= renderWindow
         }
+
+        // Page width calculation: add 1px on wide screens so two page widths fully cover the container (prevents gaps)
+        const pageWidth = Math.max(300, Math.ceil(containerSize.width / (usePortrait ? 1 : 2) + (usePortrait ? 0 : 1)))
 
         return (
             <div
@@ -372,23 +399,24 @@
                 {!isLoading && pdf && containerSize.width > 0 && (
                     <div style={{
                         boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                        overflow: 'hidden',
                         // Center the cover when closed (Page 0) on Desktop
                         // Closed book (cover) is the right half of the spread.
                         // We translate -25% (half of the right page width relative to total) to move the visual center of the cover to the center of the container.
                         transform: !usePortrait && currentPageIndex === 0 ? 'translateX(-25%)' : 'translateX(0)',
-                        transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
-                    }}>
+                        transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)'
+                    }} >
                         {/* @ts-ignore */}
                         <HTMLFlipBook
                             key={`${usePortrait}-${isFullscreen}`}
-                            width={containerSize.width / (usePortrait ? 1 : 2)}
+                            width={pageWidth}
                             height={containerSize.height}
                             size="fixed"
                             minWidth={300}
                             maxWidth={1000}
                             minHeight={400}
                             maxHeight={1533}
-                            maxShadowOpacity={0}
+                            maxShadowOpacity={0.1}
                             showCover={true}
                             mobileScrollSupport={true}
                             usePortrait={usePortrait}
@@ -396,7 +424,7 @@
                             className="demo-book"
                             style={{ margin: '0 auto' }}
                             ref={flipBookRef}
-                            flippingTime={1000}
+                            flippingTime={600}
                             useMouseEvents={true}
                             swipeDistance={30}
                             onFlip={onFlip}
@@ -406,7 +434,9 @@
                                     key={pageNum}
                                     number={pageNum}
                                     pdf={pdf}
-                                    scale={1.2}
+                                    scale={1.0}
+                                    width={pageWidth}
+                                    height={containerSize.height}
                                     shouldRender={shouldRenderPage(index)}
                                 />
                             ))}
@@ -461,6 +491,21 @@
                 <style>{`
                     .animate-spin { animation: spin 1s linear infinite; }
                     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+                    /* Pageflip smoothing + gap fixes */
+                    .demo-book { perspective: 2000px; }
+                    /* Ensure the viewport hides any subpixel hairlines */
+                    .demo-book .book-viewport, .demo-book .book { overflow: hidden !important; }
+                    .demo-book .page-wrapper, .demo-book .page { margin: 0 !important; box-sizing: border-box; padding: 0 !important; transform-style: preserve-3d; backface-visibility: hidden; will-change: transform, opacity; border: none !important; }
+                    .demo-book .page > canvas { display:block; width:100% !important; height:100% !important; transform: translateZ(0); will-change: transform; }
+                    /* Small negative overlap to avoid a hairline gutter from rounding; harmless and invisible when pages meet exactly */
+                    .demo-book .page, .demo-book .page-wrapper { margin-right: -1px !important; }
+                    .demo-book .page:last-child, .demo-book .page-wrapper:last-child { margin-right: 0 !important; }
+                    /* remove any internal borders/shadows that create the hairline */
+                    .demo-book .page, .demo-book .page * { outline: none !important; box-shadow: none !important; }
+                    .demo-book .page-shadow, .demo-book .page__shadow { transition: opacity 0.12s ease; }
+                    /* Ensure the outer wrapper transition matches our translate logic */
+                    .demo-book { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
                 `}</style>
             </div>
         )
