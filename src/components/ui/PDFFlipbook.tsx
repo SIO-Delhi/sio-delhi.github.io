@@ -164,7 +164,10 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                     setTimeout(loadPdf, 500)
                     return
                 }
-                const loadingTask = window.pdfjsLib.getDocument(url)
+                const loadingTask = window.pdfjsLib.getDocument({
+                    url,
+                    verbosity: 0 // Suppress "missing font" warnings
+                })
                 const doc = await loadingTask.promise
                 setPdf(doc)
                 setNumPages(doc.numPages)
@@ -209,7 +212,11 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                 h = isMobile ? w * aspectRatio : (w / 2) * aspectRatio
 
                 // Cap height to viewport
-                const maxHeight = window.innerHeight * 0.85
+                // Subtract top padding (Navbar ~80px + margin)
+                const maxHeight = isFullscreen
+                    ? window.innerHeight * 0.95
+                    : window.innerHeight - (isMobile ? 180 : 120)
+
                 if (h > maxHeight) {
                     h = maxHeight
                     w = isMobile ? h / aspectRatio : (h / aspectRatio) * 2
@@ -289,7 +296,10 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                 position: 'relative',
                 background: isFullscreen ? '#1a1a1a' : 'transparent',
                 padding: isFullscreen ? '20px' : '0',
-                minHeight: '300px'
+                minHeight: '300px',
+                zIndex: isFullscreen ? 100 : 10, // Ensure below Navbar (z=50) normally, but above in fullscreen
+                isolation: 'isolate', // Create new stacking context so children don't leak z-index
+                overflow: isFullscreen ? 'visible' : 'hidden' // Clip animations that fly out (except in fullscreen)
             }}
         >
             {/* Loading / Cover State */}
@@ -364,7 +374,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                         maxWidth={1000}
                         minHeight={400}
                         maxHeight={1533}
-                        maxShadowOpacity={0.5}
+                        maxShadowOpacity={0}
                         showCover={true}
                         mobileScrollSupport={true}
                         usePortrait={usePortrait}

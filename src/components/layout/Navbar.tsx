@@ -124,9 +124,10 @@ export function Navbar() {
                     top: 0,
                     left: 0,
                     right: 0,
-                    zIndex: 50,
+                    zIndex: 9999,
                     padding: isMobile ? '32px 16px' : '20px 40px',
                     opacity: 0,
+                    transform: 'translateZ(100px)', // Ensure it sits "above" 3D content like Flipbook
                 }}
             >
                 <div
