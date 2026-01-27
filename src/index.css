@@ -177,7 +177,8 @@
 :lang(ur),
 [lang="ur"] {
   font-family: 'AlQalam Taj Nastaleeq', 'Jameel Noori Nastaleeq Kasheeda', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
-  direction: rtl;
+  /* Do not set global direction here — runtime previously applied this too broadly and flipped layout.
+     Direction is applied more narrowly below for post/subsection containers only. */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -193,6 +194,15 @@
   /* small positive letter-spacing can help some renderers */
   letter-spacing: 0.01em !important;
   text-rendering: optimizeLegibility;
+}
+
+/* Apply RTL direction and alignment only inside known content containers (prevents whole-site flip) */
+.post-content .font-urdu,
+.section-card-shine .font-urdu,
+.subsection-grid .font-urdu,
+.subsection .font-urdu {
+  direction: rtl !important;
+  text-align: right !important;
 }
 
 /* IBM Plex Sans Arabic Font Family */
