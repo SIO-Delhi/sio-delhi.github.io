@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Loader2, ZoomIn, ZoomOut } from 'lucide-react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import type { ThreeEvent } from '@react-three/fiber'
-import * as THREE from 'three'
-import gsap from 'gsap'
+import { useEffect, useRef, useState, useCallback, forwardRef } from 'react'
+import HTMLFlipBook from 'react-pageflip'
+import { ChevronLeft, ChevronRight, Loader2, Maximize, Download } from 'lucide-react'
 
 interface PDFFlipbookProps {
     url: string
+    coverImage?: string
 }
 
 declare global {
@@ -15,208 +13,147 @@ declare global {
     }
 }
 
-// Sub-component for the 3D Page
-// Sub-component for the 3D Page - Removed unused BookPage
+interface PageProps {
+    number: number
+    pdf: any
+    scale?: number
+    shouldRender: boolean
+}
 
-// Scene Component wrapper to handle hook logic
-const SceneContent = ({ canvasRef, isFlipping, direction, onMidFlip, onRest, pageVersion, zoomLevel, handleFlipRequest }: any) => {
-    const meshRef = useRef<THREE.Mesh>(null)
-    const { viewport } = useThree()
+// Single Page Component
+const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, shouldRender }, ref) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+    const [pageLoaded, setPageLoaded] = useState(false)
+    const renderTaskRef = useRef<any>(null)
 
-    // Update texture from 2D canvas only when ready
     useEffect(() => {
-        if (canvasRef.current && meshRef.current) {
-            const canvas = canvasRef.current
+        if (!shouldRender || !pdf) return
 
-            // Safety check for valid canvas dimensions
-            if (canvas.width > 0 && canvas.height > 0) {
-                const tex = new THREE.CanvasTexture(canvas)
-                tex.colorSpace = THREE.SRGBColorSpace
-                tex.minFilter = THREE.LinearFilter
-                tex.magFilter = THREE.LinearFilter
-                tex.generateMipmaps = false
+        let isCancelled = false
 
-                // Dispose old texture if exists to avoid memory leaks
-                const mat = meshRef.current.material as THREE.MeshStandardMaterial
-                if (mat.map) mat.map.dispose()
+        const renderPage = async () => {
+            if (!canvasRef.current) return
 
-                mat.map = tex
-                mat.needsUpdate = true
+            try {
+                // Ensure previous render is truly cancelled/cleaned up
+                if (renderTaskRef.current) {
+                    renderTaskRef.current.cancel()
+                    renderTaskRef.current = null
+                }
+
+                const page = await pdf.getPage(number)
+                if (isCancelled) return
+
+                const viewport = page.getViewport({ scale: scale * 1.5 })
+                const canvas = canvasRef.current
+
+                // Set dimensions
+                canvas.height = viewport.height
+                canvas.width = viewport.width
+
+                const context = canvas.getContext('2d')
+                if (!context) return
+
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                }
+
+                const renderTask = page.render(renderContext)
+                renderTaskRef.current = renderTask
+
+                await renderTask.promise
+                if (!isCancelled) {
+                    setPageLoaded(true)
+                }
+            } catch (error: any) {
+                if (error.name !== 'RenderingCancelledException' && !isCancelled) {
+                    console.error(`Error rendering page ${number}:`, error)
+                }
             }
         }
-    }, [pageVersion])
 
-    // Simplified SceneContent without vertex deforms
+        renderPage()
 
-    // Handle Zoom
-    useFrame(() => {
-        if (meshRef.current) {
-            // Smooth zoom interpolation
-            meshRef.current.scale.lerp(new THREE.Vector3(zoomLevel, zoomLevel, 1), 0.1)
+        return () => {
+            isCancelled = true
+            if (renderTaskRef.current) {
+                renderTaskRef.current.cancel()
+            }
         }
-    })
+    }, [pdf, number, scale, shouldRender])
 
-    // Drag Logic
-    const dragRef = useRef({ active: false, startX: 0, currentRot: 0 })
-    const timelineRef = useRef<gsap.core.Timeline | null>(null)
+    const isEven = number % 2 === 0
+    // Spine shadow: Darker on the edge that touches the spine
+    // Left page (Even) -> Spine is on Right edge
+    // Right page (Odd) -> Spine is on Left edge
+    const spineShadow = isEven
+        ? 'inset -10px 0 20px -10px rgba(0,0,0,0.2)'
+        : 'inset 10px 0 20px -10px rgba(0,0,0,0.2)'
 
-    // Global handlers needed for robust drag (tracking off-mesh)
-    const handleGlobalPointerMove = useCallback((e: PointerEvent) => {
-        if (!dragRef.current.active || !meshRef.current) return
+    return (
+        <div ref={ref} className="page" style={{
+            backgroundColor: 'white',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            overflow: 'hidden',
+            // Combine general depth shadow with spine shadow
+            boxShadow: `${spineShadow}, inset 0 0 5px rgba(0,0,0,0.05)`
+        }}>
+            {shouldRender ? (
+                <>
+                    {/* Key forces fresh canvas on re-mount scenarios if needed, usually mostly stable */}
+                    <canvas ref={canvasRef} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    {!pageLoaded && (
+                        <div style={{ position: 'absolute' }}>
+                            <Loader2 className="animate-spin text-gray-300" />
+                        </div>
+                    )}
+                </>
+            ) : (
+                <div style={{ color: '#eee', fontSize: '2rem', fontWeight: 'bold' }}>
+                    {number}
+                </div>
+            )}
+        </div>
+    )
+})
 
-        const deltaX = e.clientX - dragRef.current.startX
-        // Map delta to rotation
-        // Simple 3D rotation around Y center
-        const rotation = Math.max(Math.min(deltaX * 0.005, Math.PI / 2.2), -Math.PI / 2.2)
+Page.displayName = 'Page'
 
-        meshRef.current.rotation.y = rotation
-        dragRef.current.currentRot = rotation
-    }, [])
+export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
+    const [pdf, setPdf] = useState<any>(null)
+    const [numPages, setNumPages] = useState(0)
+    const [isLoading, setIsLoading] = useState(true)
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+    const flipBookRef = useRef<any>(null)
+    const containerRef = useRef<HTMLDivElement>(null)
 
-    const handleGlobalPointerUp = useCallback(() => {
-        if (!dragRef.current.active || !meshRef.current) return
+    // Track current page index (0-based) from flipbook events
+    const [currentPageIndex, setCurrentPageIndex] = useState(0)
 
-        dragRef.current.active = false
-        // Remove global listeners
-        window.removeEventListener('pointermove', handleGlobalPointerMove)
-        window.removeEventListener('pointerup', handleGlobalPointerUp)
-        window.removeEventListener('pointercancel', handleGlobalPointerUp)
+    // Layout State
+    const [usePortrait, setUsePortrait] = useState(false)
+    const [scale, setScale] = useState(1.0)
 
-        const rot = meshRef.current.rotation.y
-        const threshold = Math.PI / 10
-
-        if (rot < -threshold) {
-            // Dragged Left -> Next Page
-            if (handleFlipRequest('next')) {
-                // Animation continues from current rotation
-            } else {
-                gsap.to(meshRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out' })
-            }
-        } else if (rot > threshold) {
-            // Dragged Right -> Prev Page
-            if (handleFlipRequest('prev')) {
-                // Animation continues
-            } else {
-                gsap.to(meshRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out' })
-            }
+    // Controls logic
+    const [isFullscreen, setIsFullscreen] = useState(false)
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement && containerRef.current) {
+            containerRef.current.requestFullscreen().catch(err => console.error(err))
         } else {
-            // Reset
-            gsap.to(meshRef.current.rotation, { y: 0, duration: 0.3, ease: 'power2.out' })
+            document.exitFullscreen()
         }
-    }, [handleFlipRequest, handleGlobalPointerMove])
-
-    const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
-        if (isFlipping) return
-        e.stopPropagation() // Stop propagation in R3F
-
-        // Start Drag
-        dragRef.current = { active: true, startX: e.clientX, currentRot: 0 }
-
-        // Attach global listeners
-        window.addEventListener('pointermove', handleGlobalPointerMove)
-        window.addEventListener('pointerup', handleGlobalPointerUp)
-        window.addEventListener('pointercancel', handleGlobalPointerUp)
     }
 
     useEffect(() => {
-        if (isFlipping && meshRef.current) {
-            const mesh = meshRef.current
-
-            // Simple Flip Animation: 
-            // 2. Flip Content
-            // 3. Rotate back from other side (or same side for continuity? simple flip is usually 0 -> 90 -> 0)
-
-            const targetAngle = direction === 'next' ? -Math.PI / 2 : Math.PI / 2
-
-            // Atomic Flip Sequence
-            // We use a ref to ensure we never start a duplicate timeline if re-renders happen
-            if (dragRef.current.active) return // Don't animate if still likely dragging (safety)
-
-            // 2. Check if timelineRef.current exists. If so, return.
-            if (timelineRef.current) return
-
-            // Only potential race condition: if isFlipping is true but timeline is active?
-            // We don't track timeline active state in ref here yet.
-            // Let's assume GSAP handles concurrent overwrites, but we want ONE Sequence.
-
-            // 3. Use gsap.timeline to sequence the entire flip.
-            const tl = gsap.timeline({
-                onComplete: () => {
-                    onRest()
-                    // 4. Clear timelineRef.current in onComplete of timeline.
-                    timelineRef.current = null
-                }
-            })
-
-            tl.to(mesh.rotation, {
-                y: targetAngle,
-                duration: 0.15, // Faster 1st half
-                ease: 'sine.in',
-            })
-                .call(() => {
-                    onMidFlip()
-                    // Instant rotation set for second half
-                    mesh.rotation.y = direction === 'next' ? Math.PI / 2 : -Math.PI / 2
-                })
-                .to(mesh.rotation, {
-                    y: 0,
-                    duration: 0.2, // Faster 2nd half
-                    ease: 'sine.out',
-                })
-
-            // Store the timeline in the ref
-            timelineRef.current = tl
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement)
         }
-    }, [isFlipping, direction, onMidFlip, onRest])
-
-    return (
-        <>
-            <ambientLight intensity={2} />
-            <directionalLight position={[5, 10, 5]} intensity={2} />
-
-            <mesh
-                ref={meshRef}
-                onPointerDown={handlePointerDown}
-            >
-                {/*  Responsive Plane Geometry with max viewport usage */}
-                {(() => {
-                    const aspect = 0.71 // Standard PDF aspect ratio (e.g., A4)
-                    let w = viewport.width
-                    let h = viewport.height
-
-                    // Adjust dimensions to fit within viewport while maintaining aspect ratio
-                    if (w / h > aspect) { // Viewport is wider than content
-                        w = h * aspect
-                    } else { // Viewport is taller than content
-                        h = w / aspect
-                    }
-
-                    return <planeGeometry args={[w, h]} />
-                })()}
-                <meshStandardMaterial side={THREE.DoubleSide} color="white" roughness={0.4} />
-            </mesh>
-        </>
-    )
-}
-
-import { Maximize, Download } from 'lucide-react'
-
-export function PDFFlipbook({ url }: PDFFlipbookProps) {
-    const [pdfDoc, setPdfDoc] = useState<any>(null)
-    const [currentPage, setCurrentPage] = useState(1)
-    const [totalPages, setTotalPages] = useState(0)
-    const [isLoading, setIsLoading] = useState(true)
-
-    const [isFlipping, setIsFlipping] = useState(false)
-    const [flipDirection, setFlipDirection] = useState<'next' | 'prev'>('next')
-    const [contentReady, setContentReady] = useState(false) // Trigger texture update
-    const [zoomLevel, setZoomLevel] = useState(1)
-    const [inputPage, setInputPage] = useState("1")
-
-    // Hidden canvas for rendering PDF
-    const canvasRef = useRef<HTMLCanvasElement>(null)
-    const renderTaskRef = useRef<any>(null)
-    const containerRef = useRef<HTMLDivElement>(null)
+        document.addEventListener('fullscreenchange', handleFullscreenChange)
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }, [])
 
     // Load PDF
     useEffect(() => {
@@ -228,9 +165,9 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
                     return
                 }
                 const loadingTask = window.pdfjsLib.getDocument(url)
-                const pdf = await loadingTask.promise
-                setPdfDoc(pdf)
-                setTotalPages(pdf.numPages)
+                const doc = await loadingTask.promise
+                setPdf(doc)
+                setNumPages(doc.numPages)
                 setIsLoading(false)
             } catch (error) {
                 console.error('Error loading PDF:', error)
@@ -240,162 +177,211 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
         loadPdf()
     }, [url])
 
+    // Robust Resizing
     useEffect(() => {
-        setInputPage(currentPage.toString())
-    }, [currentPage])
+        if (!containerRef.current) return
 
-    // Render Page via PDF.js to hidden canvas
-    useEffect(() => {
-        if (!pdfDoc || !canvasRef.current) return
+        const updateSize = () => {
+            if (!containerRef.current) return
 
-        const renderPage = async () => {
-            try {
-                if (renderTaskRef.current) {
-                    renderTaskRef.current.cancel()
+            // 1. Determine Mode based on Window Width (User preference mostly)
+            // If explicit fullscreen, we use the screen dimensions
+            const windowWidth = window.innerWidth
+            const isMobile = windowWidth < 1024 // Increased threshold for tablet to be single page often better
+            setUsePortrait(isMobile)
+
+            // 2. Calculate Available Space
+            // In fullscreen, we use the bounding box of the container (which should be 100% of viewport)
+            // In normal mode, we use the container's width, bounded by a max.
+            const { width: boundsWidth, height: boundsHeight } = containerRef.current.getBoundingClientRect()
+
+            let w = boundsWidth
+            let h = boundsHeight
+
+            // Normal mode limits
+            if (!isFullscreen) {
+                // Max width for the viewer in rendering
+                const MAX_APP_WIDTH = 1200
+                if (w > MAX_APP_WIDTH) w = MAX_APP_WIDTH
+
+                // Height calculation
+                const aspectRatio = 1.41
+                h = isMobile ? w * aspectRatio : (w / 2) * aspectRatio
+
+                // Cap height to viewport
+                const maxHeight = window.innerHeight * 0.85
+                if (h > maxHeight) {
+                    h = maxHeight
+                    w = isMobile ? h / aspectRatio : (h / aspectRatio) * 2
                 }
+            } else {
+                // Fullscreen Mode
+                // We want to fit within the screen with some padding
+                const safeH = window.innerHeight - 80 // Leave room for controls
+                const safeW = window.innerWidth - 40
 
-                // Higher scale for better texture quality
-                // const viewport = page.getViewport({ scale: 2.0 * zoomLevel }) // Re-render at higher quality if zoomed? No, purely relying on texture scaling is faster.
-                // Actually, let's keep base render high res (2.0) and use mesh scale for zoom to avoid re-rendering cost
+                const aspectRatio = 1.41
+                // Try fitting by height first
+                h = safeH
+                w = isMobile ? h / aspectRatio : (h / aspectRatio) * 2
 
-                // Pure texture render logic (optimized scale for performance)
-                const page = await pdfDoc.getPage(currentPage)
-                // Reduced scale from 2.0 to 1.5 to prevent frame drops during flip
-                const renderViewport = page.getViewport({ scale: 1.5 })
-
-                const canvas = canvasRef.current
-                if (!canvas) return
-
-                const context = canvas.getContext('2d')
-
-                if (context) {
-                    canvas.height = renderViewport.height
-                    canvas.width = renderViewport.width
-
-                    const renderContext = {
-                        canvasContext: context,
-                        viewport: renderViewport,
-                    }
-
-                    const renderTask = page.render(renderContext)
-                    renderTaskRef.current = renderTask
-                    await renderTask.promise
-                    setContentReady(prev => !prev) // Toggle to notify Three.js to re-read texture
+                // If width overflows, fit by width
+                if (w > safeW) {
+                    w = safeW
+                    h = isMobile ? w * aspectRatio : (w / 2) * aspectRatio
                 }
-            } catch (error: any) {
-                // Ignore cancel errors
             }
+
+            setContainerSize({ width: w, height: h })
+            // Adjust scale slightly for cleaner rendering if needed
         }
-        renderPage()
-    }, [pdfDoc, currentPage])
-    // Removed zoomLevel from dependency to avoid re-rendering PDF on simple zoom interactions
 
+        const observer = new ResizeObserver(() => {
+            // Debounce or just run? React state mismatch might occur if too fast, but usually fine.
+            window.requestAnimationFrame(updateSize)
+        })
 
-    // Ref for direction to avoid dependency cycles in callbacks
-    const directionRef = useRef<'next' | 'prev'>('next')
+        observer.observe(containerRef.current)
+        updateSize() // Initial call
 
-    // Stable flip handler
-    const handleFlip = useCallback((dir: 'next' | 'prev') => {
-        directionRef.current = dir
-        setFlipDirection(dir)
-        setIsFlipping(true)
+        return () => observer.disconnect()
+    }, [isFullscreen]) // Re-calc when fullscreen toggles
+
+    const onFlip = useCallback((e: any) => {
+        setCurrentPageIndex(e.data) // data contains the new page index
     }, [])
 
-    const onMidFlip = useCallback(() => {
-        const dir = directionRef.current
-        setCurrentPage(prev => dir === 'next' ? prev + 1 : prev - 1)
+    // Controls
+    const nextFlip = useCallback(() => {
+        if (flipBookRef.current) flipBookRef.current.pageFlip().flipNext()
     }, [])
 
-    const onRest = useCallback(() => {
-        setIsFlipping(false)
+    const prevFlip = useCallback(() => {
+        if (flipBookRef.current) flipBookRef.current.pageFlip().flipPrev()
     }, [])
 
-    // Stable state ref for bounds checking in callbacks
-    const stateRef = useRef({ currentPage: 1, totalPages: 0 })
-    useEffect(() => { stateRef.current = { currentPage, totalPages } }, [currentPage, totalPages])
+    // Page list helper
+    const pages = Array.from({ length: numPages }, (_, i) => i + 1)
 
-    const handleFlipRequestStable = useCallback((dir: 'next' | 'prev') => {
-        const { currentPage, totalPages } = stateRef.current
-        if (dir === 'next' && currentPage >= totalPages) return false
-        if (dir === 'prev' && currentPage <= 1) return false
+    // Calculate rendering window
+    // Render current page, +/- 2 pages for smoothness, and maybe page 1 (cover) always?
+    // Page 1 is index 0.
+    const renderWindow = 5 // Increased window slightly
 
-        handleFlip(dir)
-        return true
-    }, [handleFlip])
+    // Helper to determine if a page should force render
+    const shouldRenderPage = (pageIndex: number) => {
+        // Always render cover (page 0)
+        if (pageIndex === 0) return true
 
-    const handlePageSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        const page = parseInt(inputPage)
-        if (page >= 1 && page <= totalPages && page !== currentPage) {
-            setCurrentPage(page)
-        } else {
-            setInputPage(currentPage.toString())
-        }
+        // Range check
+        const distance = Math.abs(pageIndex - currentPageIndex)
+        return distance <= renderWindow
     }
-
-    const [isFullscreen, setIsFullscreen] = useState(false)
-
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement)
-        }
-        document.addEventListener('fullscreenchange', handleFullscreenChange)
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
-    }, [])
-
-    const toggleFullscreen = () => {
-        if (!document.fullscreenElement && containerRef.current) {
-            containerRef.current.requestFullscreen().catch(err => console.error(err))
-        } else {
-            document.exitFullscreen()
-        }
-    }
-
-
-    // Old handleFlipRequest removed
 
     return (
         <div
             ref={containerRef}
             style={{
                 width: '100%',
-                // Adaptive height: Fullscreen gets 100vh. 
-                // Inline gets optimized Aspect Ratio + Max Height.
-                // This ensures tight fit on mobile (A4 ratio) and reasonable limit on Desktop.
-                height: isFullscreen ? '100vh' : 'auto',
-                aspectRatio: isFullscreen ? 'unset' : '0.71', // Mobile A4 fit
-                maxHeight: isFullscreen ? 'unset' : '85vh',   // Desktop limit
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                background: isFullscreen ? '#000' : 'transparent',
-                transition: 'all 0.3s ease',
-                position: 'relative' // For overlay adjustments if needed
+                position: 'relative',
+                background: isFullscreen ? '#1a1a1a' : 'transparent',
+                padding: isFullscreen ? '20px' : '0',
+                minHeight: '300px'
             }}
         >
-            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            {/* Loading / Cover State */}
+            {isLoading && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: containerSize.height || '400px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 20
+                }}>
+                    {coverImage ? (
+                        <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', justifyContent: 'center' }}>
+                            <img
+                                src={coverImage}
+                                alt="Cover"
+                                style={{
+                                    height: '100%',
+                                    objectFit: 'contain',
+                                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                                    borderRadius: '4px'
+                                }}
+                            />
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '20px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                background: 'rgba(0,0,0,0.6)',
+                                padding: '8px 16px',
+                                borderRadius: '20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                color: 'white',
+                                backdropFilter: 'blur(4px)'
+                            }}>
+                                <Loader2 size={16} className="animate-spin" />
+                                <span style={{ fontSize: '0.85rem' }}>Loading PDF...</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center">
+                            <Loader2 size={32} className="animate-spin text-red-500 mb-2" />
+                            <span className="text-gray-500">Loading Document...</span>
+                        </div>
+                    )}
+                </div>
+            )}
 
-            <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0, touchAction: 'pan-y' }}>
-                <Canvas shadows camera={{ position: [0, 0, 15], fov: 45 }}>
-                    <SceneContent
-                        canvasRef={canvasRef}
-                        isFlipping={isFlipping}
-                        direction={flipDirection}
-                        onMidFlip={onMidFlip}
-                        onRest={onRest}
-                        pageVersion={contentReady}
-                        zoomLevel={zoomLevel}
-                        handleFlipRequest={handleFlipRequestStable}
-                    />
-                </Canvas>
-
-                {isLoading && (
-                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666' }}>
-                        <Loader2 size={32} className="animate-spin" />
-                        <span style={{ marginTop: 10, fontSize: '0.9rem' }}>Loading PDF...</span>
-                    </div>
-                )}
-            </div>
+            {/* FlipBook */}
+            {!isLoading && pdf && containerSize.width > 0 && (
+                <div style={{ boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+                    {/* @ts-ignore */}
+                    <HTMLFlipBook
+                        key={`${usePortrait}-${isFullscreen}`}
+                        width={containerSize.width / (usePortrait ? 1 : 2)}
+                        height={containerSize.height}
+                        size="fixed"
+                        minWidth={300}
+                        maxWidth={1000}
+                        minHeight={400}
+                        maxHeight={1533}
+                        maxShadowOpacity={0.5}
+                        showCover={true}
+                        mobileScrollSupport={true}
+                        usePortrait={usePortrait}
+                        startPage={0}
+                        className="demo-book"
+                        style={{ margin: '0 auto' }}
+                        ref={flipBookRef}
+                        flippingTime={1000}
+                        useMouseEvents={true}
+                        swipeDistance={30}
+                        onFlip={onFlip}
+                    >
+                        {pages.map((pageNum, index) => (
+                            <Page
+                                key={pageNum}
+                                number={pageNum}
+                                pdf={pdf}
+                                scale={1.2}
+                                shouldRender={shouldRenderPage(index)}
+                            />
+                        ))}
+                    </HTMLFlipBook>
+                </div>
+            )}
 
             {/* Controls */}
             <div style={{
@@ -407,46 +393,32 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
                 backdropFilter: 'blur(10px)',
                 borderRadius: '30px',
                 border: '1px solid rgba(255,255,255,0.1)',
-                marginTop: '10px', maxWidth: '95vw', flexWrap: 'wrap', justifyContent: 'center'
+                marginTop: '20px',
+                maxWidth: '95vw',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                zIndex: 30
             }}>
-                {/* Navigation */}
                 <button
-                    onClick={() => handleFlipRequestStable('prev')}
-                    disabled={currentPage <= 1 || isFlipping}
-                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', opacity: currentPage <= 1 ? 0.3 : 1 }}
+                    onClick={prevFlip}
+                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}
                 >
                     <ChevronLeft size={20} />
                 </button>
 
-                {/* Page Input */}
-                <form onSubmit={handlePageSubmit} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <input
-                        type="text"
-                        value={inputPage}
-                        onChange={(e) => setInputPage(e.target.value)}
-                        style={{ width: '40px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', textAlign: 'center', padding: '4px' }}
-                    />
-                    <span style={{ color: '#ccc', fontSize: '0.9rem' }}>/ {totalPages}</span>
-                </form>
+                <div style={{ color: '#ccc', fontSize: '0.9rem' }}>
+                    {currentPageIndex + 1} / {numPages}
+                </div>
 
                 <button
-                    onClick={() => handleFlipRequestStable('next')}
-                    disabled={currentPage >= totalPages || isFlipping}
-                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', opacity: currentPage >= totalPages ? 0.3 : 1 }}
+                    onClick={nextFlip}
+                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}
                 >
                     <ChevronRight size={20} />
                 </button>
 
                 <div style={{ width: '1px', height: '16px', background: '#444' }} />
 
-                {/* Zoom */}
-                <button onClick={() => setZoomLevel(z => Math.max(z - 0.2, 0.5))} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer' }}><ZoomOut size={18} /></button>
-                <button onClick={() => setZoomLevel(1)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', minWidth: '40px' }}>{Math.round(zoomLevel * 100)}%</button>
-                <button onClick={() => setZoomLevel(z => Math.min(z + 0.2, 3))} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer' }}><ZoomIn size={18} /></button>
-
-                <div style={{ width: '1px', height: '16px', background: '#444' }} />
-
-                {/* Extras */}
                 <button onClick={toggleFullscreen} title="Fullscreen" style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer' }}>
                     <Maximize size={18} />
                 </button>
@@ -454,6 +426,7 @@ export function PDFFlipbook({ url }: PDFFlipbookProps) {
                     <Download size={18} />
                 </a>
             </div>
+
             <style>{`
                 .animate-spin { animation: spin 1s linear infinite; }
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

@@ -98,8 +98,8 @@ function downloadFile($type, $filename)
     header('Content-Type: ' . $mimeType);
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     header('Content-Length: ' . $filesize);
-    header('Cache-Control: no-cache, must-revalidate');
-    header('Pragma: public');
+    header('Cache-Control: public, max-age=31536000, immutable');
+    // header('Pragma: public'); // Not needed with Cache-Control
 
     // Output file
     readfile($filepath);

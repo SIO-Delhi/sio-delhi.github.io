@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { API_BASE } from '../lib/api'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
 import { Calendar, User, ChevronLeft, ChevronRight, Volume2, VolumeX, Mail, Instagram } from 'lucide-react'
@@ -511,9 +512,13 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
 
                 // PDF Block
                 if (block.type === 'pdf' && block.pdfUrl) {
+                    const fullPdfUrl = block.pdfUrl.startsWith('http')
+                        ? block.pdfUrl
+                        : `${API_BASE}/uploads/pdfs/${block.pdfUrl}`
+
                     return (
                         <div key={index} style={{ margin: '40px 0' }}>
-                            <PDFFlipbook url={block.pdfUrl} />
+                            <PDFFlipbook url={fullPdfUrl} />
                         </div>
                     )
                 }

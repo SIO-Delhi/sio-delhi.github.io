@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
+import { API_BASE } from '../lib/api'
 import { initiatives } from '../data/initiatives'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
@@ -148,7 +149,13 @@ export function InitiativeDetail() {
                 {/* PDF Flipbook (if PDF attached) */}
                 {'pdfUrl' in initiative && initiative.pdfUrl && (
                     <div style={{ marginBottom: '40px' }}>
-                        <PDFFlipbook url={initiative.pdfUrl} />
+                        <PDFFlipbook
+                            url={initiative.pdfUrl.startsWith('http')
+                                ? initiative.pdfUrl
+                                : `${API_BASE}/uploads/pdfs/${initiative.pdfUrl}`
+                            }
+                            coverImage={initiative.image}
+                        />
                     </div>
                 )}
 
