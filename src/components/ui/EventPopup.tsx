@@ -175,21 +175,19 @@ export function EventPopup() {
 
                 {/* Action Button - Shiny style like navbar */}
                 {popup.buttonText && (
-                    <div
-                        className="shiny-button-container"
-                        style={{ animation: 'fadeIn 0.4s ease 0.2s both' }}
-                    >
+                    <div style={{ animation: 'fadeIn 0.4s ease 0.2s both' }}>
                         <a
                             href={popup.buttonLink || '#'}
                             target={popup.buttonLink?.startsWith('http') ? '_blank' : '_self'}
                             rel="noopener noreferrer"
-                            className="shiny-button"
+                            className="popup-button"
                             style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 padding: '14px 32px',
                                 color: '#efc676',
+                                border: '1px solid rgba(239,198,118,0.95)',
                                 borderRadius: '100px',
                                 fontSize: '1rem',
                                 fontWeight: 600,
@@ -209,7 +207,7 @@ export function EventPopup() {
                 )}
             </div>
 
-            {/* Animation Keyframes */}
+            {/* Animation Keyframes + popup button subtle gloss */}
             <style>
                 {`
                     @keyframes popupEnter {
@@ -232,6 +230,23 @@ export function EventPopup() {
                             transform: scale(1);
                         }
                     }
+
+                    /* Subtle gloss for the popup button - much gentler than the global shiny style */
+                    .popup-button { position: relative; overflow: hidden; display: inline-block; }
+                    .popup-button::before {
+                        content: '';
+                        position: absolute;
+                        left: 0;
+                        right: 0;
+                        top: 0;
+                        height: 52%;
+                        background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03));
+                        pointer-events: none;
+                        opacity: 1;
+                        transform-origin: center;
+                        transition: opacity 220ms ease, transform 350ms ease;
+                    }
+                    .popup-button:hover::before { opacity: 1; transform: translateY(-4%); }
                 `}
             </style>
         </div>
