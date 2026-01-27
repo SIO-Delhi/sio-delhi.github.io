@@ -7,6 +7,7 @@ import { useContent } from '../../context/ContentContext'
 
 import siodelLogo from '../../assets/logo.svg'
 import donateQr from '../../assets/qr-code.svg'
+import { ShinyButton } from '../ui/ShinyButton'
 
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
@@ -283,29 +284,16 @@ export function Navbar() {
                     {!isMobile && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             {/* Shiny Get in touch Button */}
-                            <div className="shiny-button-container">
-                                <a
-                                    href="#contact"
-                                    className="shiny-button"
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        scrollToSection('#contact')
-                                    }}
-                                    style={{
-                                        display: 'inline-block',
-                                        padding: '12px 24px',
-                                        borderRadius: '100px',
-                                        color: '#efc676', // Always white because the button is dark
-                                        fontSize: '14px',
-                                        fontWeight: 400,
-                                        transition: 'all 0.3s ease',
-                                        cursor: 'pointer',
-                                        textDecoration: 'none',
-                                    }}
-                                >
-                                    Get in touch
-                                </a>
-                            </div>
+                            <ShinyButton
+                                href="#contact"
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    scrollToSection('#contact')
+                                }}
+                                style={{ color: '#efc676' }}
+                            >
+                                Get in touch
+                            </ShinyButton>
 
                             {/* Donation Button (Replacing Theme Toggle) */}
                             <button
@@ -406,63 +394,30 @@ export function Navbar() {
                                 ))}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', width: '100%' }}>
                                     {/* Get in touch Button */}
-                                    <div className="shiny-button-container" style={{ width: '100%' }}>
-                                        <a
-                                            href="#contact"
-                                            className="shiny-button"
-                                            onClick={(e) => {
-                                                e.preventDefault()
-                                                scrollToSection('#contact')
-                                                setIsOpen(false)
-                                            }}
-                                            style={{
-                                                display: 'flex', // Changed to flex for centering
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                padding: '14px 24px',
-                                                borderRadius: '12px', // Slightly less rounded for mobile stack look? No, keep it consistent.
-                                                color: '#efc676',
-                                                fontSize: '16px',
-                                                fontWeight: 500,
-                                                transition: 'all 0.3s ease',
-                                                cursor: 'pointer',
-                                                textDecoration: 'none',
-                                                width: '100%',
-                                                textAlign: 'center'
-                                            }}
-                                        >
-                                            Get in touch
-                                        </a>
-                                    </div>
+                                    <ShinyButton
+                                        href="#contact"
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            scrollToSection('#contact')
+                                            setIsOpen(false)
+                                        }}
+                                        style={{ color: '#efc676' }}
+                                        containerClassName="w-full"
+                                    >
+                                        Get in touch
+                                    </ShinyButton>
 
                                     {/* Support Us Button */}
-                                    <div className="shiny-button-container" style={{ width: '100%' }}>
-                                        <button
-                                            onClick={() => {
-                                                setIsOpen(false)
-                                                setShowDonation(true)
-                                            }}
-                                            className="shiny-button"
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                padding: '14px 24px',
-                                                borderRadius: '12px',
-                                                color: '#ff3b3b',
-                                                fontSize: '16px',
-                                                fontWeight: 500,
-                                                transition: 'all 0.3s ease',
-                                                cursor: 'pointer',
-                                                width: '100%',
-                                                textAlign: 'center',
-                                                border: 'none',
-                                                background: 'inherit'
-                                            }}
-                                        >
-                                            Support Us
-                                        </button>
-                                    </div>
+                                    <ShinyButton
+                                        onClick={() => {
+                                            setIsOpen(false)
+                                            setShowDonation(true)
+                                        }}
+                                        style={{ color: '#ff3b3b' }}
+                                        containerClassName="w-full"
+                                    >
+                                        Support Us
+                                    </ShinyButton>
 
                                 </div>
                             </ul>

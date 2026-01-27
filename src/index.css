@@ -767,7 +767,7 @@ section {
   position: absolute;
   inset: 1px;
   border-radius: 100px;
-  background: rgba(10, 10, 10, 0.6);
+  background: rgba(20, 20, 20, 0.4);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
