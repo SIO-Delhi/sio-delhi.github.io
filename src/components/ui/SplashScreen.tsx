@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import gsap from 'gsap'
 import logoImage from '../../assets/logo.svg'
-import pngEggImage from '../../assets/pngegg.png'
+import pngEggImage from '../../assets/pngegg.webp'
 import { useContent } from '../../context/ContentContext'
 
 export function SplashScreen() {
@@ -12,7 +12,27 @@ export function SplashScreen() {
     // Check if splash was already seen in this tab session
     const alreadySeen = typeof window !== 'undefined' && sessionStorage.getItem('sio_splash_seen') === 'true'
     const [isCollapsed, setIsCollapsed] = useState(alreadySeen)
+    const [isAssetsLoaded, setIsAssetsLoaded] = useState(false)
     const [scrollProgress, setScrollProgress] = useState(0)
+
+    // Preload Images
+    useEffect(() => {
+        const loadImages = async () => {
+            const images = [logoImage, pngEggImage]
+            const promises = images.map(src => {
+                return new Promise((resolve) => {
+                    const img = new Image()
+                    img.src = src
+                    img.onload = resolve
+                    img.onerror = resolve
+                })
+            })
+            await Promise.all(promises)
+            // Small buffer to ensure rendering
+            setTimeout(() => setIsAssetsLoaded(true), 100)
+        }
+        loadImages()
+    }, [])
 
     // Refs for Splash Elements
     const splashContainerRef = useRef<HTMLDivElement>(null)
@@ -113,7 +133,7 @@ export function SplashScreen() {
                         }}
                     />
 
-                    {/* Content Container */}
+                    {/* Content Container - Only show when assets loaded */}
                     <div
                         ref={splashContentRef}
                         style={{
@@ -124,11 +144,12 @@ export function SplashScreen() {
                             alignItems: 'center',
                             textAlign: 'center',
                             gap: 0,
-                            // Layout Grouping Only (No Visual Card)
                             padding: '1rem',
                             maxWidth: 'clamp(300px, 90vw, 700px)',
                             width: '100%',
                             fontFamily: '"DM Sans", sans-serif',
+                            opacity: isAssetsLoaded ? 1 : 0,
+                            transition: 'opacity 0.6s ease-out'
                         }}
                     >
                         {/* Decorative Bismillah/Calligraphy */}
@@ -160,7 +181,7 @@ export function SplashScreen() {
                         {/* Mission Statement */}
                         <p
                             style={{
-                                color: 'rgba(255, 255, 255, 0.8)',
+                                color: '#fdedcb', // Updated to Cream
                                 fontSize: 'clamp(0.9rem, 3.5vw, 1.2rem)',
                                 lineHeight: 1.5,
                                 fontWeight: 300,
@@ -170,9 +191,9 @@ export function SplashScreen() {
                             }}
                         >
                             The mission of the <span style={{ color: '#ff6b6b', fontWeight: 500 }}>Students Islamic Organisation of India (SIO)</span> is to{' '}
-                            "<span style={{ color: '#fdedcb', fontWeight: 400 }}>prepare the students and youth</span> for the{' '}
+                            "<span style={{ color: '#fdedcb', fontWeight: 500 }}>prepare the students and youth</span> for the{' '}
                             <span style={{ color: '#ff6b6b', fontWeight: 500 }}>reconstruction of the society</span> in the light of{' '}
-                            <span style={{ color: '#fdedcb', fontWeight: 400 }}>Divine Guidance</span>."
+                            <span style={{ color: '#fdedcb', fontWeight: 500 }}>Divine Guidance</span>."
                         </p>
 
                         {/* Shiny Start Exploring Button */}
@@ -188,12 +209,12 @@ export function SplashScreen() {
                                 style={{
                                     position: 'relative',
                                     padding: 'clamp(12px, 2vh, 14px) clamp(24px, 5vw, 36px)',
-                                    background: 'rgba(255, 255, 255, 0.08)',
+                                    background: 'rgba(253, 237, 203, 0.08)', // Hint of cream in bg
                                     backdropFilter: 'blur(12px)',
                                     WebkitBackdropFilter: 'blur(12px)',
-                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    border: '1px solid rgba(253, 237, 203, 0.2)', // Cream border
                                     borderRadius: 100,
-                                    color: 'rgba(255, 255, 255, 0.95)',
+                                    color: '#fdedcb', // Cream text
                                     fontSize: 'clamp(0.85rem, 3vw, 1rem)',
                                     fontWeight: 500,
                                     letterSpacing: '0.15em',
@@ -204,12 +225,12 @@ export function SplashScreen() {
                                     whiteSpace: 'nowrap',
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'
-                                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
+                                    e.currentTarget.style.background = 'rgba(253, 237, 203, 0.12)'
+                                    e.currentTarget.style.borderColor = 'rgba(253, 237, 203, 0.3)'
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
-                                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                                    e.currentTarget.style.background = 'rgba(253, 237, 203, 0.08)'
+                                    e.currentTarget.style.borderColor = 'rgba(253, 237, 203, 0.2)'
                                 }}
                             >
                                 Start Exploring
