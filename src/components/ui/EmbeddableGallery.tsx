@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react'
-import { ZoomIn, X, Loader2 } from 'lucide-react'
+import { ZoomIn, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Lazy loading image component with Intersection Observer
 function LazyImage({ src, alt, onClick, isDark }: { src: string; alt: string; onClick: () => void; isDark: boolean }) {
@@ -73,9 +73,45 @@ function LazyImage({ src, alt, onClick, isDark }: { src: string; alt: string; on
 }
 
 // Lightbox component with loading state
-function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
+// Lightbox component with loading state
+function LightboxImage({
+    src,
+    onClose,
+    onNext,
+    onPrev,
+    hasNext,
+    hasPrev
+}: {
+    src: string;
+    onClose: () => void;
+    onNext?: () => void;
+    onPrev?: () => void;
+    hasNext?: boolean;
+    hasPrev?: boolean;
+}) {
     const [isLoaded, setIsLoaded] = useState(false)
     const [isDownloading, setIsDownloading] = useState(false)
+
+    // Reset loaded state when src changes
+    useEffect(() => {
+        setIsLoaded(false)
+    }, [src])
+
+    // Keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight' && hasNext && onNext) {
+                onNext()
+            } else if (e.key === 'ArrowLeft' && hasPrev && onPrev) {
+                onPrev()
+            } else if (e.key === 'Escape') {
+                onClose()
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [hasNext, hasPrev, onNext, onPrev, onClose])
 
     // Download image directly without redirecting
     const handleDownload = async (e: React.MouseEvent) => {
@@ -132,29 +168,32 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
             onClick={onClose}
             onContextMenu={(e) => e.preventDefault()}
         >
-            <button
-                onClick={onClose}
-                style={{
-                    position: 'absolute',
-                    top: '20px',
-                    right: '20px',
-                    background: 'rgba(255,255,255,0.1)',
-                    border: 'none',
-                    color: 'white',
-                    cursor: 'pointer',
-                    padding: '12px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'background 0.2s',
-                    zIndex: 10
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = '#ff3b3b'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-            >
-                <X size={24} />
-            </button>
+
+
+            {/* Navigation Buttons */}
+            {hasPrev && (
+                <button
+                    className="lightbox-nav-btn prev"
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onPrev?.()
+                    }}
+                >
+                    <ChevronLeft size={32} />
+                </button>
+            )}
+
+            {hasNext && (
+                <button
+                    className="lightbox-nav-btn next"
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onNext?.()
+                    }}
+                >
+                    <ChevronRight size={32} />
+                </button>
+            )}
 
             {/* Loading spinner */}
             {!isLoaded && (
@@ -171,6 +210,7 @@ function LightboxImage({ src, onClose }: { src: string; onClose: () => void }) {
             )}
 
             <img
+                key={src} // Force re-render on src change for animation
                 src={src}
                 alt="Full size"
                 draggable={false}
@@ -312,12 +352,29 @@ export function EmbeddableGallery({ imagesRaw, isDark }: EmbeddableGalleryProps)
                 </div>
             ))}
 
-            {selectedImage && (
-                <LightboxImage
-                    src={selectedImage}
-                    onClose={() => setSelectedImage(null)}
-                />
-            )}
+            {selectedImage && (() => {
+                const allImages = gallerySections.flatMap(s => s.images)
+                const currentIndex = allImages.indexOf(selectedImage)
+
+                return (
+                    <LightboxImage
+                        src={selectedImage}
+                        onClose={() => setSelectedImage(null)}
+                        hasNext={currentIndex < allImages.length - 1}
+                        hasPrev={currentIndex > 0}
+                        onNext={() => {
+                            if (currentIndex < allImages.length - 1) {
+                                setSelectedImage(allImages[currentIndex + 1])
+                            }
+                        }}
+                        onPrev={() => {
+                            if (currentIndex > 0) {
+                                setSelectedImage(allImages[currentIndex - 1])
+                            }
+                        }}
+                    />
+                )
+            })()}
 
             <style>{`
                 @keyframes spin {
@@ -330,6 +387,51 @@ export function EmbeddableGallery({ imagesRaw, isDark }: EmbeddableGalleryProps)
                     column-count: 4;
                     column-gap: 16px;
                 }
+
+                /* Lightbox Navigation Buttons */
+                .lightbox-nav-btn {
+                    position: absolute;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: rgba(255,255,255,0.1);
+                    border: none;
+                    color: white;
+                    cursor: pointer;
+                    padding: 16px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s ease;
+                    z-index: 10;
+                }
+                .lightbox-nav-btn:hover {
+                    background: rgba(255,255,255,0.2);
+                }
+                .lightbox-nav-btn.prev {
+                    left: 20px;
+                }
+                .lightbox-nav-btn.next {
+                    right: 20px;
+                }
+
+                @media (max-width: 768px) {
+                    .lightbox-nav-btn {
+                        padding: 10px;
+                    }
+                    .lightbox-nav-btn svg {
+                        width: 24px;
+                        height: 24px;
+                    }
+                    .lightbox-nav-btn.prev {
+                        left: 10px;
+                    }
+                    .lightbox-nav-btn.next {
+                        right: 10px;
+                    }
+                }
+
+
 
                 .gallery-item {
                     break-inside: avoid;
