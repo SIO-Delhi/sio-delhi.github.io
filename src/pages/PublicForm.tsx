@@ -225,6 +225,7 @@ export function PublicForm() {
                         onChange={e => handleChange(field.id, e.target.value)}
                         placeholder={field.placeholder || ''}
                         style={baseInputStyle}
+                        dir="auto"
                     />
                 )
 
@@ -235,6 +236,7 @@ export function PublicForm() {
                         onChange={e => handleChange(field.id, e.target.value)}
                         placeholder={field.placeholder || ''}
                         style={{ ...baseInputStyle, minHeight: '120px', resize: 'vertical', fontFamily: 'inherit' }}
+                        dir="auto"
                     />
                 )
 
@@ -246,6 +248,7 @@ export function PublicForm() {
                         onChange={e => handleChange(field.id, e.target.value)}
                         placeholder={field.placeholder || ''}
                         style={baseInputStyle}
+                        dir="auto"
                     />
                 )
 
@@ -265,6 +268,7 @@ export function PublicForm() {
                         value={(values[field.id] as string) || ''}
                         onChange={e => handleChange(field.id, e.target.value)}
                         style={{ ...baseInputStyle, cursor: 'pointer' }}
+                        dir="auto"
                     >
                         <option value="">{field.placeholder || 'Select an option'}</option>
                         {field.options?.map((opt, idx) => (

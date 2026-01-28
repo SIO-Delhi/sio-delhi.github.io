@@ -8,7 +8,50 @@ import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Highlight from '@tiptap/extension-highlight'
 import { Extension } from '@tiptap/core'
-import { Bold, Italic, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify, Heading1, Heading2, List, Highlighter } from 'lucide-react'
+import Link from '@tiptap/extension-link'
+import { Bold, Italic, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify, Heading1, Heading2, List, Highlighter, PilcrowLeft, PilcrowRight, Link as LinkIcon } from 'lucide-react'
+
+// --- Custom Text Direction Extension ---
+export const TextDirection = Extension.create({
+    name: 'textDirection',
+    addOptions() {
+        return {
+            types: ['heading', 'paragraph'],
+        }
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: {
+                    dir: {
+                        default: null,
+                        parseHTML: element => element.getAttribute('dir'),
+                        renderHTML: attributes => {
+                            if (!attributes.dir) {
+                                return {}
+                            }
+                            return {
+                                dir: attributes.dir,
+                            }
+                        },
+                    },
+                },
+            },
+        ]
+    },
+    addCommands() {
+        return {
+            setTextDirection: (direction: 'ltr' | 'rtl' | 'auto') => ({ commands }: any) => {
+                return this.options.types.every((type: string) => commands.updateAttributes(type, { dir: direction }))
+            },
+            unsetTextDirection: () => ({ commands }: any) => {
+                return this.options.types.every((type: string) => commands.resetAttributes(type, 'dir'))
+            },
+        }
+    },
+})
+
 
 // --- Custom Font Size Extension ---
 export const FontSize = Extension.create({
@@ -94,10 +137,10 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
             flexWrap: 'wrap', alignItems: 'center'
         }}>
             {/* Text Formatting */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))}><Bold size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))}><Italic size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))}><UnderlineIcon size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHighlight().run() }} style={buttonStyle(editor.isActive('highlight'))}><Highlighter size={16} /></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))} title="Bold"><Bold size={16} /></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))} title="Italic"><Italic size={16} /></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))} title="Underline"><UnderlineIcon size={16} /></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHighlight().run() }} style={buttonStyle(editor.isActive('highlight'))} title="Highlight"><Highlighter size={16} /></button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
@@ -138,25 +181,70 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Alignment */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))}><AlignLeft size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))}><AlignCenter size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))}><AlignRight size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('justify').run() }} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))}><AlignJustify size={16} /></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))} title="Align Left"><AlignLeft size={16} /></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))} title="Align Center"><AlignCenter size={16} /></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))} title="Align Right"><AlignRight size={16} /></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('justify').run() }} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))} title="Justify"><AlignJustify size={16} /></button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
+            {/* Link */}
+            <button type="button" onMouseDown={(e) => {
+                e.preventDefault()
+                const previousUrl = editor.getAttributes('link').href
+                const url = window.prompt('URL', previousUrl)
+
+                if (url === null) return
+                if (url === '') {
+                    editor.chain().focus().extendMarkRange('link').unsetLink().run()
+                    return
+                }
+
+                let finalUrl = url
+                if (!/^https?:\/\//i.test(url) && !/^\//.test(url) && !/^#/.test(url) && !/^mailto:/i.test(url)) {
+                    finalUrl = 'https://' + url
+                }
+
+                editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
+            }} style={buttonStyle(editor.isActive('link'))} title="Link">
+                <LinkIcon size={16} />
+            </button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+
+            {/* Text Direction */}
+            <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('ltr').run() }}
+                style={buttonStyle(editor.isActive({ dir: 'ltr' }))}
+                title="Left-to-Right"
+            >
+                <PilcrowLeft size={16} />
+            </button>
+            <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('rtl').run() }}
+                style={buttonStyle(editor.isActive({ dir: 'rtl' }))}
+                title="Right-to-Left"
+            >
+                <PilcrowRight size={16} />
+            </button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+
+
             {/* Headings */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))} title="H1">
                 <Heading1 size={16} />
             </button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))} title="H2">
                 <Heading2 size={16} />
             </button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Lists */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))}><List size={16} /></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))} title="Bullet List"><List size={16} /></button>
         </div>
     )
 }
@@ -179,7 +267,9 @@ export function RichTextEditor({ value, onChange, placeholder, minHeight = '150p
             Highlight.configure({
                 multicolor: true,
             }),
-            FontSize
+            FontSize,
+            TextDirection,
+            Link.configure({ openOnClick: false })
         ],
         content: value,
         onUpdate: ({ editor }) => {

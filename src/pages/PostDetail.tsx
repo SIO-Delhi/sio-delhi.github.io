@@ -9,6 +9,19 @@ import { SectionCard } from '../components/ui/SectionCard'
 import { PostSkeleton } from '../components/ui/PostSkeleton'
 import { ViewGalleryButton } from '../components/ui/ViewGalleryButton'
 import { EmbeddableGallery } from '../components/ui/EmbeddableGallery'
+
+// --- Helper: Detect RTL Text (Urdu/Arabic) ---
+const isRtl = (text: string) => {
+    if (!text) return false;
+    // Range includes Arabic, Persian, Urdu, etc.
+    // \u0600-\u06FF: Arabic
+    // \u0750-\u077F: Arabic Supplement
+    // \u08A0-\u08FF: Arabic Extended-A
+    // \uFB50-\uFDFF: Arabic Presentation Forms-A
+    // \uFE70-\uFEFF: Arabic Presentation Forms-B
+    const rtlRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    return rtlRegex.test(text);
+};
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 // --- ContentBlockRenderer: Parses and renders enhanced content blocks ---
 interface ParsedBlock {
@@ -372,11 +385,58 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
     return (
         <>
             {blocks.map((block, index) => {
+                // Detect RTL for text-based blocks
+                const isTextRtl = (block.type === 'text' || block.type === 'legacy') ? isRtl(block.content) : false;
+
                 const alignStyle = {
-                    textAlign: block.alignment as 'left' | 'center' | 'right',
-                    justifyContent: block.alignment === 'center' ? 'center' : (block.alignment === 'right' ? 'flex-end' : 'flex-start')
+                    textAlign: (block.alignment as 'left' | 'center' | 'right') || (isTextRtl ? 'right' : 'left'),
+                    justifyContent: block.alignment === 'center' ? 'center' : ((block.alignment === 'right' || isTextRtl) ? 'flex-end' : 'flex-start'),
+                    direction: (isTextRtl ? 'rtl' : 'ltr') as 'rtl' | 'ltr'
                 }
 
+                // Text Block (and Legacy)
+                if (block.type === 'text' || block.type === 'legacy') {
+                    // Check if content is just a raw URL or contains link tags?
+                    // Tiptap outputs <a> tags. We need to ensure they are styled.
+                    // We can add a global style or a scoped style.
+
+                    return (
+                        <div key={index} className="siodel-block block-text" style={{
+                            marginBottom: '24px',
+                            ...alignStyle
+                        }}>
+                            {/* Style for links within this block */}
+                            <style>{`
+                                .siodel-block a {
+                                    color: ${isDark ? '#ff8080' : '#d93025'};
+                                    text-decoration: underline;
+                                    text-underline-offset: 4px;
+                                }
+                                .siodel-block a:hover {
+                                    opacity: 0.8;
+                                }
+                            `}</style>
+                            {block.subtitle && (
+                                <h3 style={{
+                                    color: block.subtitleColor || '#ff3b3b',
+                                    fontSize: '1.25rem',
+                                    fontWeight: 600,
+                                    margin: '0 0 12px 0'
+                                }}>
+                                    {block.subtitle}
+                                </h3>
+                            )}
+                            <div
+                                style={{
+                                    fontSize: '1.1rem',
+                                    lineHeight: 1.8,
+                                    color: isDark ? '#eee' : '#333'
+                                }}
+                                dangerouslySetInnerHTML={{ __html: block.content }}
+                            />
+                        </div>
+                    )
+                }
                 // Video Block
                 if (block.type === 'video') {
                     // Smart Duplicate Title Check
@@ -414,53 +474,10 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                             isDark={isDark}
                         />
                     )
-
                 }
 
 
 
-                // Text Block with Glass Card
-                if (block.type === 'text') {
-                    return (
-                        <div
-                            key={index}
-                            style={{
-                                margin: '24px 0',
-                                padding: '24px 28px',
-                                borderRadius: '16px',
-                                background: isDark
-                                    ? 'linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(20,20,20,0.95) 100%)'
-                                    : 'linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,255,255,0.95) 100%)',
-                                backdropFilter: 'blur(12px)',
-                                border: isDark ? '1px solid rgba(255,59,59,0.15)' : '1px solid rgba(255,59,59,0.1)',
-                                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(255,59,59,0.05)',
-                                ...alignStyle
-                            }}
-                        >
-                            {block.subtitle && (
-                                <h3 style={{
-                                    fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px',
-                                    color: block.subtitleColor || '#ff3b3b',
-                                    borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                                    paddingBottom: '8px'
-                                }}>
-                                    {block.subtitle}
-                                </h3>
-                            )}
-                            <div
-                                className="rich-text-content"
-                                dangerouslySetInnerHTML={{ __html: block.content }}
-                                style={{
-                                    textAlign: alignStyle.textAlign,
-                                    overflowWrap: 'anywhere',
-                                    wordBreak: 'break-word',
-                                    fontSize: '1.1rem',
-                                    lineHeight: 1.6
-                                }}
-                            />
-                        </div>
-                    )
-                }
 
                 // Image Block (single or carousel)
                 if (block.type === 'image') {
@@ -593,10 +610,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                     )
                 }
 
-                // Legacy fallback
-                if (block.type === 'legacy') {
-                    return <div key={index} dangerouslySetInnerHTML={{ __html: block.content }} />
-                }
+
 
                 return null
             })
@@ -1088,14 +1102,16 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
     if (isSubsectionChild) {
         return (
             <>
-                <h1 style={{
+                <h1 className={`${isRtl(post.title || '') ? 'font-urdu' : ''}`} style={{
                     fontSize: 'clamp(2rem, 4vw, 3rem)',
                     fontWeight: 700,
                     color: isDark ? '#efc676' : '#111111',
                     marginBottom: '16px',
                     lineHeight: 1.1,
                     overflowWrap: 'anywhere',
-                    wordBreak: 'break-word'
+                    wordBreak: 'break-word',
+                    textAlign: isRtl(post.title || '') ? 'right' : 'left',
+                    direction: isRtl(post.title || '') ? 'rtl' : 'ltr'
                 }}>
                     {post.title}
                 </h1>
@@ -1147,7 +1163,7 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
     return (
         <>
             <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                <h1 style={{
+                <h1 className={`${isRtl(post.title || '') ? 'font-urdu' : ''}`} style={{
                     fontSize: 'clamp(2.5rem, 5vw, 4rem)',
                     fontWeight: 700,
                     color: isDark ? '#efc676' : '#111111',
@@ -1156,7 +1172,8 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     textAlign: 'center',
                     overflowWrap: 'anywhere',
                     wordBreak: 'break-word',
-                    maxWidth: '100%'
+                    maxWidth: '100%',
+                    direction: isRtl(post.title || '') ? 'rtl' : 'ltr'
                 }}>
                     {post.title}
                 </h1>
@@ -1406,14 +1423,16 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any;
 
                 {/* Name & Position */}
                 <div>
-                    <h1 style={{
+                    <h1 className={`${isRtl(post.title || '') ? 'font-urdu' : ''}`} style={{
                         fontSize: '1.75rem',
                         fontWeight: 700,
                         color: isDark ? '#efc676' : '#111111',
                         margin: '0 0 8px 0',
                         lineHeight: 1.1,
                         overflowWrap: 'anywhere',
-                        wordBreak: 'break-word'
+                        wordBreak: 'break-word',
+                        textAlign: 'center',
+                        direction: isRtl(post.title || '') ? 'rtl' : 'ltr'
                     }}>
                         {post.title}
                     </h1>
@@ -1474,12 +1493,13 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any;
                 {
                     post.content && (
                         <div
-                            className="leader-bio"
+                            className={`leader-bio ${isRtl(post.content || '') ? 'font-urdu' : ''}`}
                             style={{
                                 color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
                                 fontSize: '1.1rem',
                                 lineHeight: 1.4,
-                                textAlign: 'left'
+                                textAlign: isRtl(post.content || '') ? 'right' : 'left',
+                                direction: isRtl(post.content || '') ? 'rtl' : 'ltr'
                             }}
                         >
                             {/* We use ContentBlockRenderer but cheat by overriding styles via CSS if needed, 
@@ -1570,7 +1590,7 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
                 ))}
             </div>
 
-            <h1 style={{
+            <h1 className={`${isRtl(post.title || '') ? 'font-urdu' : ''}`} style={{
                 fontSize: 'clamp(2rem, 4vw, 3rem)',
                 fontWeight: 700,
                 color: isDark ? '#fdedcb' : '#111111',
@@ -1578,7 +1598,9 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
                 lineHeight: 1.2,
                 overflowWrap: 'anywhere',
                 wordBreak: 'break-word',
-                maxWidth: '100%'
+                maxWidth: '100%',
+                textAlign: isRtl(post.title || '') ? 'right' : 'left',
+                direction: isRtl(post.title || '') ? 'rtl' : 'ltr'
             }}>
                 {post.title}
             </h1>
@@ -1637,11 +1659,13 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDa
             {
                 post.content && post.layout !== 'gallery' && (
                     <div
-                        className="news-content"
+                        className={`news-content ${isRtl(post.content || '') ? 'font-urdu' : ''}`}
                         style={{
                             color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.15rem',
-                            lineHeight: 1.4
+                            lineHeight: 1.4,
+                            textAlign: isRtl(post.content || '') ? 'right' : 'left',
+                            direction: isRtl(post.content || '') ? 'rtl' : 'ltr'
                         }}
                     >
                         <ContentBlockRenderer content={post.content} isDark={isDark} />

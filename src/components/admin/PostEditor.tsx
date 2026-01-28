@@ -10,11 +10,12 @@ import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 
-import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Facebook, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
+import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Facebook, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link as LinkIcon, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, PilcrowLeft, PilcrowRight } from 'lucide-react'
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
+import Link from '@tiptap/extension-link'
 
 
 // --- Block Types & Interfaces ---
@@ -45,7 +46,7 @@ const ICON_OPTIONS = [
     { name: 'File', icon: FileIcon },
     { name: 'Folder', icon: Folder },
     { name: 'Book', icon: Book },
-    { name: 'Link', icon: Link },
+    { name: 'Link', icon: LinkIcon },
     { name: 'ExternalLink', icon: ExternalLink },
     { name: 'Download', icon: Download },
     { name: 'Globe', icon: Globe },
@@ -83,6 +84,47 @@ const ICON_OPTIONS = [
     { name: 'AlertTriangle', icon: AlertTriangle },
     { name: 'Info', icon: Info }
 ]
+
+// --- Custom Text Direction Extension ---
+export const TextDirection = Extension.create({
+    name: 'textDirection',
+    addOptions() {
+        return {
+            types: ['heading', 'paragraph'],
+        }
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: {
+                    dir: {
+                        default: null,
+                        parseHTML: element => element.getAttribute('dir'),
+                        renderHTML: attributes => {
+                            if (!attributes.dir) {
+                                return {}
+                            }
+                            return {
+                                dir: attributes.dir,
+                            }
+                        },
+                    },
+                },
+            },
+        ]
+    },
+    addCommands() {
+        return {
+            setTextDirection: (direction: 'ltr' | 'rtl' | 'auto') => ({ commands }: any) => {
+                return this.options.types.every((type: string) => commands.updateAttributes(type, { dir: direction }))
+            },
+            unsetTextDirection: () => ({ commands }: any) => {
+                return this.options.types.every((type: string) => commands.resetAttributes(type, 'dir'))
+            },
+        }
+    },
+})
 
 export const FontSize = Extension.create({
     name: 'fontSize',
@@ -167,9 +209,9 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
             flexWrap: 'wrap', alignItems: 'center'
         }}>
             {/* Text Formatting */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))}><Bold size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))}><Italic size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))}><UnderlineIcon size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))} title="Bold"><Bold size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))} title="Italic"><Italic size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))} title="Underline"><UnderlineIcon size={16} /></button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
@@ -209,27 +251,74 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
+            {/* Link */}
+            <button onMouseDown={(e) => {
+                e.preventDefault()
+                const previousUrl = editor.getAttributes('link').href
+                const url = window.prompt('URL', previousUrl)
+
+                // cancelled
+                if (url === null) {
+                    return
+                }
+
+                // empty
+                if (url === '') {
+                    editor.chain().focus().extendMarkRange('link').unsetLink().run()
+                    return
+                }
+
+                let finalUrl = url
+                if (!/^https?:\/\//i.test(url) && !/^\//.test(url) && !/^#/.test(url) && !/^mailto:/i.test(url)) {
+                    finalUrl = 'https://' + url
+                }
+
+                // update
+                editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
+            }} style={buttonStyle(editor.isActive('link'))} title="Link">
+                <LinkIcon size={16} />
+            </button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+
             {/* Alignment */}
-            {/* Alignment */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))}><AlignLeft size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))}><AlignCenter size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))}><AlignRight size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('justify').run() }} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))}><AlignJustify size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))} title="Align Left"><AlignLeft size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))} title="Align Center"><AlignCenter size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))} title="Align Right"><AlignRight size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('justify').run() }} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))} title="Justify"><AlignJustify size={16} /></button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+
+            {/* Text Direction */}
+            <button
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('ltr').run() }}
+                style={buttonStyle(editor.isActive({ dir: 'ltr' }))}
+                title="Left-to-Right"
+            >
+                <PilcrowLeft size={16} />
+            </button>
+            <button
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('rtl').run() }}
+                style={buttonStyle(editor.isActive({ dir: 'rtl' }))}
+                title="Right-to-Left"
+            >
+                <PilcrowRight size={16} />
+            </button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Headings - Kept for structure */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))}>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))} title="H1">
                 <Heading1 size={16} />
             </button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))}>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))} title="H2">
                 <Heading2 size={16} />
             </button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Lists */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))}><List size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))} title="Bullet List"><List size={16} /></button>
         </div>
     )
 }
@@ -335,7 +424,9 @@ const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange,
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             TextStyle,
             Color,
-            FontSize
+            FontSize,
+            TextDirection,
+            Link.configure({ openOnClick: false })
         ],
         content: initialContent,
         onUpdate: ({ editor }) => {
@@ -1006,7 +1097,9 @@ const CompositeBlockEditor = ({
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             TextStyle,
             Color,
-            FontSize
+            FontSize,
+            TextDirection,
+            Link.configure({ openOnClick: false })
         ],
         content: textContent || '<p>Add your text here...</p>',
         onUpdate: ({ editor }) => {

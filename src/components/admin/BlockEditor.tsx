@@ -6,13 +6,14 @@ import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 import { Extension } from '@tiptap/core'
+import Link from '@tiptap/extension-link'
 import { uploadImage, uploadPdf } from '../../lib/storage'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { ImageCropper } from './ImageCropper'
 import {
     Plus, X, FileText, Trash2, Loader2, Bold, Italic, Underline as UnderlineIcon,
     Heading1, Heading2, List, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify,
-    ImageIcon, Volume2, Palette, Layout
+    ImageIcon, Volume2, Palette, Layout, PilcrowLeft, PilcrowRight, Link as LinkIcon
 } from 'lucide-react'
 
 // --- Block Types & Interfaces ---
@@ -35,6 +36,47 @@ export interface EditorBlock {
 
 // Re-export for verbatimModuleSyntax compatibility
 export type { EditorBlock as EditorBlockInterface }
+
+// --- Custom Text Direction Extension ---
+export const TextDirection = Extension.create({
+    name: 'textDirection',
+    addOptions() {
+        return {
+            types: ['heading', 'paragraph'],
+        }
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: {
+                    dir: {
+                        default: null,
+                        parseHTML: element => element.getAttribute('dir'),
+                        renderHTML: attributes => {
+                            if (!attributes.dir) {
+                                return {}
+                            }
+                            return {
+                                dir: attributes.dir,
+                            }
+                        },
+                    },
+                },
+            },
+        ]
+    },
+    addCommands() {
+        return {
+            setTextDirection: (direction: 'ltr' | 'rtl' | 'auto') => ({ commands }: any) => {
+                return this.options.types.every((type: string) => commands.updateAttributes(type, { dir: direction }))
+            },
+            unsetTextDirection: () => ({ commands }: any) => {
+                return this.options.types.every((type: string) => commands.resetAttributes(type, 'dir'))
+            },
+        }
+    },
+})
 
 // FontSize Extension
 export const FontSize = Extension.create({
@@ -107,17 +149,17 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
             background: '#1a1a1a', borderRadius: '8px 8px 0 0', borderBottom: '1px solid #333',
             alignItems: 'center'
         }}>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))} title="Bold">
                 <Bold size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))} title="Italic">
                 <Italic size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))} title="Underline">
                 <UnderlineIcon size={14} />
             </button>
             <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-            
+
             {/* Font Size */}
             <select
                 onMouseDown={(e) => e.stopPropagation()}
@@ -135,9 +177,9 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
                 <option value="1.5rem">X-Large</option>
                 <option value="1.875rem">XX-Large</option>
             </select>
-            
+
             <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-            
+
             {/* Text Color */}
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
@@ -151,27 +193,72 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
                     title="Text Color"
                 />
             </div>
-            
+
             <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-            
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))}>
+
+            {/* Link */}
+            <button type="button" onMouseDown={(e) => {
+                e.preventDefault()
+                const previousUrl = editor.getAttributes('link').href
+                const url = window.prompt('URL', previousUrl)
+
+                if (url === null) return
+                if (url === '') {
+                    editor.chain().focus().extendMarkRange('link').unsetLink().run()
+                    return
+                }
+
+                let finalUrl = url
+                // If it doesn't start with http/https/mailto and is not a relative path (/ or #), prepend https://
+                if (!/^https?:\/\//i.test(url) && !/^\//.test(url) && !/^#/.test(url) && !/^mailto:/i.test(url)) {
+                    finalUrl = 'https://' + url
+                }
+
+                editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
+            }} style={buttonStyle(editor.isActive('link'))} title="Link">
+                <LinkIcon size={14} />
+            </button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
+
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))} title="H1">
                 <Heading1 size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))} title="H2">
                 <Heading2 size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))} title="Bullet List">
                 <List size={14} />
             </button>
             <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))} title="Align Left">
                 <AlignLeft size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))} title="Align Center">
                 <AlignCenter size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))} title="Align Right">
                 <AlignRight size={14} />
+            </button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
+
+            {/* Text Direction */}
+            <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('ltr').run() }}
+                style={buttonStyle(editor.isActive({ dir: 'ltr' }))}
+                title="Left-to-Right"
+            >
+                <PilcrowLeft size={14} />
+            </button>
+            <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('rtl').run() }}
+                style={buttonStyle(editor.isActive({ dir: 'rtl' }))}
+                title="Right-to-Left"
+            >
+                <PilcrowRight size={14} />
             </button>
         </div>
     )
@@ -185,7 +272,7 @@ const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange 
     onSubtitleChange?: (subtitle: string) => void
 }) => {
     const editor = useEditor({
-        extensions: [StarterKit, Underline, TextAlign.configure({ types: ['heading', 'paragraph'] }), TextStyle, Color, FontSize],
+        extensions: [StarterKit, Underline, TextAlign.configure({ types: ['heading', 'paragraph'] }), TextStyle, Color, FontSize, TextDirection, Link.configure({ openOnClick: false })],
         content: initialContent,
         onUpdate: ({ editor }) => onChange(editor.getHTML()),
         editorProps: { attributes: { class: 'prose prose-invert max-w-none focus:outline-none min-h-[100px]' } },
@@ -294,7 +381,7 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
                     onCropComplete={handleCropComplete}
                 />
             )}
-            
+
             {/* Carousel Toggle */}
             {onCarouselToggle && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', cursor: 'pointer', color: '#888', fontSize: '0.85rem' }}>
@@ -508,7 +595,9 @@ const CompositeBlockEditor = ({
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             TextStyle,
             Color,
-            FontSize
+            FontSize,
+            TextDirection,
+            Link.configure({ openOnClick: false })
         ],
         content: textContent || '<p>Add your text here...</p>',
         onUpdate: ({ editor }) => {
@@ -839,7 +928,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
         const newBlocks = [...blocks]
         const targetIndex = direction === 'up' ? index - 1 : index + 1
         if (targetIndex < 0 || targetIndex >= blocks.length) return
-        ;[newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]]
+            ;[newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]]
         onChange(newBlocks)
     }
 
@@ -980,7 +1069,7 @@ export function htmlToBlocks(html: string): EditorBlock[] {
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = html
     const blockElements = tempDiv.querySelectorAll('.siodel-block')
-    
+
     if (blockElements.length === 0) {
         // Legacy content - return as single text block
         if (html.trim()) {
@@ -1013,7 +1102,7 @@ export function htmlToBlocks(html: string): EditorBlock[] {
             try {
                 const imagesAttr = el.getAttribute('data-images')
                 if (imagesAttr) block.carouselImages = JSON.parse(decodeURIComponent(imagesAttr))
-            } catch {}
+            } catch { }
         } else if (type === 'pdf') {
             block.content = decodeURIComponent(el.getAttribute('data-pdf-url') || '')
         } else if (type === 'video') {
@@ -1028,7 +1117,7 @@ export function htmlToBlocks(html: string): EditorBlock[] {
             try {
                 const imagesAttr = el.getAttribute('data-images')
                 if (imagesAttr) block.carouselImages = JSON.parse(imagesAttr)
-            } catch {}
+            } catch { }
         }
 
         block.alignment = (el.getAttribute('data-align') as any) || undefined

@@ -1001,6 +1001,7 @@ export function FormBuilder() {
                                                 color: 'white', fontSize: '1.1rem', fontWeight: 500, outline: 'none',
                                                 boxSizing: 'border-box'
                                             }}
+                                            dir="auto"
                                         />
 
                                         {/* Placeholder Input */}
@@ -1013,6 +1014,7 @@ export function FormBuilder() {
                                                 border: 'none', color: '#71717a', fontSize: '0.9rem', outline: 'none',
                                                 marginTop: '8px', boxSizing: 'border-box'
                                             }}
+                                            dir="auto"
                                         />
 
                                         {/* Options for dropdown/checkbox/radio */}
@@ -1031,6 +1033,7 @@ export function FormBuilder() {
                                                                 border: '1px solid #27272a', borderRadius: '8px',
                                                                 color: 'white', fontSize: '0.9rem', outline: 'none'
                                                             }}
+                                                            dir="auto"
                                                         />
                                                         {field.options!.length > 1 && (
                                                             <button

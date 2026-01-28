@@ -197,9 +197,13 @@
 }
 
 /* Apply RTL direction and alignment only inside known content containers (prevents whole-site flip) */
+.post-content.font-urdu,
 .post-content .font-urdu,
+.section-card-shine.font-urdu,
 .section-card-shine .font-urdu,
+.subsection-grid.font-urdu,
 .subsection-grid .font-urdu,
+.subsection.font-urdu,
 .subsection .font-urdu {
   direction: rtl !important;
   text-align: right !important;
