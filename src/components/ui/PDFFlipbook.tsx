@@ -506,9 +506,30 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                 <button onClick={toggleFullscreen} title="Fullscreen" style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer' }}>
                     <Maximize size={18} />
                 </button>
-                <a href={url} download target="_blank" rel="noopener noreferrer" title="Download PDF" style={{ color: '#ccc', display: 'flex', alignItems: 'center' }}>
+                <button
+                    onClick={async () => {
+                        try {
+                            const response = await fetch(url);
+                            const blob = await response.blob();
+                            const blobUrl = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = blobUrl;
+                            link.download = url.split('/').pop() || 'document.pdf';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(blobUrl);
+                        } catch (error) {
+                            console.error('Download failed:', error);
+                            // Fallback to simple link navigation if fetch fails
+                            window.location.href = url;
+                        }
+                    }}
+                    title="Download PDF"
+                    style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                >
                     <Download size={18} />
-                </a>
+                </button>
             </div>
 
             <style>{`

@@ -180,6 +180,14 @@ export function PDFPreviewCard({ url, onClick, coverImage }: PDFPreviewCardProps
                 .group:hover .view-pdf-btn { transform: translateY(0) !important; }
                 .group:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0,0,0,0.5) !important; }
 
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .animate-spin {
+                    animation: spin 1s linear infinite;
+                }
+
                 @media (max-width: 768px) {
                     .pdf-overlay {
                         display: none !important; /* Hide overlay on mobile completely */
