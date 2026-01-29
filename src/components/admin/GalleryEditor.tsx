@@ -35,6 +35,9 @@ export function GalleryEditor() {
     const [cropQueue, setCropQueue] = useState<{ file: File, sectionId: string | 'cover', preview: string }[]>([])
     const [currentCropIndex, setCurrentCropIndex] = useState(0)
 
+    // Pending Files
+    const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({})
+
     // Load existing data
     useEffect(() => {
         if (id) {
@@ -78,16 +81,40 @@ export function GalleryEditor() {
 
         setIsSaving(true)
         try {
+            // 1. Process Cover Image
+            let finalCoverImage = coverImage
+            if (coverImage.startsWith('blob:') && pendingFiles[coverImage]) {
+                finalCoverImage = await uploadImage(pendingFiles[coverImage])
+            }
+
+            // 2. Process Sections Images
+            const processedSections = [...sections]
+            for (let i = 0; i < processedSections.length; i++) {
+                const section = processedSections[i]
+                const processedImages = [...section.images]
+                let changed = false
+
+                for (let j = 0; j < processedImages.length; j++) {
+                    const url = processedImages[j]
+                    if (url.startsWith('blob:') && pendingFiles[url]) {
+                        processedImages[j] = await uploadImage(pendingFiles[url])
+                        changed = true
+                    }
+                }
+
+                if (changed) {
+                    processedSections[i] = { ...section, images: processedImages }
+                }
+            }
+
             const postData = {
                 title,
                 content,
-                image: coverImage,
-                layout: 'gallery', // Special layout tag
-                galleryImages: sections as any, // Save the sections structure
+                image: finalCoverImage,
+                layout: 'gallery',
+                galleryImages: processedSections as any,
                 sectionId: sectionId,
-                isPublished: true // Default to published for valid galleries? Or draft? Let's say draft usually but maybe published for convenience. Let's stick to default which is typically draft if not specified? 
-                // Wait, createPost usually defaults isPublished to false/0. Let's explicitly set it if needed, or leave it. 
-                // The user's other editors might default to something. Let's just pass what we have.
+                isPublished: true
             }
 
             if (id) {
@@ -131,41 +158,35 @@ export function GalleryEditor() {
         if (!files || files.length === 0) return
 
         setIsUploading(true)
-        const newImages: string[] = []
-
         try {
-            // Process sequentially to keep order or parallel for speed? Parallel is better.
-            const uploadPromises = Array.from(files).map(async (file) => {
+            const newUrls: string[] = []
+            const newPendingFiles: Record<string, File> = {}
+
+            for (const file of Array.from(files)) {
                 try {
                     validateImage(file)
-                    // Compress directly
                     const compressed = await compressImage(file)
-                    // Upload
-                    return await uploadImage(compressed)
+                    const blobUrl = URL.createObjectURL(compressed)
+                    newUrls.push(blobUrl)
+                    newPendingFiles[blobUrl] = compressed
                 } catch (err: any) {
-                    console.error(`Error uploading ${file.name}:`, err)
+                    console.error(`Error processing ${file.name}:`, err)
                     alert(`Failed option for ${file.name}: ${err.message}`)
-                    return null
                 }
-            })
+            }
 
-            const results = await Promise.all(uploadPromises)
-            // Filter out failures
-            results.forEach(url => {
-                if (url) newImages.push(url)
-            })
-
-            if (newImages.length > 0) {
+            if (newUrls.length > 0) {
+                setPendingFiles(prev => ({ ...prev, ...newPendingFiles }))
                 setSections(prev => prev.map(s => {
                     if (s.id === targetSectionId) {
-                        return { ...s, images: [...s.images, ...newImages] }
+                        return { ...s, images: [...s.images, ...newUrls] }
                     }
                     return s
                 }))
             }
 
         } catch (err) {
-            console.error('Batch upload error:', err)
+            console.error('Batch processing error:', err)
         } finally {
             setIsUploading(false)
             e.target.value = ''
@@ -209,22 +230,24 @@ export function GalleryEditor() {
         try {
             // Convert blob to File and Compress/Convert to WebP
             const file = new File([croppedBlob], currentItem.file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp' })
-            const compressed = await compressImage(file)
-            const url = await uploadImage(compressed)
+            const compressed = await compressImage(file) // Re-compress or just use? compressImage usage is fine
+
+            const blobUrl = URL.createObjectURL(compressed)
+            setPendingFiles(prev => ({ ...prev, [blobUrl]: compressed }))
 
             if (currentItem.sectionId === 'cover') {
-                setCoverImage(url)
+                setCoverImage(blobUrl)
             } else {
                 setSections(prev => prev.map(s => {
                     if (s.id === currentItem.sectionId) {
-                        return { ...s, images: [...s.images, url] }
+                        return { ...s, images: [...s.images, blobUrl] }
                     }
                     return s
                 }))
             }
         } catch (err: any) {
-            console.error('Upload failed:', err)
-            alert('Upload failed: ' + err.message)
+            console.error('Processing failed:', err)
+            alert('Processing failed: ' + err.message)
         } finally {
             setIsUploading(false)
             // Move to next
