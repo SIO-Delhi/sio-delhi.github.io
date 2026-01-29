@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
@@ -6,6 +5,9 @@ import { uploadImage } from '../../lib/storage'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { ImageCropper } from './ImageCropper'
 import { ArrowLeft, Save, Plus, X, Image as ImageIcon, Trash2, GripVertical, Loader2, Images } from 'lucide-react'
+import { DeleteConfirmationModal } from './DeleteConfirmationModal'
+import { UndoToast } from '../ui/UndoToast'
+import { useUndoableDelete } from '../../hooks/useUndoableDelete'
 
 interface GallerySection {
     id: string
@@ -37,6 +39,20 @@ export function GalleryEditor() {
 
     // Pending Files
     const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({})
+
+    // Delete Hook for Sections
+    const {
+        requestDelete,
+        confirmDelete,
+        undoDelete,
+        cancelDelete,
+        deleteState,
+        pendingItem
+    } = useUndoableDelete<string>({
+        performDelete: async (sectionIdToDelete) => {
+            setSections(prev => prev.filter(s => s.id !== sectionIdToDelete))
+        }
+    })
 
     // Load existing data
     useEffect(() => {
@@ -143,11 +159,7 @@ export function GalleryEditor() {
         }])
     }
 
-    const handleRemoveSection = (sectionId: string) => {
-        if (confirm('Delete this entire section?')) {
-            setSections(sections.filter(s => s.id !== sectionId))
-        }
-    }
+    // handleRemoveSection replaced by requestDelete
 
     const handleUpdateSectionTitle = (sectionId: string, newTitle: string) => {
         setSections(sections.map(s => s.id === sectionId ? { ...s, title: newTitle } : s))
@@ -273,8 +285,34 @@ export function GalleryEditor() {
 
     const currentCropItem = cropQueue[currentCropIndex]
 
+    // Find the section being deleted for the modal
+    const pendingSection = pendingItem ? sections.find(s => s.id === pendingItem) : null
+
+    // Optimistic UI - filter out pending deletions
+    const visibleSections = sections.filter(s => !((deleteState === 'PENDING') && pendingItem === s.id))
+
+
     return (
         <div style={{ minHeight: '100vh', background: '#09090b', color: 'white', paddingBottom: '100px' }}>
+            {deleteState === 'CONFIRMING' && (
+                <DeleteConfirmationModal
+                    isOpen={true}
+                    onClose={cancelDelete}
+                    onConfirm={confirmDelete}
+                    itemName={pendingSection?.title || 'Section'}
+                    title="Delete Section"
+                    description={`This will permanently delete the section "${pendingSection?.title || 'Untitled'}" and its images.`}
+                />
+            )}
+
+            {deleteState === 'PENDING' && (
+                <UndoToast
+                    message="Section deleted."
+                    seconds={10}
+                    onUndo={undoDelete}
+                />
+            )}
+
             {/* Cropper Modal */}
             {currentCropItem && (
                 <ImageCropper
@@ -413,7 +451,7 @@ export function GalleryEditor() {
                         </button>
                     </div>
 
-                    {sections.map((section) => (
+                    {visibleSections.map((section) => (
                         <div key={section.id} style={{
                             background: '#18181b', border: '1px solid #27272a', borderRadius: '16px',
                             padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px'
@@ -438,7 +476,7 @@ export function GalleryEditor() {
                                     />
                                 </div>
                                 <button
-                                    onClick={() => handleRemoveSection(section.id)}
+                                    onClick={() => requestDelete(section.id)}
                                     title="Remove Section"
                                     style={{
                                         background: 'rgba(255, 59, 59, 0.1)', color: '#ff3b3b',
@@ -509,7 +547,7 @@ export function GalleryEditor() {
                         </div>
                     ))}
 
-                    {sections.length === 0 && (
+                    {visibleSections.length === 0 && (
                         <div style={{
                             padding: '48px', border: '2px dashed #27272a', borderRadius: '16px',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
