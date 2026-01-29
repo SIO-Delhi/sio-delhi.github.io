@@ -180,13 +180,13 @@ export function GarbageCollector() {
         })
     }
 
-    const selectAllOrphans = () => {
-        if (selectedOrphans.size === orphanedFiles.length) {
-            setSelectedOrphans(new Set())
-        } else {
-            setSelectedOrphans(new Set(orphanedFiles.map(f => f.path)))
-        }
-    }
+    // const selectAllOrphans = () => {
+    //     if (selectedOrphans.size === orphanedFiles.length) {
+    //         setSelectedOrphans(new Set())
+    //     } else {
+    //         setSelectedOrphans(new Set(orphanedFiles.map(f => f.path)))
+    //     }
+    // }
 
     const deleteSelectedOrphans = async () => {
         if (selectedOrphans.size === 0) return
@@ -258,37 +258,37 @@ export function GarbageCollector() {
         }
     }
 
-    const deleteAllOrphans = async () => {
-        if (orphanedFiles.length === 0) return
-        if (!confirm(`Are you sure you want to delete ALL ${orphanedFiles.length} orphaned files? This will free ${formatSize(garbageStats.totalSize)}. This cannot be undone.`)) return
+    // const deleteAllOrphans = async () => {
+    //     if (orphanedFiles.length === 0) return
+    //     if (!confirm(`Are you sure you want to delete ALL ${orphanedFiles.length} orphaned files? This will free ${formatSize(garbageStats.totalSize)}. This cannot be undone.`)) return
 
-        setDeletingOrphans(true)
-        try {
-            const response = await fetch(`${API_BASE}/garbage/cleanup`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deleteAll: true })
-            })
-            const data = await response.json()
+    //     setDeletingOrphans(true)
+    //     try {
+    //         const response = await fetch(`${API_BASE}/garbage/cleanup`, {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify({ deleteAll: true })
+    //         })
+    //         const data = await response.json()
 
-            if (data.deletedCount > 0) {
-                setOrphanedFiles([])
-                setGarbageStats(prev => ({ ...prev, totalCount: 0, totalSize: 0 }))
-                setSelectedOrphans(new Set())
-                alert(`Successfully deleted ${data.deletedCount} file(s), freed ${formatSize(data.spaceFreed)}`)
-            }
+    //         if (data.deletedCount > 0) {
+    //             setOrphanedFiles([])
+    //             setGarbageStats(prev => ({ ...prev, totalCount: 0, totalSize: 0 }))
+    //             setSelectedOrphans(new Set())
+    //             alert(`Successfully deleted ${data.deletedCount} file(s), freed ${formatSize(data.spaceFreed)}`)
+    //         }
 
-            if (data.failedCount > 0) {
-                loadOrphanedFiles()
-                alert(`Failed to delete ${data.failedCount} file(s)`)
-            }
-        } catch (err: any) {
-            console.error('Error deleting all orphans:', err)
-            alert('Failed to delete files: ' + (err.message || 'Unknown error'))
-        } finally {
-            setDeletingOrphans(false)
-        }
-    }
+    //         if (data.failedCount > 0) {
+    //             loadOrphanedFiles()
+    //             alert(`Failed to delete ${data.failedCount} file(s)`)
+    //         }
+    //     } catch (err: any) {
+    //         console.error('Error deleting all orphans:', err)
+    //         alert('Failed to delete files: ' + (err.message || 'Unknown error'))
+    //     } finally {
+    //         setDeletingOrphans(false)
+    //     }
+    // }
 
     const SourceLink = ({ source }: { source: { table: string, column: string, id: string | number, pid?: string | number } }) => {
         const tableNames: Record<string, string> = {
@@ -839,7 +839,7 @@ export function GarbageCollector() {
                                     zIndex: 1
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <button
+                                        {/* <button
                                             onClick={(e) => { e.stopPropagation(); selectAllOrphans() }}
                                             style={{
                                                 padding: '6px 12px',
@@ -852,7 +852,7 @@ export function GarbageCollector() {
                                             }}
                                         >
                                             {selectedOrphans.size === orphanedFiles.length ? 'Deselect All' : 'Select All'}
-                                        </button>
+                                        </button> */}
                                         {selectedOrphans.size > 0 && (
                                             <span style={{ fontSize: '0.8rem', color: '#888' }}>
                                                 {selectedOrphans.size} selected
@@ -882,7 +882,7 @@ export function GarbageCollector() {
                                                 Delete Selected
                                             </button>
                                         )}
-                                        <button
+                                        {/* <button
                                             onClick={(e) => { e.stopPropagation(); deleteAllOrphans() }}
                                             disabled={deletingOrphans}
                                             style={{
@@ -900,7 +900,7 @@ export function GarbageCollector() {
                                             }}
                                         >
                                             Delete All
-                                        </button>
+                                        </button> */}
                                     </div>
                                 </div>
 
