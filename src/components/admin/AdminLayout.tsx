@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, Frame } from 'lucide-react'
+import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, PenTool, Trash2 } from 'lucide-react'
 import { useClerk } from '@clerk/clerk-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
@@ -157,19 +157,35 @@ export function AdminLayout() {
                     </Link>
 
                     <Link
-                        to="/admin/frame-tool"
+                        to="/admin/utilities"
                         onClick={() => isMobile && setSidebarOpen(false)}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '12px',
                             padding: '12px', borderRadius: '8px',
-                            background: isActive('/admin/frame-tool') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
-                            color: isActive('/admin/frame-tool') ? '#ff3b3b' : 'inherit',
+                            background: isActive('/admin/utilities') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
+                            color: isActive('/admin/utilities') ? '#ff3b3b' : 'inherit',
                             textDecoration: 'none', fontWeight: 500,
                             transition: 'all 0.2s ease'
                         }}
                     >
-                        <Frame size={20} />
-                        Frame Tool
+                        <PenTool size={20} />
+                        Utilities
+                    </Link>
+
+                    <Link
+                        to="/admin/garbage"
+                        onClick={() => isMobile && setSidebarOpen(false)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '12px', borderRadius: '8px',
+                            background: isActive('/admin/garbage') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
+                            color: isActive('/admin/garbage') ? '#ff3b3b' : 'inherit',
+                            textDecoration: 'none', fontWeight: 500,
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        <Trash2 size={20} />
+                        Garbage Collector
                     </Link>
 
                     <div style={{ height: '1px', background: isDark ? '#222' : '#eee', margin: '8px 0' }} />
