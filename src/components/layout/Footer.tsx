@@ -1,13 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import logo from '../../assets/logo.svg'
 import { X, Instagram, Youtube, Facebook } from 'lucide-react'
 
-// ... existing code ...
 
-gsap.registerPlugin(ScrollTrigger)
 
 const sections = ['About', 'Initiatives', 'Media', 'Leadership', 'Contact']
 
@@ -30,60 +26,9 @@ const ThreadsLogo = ({ size = 20, className = "" }: { size?: number, className?:
 )
 
 export function Footer() {
-    const footerRef = useRef<HTMLElement>(null)
     const [showCredits, setShowCredits] = useState(false)
     const location = useLocation()
     const navigate = useNavigate()
-
-    useEffect(() => {
-        const ctx = gsap.context(() => {
-            gsap.fromTo(
-                '.footer-logo',
-                { opacity: 0, y: 40 },
-                {
-                    opacity: 1,
-                    y: 0,
-                    duration: 0.8,
-                    scrollTrigger: {
-                        trigger: footerRef.current,
-                        start: 'top 85%',
-                    },
-                }
-            )
-
-            // Animate icons
-            gsap.fromTo(
-                '.social-icon',
-                { opacity: 0, scale: 0.8 },
-                {
-                    opacity: 1,
-                    scale: 1,
-                    duration: 0.4,
-                    stagger: 0.1,
-                    scrollTrigger: {
-                        trigger: '.footer-socials',
-                        start: 'top 90%',
-                    },
-                }
-            )
-
-            gsap.fromTo(
-                '.footer-link',
-                { opacity: 0 },
-                {
-                    opacity: 1,
-                    duration: 0.4,
-                    stagger: 0.05,
-                    scrollTrigger: {
-                        trigger: '.footer-links',
-                        start: 'top 95%',
-                    },
-                }
-            )
-        }, footerRef)
-
-        return () => ctx.revert()
-    }, [])
 
     const scrollToSection = (sectionId: string) => {
         if (location.pathname !== '/') {
@@ -102,7 +47,6 @@ export function Footer() {
     return (
         <>
             <footer
-                ref={footerRef}
                 style={{
                     padding: '40px 0',
                     borderTop: '1px solid rgba(255,255,255,0.08)',
