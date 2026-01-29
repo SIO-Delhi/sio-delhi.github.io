@@ -7,7 +7,7 @@ import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 import { Extension } from '@tiptap/core'
 import Link from '@tiptap/extension-link'
-import { uploadImage, uploadPdf } from '../../lib/storage'
+// Imports removed as they are no longer used here
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { ImageCropper } from './ImageCropper'
 import {
@@ -302,7 +302,7 @@ const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange 
 }
 
 // --- Image Block Editor ---
-const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, onCaptionChange, onCarouselToggle, onCarouselImagesChange }: {
+const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, onCaptionChange, onCarouselToggle, onCarouselImagesChange, onAssetsChange }: {
     url: string
     caption?: string
     isCarousel?: boolean
@@ -311,6 +311,7 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
     onCaptionChange?: (caption: string) => void
     onCarouselToggle?: (isCarousel: boolean) => void
     onCarouselImagesChange?: (images: string[]) => void
+    onAssetsChange?: (assets: { url: string, file: File }[]) => void
 }) => {
     const [isUploading, setIsUploading] = useState(false)
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
@@ -327,7 +328,15 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
             reader.readAsDataURL(file)
         } catch (err: any) {
             alert(err.message)
+            e.target.value = ''
+            return
         }
+
+        // Defer upload
+        setPendingFile(file)
+        const reader = new FileReader()
+        reader.addEventListener('load', () => setCropImageSrc(reader.result?.toString() || null))
+        reader.readAsDataURL(file)
         e.target.value = ''
     }
 
@@ -336,12 +345,16 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
         setCropImageSrc(null)
         setIsUploading(true)
         try {
+            validateImage(pendingFile)
             const compressed = await compressImage(pendingFile)
-            const uploadedUrl = await uploadImage(compressed)
+            const blobUrl = URL.createObjectURL(compressed)
+
             if (isCarousel && onCarouselImagesChange) {
-                onCarouselImagesChange([...(carouselImages || []), uploadedUrl])
+                onAssetsChange?.([{ url: blobUrl, file: compressed }])
+                onCarouselImagesChange([...(carouselImages || []), blobUrl])
             } else {
-                onChange(uploadedUrl)
+                onAssetsChange?.([{ url: blobUrl, file: compressed }])
+                onChange(blobUrl)
             }
         } catch (err: any) {
             alert(err.message || 'Upload failed')
@@ -355,12 +368,17 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
         setCropImageSrc(null)
         setIsUploading(true)
         try {
+            // Blob is WebP
+            // @ts-ignore
             const file = new File([blob], `cropped-${Date.now()}.webp`, { type: 'image/webp' })
-            const uploadedUrl = await uploadImage(file)
+            const blobUrl = URL.createObjectURL(file)
+
             if (isCarousel && onCarouselImagesChange) {
-                onCarouselImagesChange([...(carouselImages || []), uploadedUrl])
+                onAssetsChange?.([{ url: blobUrl, file }])
+                onCarouselImagesChange([...(carouselImages || []), blobUrl])
             } else {
-                onChange(uploadedUrl)
+                onAssetsChange?.([{ url: blobUrl, file }])
+                onChange(blobUrl)
             }
         } catch (err) {
             alert('Upload failed')
@@ -455,7 +473,7 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
 }
 
 // --- PDF Block Editor ---
-const PdfBlockEditor = ({ url, onChange }: { url: string, onChange: (url: string) => void }) => {
+const PdfBlockEditor = ({ url, onChange, onAssetChange }: { url: string, onChange: (url: string) => void, onAssetChange?: (url: string, file: File) => void }) => {
     const [isUploading, setIsUploading] = useState(false)
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -464,8 +482,9 @@ const PdfBlockEditor = ({ url, onChange }: { url: string, onChange: (url: string
         if (!file.type.includes('pdf')) { alert('Please upload a PDF file'); return }
         setIsUploading(true)
         try {
-            const uploadedUrl = await uploadPdf(file)
-            onChange(uploadedUrl)
+            const blobUrl = URL.createObjectURL(file)
+            onAssetChange?.(blobUrl, file)
+            onChange(blobUrl)
         } catch (err) {
             alert('Upload failed')
         } finally {
@@ -563,7 +582,8 @@ const CompositeBlockEditor = ({
     onTextChange,
     onSubtitleChange,
     onSubtitleColorChange,
-    onAlignmentChange
+    onAlignmentChange,
+    onAssetsChange
 }: {
     layout?: 'image-left' | 'image-right' | 'image-top' | 'stacked'
     imageUrl?: string
@@ -579,6 +599,7 @@ const CompositeBlockEditor = ({
     onSubtitleChange?: (subtitle: string) => void
     onSubtitleColorChange?: (color: string) => void
     onAlignmentChange?: (alignment: 'left' | 'center' | 'right' | 'justify') => void
+    onAssetsChange?: (assets: { url: string, file: File }[]) => void
 }) => {
     const [isUploading, setIsUploading] = useState(false)
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
@@ -636,10 +657,11 @@ const CompositeBlockEditor = ({
         try {
             validateImage(pendingFile)
             const compressed = await compressImage(pendingFile)
-            const url = await uploadImage(compressed)
-            const newImages = [...images, url]
+            const blobUrl = URL.createObjectURL(compressed)
+            onAssetsChange?.([{ url: blobUrl, file: compressed }])
+            const newImages = [...images, blobUrl]
             onImagesChange?.(newImages)
-            if (newImages.length === 1) onImageChange?.(url)
+            if (newImages.length === 1) onImageChange?.(blobUrl)
         } catch (err: any) { console.error(err); alert(err.message || 'Upload failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
@@ -648,11 +670,13 @@ const CompositeBlockEditor = ({
         setCropImageSrc(null)
         setIsUploading(true)
         try {
+            // @ts-ignore
             const file = new File([blob], `cropped-composite-${Date.now()}.webp`, { type: "image/webp" })
-            const url = await uploadImage(file)
-            const newImages = [...images, url]
+            const blobUrl = URL.createObjectURL(file)
+            onAssetsChange?.([{ url: blobUrl, file }])
+            const newImages = [...images, blobUrl]
             onImagesChange?.(newImages)
-            if (newImages.length === 1) onImageChange?.(url)
+            if (newImages.length === 1) onImageChange?.(blobUrl)
         } catch (err) { console.error(err) }
         finally { setIsUploading(false) }
     }
@@ -906,7 +930,13 @@ interface BlockEditorProps {
     onChange: (blocks: EditorBlock[]) => void
 }
 
-export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
+interface BlockEditorProps {
+    blocks: EditorBlock[]
+    onChange: (blocks: EditorBlock[]) => void
+    onBlockAssetsChange?: (blockId: string, assets: { url: string, file: File }[]) => void
+}
+
+export function BlockEditor({ blocks, onChange, onBlockAssetsChange }: BlockEditorProps) {
     const addBlock = (type: EditorBlock['type']) => {
         const newBlock: EditorBlock = {
             id: crypto.randomUUID(),
@@ -985,12 +1015,14 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                                 onCaptionChange={(caption) => updateBlock(block.id, { caption })}
                                 onCarouselToggle={(isCarousel) => updateBlock(block.id, { isCarousel })}
                                 onCarouselImagesChange={(carouselImages) => updateBlock(block.id, { carouselImages })}
+                                onAssetsChange={(assets) => onBlockAssetsChange?.(block.id, assets)}
                             />
                         )}
                         {block.type === 'pdf' && (
                             <PdfBlockEditor
                                 url={block.content}
                                 onChange={(content) => updateBlock(block.id, { content })}
+                                onAssetChange={(url, file) => onBlockAssetsChange?.(block.id, [{ url, file }])}
                             />
                         )}
                         {block.type === 'video' && (
@@ -1017,6 +1049,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                                 onSubtitleChange={(subtitle) => updateBlock(block.id, { subtitle })}
                                 onSubtitleColorChange={(color) => updateBlock(block.id, { subtitleColor: color })}
                                 onAlignmentChange={(alignment) => updateBlock(block.id, { alignment })}
+                                onAssetsChange={(assets) => onBlockAssetsChange?.(block.id, assets)}
                             />
                         )}
                     </div>

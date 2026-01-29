@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
-import { uploadImage } from '../../lib/storage'
+import { uploadImage, uploadPdf } from '../../lib/storage'
 import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff, GripVertical, Images } from 'lucide-react'
 import { ImageCropper } from './ImageCropper'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
@@ -41,6 +41,9 @@ export function SubsectionEditor() {
     // Crop State
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
     const [pendingFile, setPendingFile] = useState<File | null>(null)
+    const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null)
+    const [pendingGalleryFiles, setPendingGalleryFiles] = useState<Record<string, File>>({})
+    const [pendingBlockAssets, setPendingBlockAssets] = useState<Record<string, { url: string, file: File }[]>>({})
 
     // Load existing data if editing
     useEffect(() => {
@@ -77,8 +80,7 @@ export function SubsectionEditor() {
             setCropImageSrc(reader.result?.toString() || null)
         })
         reader.readAsDataURL(file)
-
-        // Reset input so same file can be selected again if cancelled
+        setPendingFile(file)
         e.target.value = ''
     }
 
@@ -87,11 +89,11 @@ export function SubsectionEditor() {
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            // Already validated in handleImageUpload usually, but strictly:
             validateImage(pendingFile)
             const compressed = await compressImage(pendingFile)
-            const url = await uploadImage(compressed)
-            setCoverImage(url)
+            const blobUrl = URL.createObjectURL(compressed)
+            setCoverImage(blobUrl)
+            setPendingCoverFile(compressed)
         } catch (err: any) {
             console.error(err)
             alert(err.message || 'Upload failed')
@@ -107,8 +109,9 @@ export function SubsectionEditor() {
         try {
             // blob is already webp
             const file = new File([blob], `cropped-image-${Date.now()}.webp`, { type: "image/webp" })
-            const url = await uploadImage(file)
-            setCoverImage(url)
+            const blobUrl = URL.createObjectURL(file)
+            setCoverImage(blobUrl)
+            setPendingCoverFile(file)
         } catch (err) {
             console.error(err)
             alert('Upload failed')
@@ -121,20 +124,63 @@ export function SubsectionEditor() {
         if (!title) { alert('Please enter a title'); return }
         setIsSaving(true)
 
-        // Serialize blocks to HTML
-        const finalContent = blocksToHtml(blocks)
+        // Helper to upload a single file (image or PDF)
+        const uploadPendingFile = async (file: File) => {
+            if (file.type.includes('pdf')) return await uploadPdf(file)
+            return await uploadImage(file)
+        }
 
         try {
+            // 1. Upload Cover Image if pending
+            let finalCoverImage = coverImage
+            if (pendingCoverFile && coverImage.startsWith('blob:')) {
+                finalCoverImage = await uploadPendingFile(pendingCoverFile)
+            }
+
+            // 2. Upload Gallery Images
+            const processedGalleryImages = [...galleryImages]
+            for (let i = 0; i < processedGalleryImages.length; i++) {
+                const url = processedGalleryImages[i]
+                if (pendingGalleryFiles[url]) {
+                    const realUrl = await uploadPendingFile(pendingGalleryFiles[url])
+                    processedGalleryImages[i] = realUrl
+                }
+            }
+
+            // 3. Process Blocks (Upload pending assets and replace URLs)
+            const processedBlocks = JSON.parse(JSON.stringify(blocks)) as EditorBlock[]
+
+            for (const block of processedBlocks) {
+                const assets = pendingBlockAssets[block.id]
+                if (assets && assets.length > 0) {
+                    for (const asset of assets) {
+                        const realUrl = await uploadPendingFile(asset.file)
+
+                        // Update Block Content/Props
+                        if (block.content === asset.url) block.content = realUrl
+                        if (block.imageUrl === asset.url) block.imageUrl = realUrl
+
+                        // Update Carousel Images
+                        if (block.carouselImages) {
+                            block.carouselImages = block.carouselImages.map(u => u === asset.url ? realUrl : u)
+                        }
+                    }
+                }
+            }
+
+            // Serialize blocks to HTML
+            const finalContent = blocksToHtml(processedBlocks)
+
             const postData = {
                 title,
                 subtitle,
-                content: finalContent, // Serialize blocks to HTML
-                image: coverImage,
+                content: finalContent,
+                image: finalCoverImage,
                 pdfUrl: '',
                 layout: 'custom',
-                isSubsection: true, // This is a subsection!
-                galleryImages, // Include gallery images
-                createdAt: date ? new Date(date).getTime() : undefined, // Pass date
+                isSubsection: true,
+                galleryImages: processedGalleryImages,
+                createdAt: date ? new Date(date).getTime() : undefined,
             }
 
             if (isEditMode && id) {
@@ -158,13 +204,18 @@ export function SubsectionEditor() {
         setIsGalleryUploading(true)
         try {
             const newUrls: string[] = []
+            const newPendingFiles: Record<string, File> = {}
+
             for (const file of Array.from(files)) {
                 validateImage(file)
                 const compressed = await compressImage(file)
-                const url = await uploadImage(compressed)
-                newUrls.push(url)
+                const blobUrl = URL.createObjectURL(compressed)
+                newUrls.push(blobUrl)
+                newPendingFiles[blobUrl] = compressed
             }
+
             setGalleryImages(prev => [...prev, ...newUrls])
+            setPendingGalleryFiles(prev => ({ ...prev, ...newPendingFiles }))
         } catch (err: any) {
             alert(err.message || 'Upload failed')
         } finally {
@@ -451,7 +502,13 @@ export function SubsectionEditor() {
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '0.8rem', marginBottom: '12px', fontWeight: 500 }}>
                             <FileText size={14} /> Content Blocks
                         </label>
-                        <BlockEditor blocks={blocks} onChange={setBlocks} />
+                        <BlockEditor
+                            blocks={blocks}
+                            onChange={setBlocks}
+                            onBlockAssetsChange={(blockId, assets) => {
+                                setPendingBlockAssets(prev => ({ ...prev, [blockId]: assets }))
+                            }}
+                        />
                     </div>
                 </div>
 
