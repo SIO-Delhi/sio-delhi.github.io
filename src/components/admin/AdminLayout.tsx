@@ -172,21 +172,7 @@ export function AdminLayout() {
                         Utilities
                     </Link>
 
-                    <Link
-                        to="/admin/garbage"
-                        onClick={() => isMobile && setSidebarOpen(false)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '12px',
-                            padding: '12px', borderRadius: '8px',
-                            background: isActive('/admin/garbage') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
-                            color: isActive('/admin/garbage') ? '#ff3b3b' : 'inherit',
-                            textDecoration: 'none', fontWeight: 500,
-                            transition: 'all 0.2s ease'
-                        }}
-                    >
-                        <Trash2 size={20} />
-                        Garbage Collector
-                    </Link>
+
 
                     <Link
                         to="/admin/forms"
