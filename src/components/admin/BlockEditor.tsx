@@ -15,6 +15,9 @@ import {
     Heading1, Heading2, List, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify,
     ImageIcon, Volume2, Palette, Layout, PilcrowLeft, PilcrowRight, Link as LinkIcon
 } from 'lucide-react'
+import { PDFPreviewCard } from '../ui/PDFPreviewCard'
+import { PDFModal } from '../ui/PDFModal'
+import { PDFFlipbook } from '../ui/PDFFlipbook'
 
 // --- Block Types & Interfaces ---
 export type EditorBlockType = 'text' | 'image' | 'pdf' | 'composite' | 'video'
@@ -494,17 +497,26 @@ const PdfBlockEditor = ({ url, onChange, onAssetChange }: { url: string, onChang
     }
 
     if (url) {
+        const [isModalOpen, setIsModalOpen] = useState(false)
         return (
             <div style={{ background: '#111', borderRadius: '12px', padding: '16px', border: '1px solid #333' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <FileText size={24} color="#ff3b3b" />
-                        <span style={{ color: '#ccc', fontSize: '0.9rem' }}>PDF uploaded</span>
+                        <span style={{ color: '#ccc', fontSize: '0.9rem' }}>PDF Block</span>
                     </div>
                     <button onClick={() => onChange('')} style={{ background: '#222', border: 'none', color: '#888', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>
                         Remove
                     </button>
                 </div>
+
+                <div style={{ maxWidth: '300px', margin: '0 auto' }}>
+                    <PDFPreviewCard url={url} onClick={() => setIsModalOpen(true)} />
+                </div>
+
+                <PDFModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+                    <PDFFlipbook url={url} />
+                </PDFModal>
             </div>
         )
     }
