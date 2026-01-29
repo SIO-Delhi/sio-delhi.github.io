@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import JSZip from 'jszip'
+
 import { saveAs } from 'file-saver'
 import {
     Upload, X, Loader2, Download,
@@ -338,66 +338,38 @@ export function FrameTool() {
         setIsProcessing(true)
         setProcessProgress({ current: 0, total: photos.length })
 
-        try {
-            const zip = new JSZip()
-            const folder = zip.folder("frames")
+        // Create Worker
+        const worker = new Worker(new URL('./frame-processor.worker.ts', import.meta.url), { type: 'module' })
 
-            // Load Frame Once
-            const frameImg = new Image()
-            frameImg.src = frameURL
-            await new Promise(r => frameImg.onload = r)
+        worker.onmessage = (e) => {
+            const { type, payload } = e.data
 
-            for (let i = 0; i < photos.length; i++) {
-                setProcessProgress({ current: i + 1, total: photos.length })
-                const photo = photos[i]
-
-                // Load Photo
-                const photoImg = new Image()
-                photoImg.crossOrigin = 'anonymous'
-                photoImg.src = photo.url
-                await new Promise((resolve) => {
-                    photoImg.onload = resolve
-                    photoImg.onerror = () => resolve(null) // Skip on error
-                })
-
-                if (!photoImg) continue
-
-                // Determine dimensions
-                let w = 1080
-                let h = 1080
-
-                if (photo.config.canvasMode === 'original') {
-                    // Use FULL resolution for export
-                    w = photoImg.width
-                    h = photoImg.height
-                }
-
-                // Create offscreen canvas
-                const canvas = document.createElement('canvas')
-                canvas.width = w
-                canvas.height = h
-                const ctx = canvas.getContext('2d')!
-
-                // Draw using THIS photo's config
-                drawToCanvas(ctx, w, h, photoImg, frameImg, photo.config)
-
-                // Blob
-                const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9))
-                if (blob && folder) {
-                    folder.file(`frame_${i + 1}_${photo.name}.jpg`, blob)
-                }
+            if (type === 'PROGRESS') {
+                setProcessProgress(payload)
+            } else if (type === 'COMPLETE') {
+                saveAs(payload, "siodelhi_frames.zip")
+                setIsProcessing(false)
+                worker.terminate()
+            } else if (type === 'ERROR') {
+                console.error(payload)
+                alert('Error processing images')
+                setIsProcessing(false)
+                worker.terminate()
             }
-
-            // Generate Zip
-            const content = await zip.generateAsync({ type: "blob" })
-            saveAs(content, "siodelhi_frames.zip")
-
-        } catch (e) {
-            console.error(e)
-            alert('Error processing images')
-        } finally {
-            setIsProcessing(false)
         }
+
+        // Start processing
+        worker.postMessage({
+            type: 'START',
+            payload: {
+                frameURL,
+                photos: photos.map(p => ({
+                    url: p.url,
+                    name: p.name,
+                    config: p.config
+                }))
+            }
+        })
     }
 
     const handleApplyToAll = () => {
@@ -436,7 +408,7 @@ export function FrameTool() {
                     </h1>
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ flex: 1, overflow: 'hidden', padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {/* Frame Upload */}
                     <div>
                         <h2 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#71717a', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -519,25 +491,58 @@ export function FrameTool() {
                         ) : (
                             <div style={{
                                 display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px',
-                                overflowY: 'auto', paddingRight: '4px'
+                                overflowY: 'auto', paddingRight: '4px',
+                                flex: 1, minHeight: 0, alignContent: 'start'
                             }}>
                                 {photos.map((photo, i) => (
                                     <div
                                         key={photo.id}
                                         onClick={() => setActivePhotoIndex(i)}
                                         style={{
-                                            aspectRatio: '1', borderRadius: '8px', overflow: 'hidden',
+                                            width: '100%',
+                                            paddingBottom: '100%', // Force square aspect ratio
+                                            height: 0,
+                                            borderRadius: '8px',
+                                            overflow: 'hidden',
                                             border: activePhotoIndex === i ? '2px solid #ff3b3b' : '1px solid #3f3f46',
-                                            cursor: 'pointer', position: 'relative'
+                                            cursor: 'pointer',
+                                            position: 'relative',
+                                            background: '#18181b',
                                         }}
                                     >
-                                        <img src={photo.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: 0, left: 0, right: 0,
+                                            padding: '4px 8px',
+                                            background: 'rgba(0,0,0,0.7)',
+                                            color: '#a1a1aa',
+                                            fontSize: '0.7rem',
+                                            pointerEvents: 'none',
+                                            zIndex: 10
+                                        }}>
+                                            #{i + 1}
+                                        </div>
+
+                                        <img
+                                            src={photo.url}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'contain'
+                                            }}
+                                            alt=""
+                                        />
+
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setPhotos(p => p.filter((_, idx) => idx !== i)) }}
                                             style={{
                                                 position: 'absolute', top: 2, right: 2,
                                                 background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '4px',
-                                                width: 18, height: 18, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                width: 18, height: 18, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                zIndex: 11
                                             }}
                                         >
                                             <X size={10} />
