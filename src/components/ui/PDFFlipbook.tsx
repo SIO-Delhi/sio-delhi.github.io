@@ -83,9 +83,10 @@ export function PDFFlipbook({ url, coverImage: _coverImage }: PDFFlipbookProps) 
 
                 const options = {
                     pdf: url,
-                    pdf: url,
+                    downloadURL: url,
                     smartTexture: true,
                     gravity: 2.5, // Increase gravity for faster fall
+                    pan: { speed: 10000 }, // Instant camera pan
                     sheet: {
                         startVelocity: 1.2, // Increase start velocity for faster flip
                         bending: 11

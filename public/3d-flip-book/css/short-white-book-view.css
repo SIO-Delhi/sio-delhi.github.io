@@ -639,3 +639,23 @@
   color: #333;
   font-size: 12px;
 }
+
+/* User Customizations */
+
+/* Hide Print Button Globally (Replaced by Download) */
+.cmdPrint {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .ctrl .fnavbar .fnav .fnav-item>a {
+    padding: 10px 4px; 
+  }
+  
+  /* Hide non-essential buttons on mobile, BUT KEEP SAVE/DOWNLOAD */
+  .cmdZoomIn, .cmdZoomOut, .cmdDefaultZoom,
+  .cmdSearch, .cmdBookmarks, .cmdThumbnails,
+  .cmdLightingUp, .cmdLightingDown {
+     display: none !important;
+  }
+}

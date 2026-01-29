@@ -5239,11 +5239,16 @@
             };
 
             BookController.prototype.cmdSave = function cmdSave() {
-              window.open(this.p.downloadURL, '_blank');
+              var link = document.createElement('a');
+              link.href = this.p.downloadURL || this.src;
+              link.download = this.p.downloadURL ? this.p.downloadURL.split('/').pop() : 'document.pdf';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
             };
 
             BookController.prototype.cmdPrint = function cmdPrint() {
-              this.printer.print();
+              window.open(this.p.downloadURL || this.src, '_blank');
             };
 
             BookController.prototype.cmdFullScreen = function cmdFullScreen() {
