@@ -22,6 +22,12 @@ import { GalleryEditor } from './components/admin/GalleryEditor'
 import { FrameTool } from './components/admin/FrameTool'
 import { Utilities } from './components/admin/Utilities'
 import { AdminGarbageCollector } from './components/admin/AdminGarbageCollector'
+import { FormList } from './components/admin/FormList'
+import { FormBuilder } from './components/admin/FormBuilder'
+import { FormResponseViewer } from './components/admin/FormResponseViewer'
+import { FormResponseDetail } from './components/admin/FormResponseDetail'
+import { GarbageCollector } from './components/admin/GarbageCollector'
+import { PublicForm } from './pages/PublicForm'
 
 
 function App() {
@@ -48,8 +54,17 @@ function App() {
               <Route path="post/:id" element={<PostEditor />} />
               <Route path="subsection/:id" element={<SubsectionEditor />} />
               <Route path="gallery-editor/:id" element={<GalleryEditor />} />
+              <Route path="forms" element={<FormList />} />
+              <Route path="forms/new" element={<FormBuilder />} />
+              <Route path="forms/:id" element={<FormBuilder />} />
+              <Route path="forms/:formId/responses" element={<FormResponseViewer />} />
+              <Route path="forms/:formId/responses/:responseId" element={<FormResponseDetail />} />
+              <Route path="garbage" element={<GarbageCollector />} />
             </Route>
           </Route>
+
+          {/* Public Form Route - outside admin, no main layout */}
+          <Route path="/f/:formId" element={<PublicForm />} />
 
           {/* Main Site Routes - wildcard catch-all wrapped in Layout */}
           <Route path="/*" element={

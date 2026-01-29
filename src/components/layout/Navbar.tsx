@@ -5,8 +5,9 @@ import gsap from 'gsap'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
 
-import siodelLogo from '../../assets/logo.png'
-import donateQr from '../../assets/donate-sio.svg'
+import siodelLogo from '../../assets/logo.svg'
+import donateQr from '../../assets/qr-code.svg'
+import { ShinyButton } from '../ui/ShinyButton'
 
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
@@ -124,9 +125,10 @@ export function Navbar() {
                     top: 0,
                     left: 0,
                     right: 0,
-                    zIndex: 50,
+                    zIndex: 9999,
                     padding: isMobile ? '32px 16px' : '20px 40px',
                     opacity: 0,
+                    transform: 'translateZ(100px)', // Ensure it sits "above" 3D content like Flipbook
                 }}
             >
                 <div
@@ -193,7 +195,7 @@ export function Navbar() {
                             <span style={{
                                 fontSize: '0.75rem',
                                 fontWeight: 500,
-                                color: '#ffffff',
+                                color: '#fdedcb',
                                 letterSpacing: '-0.01em',
                                 mixBlendMode: 'difference'
                             }}>
@@ -256,7 +258,7 @@ export function Navbar() {
                                         fontWeight: 400,
                                         color: hoveredLink === link.href
                                             ? '#ff3b3b' // Red on Hover
-                                            : (isActive(link.href) ? (isDark ? '#ffffff' : '#111111') : '#ffffff'),
+                                            : (isActive(link.href) ? '#efc676' : '#fdedcb'),
                                         mixBlendMode: (hoveredLink === link.href || isActive(link.href)) ? 'normal' : 'difference',
                                         background: 'transparent',
                                         border: isActive(link.href)
@@ -282,29 +284,16 @@ export function Navbar() {
                     {!isMobile && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             {/* Shiny Get in touch Button */}
-                            <div className="shiny-button-container">
-                                <a
-                                    href="#contact"
-                                    className="shiny-button"
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        scrollToSection('#contact')
-                                    }}
-                                    style={{
-                                        display: 'inline-block',
-                                        padding: '12px 24px',
-                                        borderRadius: '100px',
-                                        color: '#ffffff', // Always white because the button is dark
-                                        fontSize: '14px',
-                                        fontWeight: 400,
-                                        transition: 'all 0.3s ease',
-                                        cursor: 'pointer',
-                                        textDecoration: 'none',
-                                    }}
-                                >
-                                    Get in touch
-                                </a>
-                            </div>
+                            <ShinyButton
+                                href="#contact"
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    scrollToSection('#contact')
+                                }}
+                                style={{ color: '#efc676' }}
+                            >
+                                Get in touch
+                            </ShinyButton>
 
                             {/* Donation Button (Replacing Theme Toggle) */}
                             <button
@@ -370,7 +359,7 @@ export function Navbar() {
                         <div className="mobile-menu-content">
                             <ul className="mobile-links">
                                 {navLinks.map((link, index) => (
-                                    <div key={link.href} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <div key={link.href} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '6px 0' }}>
                                         <a
                                             href={link.href}
                                             className={isActive(link.href) ? 'active' : ''}
@@ -384,7 +373,9 @@ export function Navbar() {
                                                 display: 'block',
                                                 width: '100%',
                                                 textAlign: 'center',
-                                                fontSize: '1.2rem'
+                                                fontSize: '1.18rem',
+                                                color: isActive(link.href) ? '#efc676' : '#fdedcb',
+                                                lineHeight: 1.3
                                             }}
                                         >
                                             {link.name}
@@ -393,74 +384,41 @@ export function Navbar() {
                                         {index < navLinks.length - 1 && (
                                             <div style={{
                                                 width: '80%', // Relative width for responsiveness
-                                                maxWidth: '200px',
-                                                height: '1px',
-                                                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 59, 59, 0.8) 50%, transparent 100%)', // Sleek gradient
-                                                margin: '0 auto',
-                                                opacity: 0.8
+                                                maxWidth: '220px',
+                                                height: '2px',
+                                                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 59, 59, 0.85) 50%, transparent 100%)', // Sleek gradient
+                                                margin: '4px auto 0 auto',
+                                                opacity: 0.9
                                             }} />
                                         )}
                                     </div>
                                 ))}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', width: '100%' }}>
                                     {/* Get in touch Button */}
-                                    <div className="shiny-button-container" style={{ width: '100%' }}>
-                                        <a
-                                            href="#contact"
-                                            className="shiny-button"
-                                            onClick={(e) => {
-                                                e.preventDefault()
-                                                scrollToSection('#contact')
-                                                setIsOpen(false)
-                                            }}
-                                            style={{
-                                                display: 'flex', // Changed to flex for centering
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                padding: '14px 24px',
-                                                borderRadius: '12px', // Slightly less rounded for mobile stack look? No, keep it consistent.
-                                                color: '#ffffff',
-                                                fontSize: '16px',
-                                                fontWeight: 500,
-                                                transition: 'all 0.3s ease',
-                                                cursor: 'pointer',
-                                                textDecoration: 'none',
-                                                width: '100%',
-                                                textAlign: 'center'
-                                            }}
-                                        >
-                                            Get in touch
-                                        </a>
-                                    </div>
+                                    <ShinyButton
+                                        href="#contact"
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            scrollToSection('#contact')
+                                            setIsOpen(false)
+                                        }}
+                                        style={{ color: '#efc676' }}
+                                        containerClassName="w-full"
+                                    >
+                                        Get in touch
+                                    </ShinyButton>
 
                                     {/* Support Us Button */}
-                                    <div className="shiny-button-container" style={{ width: '100%' }}>
-                                        <button
-                                            onClick={() => {
-                                                setIsOpen(false)
-                                                setShowDonation(true)
-                                            }}
-                                            className="shiny-button"
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                padding: '14px 24px',
-                                                borderRadius: '12px',
-                                                color: '#ff3b3b',
-                                                fontSize: '16px',
-                                                fontWeight: 500,
-                                                transition: 'all 0.3s ease',
-                                                cursor: 'pointer',
-                                                width: '100%',
-                                                textAlign: 'center',
-                                                border: 'none',
-                                                background: 'inherit'
-                                            }}
-                                        >
-                                            Support Us
-                                        </button>
-                                    </div>
+                                    <ShinyButton
+                                        onClick={() => {
+                                            setIsOpen(false)
+                                            setShowDonation(true)
+                                        }}
+                                        style={{ color: '#ff3b3b' }}
+                                        containerClassName="w-full"
+                                    >
+                                        Support Us
+                                    </ShinyButton>
 
                                 </div>
                             </ul>

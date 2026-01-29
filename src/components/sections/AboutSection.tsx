@@ -17,10 +17,10 @@ export function AboutSection() {
             style={{
                 fontSize: 'clamp(2.5rem, 5vw, 4rem)',
                 fontWeight: 700,
-                color: '#ffffff',
+                color: '#efc676',
                 lineHeight: 1.1,
                 margin: 0,
-                fontFamily: '"Geist", sans-serif',
+                fontFamily: '"DM Sans", sans-serif',
                 letterSpacing: '-0.02em'
             }}
         >

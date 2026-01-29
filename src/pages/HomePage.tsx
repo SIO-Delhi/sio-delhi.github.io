@@ -6,14 +6,16 @@ import { InitiativesSection } from '../components/sections/InitiativesSection'
 import { MoreSection } from '../components/sections/MoreSection'
 import { ContactSection } from '../components/sections/ContactSection'
 import { useRef, useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { InteractiveFlag } from '../components/three/InteractiveFlag'
 import { useContent } from '../context/ContentContext'
 import { GenericSection } from '../components/sections/GenericSection'
 
 export function HomePage() {
-    const { sections } = useContent()
+    const { sections, loading } = useContent()
     const flagContainerRef = useRef<HTMLDivElement>(null)
     const [isMobile, setIsMobile] = useState(false)
+    const location = useLocation()
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 1024)
@@ -21,6 +23,44 @@ export function HomePage() {
         window.addEventListener('resize', checkMobile)
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
+
+    // Handle scroll from other pages
+    useEffect(() => {
+        if (loading) return
+
+        const performScroll = (targetId: string) => {
+            let attempts = 0
+            const maxAttempts = 20 // 2 seconds
+
+            const poll = setInterval(() => {
+                const element = document.querySelector(targetId)
+                if (element) {
+                    clearInterval(poll)
+                    // Small delay to ensure layout stability
+                    setTimeout(() => {
+                        const lenis = (window as any).lenis
+                        if (lenis) {
+                            lenis.scrollTo(element, { offset: -50 }) // Add some offset
+                        } else {
+                            element.scrollIntoView({ behavior: 'smooth' })
+                        }
+                    }, 100)
+                } else {
+                    attempts++
+                    if (attempts >= maxAttempts) clearInterval(poll)
+                }
+            }, 100)
+        }
+
+        if (location.state && (location.state as any).scrollTo) {
+            const targetId = (location.state as any).scrollTo
+            performScroll(targetId)
+            // Clear state to avoid scrolling on subsequent updates
+            window.history.replaceState({}, document.title)
+        } else if (location.hash) {
+            performScroll(location.hash)
+        }
+    }, [location, loading])
 
     useEffect(() => {
         // Global Scroll Trigger for Flag - Blur and move to center

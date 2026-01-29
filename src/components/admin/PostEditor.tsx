@@ -10,11 +10,12 @@ import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 
-import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Facebook, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
+import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Facebook, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link as LinkIcon, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, PilcrowLeft, PilcrowRight } from 'lucide-react'
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
+import Link from '@tiptap/extension-link'
 
 
 // --- Block Types & Interfaces ---
@@ -33,7 +34,7 @@ interface EditorBlock {
     imageUrl?: string         // Image URL for composite blocks
     textContent?: string      // HTML text content for composite blocks
     subtitleColor?: string    // Custom color for subtitle/heading
-
+    pendingUploads?: Record<string, File> // Map blobUrl -> File for deferred upload
 }
 
 // --- Helper Components ---
@@ -45,7 +46,7 @@ const ICON_OPTIONS = [
     { name: 'File', icon: FileIcon },
     { name: 'Folder', icon: Folder },
     { name: 'Book', icon: Book },
-    { name: 'Link', icon: Link },
+    { name: 'Link', icon: LinkIcon },
     { name: 'ExternalLink', icon: ExternalLink },
     { name: 'Download', icon: Download },
     { name: 'Globe', icon: Globe },
@@ -83,6 +84,47 @@ const ICON_OPTIONS = [
     { name: 'AlertTriangle', icon: AlertTriangle },
     { name: 'Info', icon: Info }
 ]
+
+// --- Custom Text Direction Extension ---
+export const TextDirection = Extension.create({
+    name: 'textDirection',
+    addOptions() {
+        return {
+            types: ['heading', 'paragraph'],
+        }
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: {
+                    dir: {
+                        default: null,
+                        parseHTML: element => element.getAttribute('dir'),
+                        renderHTML: attributes => {
+                            if (!attributes.dir) {
+                                return {}
+                            }
+                            return {
+                                dir: attributes.dir,
+                            }
+                        },
+                    },
+                },
+            },
+        ]
+    },
+    addCommands() {
+        return {
+            setTextDirection: (direction: 'ltr' | 'rtl' | 'auto') => ({ commands }: any) => {
+                return this.options.types.every((type: string) => commands.updateAttributes(type, { dir: direction }))
+            },
+            unsetTextDirection: () => ({ commands }: any) => {
+                return this.options.types.every((type: string) => commands.resetAttributes(type, 'dir'))
+            },
+        }
+    },
+})
 
 export const FontSize = Extension.create({
     name: 'fontSize',
@@ -167,9 +209,9 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
             flexWrap: 'wrap', alignItems: 'center'
         }}>
             {/* Text Formatting */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))}><Bold size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))}><Italic size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))}><UnderlineIcon size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))} title="Bold"><Bold size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))} title="Italic"><Italic size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))} title="Underline"><UnderlineIcon size={16} /></button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
@@ -198,7 +240,7 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
                 <input
                     type="color"
                     onChange={handleColorChange}
-                    value={editor.getAttributes('textStyle').color || '#ffffff'}
+                    value={editor.getAttributes('textStyle').color || '#fdedcb'}
                     style={{
                         width: '28px', height: '28px', padding: 0, border: '2px solid #444',
                         borderRadius: '4px', cursor: 'pointer', background: 'transparent'
@@ -209,27 +251,74 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
+            {/* Link */}
+            <button onMouseDown={(e) => {
+                e.preventDefault()
+                const previousUrl = editor.getAttributes('link').href
+                const url = window.prompt('URL', previousUrl)
+
+                // cancelled
+                if (url === null) {
+                    return
+                }
+
+                // empty
+                if (url === '') {
+                    editor.chain().focus().extendMarkRange('link').unsetLink().run()
+                    return
+                }
+
+                let finalUrl = url
+                if (!/^https?:\/\//i.test(url) && !/^\//.test(url) && !/^#/.test(url) && !/^mailto:/i.test(url)) {
+                    finalUrl = 'https://' + url
+                }
+
+                // update
+                editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
+            }} style={buttonStyle(editor.isActive('link'))} title="Link">
+                <LinkIcon size={16} />
+            </button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+
             {/* Alignment */}
-            {/* Alignment */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))}><AlignLeft size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))}><AlignCenter size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))}><AlignRight size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('justify').run() }} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))}><AlignJustify size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))} title="Align Left"><AlignLeft size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))} title="Align Center"><AlignCenter size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))} title="Align Right"><AlignRight size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('justify').run() }} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))} title="Justify"><AlignJustify size={16} /></button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+
+            {/* Text Direction */}
+            <button
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('ltr').run() }}
+                style={buttonStyle(editor.isActive({ dir: 'ltr' }))}
+                title="Left-to-Right"
+            >
+                <PilcrowLeft size={16} />
+            </button>
+            <button
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('rtl').run() }}
+                style={buttonStyle(editor.isActive({ dir: 'rtl' }))}
+                title="Right-to-Left"
+            >
+                <PilcrowRight size={16} />
+            </button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Headings - Kept for structure */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))}>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))} title="H1">
                 <Heading1 size={16} />
             </button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))}>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))} title="H2">
                 <Heading2 size={16} />
             </button>
 
             <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
 
             {/* Lists */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))}><List size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))} title="Bullet List"><List size={16} /></button>
         </div>
     )
 }
@@ -335,7 +424,9 @@ const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange,
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             TextStyle,
             Color,
-            FontSize
+            FontSize,
+            TextDirection,
+            Link.configure({ openOnClick: false })
         ],
         content: initialContent,
         onUpdate: ({ editor }) => {
@@ -398,7 +489,8 @@ const ImageBlockEditor = ({
     onCaptionChange,
     onAlignmentChange,
     onCarouselToggle,
-    onCarouselImagesChange
+    onCarouselImagesChange,
+    onAssetsChange
 }: {
     url: string,
     caption?: string,
@@ -410,6 +502,7 @@ const ImageBlockEditor = ({
     onAlignmentChange?: (alignment: 'left' | 'center' | 'right' | 'justify') => void,
     onCarouselToggle?: (isCarousel: boolean) => void,
     onCarouselImagesChange?: (images: string[]) => void
+    onAssetsChange?: (assets: { url: string, file: File }[]) => void
 }) => {
     const [isUploading, setIsUploading] = useState(false)
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
@@ -438,31 +531,40 @@ const ImageBlockEditor = ({
             return
         }
 
-        // Bulk upload or carousel logic
+        // Bulk upload or carousel logic (Deferred)
         setIsUploading(true)
         try {
             if (isCarousel && files.length > 1) {
                 // Multiple images for carousel
-                const urls: string[] = [...(carouselImages || [])]
+                const currentUrls: string[] = [...(carouselImages || [])]
+                const newAssets: { url: string, file: File }[] = []
+                const newUrls: string[] = []
+
                 for (const file of Array.from(files)) {
-                    validateImage(file)
+                    // validateImage(file) // Already validated
                     const compressed = await compressImage(file)
-                    const uploadedUrl = await uploadImage(compressed)
-                    urls.push(uploadedUrl)
+                    const blobUrl = URL.createObjectURL(compressed)
+                    newAssets.push({ url: blobUrl, file: compressed })
+                    newUrls.push(blobUrl)
                 }
-                onCarouselImagesChange?.(urls)
-                if (!url && urls.length > 0) onChange(urls[0]) // Set first as main
+
+                onAssetsChange?.(newAssets)
+                const updatedUrls = [...currentUrls, ...newUrls]
+                onCarouselImagesChange?.(updatedUrls)
+                if (!url && updatedUrls.length > 0) onChange(updatedUrls[0])
             } else {
                 // Single image fallback (direct)
                 const file = files[0]
-                validateImage(file)
+                // validateImage(file)
                 const compressed = await compressImage(file)
-                const uploadedUrl = await uploadImage(compressed)
-                onChange(uploadedUrl)
+                const blobUrl = URL.createObjectURL(compressed)
+
+                onAssetsChange?.([{ url: blobUrl, file: compressed }])
+                onChange(blobUrl)
             }
         } catch (err: any) {
             console.error(err)
-            alert(err.message || 'Upload failed')
+            alert(err.message || 'Processing failed')
         } finally {
             setIsUploading(false)
         }
@@ -473,17 +575,19 @@ const ImageBlockEditor = ({
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            validateImage(pendingFile)
             const compressed = await compressImage(pendingFile)
-            const url = await uploadImage(compressed)
+            const blobUrl = URL.createObjectURL(compressed)
+
             if (isCarousel) {
-                const newImages = [...(carouselImages || []), url]
+                onAssetsChange?.([{ url: blobUrl, file: compressed }])
+                const newImages = [...(carouselImages || []), blobUrl]
                 onCarouselImagesChange?.(newImages)
-                if (!url) onChange(url)
+                if (!url) onChange(blobUrl)
             } else {
-                onChange(url)
+                onAssetsChange?.([{ url: blobUrl, file: compressed }])
+                onChange(blobUrl)
             }
-        } catch (err: any) { console.error(err); alert(err.message || 'Upload failed') }
+        } catch (err: any) { console.error(err); alert(err.message || 'Processing failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
 
@@ -491,17 +595,19 @@ const ImageBlockEditor = ({
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            // Blob is already WebP from getCroppedImg
             // Blob is WebP
             // @ts-ignore
             const file = new File([blob], `cropped-block-${Date.now()}.webp`, { type: "image/webp" })
-            const uploadedUrl = await uploadImage(file)
+            const blobUrl = URL.createObjectURL(file)
+
             if (isCarousel) {
-                const newImages = [...(carouselImages || []), uploadedUrl]
+                onAssetsChange?.([{ url: blobUrl, file }])
+                const newImages = [...(carouselImages || []), blobUrl]
                 onCarouselImagesChange?.(newImages)
-                if (!url) onChange(uploadedUrl)
+                if (!url) onChange(blobUrl)
             } else {
-                onChange(uploadedUrl)
+                onAssetsChange?.([{ url: blobUrl, file }])
+                onChange(blobUrl)
             }
         } catch (err) { console.error(err) } finally { setIsUploading(false) }
     }
@@ -690,11 +796,8 @@ const ImageBlockEditor = ({
     )
 }
 
-const PdfBlockEditor = ({ url, onChange }: { url: string, onChange: (url: string) => void }) => {
+const PdfBlockEditor = ({ url, onChange, onAssetChange }: { url: string, onChange: (url: string) => void, onAssetChange?: (url: string, file: File) => void }) => {
     const [isUploading, setIsUploading] = useState(false)
-
-
-
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -702,11 +805,13 @@ const PdfBlockEditor = ({ url, onChange }: { url: string, onChange: (url: string
 
         setIsUploading(true)
         try {
-            const uploadedUrl = await uploadPdf(file)
-            onChange(uploadedUrl)
+            // Create blob URL for PDF
+            const blobUrl = URL.createObjectURL(file)
+            onAssetChange?.(blobUrl, file)
+            onChange(blobUrl)
         } catch (err) {
             console.error(err)
-            alert('Upload failed')
+            alert('Processing failed')
         } finally {
             setIsUploading(false)
         }
@@ -973,7 +1078,8 @@ const CompositeBlockEditor = ({
     onTextChange,
     onSubtitleChange,
     onSubtitleColorChange,
-    onAlignmentChange
+    onAlignmentChange,
+    onAssetsChange
 }: {
     layout?: 'image-left' | 'image-right' | 'image-top' | 'stacked'
     imageUrl?: string
@@ -989,6 +1095,7 @@ const CompositeBlockEditor = ({
     onSubtitleChange?: (subtitle: string) => void
     onSubtitleColorChange?: (color: string) => void
     onAlignmentChange?: (alignment: 'left' | 'center' | 'right' | 'justify') => void
+    onAssetsChange?: (assets: { url: string, file: File }[]) => void
 }) => {
     const [isUploading, setIsUploading] = useState(false)
     // const [isFocused, setIsFocused] = useState(false)
@@ -1006,7 +1113,9 @@ const CompositeBlockEditor = ({
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             TextStyle,
             Color,
-            FontSize
+            FontSize,
+            TextDirection,
+            Link.configure({ openOnClick: false })
         ],
         content: textContent || '<p>Add your text here...</p>',
         onUpdate: ({ editor }) => {
@@ -1045,13 +1154,14 @@ const CompositeBlockEditor = ({
         setCropImageSrc(null)
         setIsUploading(true)
         try {
-            validateImage(pendingFile)
             const compressed = await compressImage(pendingFile)
-            const url = await uploadImage(compressed)
-            const newImages = [...images, url]
+            const blobUrl = URL.createObjectURL(compressed)
+
+            onAssetsChange?.([{ url: blobUrl, file: compressed }])
+            const newImages = [...images, blobUrl]
             onImagesChange?.(newImages)
-            if (newImages.length === 1) onImageChange?.(url)
-        } catch (err: any) { console.error(err); alert(err.message || 'Upload failed') }
+            if (newImages.length === 1) onImageChange?.(blobUrl)
+        } catch (err: any) { console.error(err); alert(err.message || 'Processing failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
 
@@ -1060,13 +1170,14 @@ const CompositeBlockEditor = ({
         setIsUploading(true)
         try {
             // Blob is already WebP
-            // Blob is WebP
             // @ts-ignore
             const file = new File([blob], `cropped-composite-${Date.now()}.webp`, { type: "image/webp" })
-            const url = await uploadImage(file)
-            const newImages = [...images, url]
+            const blobUrl = URL.createObjectURL(file)
+
+            onAssetsChange?.([{ url: blobUrl, file }])
+            const newImages = [...images, blobUrl]
             onImagesChange?.(newImages)
-            if (newImages.length === 1) onImageChange?.(url)
+            if (newImages.length === 1) onImageChange?.(blobUrl)
         } catch (err) { console.error(err) }
         finally { setIsUploading(false) }
     }
@@ -1317,6 +1428,20 @@ export function PostEditor() {
 
     // Blocks State
     const [blocks, setBlocks] = useState<EditorBlock[]>([])
+
+    // Pending Uploads State (Global)
+    const [pendingCoverFiles, setPendingCoverFiles] = useState<Record<string, File>>({})
+    const [pendingGalleryFiles, setPendingGalleryFiles] = useState<Record<string, File>>({})
+    const [pendingIconFile, setPendingIconFile] = useState<{ url: string, file: File } | null>(null)
+
+    const handleBlockAssetsChange = (blockId: string, assets: { url: string, file: File }[]) => {
+        setBlocks(prev => prev.map(b => {
+            if (b.id !== blockId) return b
+            const newPending = { ...(b.pendingUploads || {}) }
+            assets.forEach(a => newPending[a.url] = a.file)
+            return { ...b, pendingUploads: newPending }
+        }))
+    }
 
     // Cover Carousel State
     const [currentCoverIndex, setCurrentCoverIndex] = useState(0)
@@ -1578,13 +1703,15 @@ export function PostEditor() {
         setIsUploading(true)
         try {
             // Already validated but safe to re-validate
-            validateImage(pendingFile)
             const compressed = await compressImage(pendingFile)
-            const url = await uploadImage(compressed)
-            setImages(prev => [...prev, url])
+            const blobUrl = URL.createObjectURL(compressed)
+
+            setPendingCoverFiles(prev => ({ ...prev, [blobUrl]: compressed }))
+            setImages(prev => [...prev, blobUrl])
+
             // If first image, reset index
             if (images.length === 0) setCurrentCoverIndex(0)
-        } catch (err: any) { console.error(err); alert(err.message || 'Upload failed') }
+        } catch (err: any) { console.error(err); alert(err.message || 'Processing failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
 
@@ -1593,11 +1720,13 @@ export function PostEditor() {
         setIsUploading(true)
         try {
             // Blob is WebP
-            // Blob is WebP
             // @ts-ignore
             const file = new File([blob], `cropped-cover-${Date.now()}.webp`, { type: "image/webp" })
-            const url = await uploadImage(file)
-            setImages(prev => [...prev, url])
+            const blobUrl = URL.createObjectURL(file)
+
+            setPendingCoverFiles(prev => ({ ...prev, [blobUrl]: file }))
+            setImages(prev => [...prev, blobUrl])
+
             // If first image, reset index
             if (images.length === 0) setCurrentCoverIndex(0)
         } catch (err) { console.error(err) } finally { setIsUploading(false) }
@@ -1611,27 +1740,144 @@ export function PostEditor() {
             validateImage(file)
             setIsUploading(true)
             const compressed = await compressImage(file)
-            const url = await uploadImage(compressed)
-            setIcon(url)
+            const blobUrl = URL.createObjectURL(compressed)
+            setPendingIconFile({ url: blobUrl, file: compressed })
+            setIcon(blobUrl)
         } catch (err: any) {
             console.error(err)
-            alert(err.message || 'Upload failed')
+            alert(err.message || 'Processing failed')
         } finally {
             setIsUploading(false)
             e.target.value = ''
         }
     }
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!title) { alert('Please enter a title'); return }
         setIsSaving(true)
 
+        // --- Process Pending Uploads ---
+        const uploadPendingFile = async (file: File) => {
+            if (file.type.includes('pdf')) return await uploadPdf(file)
+            return await uploadImage(file)
+        }
+
+        // 1. Upload Cover Images
+        const processedImages = [...images]
+        try {
+            for (let i = 0; i < processedImages.length; i++) {
+                const url = processedImages[i]
+                if (pendingCoverFiles[url]) {
+                    const realUrl = await uploadPendingFile(pendingCoverFiles[url])
+                    processedImages[i] = realUrl
+                }
+            }
+        } catch (e) {
+            console.error('Failed cover uploads', e)
+            alert('Failed to upload cover images')
+            setIsSaving(false)
+            return
+        }
+
+        // 2. Upload Gallery Images
+        const processedGalleryImages = [...galleryImages]
+        try {
+            for (let i = 0; i < processedGalleryImages.length; i++) {
+                const url = processedGalleryImages[i]
+                if (pendingGalleryFiles[url]) {
+                    const realUrl = await uploadPendingFile(pendingGalleryFiles[url])
+                    processedGalleryImages[i] = realUrl
+                }
+            }
+        } catch (e) {
+            console.error('Failed gallery uploads', e)
+            alert('Failed to upload gallery images')
+            setIsSaving(false)
+            return
+        }
+
+        // 3. Upload Icon
+        let processedIcon = icon
+        if (pendingIconFile && pendingIconFile.url === icon) {
+            try {
+                processedIcon = await uploadPendingFile(pendingIconFile.file)
+            } catch (e) {
+                console.error('Failed icon upload', e)
+                alert('Failed to upload icon')
+                setIsSaving(false)
+                return
+            }
+        }
+
+        // 4. Upload Block Assets
+        const processedBlocks = [...blocks]
+        const urlMap: Record<string, string> = {} // blobUrl -> realUrl
+
+        try {
+            // Collect all pending uploads across blocks
+            const uploads: Promise<void>[] = []
+
+            for (const block of processedBlocks) {
+                if (block.pendingUploads) {
+                    for (const [blobUrl, file] of Object.entries(block.pendingUploads)) {
+                        uploads.push((async () => {
+                            const realUrl = await uploadPendingFile(file)
+                            urlMap[blobUrl] = realUrl
+                        })())
+                    }
+                }
+            }
+
+            if (uploads.length > 0) {
+                await Promise.all(uploads)
+            }
+        } catch (e) {
+            console.error('Failed block uploads', e)
+            alert('Failed to upload content assets')
+            setIsSaving(false)
+            return
+        }
+
+        // Replace blobs in blocks with real URLs
+        processedBlocks.forEach(block => {
+            // Helper to replace specific URL
+            const replaceUrl = (u: string) => urlMap[u] || u
+
+            // Helper to replace in string content (if it contains the blob URL)
+            // Note: simple replacement might be risky if blob URL is short, but they are UUIDs usually.
+            // Better to rely on structured fields if possible.
+
+            if (block.content) {
+                // Check if content matches a blob key exactly (Image/PDF)
+                if (urlMap[block.content]) {
+                    block.content = urlMap[block.content]
+                } else if (block.type === 'text') {
+                    // NO-OP for text usually, unless we support inline images in text later
+                }
+            }
+
+            // Also composite fields
+            if (block.imageUrl && urlMap[block.imageUrl]) {
+                block.imageUrl = urlMap[block.imageUrl]
+            }
+
+            // Carousel arrays
+            if (block.carouselImages) {
+                block.carouselImages = block.carouselImages.map(replaceUrl)
+            }
+
+            // Clean up html content for Image/PDF blocks (since we regenerate HTML below)
+            // But wait, "block.content" is used for regeneration.
+            // If block.content was a blob URL, we just updated it.
+            // So the regeneration below will use the new URL.
+
+        })
 
 
         // Serialize Blocks to HTML
         let finalContent = ''
         let extractedPdfUrl = '' // For backward compatibility
-        blocks.forEach(block => {
+        processedBlocks.forEach(block => {
             const alignAttr = block.alignment ? ` data-align="${block.alignment}"` : ''
             const subtitleColorAttr = block.subtitleColor ? ` data-subtitle-color="${block.subtitleColor}"` : ''
 
@@ -1709,20 +1955,21 @@ export function PostEditor() {
             }
         })
 
+
         try {
             // Construct Post Data
             const postData = {
                 title,
                 subtitle,
                 content: finalContent,
-                image: images.length > 1 ? JSON.stringify(images) : (images[0] || undefined),
+                image: processedImages.length > 1 ? JSON.stringify(processedImages) : (processedImages[0] || undefined),
                 pdfUrl: pdfUrl || extractedPdfUrl,
                 enableAudio,
                 email,
                 instagram,
                 tags, // Include tags in save
-                galleryImages, // Include gallery images
-                icon, // Include icon in save
+                galleryImages: processedGalleryImages, // Include gallery images
+                icon: processedIcon, // Include icon in save
                 layout: 'default',
                 order,
                 createdAt: date ? new Date(date).getTime() : (post?.createdAt || Date.now()) // Use selected date or existing/current
@@ -2070,16 +2317,19 @@ export function PostEditor() {
                                     if (!files || files.length === 0) return
                                     setIsUploading(true)
                                     try {
+                                        const newPending: Record<string, File> = {}
                                         const newUrls: string[] = []
                                         for (const file of Array.from(files)) {
                                             validateImage(file)
                                             const compressed = await compressImage(file)
-                                            const url = await uploadImage(compressed)
-                                            newUrls.push(url)
+                                            const blobUrl = URL.createObjectURL(compressed)
+                                            newPending[blobUrl] = compressed
+                                            newUrls.push(blobUrl)
                                         }
+                                        setPendingGalleryFiles(prev => ({ ...prev, ...newPending }))
                                         setGalleryImages(prev => [...prev, ...newUrls])
                                     } catch (err: any) {
-                                        alert(err.message || 'Upload failed')
+                                        alert(err.message || 'Processing failed')
                                     } finally {
                                         setIsUploading(false)
                                         e.target.value = ''
@@ -2288,10 +2538,15 @@ export function PostEditor() {
                                     onAlignmentChange={(alignment) => updateBlockField(block.id, 'alignment', alignment)}
                                     onCarouselToggle={(isCarousel) => updateBlockField(block.id, 'isCarousel', isCarousel)}
                                     onCarouselImagesChange={(images) => updateBlockField(block.id, 'carouselImages', images)}
+                                    onAssetsChange={(assets) => handleBlockAssetsChange(block.id, assets)}
                                 />
                             )}
                             {block.type === 'pdf' && (
-                                <PdfBlockEditor url={block.content} onChange={(url) => updateBlockContent(block.id, url)} />
+                                <PdfBlockEditor
+                                    url={block.content}
+                                    onChange={(url) => updateBlockContent(block.id, url)}
+                                    onAssetChange={(url, file) => handleBlockAssetsChange(block.id, [{ url, file }])}
+                                />
                             )}
                             {block.type === 'composite' && (
                                 <CompositeBlockEditor
@@ -2305,6 +2560,7 @@ export function PostEditor() {
                                     onLayoutChange={(layout) => updateBlockField(block.id, 'layout', layout)}
                                     onImageChange={(url) => updateBlockField(block.id, 'imageUrl', url)}
                                     onImagesChange={(urls) => updateBlockField(block.id, 'carouselImages', urls)}
+                                    onAssetsChange={(assets) => handleBlockAssetsChange(block.id, assets)}
                                     onTextChange={(content) => updateBlockField(block.id, 'textContent', content)}
                                     onSubtitleChange={(subtitle) => updateBlockField(block.id, 'subtitle', subtitle)}
                                     onSubtitleColorChange={(color) => updateBlockField(block.id, 'subtitleColor', color)}

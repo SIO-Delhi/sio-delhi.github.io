@@ -57,11 +57,11 @@ export function PageTemplate({
                         style={{
                             fontSize: 'clamp(3rem, 6vw, 5rem)',
                             fontWeight: 800,
-                            color: isDark ? '#ffffff' : '#000000',
+                            color: isDark ? '#fdedcb' : '#000000',
                             lineHeight: 1,
                             margin: 0,
                             textTransform: 'uppercase',
-                            fontFamily: '"Geist", sans-serif',
+                            fontFamily: '"DM Sans", sans-serif',
                             letterSpacing: '-0.03em',
                             opacity: 0 // Start hidden for animation
                         }}

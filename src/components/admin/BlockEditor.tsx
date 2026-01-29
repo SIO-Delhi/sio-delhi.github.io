@@ -6,14 +6,18 @@ import TextAlign from '@tiptap/extension-text-align'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 import { Extension } from '@tiptap/core'
-import { uploadImage, uploadPdf } from '../../lib/storage'
+import Link from '@tiptap/extension-link'
+// Imports removed as they are no longer used here
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { ImageCropper } from './ImageCropper'
 import {
     Plus, X, FileText, Trash2, Loader2, Bold, Italic, Underline as UnderlineIcon,
     Heading1, Heading2, List, MoveUp, MoveDown, AlignLeft, AlignCenter, AlignRight, AlignJustify,
-    ImageIcon, Volume2, Palette, Layout
+    ImageIcon, Volume2, Palette, Layout, PilcrowLeft, PilcrowRight, Link as LinkIcon
 } from 'lucide-react'
+import { PDFPreviewCard } from '../ui/PDFPreviewCard'
+import { PDFModal } from '../ui/PDFModal'
+import { PDFFlipbook } from '../ui/PDFFlipbook'
 
 // --- Block Types & Interfaces ---
 export type EditorBlockType = 'text' | 'image' | 'pdf' | 'composite' | 'video'
@@ -35,6 +39,47 @@ export interface EditorBlock {
 
 // Re-export for verbatimModuleSyntax compatibility
 export type { EditorBlock as EditorBlockInterface }
+
+// --- Custom Text Direction Extension ---
+export const TextDirection = Extension.create({
+    name: 'textDirection',
+    addOptions() {
+        return {
+            types: ['heading', 'paragraph'],
+        }
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: {
+                    dir: {
+                        default: null,
+                        parseHTML: element => element.getAttribute('dir'),
+                        renderHTML: attributes => {
+                            if (!attributes.dir) {
+                                return {}
+                            }
+                            return {
+                                dir: attributes.dir,
+                            }
+                        },
+                    },
+                },
+            },
+        ]
+    },
+    addCommands() {
+        return {
+            setTextDirection: (direction: 'ltr' | 'rtl' | 'auto') => ({ commands }: any) => {
+                return this.options.types.every((type: string) => commands.updateAttributes(type, { dir: direction }))
+            },
+            unsetTextDirection: () => ({ commands }: any) => {
+                return this.options.types.every((type: string) => commands.resetAttributes(type, 'dir'))
+            },
+        }
+    },
+})
 
 // FontSize Extension
 export const FontSize = Extension.create({
@@ -107,17 +152,17 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
             background: '#1a1a1a', borderRadius: '8px 8px 0 0', borderBottom: '1px solid #333',
             alignItems: 'center'
         }}>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))} title="Bold">
                 <Bold size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))} title="Italic">
                 <Italic size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))} title="Underline">
                 <UnderlineIcon size={14} />
             </button>
             <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-            
+
             {/* Font Size */}
             <select
                 onMouseDown={(e) => e.stopPropagation()}
@@ -135,15 +180,15 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
                 <option value="1.5rem">X-Large</option>
                 <option value="1.875rem">XX-Large</option>
             </select>
-            
+
             <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-            
+
             {/* Text Color */}
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                     type="color"
                     onChange={handleColorChange}
-                    value={editor.getAttributes('textStyle').color || '#ffffff'}
+                    value={editor.getAttributes('textStyle').color || '#fdedcb'}
                     style={{
                         width: '28px', height: '28px', padding: 0, border: '2px solid #444',
                         borderRadius: '4px', cursor: 'pointer', background: 'transparent'
@@ -151,27 +196,72 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
                     title="Text Color"
                 />
             </div>
-            
+
             <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-            
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))}>
+
+            {/* Link */}
+            <button type="button" onMouseDown={(e) => {
+                e.preventDefault()
+                const previousUrl = editor.getAttributes('link').href
+                const url = window.prompt('URL', previousUrl)
+
+                if (url === null) return
+                if (url === '') {
+                    editor.chain().focus().extendMarkRange('link').unsetLink().run()
+                    return
+                }
+
+                let finalUrl = url
+                // If it doesn't start with http/https/mailto and is not a relative path (/ or #), prepend https://
+                if (!/^https?:\/\//i.test(url) && !/^\//.test(url) && !/^#/.test(url) && !/^mailto:/i.test(url)) {
+                    finalUrl = 'https://' + url
+                }
+
+                editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
+            }} style={buttonStyle(editor.isActive('link'))} title="Link">
+                <LinkIcon size={14} />
+            </button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
+
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))} title="H1">
                 <Heading1 size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))} title="H2">
                 <Heading2 size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))} title="Bullet List">
                 <List size={14} />
             </button>
             <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))} title="Align Left">
                 <AlignLeft size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))} title="Align Center">
                 <AlignCenter size={14} />
             </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))}>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))} title="Align Right">
                 <AlignRight size={14} />
+            </button>
+
+            <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
+
+            {/* Text Direction */}
+            <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('ltr').run() }}
+                style={buttonStyle(editor.isActive({ dir: 'ltr' }))}
+                title="Left-to-Right"
+            >
+                <PilcrowLeft size={14} />
+            </button>
+            <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('rtl').run() }}
+                style={buttonStyle(editor.isActive({ dir: 'rtl' }))}
+                title="Right-to-Left"
+            >
+                <PilcrowRight size={14} />
             </button>
         </div>
     )
@@ -185,7 +275,7 @@ const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange 
     onSubtitleChange?: (subtitle: string) => void
 }) => {
     const editor = useEditor({
-        extensions: [StarterKit, Underline, TextAlign.configure({ types: ['heading', 'paragraph'] }), TextStyle, Color, FontSize],
+        extensions: [StarterKit, Underline, TextAlign.configure({ types: ['heading', 'paragraph'] }), TextStyle, Color, FontSize, TextDirection, Link.configure({ openOnClick: false })],
         content: initialContent,
         onUpdate: ({ editor }) => onChange(editor.getHTML()),
         editorProps: { attributes: { class: 'prose prose-invert max-w-none focus:outline-none min-h-[100px]' } },
@@ -215,7 +305,7 @@ const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange 
 }
 
 // --- Image Block Editor ---
-const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, onCaptionChange, onCarouselToggle, onCarouselImagesChange }: {
+const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, onCaptionChange, onCarouselToggle, onCarouselImagesChange, onAssetsChange }: {
     url: string
     caption?: string
     isCarousel?: boolean
@@ -224,6 +314,7 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
     onCaptionChange?: (caption: string) => void
     onCarouselToggle?: (isCarousel: boolean) => void
     onCarouselImagesChange?: (images: string[]) => void
+    onAssetsChange?: (assets: { url: string, file: File }[]) => void
 }) => {
     const [isUploading, setIsUploading] = useState(false)
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
@@ -240,7 +331,15 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
             reader.readAsDataURL(file)
         } catch (err: any) {
             alert(err.message)
+            e.target.value = ''
+            return
         }
+
+        // Defer upload
+        setPendingFile(file)
+        const reader = new FileReader()
+        reader.addEventListener('load', () => setCropImageSrc(reader.result?.toString() || null))
+        reader.readAsDataURL(file)
         e.target.value = ''
     }
 
@@ -249,12 +348,16 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
         setCropImageSrc(null)
         setIsUploading(true)
         try {
+            validateImage(pendingFile)
             const compressed = await compressImage(pendingFile)
-            const uploadedUrl = await uploadImage(compressed)
+            const blobUrl = URL.createObjectURL(compressed)
+
             if (isCarousel && onCarouselImagesChange) {
-                onCarouselImagesChange([...(carouselImages || []), uploadedUrl])
+                onAssetsChange?.([{ url: blobUrl, file: compressed }])
+                onCarouselImagesChange([...(carouselImages || []), blobUrl])
             } else {
-                onChange(uploadedUrl)
+                onAssetsChange?.([{ url: blobUrl, file: compressed }])
+                onChange(blobUrl)
             }
         } catch (err: any) {
             alert(err.message || 'Upload failed')
@@ -268,12 +371,17 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
         setCropImageSrc(null)
         setIsUploading(true)
         try {
+            // Blob is WebP
+            // @ts-ignore
             const file = new File([blob], `cropped-${Date.now()}.webp`, { type: 'image/webp' })
-            const uploadedUrl = await uploadImage(file)
+            const blobUrl = URL.createObjectURL(file)
+
             if (isCarousel && onCarouselImagesChange) {
-                onCarouselImagesChange([...(carouselImages || []), uploadedUrl])
+                onAssetsChange?.([{ url: blobUrl, file }])
+                onCarouselImagesChange([...(carouselImages || []), blobUrl])
             } else {
-                onChange(uploadedUrl)
+                onAssetsChange?.([{ url: blobUrl, file }])
+                onChange(blobUrl)
             }
         } catch (err) {
             alert('Upload failed')
@@ -294,7 +402,7 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
                     onCropComplete={handleCropComplete}
                 />
             )}
-            
+
             {/* Carousel Toggle */}
             {onCarouselToggle && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', cursor: 'pointer', color: '#888', fontSize: '0.85rem' }}>
@@ -368,7 +476,7 @@ const ImageBlockEditor = ({ url, caption, isCarousel, carouselImages, onChange, 
 }
 
 // --- PDF Block Editor ---
-const PdfBlockEditor = ({ url, onChange }: { url: string, onChange: (url: string) => void }) => {
+const PdfBlockEditor = ({ url, onChange, onAssetChange }: { url: string, onChange: (url: string) => void, onAssetChange?: (url: string, file: File) => void }) => {
     const [isUploading, setIsUploading] = useState(false)
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -377,8 +485,9 @@ const PdfBlockEditor = ({ url, onChange }: { url: string, onChange: (url: string
         if (!file.type.includes('pdf')) { alert('Please upload a PDF file'); return }
         setIsUploading(true)
         try {
-            const uploadedUrl = await uploadPdf(file)
-            onChange(uploadedUrl)
+            const blobUrl = URL.createObjectURL(file)
+            onAssetChange?.(blobUrl, file)
+            onChange(blobUrl)
         } catch (err) {
             alert('Upload failed')
         } finally {
@@ -388,17 +497,26 @@ const PdfBlockEditor = ({ url, onChange }: { url: string, onChange: (url: string
     }
 
     if (url) {
+        const [isModalOpen, setIsModalOpen] = useState(false)
         return (
             <div style={{ background: '#111', borderRadius: '12px', padding: '16px', border: '1px solid #333' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <FileText size={24} color="#ff3b3b" />
-                        <span style={{ color: '#ccc', fontSize: '0.9rem' }}>PDF uploaded</span>
+                        <span style={{ color: '#ccc', fontSize: '0.9rem' }}>PDF Block</span>
                     </div>
                     <button onClick={() => onChange('')} style={{ background: '#222', border: 'none', color: '#888', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer' }}>
                         Remove
                     </button>
                 </div>
+
+                <div style={{ maxWidth: '300px', margin: '0 auto' }}>
+                    <PDFPreviewCard url={url} onClick={() => setIsModalOpen(true)} />
+                </div>
+
+                <PDFModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+                    <PDFFlipbook url={url} />
+                </PDFModal>
             </div>
         )
     }
@@ -476,7 +594,8 @@ const CompositeBlockEditor = ({
     onTextChange,
     onSubtitleChange,
     onSubtitleColorChange,
-    onAlignmentChange
+    onAlignmentChange,
+    onAssetsChange
 }: {
     layout?: 'image-left' | 'image-right' | 'image-top' | 'stacked'
     imageUrl?: string
@@ -492,6 +611,7 @@ const CompositeBlockEditor = ({
     onSubtitleChange?: (subtitle: string) => void
     onSubtitleColorChange?: (color: string) => void
     onAlignmentChange?: (alignment: 'left' | 'center' | 'right' | 'justify') => void
+    onAssetsChange?: (assets: { url: string, file: File }[]) => void
 }) => {
     const [isUploading, setIsUploading] = useState(false)
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
@@ -508,7 +628,9 @@ const CompositeBlockEditor = ({
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             TextStyle,
             Color,
-            FontSize
+            FontSize,
+            TextDirection,
+            Link.configure({ openOnClick: false })
         ],
         content: textContent || '<p>Add your text here...</p>',
         onUpdate: ({ editor }) => {
@@ -547,10 +669,11 @@ const CompositeBlockEditor = ({
         try {
             validateImage(pendingFile)
             const compressed = await compressImage(pendingFile)
-            const url = await uploadImage(compressed)
-            const newImages = [...images, url]
+            const blobUrl = URL.createObjectURL(compressed)
+            onAssetsChange?.([{ url: blobUrl, file: compressed }])
+            const newImages = [...images, blobUrl]
             onImagesChange?.(newImages)
-            if (newImages.length === 1) onImageChange?.(url)
+            if (newImages.length === 1) onImageChange?.(blobUrl)
         } catch (err: any) { console.error(err); alert(err.message || 'Upload failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
@@ -559,11 +682,13 @@ const CompositeBlockEditor = ({
         setCropImageSrc(null)
         setIsUploading(true)
         try {
+            // @ts-ignore
             const file = new File([blob], `cropped-composite-${Date.now()}.webp`, { type: "image/webp" })
-            const url = await uploadImage(file)
-            const newImages = [...images, url]
+            const blobUrl = URL.createObjectURL(file)
+            onAssetsChange?.([{ url: blobUrl, file }])
+            const newImages = [...images, blobUrl]
             onImagesChange?.(newImages)
-            if (newImages.length === 1) onImageChange?.(url)
+            if (newImages.length === 1) onImageChange?.(blobUrl)
         } catch (err) { console.error(err) }
         finally { setIsUploading(false) }
     }
@@ -817,7 +942,13 @@ interface BlockEditorProps {
     onChange: (blocks: EditorBlock[]) => void
 }
 
-export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
+interface BlockEditorProps {
+    blocks: EditorBlock[]
+    onChange: (blocks: EditorBlock[]) => void
+    onBlockAssetsChange?: (blockId: string, assets: { url: string, file: File }[]) => void
+}
+
+export function BlockEditor({ blocks, onChange, onBlockAssetsChange }: BlockEditorProps) {
     const addBlock = (type: EditorBlock['type']) => {
         const newBlock: EditorBlock = {
             id: crypto.randomUUID(),
@@ -839,7 +970,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
         const newBlocks = [...blocks]
         const targetIndex = direction === 'up' ? index - 1 : index + 1
         if (targetIndex < 0 || targetIndex >= blocks.length) return
-        ;[newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]]
+            ;[newBlocks[index], newBlocks[targetIndex]] = [newBlocks[targetIndex], newBlocks[index]]
         onChange(newBlocks)
     }
 
@@ -896,12 +1027,14 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                                 onCaptionChange={(caption) => updateBlock(block.id, { caption })}
                                 onCarouselToggle={(isCarousel) => updateBlock(block.id, { isCarousel })}
                                 onCarouselImagesChange={(carouselImages) => updateBlock(block.id, { carouselImages })}
+                                onAssetsChange={(assets) => onBlockAssetsChange?.(block.id, assets)}
                             />
                         )}
                         {block.type === 'pdf' && (
                             <PdfBlockEditor
                                 url={block.content}
                                 onChange={(content) => updateBlock(block.id, { content })}
+                                onAssetChange={(url, file) => onBlockAssetsChange?.(block.id, [{ url, file }])}
                             />
                         )}
                         {block.type === 'video' && (
@@ -928,6 +1061,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                                 onSubtitleChange={(subtitle) => updateBlock(block.id, { subtitle })}
                                 onSubtitleColorChange={(color) => updateBlock(block.id, { subtitleColor: color })}
                                 onAlignmentChange={(alignment) => updateBlock(block.id, { alignment })}
+                                onAssetsChange={(assets) => onBlockAssetsChange?.(block.id, assets)}
                             />
                         )}
                     </div>
@@ -980,7 +1114,7 @@ export function htmlToBlocks(html: string): EditorBlock[] {
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = html
     const blockElements = tempDiv.querySelectorAll('.siodel-block')
-    
+
     if (blockElements.length === 0) {
         // Legacy content - return as single text block
         if (html.trim()) {
@@ -1013,7 +1147,7 @@ export function htmlToBlocks(html: string): EditorBlock[] {
             try {
                 const imagesAttr = el.getAttribute('data-images')
                 if (imagesAttr) block.carouselImages = JSON.parse(decodeURIComponent(imagesAttr))
-            } catch {}
+            } catch { }
         } else if (type === 'pdf') {
             block.content = decodeURIComponent(el.getAttribute('data-pdf-url') || '')
         } else if (type === 'video') {
@@ -1028,7 +1162,7 @@ export function htmlToBlocks(html: string): EditorBlock[] {
             try {
                 const imagesAttr = el.getAttribute('data-images')
                 if (imagesAttr) block.carouselImages = JSON.parse(imagesAttr)
-            } catch {}
+            } catch { }
         }
 
         block.alignment = (el.getAttribute('data-align') as any) || undefined

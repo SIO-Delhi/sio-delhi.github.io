@@ -1,147 +1,146 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
 
-/* Geist Font Family */
+/* DM Sans Font Family */
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Thin.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Thin.ttf') format('truetype');
   font-weight: 100;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-ExtraLight.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-ThinItalic.ttf') format('truetype');
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-ExtraLight.ttf') format('truetype');
   font-weight: 200;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Light.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-ExtraLightItalic.ttf') format('truetype');
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Light.ttf') format('truetype');
   font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Regular.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-LightItalic.ttf') format('truetype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Medium.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Medium.ttf') format('truetype');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-SemiBold.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-MediumItalic.ttf') format('truetype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-SemiBold.ttf') format('truetype');
   font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Bold.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-SemiBoldItalic.ttf') format('truetype');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Bold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-ExtraBold.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-ExtraBold.ttf') format('truetype');
   font-weight: 800;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-Black.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-ExtraBoldItalic.ttf') format('truetype');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-Black.ttf') format('truetype');
   font-weight: 900;
   font-style: normal;
   font-display: swap;
 }
 
-/* Geist Italic variants */
 @font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-ThinItalic.otf') format('opentype');
-  font-weight: 100;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-ExtraLightItalic.otf') format('opentype');
-  font-weight: 200;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-LightItalic.otf') format('opentype');
-  font-weight: 300;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-RegularItalic.otf') format('opentype');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-MediumItalic.otf') format('opentype');
-  font-weight: 500;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-SemiBoldItalic.otf') format('opentype');
-  font-weight: 600;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-BoldItalic.otf') format('opentype');
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-ExtraBoldItalic.otf') format('opentype');
-  font-weight: 800;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Geist';
-  src: url('./fonts/Geist-BlackItalic.otf') format('opentype');
+  font-family: 'DM Sans';
+  src: url('./fonts/DM_Sans/static/DMSans-BlackItalic.ttf') format('truetype');
   font-weight: 900;
   font-style: italic;
   font-display: swap;
@@ -165,9 +164,49 @@
   font-display: swap;
 }
 
-.font-urdu {
-  font-family: 'Jameel Noori Nastaleeq Kasheeda', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif;
-  direction: rtl;
+/* AlQalam Taj Nastaleeq Font */
+@font-face {
+  font-family: 'AlQalam Taj Nastaleeq';
+  src: url('./fonts/AlQalam Taj Nastaleeq Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-urdu,
+:lang(ur),
+[lang="ur"] {
+  font-family: 'AlQalam Taj Nastaleeq', 'Jameel Noori Nastaleeq Kasheeda', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+  /* Do not set global direction here — runtime previously applied this too broadly and flipped layout.
+     Direction is applied more narrowly below for post/subsection containers only. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Adjust spacing for Nastaliq-style Urdu to improve readability */
+.font-urdu,
+:lang(ur),
+[lang="ur"] {
+  /* space between words; tweak value if too wide/narrow */
+  word-spacing: 0.22em !important;
+  /* slightly more line-height for dense Nastaliq text */
+  line-height: 1.6 !important;
+  /* small positive letter-spacing can help some renderers */
+  letter-spacing: 0.01em !important;
+  text-rendering: optimizeLegibility;
+}
+
+/* Apply RTL direction and alignment only inside known content containers (prevents whole-site flip) */
+.post-content.font-urdu,
+.post-content .font-urdu,
+.section-card-shine.font-urdu,
+.section-card-shine .font-urdu,
+.subsection-grid.font-urdu,
+.subsection-grid .font-urdu,
+.subsection.font-urdu,
+.subsection .font-urdu {
+  direction: rtl !important;
+  text-align: right !important;
 }
 
 /* IBM Plex Sans Arabic Font Family */
@@ -230,6 +269,7 @@
 .font-arabic {
   font-family: 'IBM Plex Sans Arabic', sans-serif;
   direction: rtl;
+  color: #fdedcb;
 }
 
 /* Custom color theme for Tailwind v4 */
@@ -245,7 +285,7 @@
   --color-bg-elevated: #141416;
   --color-bg-surface: #202020;
 
-  --color-text-primary: #ffffff;
+  --color-text-primary: #fdedcb;
   --color-text-secondary: #999999;
   --color-text-muted: #666666;
 
@@ -265,12 +305,12 @@ html {
 }
 
 body {
-  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #000000;
-  background-attachment: fixed;
-  /* Ensures it stays in place while scrolling */
-  color: #ffffff;
-  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: #030304;
+  color: #fdedcb;
+  font-family: 'DM Sans', sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -459,6 +499,7 @@ h1 {
   font-weight: 400;
   line-height: 1.15;
   letter-spacing: -0.04em;
+  color: #efc676;
 }
 
 h2 {
@@ -624,8 +665,8 @@ section {
 .mobile-menu-btn .bar {
   width: 100%;
   height: 2px;
-  background-color: white;
-  /* Default to white, can be overridden */
+  background-color: #fdedcb;
+  /* Hamburger color changed to match brand accent */
   border-radius: 2px;
   transition: all 0.3s ease;
   transform-origin: left;
@@ -679,7 +720,8 @@ section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 40px;
+  gap: 20px; /* reduced gap so items sit closer vertically */
+  padding-top: 24px; /* bring items closer to the top */
   opacity: 0;
   transform: translateY(20px);
   transition: all 0.4s ease 0.1s;
@@ -696,7 +738,7 @@ section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: 12px; /* tightened spacing between link blocks */
   padding: 0;
 }
 
@@ -717,7 +759,7 @@ section {
 
 .mobile-links a.active,
 .mobile-links a:hover {
-  color: #ffffff;
+  color: #fdedcb;
 }
 
 [data-theme="light"] .mobile-links a.active,
@@ -740,16 +782,20 @@ section {
   content: '';
   position: absolute;
   inset: -50%;
+  /* More subtle gradient so initial render isn't overwhelmingly bright */
   background: conic-gradient(from var(--angle, 0deg),
       transparent 0deg,
       transparent 260deg,
-      rgba(255, 255, 255, 0.2) 290deg,
-      rgba(255, 255, 255, 0.5) 320deg,
-      rgba(255, 255, 255, 1) 350deg,
-      rgba(255, 255, 255, 0.5) 355deg,
-      rgba(255, 255, 255, 0.2) 358deg,
+      rgba(255, 255, 255, 0.12) 290deg,
+      rgba(255, 255, 255, 0.28) 320deg,
+      rgba(255, 255, 255, 0.65) 350deg,
+      rgba(255, 255, 255, 0.28) 355deg,
+      rgba(255, 255, 255, 0.12) 358deg,
       transparent 360deg);
+  /* Pause the animation by default to avoid a bright initial frame.
+     It will be enabled on window `load` by adding `.shiny-ready` on <html>. */
   animation: spin 5s linear infinite;
+  animation-play-state: paused;
 }
 
 .shiny-button-container::after {
@@ -757,7 +803,7 @@ section {
   position: absolute;
   inset: 1px;
   border-radius: 100px;
-  background: rgba(10, 10, 10, 0.6);
+  background: rgba(20, 20, 20, 0.4);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -788,6 +834,12 @@ section {
   syntax: '<angle>';
   initial-value: 0deg;
   inherits: false;
+}
+
+/* When the page is fully loaded, enable the shiny animation. This prevents
+   the initial bright render/frame from flashing before the page styles settle. */
+.shiny-ready .shiny-button-container::before {
+  animation-play-state: running;
 }
 
 /* Composite Layout Responsiveness */

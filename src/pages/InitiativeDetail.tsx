@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
+import { API_BASE } from '../lib/api'
 import { initiatives } from '../data/initiatives'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
@@ -67,7 +68,7 @@ export function InitiativeDetail() {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '8px',
-                        color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+                        color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.6)',
                         textDecoration: 'none',
                         marginBottom: '32px',
                         fontSize: '14px',
@@ -105,7 +106,7 @@ export function InitiativeDetail() {
                             style={{
                                 fontSize: '12px',
                                 fontWeight: 600,
-                                color: isDark ? '#ffffff' : '#111111',
+                                color: isDark ? '#fdedcb' : '#111111',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em'
                             }}
@@ -118,7 +119,7 @@ export function InitiativeDetail() {
                 <h1 style={{
                     fontSize: 'clamp(2.5rem, 5vw, 4rem)',
                     fontWeight: 700,
-                    color: isDark ? '#ffffff' : '#111111',
+                    color: isDark ? '#efc676' : '#111111',
                     marginBottom: '24px',
                     lineHeight: 1.1
                 }}>
@@ -148,7 +149,13 @@ export function InitiativeDetail() {
                 {/* PDF Flipbook (if PDF attached) */}
                 {'pdfUrl' in initiative && initiative.pdfUrl && (
                     <div style={{ marginBottom: '40px' }}>
-                        <PDFFlipbook url={initiative.pdfUrl} />
+                        <PDFFlipbook
+                            url={initiative.pdfUrl.startsWith('http')
+                                ? initiative.pdfUrl
+                                : `${API_BASE}/uploads/pdfs/${initiative.pdfUrl}`
+                            }
+                            coverImage={initiative.image}
+                        />
                     </div>
                 )}
 
@@ -157,7 +164,7 @@ export function InitiativeDetail() {
                     <div
                         className="initiative-content"
                         style={{
-                            color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)',
+                            color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
                             fontSize: '1.1rem',
                             lineHeight: 1.8
                         }}
@@ -171,7 +178,7 @@ export function InitiativeDetail() {
                         font-weight: 600;
                         margin-top: 32px;
                         margin-bottom: 16px;
-                        color: ${isDark ? '#ffffff' : '#111111'};
+                        color: ${isDark ? '#fdedcb' : '#111111'};
                     }
                     .initiative-content p {
                         margin-bottom: 24px;

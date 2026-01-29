@@ -114,7 +114,7 @@ export function HeroSection() {
                         fontFamily: "'TheYearofTheCamel', sans-serif",
                         fontSize: 'clamp(3.5rem, 7vw, 6rem)',
                         fontWeight: 700,
-                        color: isDark ? '#ffffff' : '#1a1a1a',
+                        color: isDark ? '#fdedcb' : '#1a1a1a',
                         marginBottom: '0.5rem',
                         marginLeft: isMobile ? 'auto' : undefined,
                         marginRight: isMobile ? 'auto' : undefined,
@@ -131,9 +131,9 @@ export function HeroSection() {
                 <p
                     className="drop-in-2"
                     style={{
-                        fontFamily: "'Geist', sans-serif",
+                        fontFamily: "'DM Sans', sans-serif",
                         fontSize: 'clamp(1.4rem, 2.5vw, 2.2rem)',
-                        color: '#ffffff',
+                        color: '#efc676',
                         maxWidth: '600px',
                         marginLeft: isMobile ? 'auto' : 'auto', // Centered on mobile since textAlign is center
                         marginRight: isMobile ? 'auto' : '0', // Explicitly center on mobile

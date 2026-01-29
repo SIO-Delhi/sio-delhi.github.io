@@ -3,6 +3,9 @@
  * Posts API Routes
  */
 
+// Include upload helpers for file deletion
+require_once __DIR__ . '/upload.php';
+
 function getAll() {
     $db = getDB();
 
@@ -165,13 +168,33 @@ function update($id) {
 function delete($id) {
     $db = getDB();
 
-    $stmt = $db->prepare("SELECT id FROM posts WHERE id = ?");
+    // Get post data before deleting (need file URLs)
+    $stmt = $db->prepare("SELECT * FROM posts WHERE id = ?");
     $stmt->execute([$id]);
-    if (!$stmt->fetch()) {
+    $post = $stmt->fetch();
+
+    if (!$post) {
         http_response_code(404);
         return ['error' => 'Post not found'];
     }
 
+    // Delete associated files
+    if (!empty($post['image'])) {
+        deleteFileByUrl($post['image']);
+    }
+    if (!empty($post['pdf_url'])) {
+        deleteFileByUrl($post['pdf_url']);
+    }
+    if (!empty($post['gallery_images'])) {
+        $galleryImages = json_decode($post['gallery_images'], true);
+        if (is_array($galleryImages)) {
+            foreach ($galleryImages as $imageUrl) {
+                deleteFileByUrl($imageUrl);
+            }
+        }
+    }
+
+    // Delete from database
     $stmt = $db->prepare("DELETE FROM posts WHERE id = ?");
     $stmt->execute([$id]);
 

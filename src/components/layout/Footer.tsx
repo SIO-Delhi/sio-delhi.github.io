@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import logo from '../../assets/logo.png'
+import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import logo from '../../assets/logo.svg'
 import { X, Instagram, Youtube, Facebook } from 'lucide-react'
 
-gsap.registerPlugin(ScrollTrigger)
+
 
 const sections = ['About', 'Initiatives', 'Media', 'Leadership', 'Contact']
 
@@ -16,7 +15,7 @@ const XLogo = ({ size = 20, className = "" }: { size?: number, className?: strin
 
 const TelegramLogo = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
-        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+        <path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42l10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l-.004.002l-.317 4.743c.466 0 .672-.214.929-.472l2.228-2.15l4.641 3.429c.854.471 1.466.226 1.677-.796l3.036-14.318c.311-1.246-.474-1.808-1.394-1.396z" />
     </svg>
 )
 
@@ -27,60 +26,16 @@ const ThreadsLogo = ({ size = 20, className = "" }: { size?: number, className?:
 )
 
 export function Footer() {
-    const footerRef = useRef<HTMLElement>(null)
     const [showCredits, setShowCredits] = useState(false)
-
-    useEffect(() => {
-        const ctx = gsap.context(() => {
-            gsap.fromTo(
-                '.footer-logo',
-                { opacity: 0, y: 40 },
-                {
-                    opacity: 1,
-                    y: 0,
-                    duration: 0.8,
-                    scrollTrigger: {
-                        trigger: footerRef.current,
-                        start: 'top 85%',
-                    },
-                }
-            )
-
-            // Animate icons
-            gsap.fromTo(
-                '.social-icon',
-                { opacity: 0, scale: 0.8 },
-                {
-                    opacity: 1,
-                    scale: 1,
-                    duration: 0.4,
-                    stagger: 0.1,
-                    scrollTrigger: {
-                        trigger: '.footer-socials',
-                        start: 'top 90%',
-                    },
-                }
-            )
-
-            gsap.fromTo(
-                '.footer-link',
-                { opacity: 0 },
-                {
-                    opacity: 1,
-                    duration: 0.4,
-                    stagger: 0.05,
-                    scrollTrigger: {
-                        trigger: '.footer-links',
-                        start: 'top 95%',
-                    },
-                }
-            )
-        }, footerRef)
-
-        return () => ctx.revert()
-    }, [])
+    const location = useLocation()
+    const navigate = useNavigate()
 
     const scrollToSection = (sectionId: string) => {
+        if (location.pathname !== '/') {
+            navigate('/', { state: { scrollTo: sectionId } })
+            return
+        }
+
         const el = document.querySelector(sectionId)
         if (el) {
             const lenis = (window as any).lenis
@@ -92,7 +47,6 @@ export function Footer() {
     return (
         <>
             <footer
-                ref={footerRef}
                 style={{
                     padding: '40px 0',
                     borderTop: '1px solid rgba(255,255,255,0.08)',
@@ -110,12 +64,12 @@ export function Footer() {
 
                     {/* Social Icons */}
                     <div className="footer-socials" style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                        <a href="https://www.instagram.com/siodelhi/?hl=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="Instagram"><Instagram size={20} /></a>
-                        <a href="https://www.facebook.com/delhisio/" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="Facebook"><Facebook size={20} /></a>
-                        <a href="https://youtube.com/c/SIODELHI" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="YouTube"><Youtube size={20} /></a>
-                        <a href="https://x.com/siodelhi?lang=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="X (Twitter)"><XLogo size={18} /></a>
-                        <a href="https://t.me/siodelhi" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="Telegram"><TelegramLogo size={20} /></a>
-                        <a href="https://www.threads.net/@siodelhi" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#cccccc', transition: 'color 0.2s' }} aria-label="Threads"><ThreadsLogo size={20} /></a>
+                        <a href="https://www.instagram.com/siodelhi/?hl=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="Instagram"><Instagram size={20} /></a>
+                        <a href="https://www.facebook.com/delhisio/" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="Facebook"><Facebook size={20} /></a>
+                        <a href="https://youtube.com/c/SIODELHI" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="YouTube"><Youtube size={20} /></a>
+                        <a href="https://x.com/siodelhi?lang=en" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="X (Twitter)"><XLogo size={18} /></a>
+                        <a href="https://t.me/siodelhi" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="Telegram"><TelegramLogo size={20} /></a>
+                        <a href="https://www.threads.net/@siodelhi" target="_blank" rel="noopener noreferrer" className="social-icon" style={{ color: '#fdedcb', transition: 'color 0.2s' }} aria-label="Threads"><ThreadsLogo size={20} /></a>
                     </div>
                     <style>{`
                         .social-icon:hover { color: #fff !important; transform: translateY(-2px); }
@@ -129,7 +83,7 @@ export function Footer() {
                                 href={`#${link.toLowerCase()}`}
                                 className="footer-link"
                                 style={{
-                                    color: '#e0e0e0', // Increased brightness
+                                    color: '#fdedcb', // Creamy off-white
                                     fontSize: '0.85rem',
                                     fontWeight: 500,
                                     textTransform: 'uppercase',
@@ -137,8 +91,8 @@ export function Footer() {
                                     transition: 'color 0.3s ease',
                                     textDecoration: 'none'
                                 }}
-                                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                                onMouseLeave={(e) => (e.currentTarget.style.color = '#e0e0e0')}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = '#fdedcb')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = '#fdedcb')}
                                 onClick={(e) => {
                                     e.preventDefault()
                                     scrollToSection(`#${link.toLowerCase()}`)
@@ -151,7 +105,7 @@ export function Footer() {
 
                     {/* Copyright & Description */}
                     <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                        <p style={{ color: '#b0b0b0', fontSize: '14px', lineHeight: 1.6 }}> {/* Lighter grey for copy */}
+                        <p style={{ color: '#fdedcb', fontSize: '14px', lineHeight: 1.6 }}> {/* Creamy off-white for copy */}
                             © {new Date().getFullYear()} Students Islamic Organisation of India - Delhi Zone. <br />
                             All rights reserved.
                         </p>
@@ -159,8 +113,8 @@ export function Footer() {
 
                     {/* Development Credits */}
                     <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
-                        <p style={{ color: '#999', fontSize: '14px', margin: 0 }}> {/* Lighter Credits */}
-                            Development by <a href="mailto:dev@siodelhi.org" style={{ color: '#fff', textDecoration: 'none', fontWeight: 600 }}>0xAdnan</a>
+                        <p style={{ color: 'rgba(253, 237, 203, 0.7)', fontSize: '14px', margin: 0 }}> {/* Lighter Credits */}
+                            Development by <a href="https://www.0x-adnan.com" target="_blank" style={{ color: '#efc676', textDecoration: 'none', fontWeight: 600 }}>adnan.</a>
                         </p>
                         {/* <button
                             onClick={() => setShowCredits(true)}
@@ -173,7 +127,7 @@ export function Footer() {
                                 textDecoration: 'underline',
                                 padding: '4px'
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#fdedcb')}
                             onMouseLeave={(e) => (e.currentTarget.style.color = '#aaa')}
                         >
                             Full credits

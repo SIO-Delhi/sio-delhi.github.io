@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText, GripVertical, Link as LinkIcon, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, Mail, Images } from 'lucide-react'
+import { DeleteConfirmationModal } from './DeleteConfirmationModal'
+import { UndoToast } from '../ui/UndoToast'
+import { useUndoableDelete } from '../../hooks/useUndoableDelete'
 
 const ICON_MAP: Record<string, any> = {
     FileText, Link: LinkIcon, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Mail, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info
@@ -34,6 +37,20 @@ export function SectionManager() {
     const [isUpdatingOrder, setIsUpdatingOrder] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
 
+    // Delete Hook
+    const {
+        requestDelete,
+        confirmDelete,
+        undoDelete,
+        cancelDelete, // Added missing destructuring
+        deleteState,
+        pendingItem
+    } = useUndoableDelete<any>({
+        performDelete: async (post) => {
+            await deletePost(post.id)
+        }
+    })
+
     // Detect screen size
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -44,7 +61,10 @@ export function SectionManager() {
 
     const section = sections.find(s => s.id === sectionId)
     // Get posts and ensure they are sorted by order
-    const posts = sectionId ? getPostsBySection(sectionId) : []
+    const allPosts = sectionId ? getPostsBySection(sectionId) : []
+
+    // Filter out the pending item if it's in PENDING state to optimistically hide it
+    const posts = allPosts.filter(p => !((deleteState === 'PENDING') && pendingItem?.id === p.id))
 
     const togglePublish = async (postId: string, currentStatus: boolean) => {
         try {
@@ -120,6 +140,27 @@ export function SectionManager() {
 
     return (
         <div>
+            {/* Delete Confirmation Modal */}
+            <DeleteConfirmationModal
+                isOpen={deleteState === 'CONFIRMING'}
+                onClose={cancelDelete}
+                onConfirm={confirmDelete}
+                itemName={pendingItem?.title || ''}
+                title="Delete Post"
+                description={`This will permanently delete "${pendingItem?.title}".`}
+            />
+
+            {/* Undo Toast */}
+            {deleteState === 'PENDING' && (
+                <UndoToast
+                    message="Post deleted."
+                    seconds={10}
+                    onUndo={undoDelete}
+                // Optional: onDismiss={commitDeleteImmediately} ? If we want to hide it. 
+                // But standard toast logic usually just lets it fade or we can force commit.
+                />
+            )}
+
             {/* Header */}
             <div style={{
                 display: 'flex',
@@ -361,17 +402,10 @@ export function SectionManager() {
                                         <Edit2 size={18} />
                                     </button>
                                     <button
-                                        onClick={async (e) => {
+                                        onClick={(e) => {
                                             e.preventDefault()
                                             e.stopPropagation()
-                                            if (window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-                                                try {
-                                                    await deletePost(post.id)
-                                                } catch (err) {
-                                                    console.error('Delete error:', err)
-                                                    alert('Failed to delete post.')
-                                                }
-                                            }
+                                            requestDelete(post)
                                         }}
                                         title="Delete Post"
                                         style={{
@@ -390,6 +424,15 @@ export function SectionManager() {
                     })}
                 </div>
             )}
+
+            <DeleteConfirmationModal
+                isOpen={deleteState === 'CONFIRMING'}
+                onClose={cancelDelete}
+                onConfirm={confirmDelete}
+                itemName={pendingItem?.title || ''}
+                title="Delete Post"
+                description={`This will permanently delete "${pendingItem?.title}".`}
+            />
         </div>
     )
 }

@@ -72,6 +72,7 @@ $routes = [
     // Popups
     'GET /popups' => 'routes/popups.php@getAll',
     'GET /popups/active' => 'routes/popups.php@getActive',
+    'GET /popups/([^/]+)' => 'routes/popups.php@getOne',
     'POST /popups' => 'routes/popups.php@create',
     'PUT /popups/([^/]+)' => 'routes/popups.php@update',
     'DELETE /popups/([^/]+)' => 'routes/popups.php@delete',
@@ -91,6 +92,24 @@ $routes = [
 
     // Frame Tool
     'POST /frame/apply-bulk' => 'routes/frame.php@applyFrameBulk',
+    // Garbage Collector
+    'GET /garbage' => 'routes/stats.php@getOrphanedFiles',
+    'POST /garbage/cleanup' => 'routes/stats.php@deleteOrphanedFiles',
+
+    // Forms
+    'GET /forms' => 'routes/forms.php@getAllForms',
+    'GET /forms/public/([^/]+)' => 'routes/forms.php@getPublicForm',
+    'GET /forms/([^/]+)/responses/([^/]+)' => 'routes/forms.php@getFormResponse',
+    'GET /forms/([^/]+)/responses' => 'routes/forms.php@getFormResponses',
+    'GET /forms/([^/]+)/export' => 'routes/forms.php@exportFormResponses',
+    'GET /forms/([^/]+)' => 'routes/forms.php@getFormById',
+    'POST /forms' => 'routes/forms.php@createForm',
+    'POST /forms/([^/]+)/submit' => 'routes/forms.php@submitFormResponse',
+    'PUT /forms/([^/]+)/fields' => 'routes/forms.php@updateFormFields',
+    'PUT /forms/([^/]+)/responses/([^/]+)' => 'routes/forms.php@updateFormResponse',
+    'PUT /forms/([^/]+)' => 'routes/forms.php@updateForm',
+    'DELETE /forms/([^/]+)/responses/([^/]+)' => 'routes/forms.php@deleteFormResponse',
+    'DELETE /forms/([^/]+)' => 'routes/forms.php@deleteForm',
 ];
 
 // Find matching route

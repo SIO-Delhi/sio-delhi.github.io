@@ -6,11 +6,13 @@ import { api } from './api'
  * @param filename - Optional custom filename (not used with API, kept for compatibility)
  * @returns Public URL of the uploaded image
  */
-export async function uploadImage(file: File | string, _filename?: string): Promise<string> {
+export async function uploadImage(file: File | string, _filename?: string, formId?: string, userName?: string): Promise<string> {
+    console.log('storage.uploadImage args:', { formId, userName })
     let fileToUpload: File | Blob
 
     // Handle base64 data URL
     if (typeof file === 'string' && file.startsWith('data:')) {
+        // ... existing blob conversion ...
         const response = await fetch(file)
         const blob = await response.blob()
         fileToUpload = blob
@@ -20,7 +22,7 @@ export async function uploadImage(file: File | string, _filename?: string): Prom
         throw new Error('Invalid file input')
     }
 
-    const result = await api.upload.image(fileToUpload)
+    const result = await api.upload.image(fileToUpload, formId, userName)
 
     if (result.error) {
         console.error('Upload error:', result.error)
@@ -35,8 +37,7 @@ export async function uploadImage(file: File | string, _filename?: string): Prom
  * @param url - Public URL of the image
  */
 export async function deleteImage(url: string): Promise<void> {
-    // Extract filename from URL (remove query params if any)
-    const filename = url.split('/').pop()?.split('?')[0]
+    const filename = url.split('/').pop()
     if (!filename) return
 
     const result = await api.upload.deleteFile('images', filename)
@@ -49,11 +50,10 @@ export async function deleteImage(url: string): Promise<void> {
 
 /**
  * Upload a PDF to the server
- * @param file - PDF File
- * @returns Public URL of the uploaded PDF
  */
-export async function uploadPdf(file: File): Promise<string> {
-    const result = await api.upload.pdf(file)
+export async function uploadPdf(file: File, formId?: string, userName?: string): Promise<string> {
+    console.log('storage.uploadPdf args:', { formId, userName })
+    const result = await api.upload.pdf(file, formId, userName)
 
     if (result.error) {
         console.error('PDF upload error:', result.error)
@@ -84,8 +84,8 @@ export async function deletePdf(url: string): Promise<void> {
  * @param file - Audio File or Blob
  * @returns Public URL of the uploaded Audio
  */
-export async function uploadAudio(file: File | Blob): Promise<string> {
-    const result = await api.upload.audio(file)
+export async function uploadAudio(file: File | Blob, formId?: string): Promise<string> {
+    const result = await api.upload.audio(file, formId)
 
     if (result.error) {
         console.error('Audio upload error:', result.error)

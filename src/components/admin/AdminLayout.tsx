@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, PenTool, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, PenTool, FileText, Trash2 } from 'lucide-react'
 import { useClerk } from '@clerk/clerk-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
@@ -51,8 +51,8 @@ export function AdminLayout() {
             display: 'flex',
             minHeight: '100vh',
             background: isDark ? '#000000' : '#f5f5f5',
-            color: isDark ? '#ffffff' : '#111111',
-            fontFamily: '"Geist", sans-serif',
+            color: isDark ? '#fdedcb' : '#111111',
+            fontFamily: '"DM Sans", sans-serif',
         }}>
             {/* Mobile Overlay */}
             {isMobile && sidebarOpen && (
@@ -76,7 +76,7 @@ export function AdminLayout() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '24px',
-                background: isDark ? '#0a0a0a' : '#ffffff',
+                background: isDark ? '#0a0a0a' : '#fdedcb',
                 position: 'fixed',
                 top: 0,
                 bottom: 0,
@@ -180,6 +180,38 @@ export function AdminLayout() {
                             padding: '12px', borderRadius: '8px',
                             background: isActive('/admin/garbage') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
                             color: isActive('/admin/garbage') ? '#ff3b3b' : 'inherit',
+                            textDecoration: 'none', fontWeight: 500,
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        <Trash2 size={20} />
+                        Garbage Collector
+                    </Link>
+
+                    <Link
+                        to="/admin/forms"
+                        onClick={() => isMobile && setSidebarOpen(false)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '12px', borderRadius: '8px',
+                            background: isActive('/admin/forms') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
+                            color: isActive('/admin/forms') ? '#ff3b3b' : 'inherit',
+                            textDecoration: 'none', fontWeight: 500,
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        <FileText size={20} />
+                        Form Builder
+                    </Link>
+
+                    <Link
+                        to="/admin/garbage"
+                        onClick={() => isMobile && setSidebarOpen(false)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '12px', borderRadius: '8px',
+                            background: isActive('/admin/garbage') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
+                            color: isActive('/admin/garbage') ? '#f59e0b' : 'inherit',
                             textDecoration: 'none', fontWeight: 500,
                             transition: 'all 0.2s ease'
                         }}

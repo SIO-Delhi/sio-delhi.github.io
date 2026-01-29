@@ -128,7 +128,7 @@ export function CustomCursor() {
                     fontSize: isView ? '14px' : undefined,
                     fontWeight: isView ? 500 : undefined,
                     letterSpacing: isView ? '0.02em' : undefined,
-                    color: isView ? '#ffffff' : undefined,
+                    color: isView ? '#fdedcb' : undefined,
                     filter: isView ? 'blur(0)' : undefined,
                 }}
             >

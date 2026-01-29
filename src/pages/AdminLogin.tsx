@@ -1,5 +1,5 @@
 import { SignIn } from '@clerk/clerk-react'
-import logo from '../assets/logo.png'
+import logo from '../assets/logo.svg'
 import { dark } from '@clerk/themes'
 
 export function AdminLogin() {
@@ -11,7 +11,7 @@ export function AdminLogin() {
             justifyContent: 'center',
             background: 'radial-gradient(circle at 50% 100%, rgba(220, 38, 38, 0.45) 0%, #000000 75%)',
             backgroundColor: '#000', // Fallback
-            fontFamily: '"Geist", sans-serif',
+            fontFamily: '"DM Sans", sans-serif',
             padding: '20px',
         }}>
             {/* Custom Styles for Glossy/Glassy Look */}

@@ -73,9 +73,9 @@ export function ContentSection({
                         <h2 style={{
                             fontSize: 'clamp(2rem, 4vw, 3rem)',
                             fontWeight: 700,
-                            color: isDark ? '#ffffff' : '#000000',
+                            color: isDark ? '#fdedcb' : '#000000',
                             marginBottom: '24px',
-                            fontFamily: '"Geist", sans-serif',
+                            fontFamily: '"DM Sans", sans-serif',
                         }}>
                             {title} <span style={{ color: highlightColor }}>{highlight}</span>
                         </h2>

@@ -1,42 +1,13 @@
-import { useEffect, useRef } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ArrowUpRight } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 
-gsap.registerPlugin(ScrollTrigger)
 
 export function ContactSection() {
-    const sectionRef = useRef<HTMLElement>(null)
-    const containerRef = useRef<HTMLDivElement>(null)
     const { isDark } = useTheme()
-
-    useEffect(() => {
-        const ctx = gsap.context(() => {
-            gsap.fromTo(
-                '.animate-up',
-                { opacity: 0, y: 30 },
-                {
-                    opacity: 1,
-                    y: 0,
-                    duration: 0.8,
-                    stagger: 0.1,
-                    ease: 'power3.out',
-                    scrollTrigger: {
-                        trigger: containerRef.current,
-                        start: 'top 75%',
-                    },
-                }
-            )
-        }, sectionRef)
-
-        return () => ctx.revert()
-    }, [])
 
     return (
         <section
             id="contact"
-            ref={sectionRef}
             style={{
                 padding: '120px 0',
                 background: 'transparent',
@@ -49,7 +20,6 @@ export function ContactSection() {
             }}
         >
             <div
-                ref={containerRef}
                 style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -68,7 +38,7 @@ export function ContactSection() {
                         fontWeight: 600,
                         letterSpacing: '0.2em',
                         textTransform: 'uppercase',
-                        color: isDark ? '#ffffff' : '#000000',
+                        color: isDark ? '#fdedcb' : '#000000',
                         opacity: 0.8,
                         marginLeft: '4px' // Subtle alignment correction
                     }}>
@@ -77,11 +47,11 @@ export function ContactSection() {
                     <h2 className="animate-up" style={{
                         fontSize: 'clamp(2.5rem, 5vw, 4.5rem)', // Matched other sections
                         fontWeight: 700,
-                        color: isDark ? '#ffffff' : '#111111',
+                        color: isDark ? '#efc676' : '#111111',
                         margin: 0,
                         lineHeight: 1, // Tighter line height
                         letterSpacing: '-0.02em',
-                        fontFamily: '"Geist", sans-serif',
+                        fontFamily: '"DM Sans", sans-serif',
                         textShadow: '0 4px 12px rgba(0,0,0,0.5)'
                     }}>
                         Connect <span style={{ color: '#ff3333' }}>with us</span>
@@ -90,7 +60,7 @@ export function ContactSection() {
                     <p className="animate-up" style={{
                         marginTop: '12px',
                         fontSize: '1.2rem',
-                        color: isDark ? '#e0e0e0' : '#333333',
+                        color: isDark ? '#fdedcb' : '#333333',
                         maxWidth: '600px',
                         lineHeight: 1.4, // Reduced line spacing
                         fontWeight: 400,
@@ -112,7 +82,7 @@ export function ContactSection() {
                         borderRadius: '100px',
                         background: 'rgba(20, 20, 20, 0.6)',
                         border: '1px solid rgba(255,255,255,0.15)',
-                        color: '#ffffff',
+                        color: '#efc676',
                         fontSize: 'clamp(1rem, 4vw, 1.35rem)', // Responsive font size
                         fontWeight: 500,
                         textDecoration: 'none',
@@ -128,7 +98,7 @@ export function ContactSection() {
                     onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-4px)'
                         e.currentTarget.style.background = 'rgba(30, 30, 30, 0.8)'
-                        e.currentTarget.style.borderColor = '#ffffff'
+                        e.currentTarget.style.borderColor = '#fdedcb'
                         e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)'
                     }}
                     onMouseLeave={(e) => {
