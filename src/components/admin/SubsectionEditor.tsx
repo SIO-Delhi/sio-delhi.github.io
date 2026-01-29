@@ -7,6 +7,9 @@ import { ImageCropper } from './ImageCropper'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { BlockEditor, blocksToHtml, htmlToBlocks } from './BlockEditor'
 import type { EditorBlock } from './BlockEditor'
+import { DeleteConfirmationModal } from './DeleteConfirmationModal'
+import { UndoToast } from '../ui/UndoToast'
+import { useUndoableDelete } from '../../hooks/useUndoableDelete'
 
 
 export function SubsectionEditor() {
@@ -22,10 +25,27 @@ export function SubsectionEditor() {
     const [localChildPosts, setLocalChildPosts] = useState(childPostsFromContext)
     const [draggedPostId, setDraggedPostId] = useState<string | null>(null)
 
+    // Delete Hook
+    const {
+        requestDelete,
+        confirmDelete,
+        undoDelete,
+        cancelDelete,
+        deleteState,
+        pendingItem
+    } = useUndoableDelete<any>({
+        performDelete: async (postId) => {
+            await deletePost(postId)
+        }
+    })
+
     // Sync local state when context changes
     useEffect(() => {
         setLocalChildPosts(childPostsFromContext)
     }, [childPostsFromContext.length, childPostsFromContext.map(p => p.id).join(',')])
+
+    // Filter out pending deleted items
+    const visibleChildPosts = localChildPosts.filter(p => !((deleteState === 'PENDING') && pendingItem === p.id))
 
     // Form State - simplified for subsection
     const [title, setTitle] = useState('')
@@ -274,11 +294,7 @@ export function SubsectionEditor() {
         }
     }
 
-    const handleDeleteChildPost = (postId: string, postTitle: string) => {
-        if (confirm(`Delete "${postTitle}"? This cannot be undone.`)) {
-            deletePost(postId)
-        }
-    }
+    // Deleted handleDeleteChildPost function in favor of requestDelete
 
     // Mobile detection
     const [isMobile, setIsMobile] = useState(false)
@@ -291,8 +307,30 @@ export function SubsectionEditor() {
 
     if (!section && !isEditMode) return <div>Section not found</div>
 
+    // Need to find the object for the pending ID to show name in modal
+    const pendingChildPost = pendingItem ? localChildPosts.find(p => p.id === pendingItem) : null
+
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: isMobile ? '60px' : '100px' }}>
+            {deleteState === 'CONFIRMING' && (
+                <DeleteConfirmationModal
+                    isOpen={true}
+                    onClose={cancelDelete}
+                    onConfirm={confirmDelete}
+                    itemName={pendingChildPost?.title || ''}
+                    title="Delete Post"
+                    description={`This will permanently delete "${pendingChildPost?.title}".`}
+                />
+            )}
+
+            {deleteState === 'PENDING' && (
+                <UndoToast
+                    message="Child post deleted."
+                    seconds={10}
+                    onUndo={undoDelete}
+                />
+            )}
+
             {cropImageSrc && (
                 <ImageCropper
                     imageSrc={cropImageSrc}
@@ -530,7 +568,7 @@ export function SubsectionEditor() {
                             </button>
                         </div>
 
-                        {localChildPosts.length === 0 ? (
+                        {visibleChildPosts.length === 0 ? (
                             <div style={{
                                 padding: '48px', borderRadius: '12px', border: '2px dashed #333',
                                 textAlign: 'center', color: '#555'
@@ -541,7 +579,7 @@ export function SubsectionEditor() {
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {localChildPosts.map(post => (
+                                {visibleChildPosts.map(post => (
                                     <div
                                         key={post.id}
                                         onClick={() => navigate(`/admin/post/${post.id}`)}
@@ -638,7 +676,7 @@ export function SubsectionEditor() {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleDeleteChildPost(post.id, post.title);
+                                                    requestDelete(post.id);
                                                 }}
                                                 style={{ padding: '8px', borderRadius: '6px', background: '#222', border: 'none', color: '#666', cursor: 'pointer' }}
                                                 title="Delete"
