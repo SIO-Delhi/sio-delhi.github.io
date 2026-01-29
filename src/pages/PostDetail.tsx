@@ -9,6 +9,8 @@ import { SectionCard } from '../components/ui/SectionCard'
 import { PostSkeleton } from '../components/ui/PostSkeleton'
 import { ViewGalleryButton } from '../components/ui/ViewGalleryButton'
 import { EmbeddableGallery } from '../components/ui/EmbeddableGallery'
+import { PDFPreviewCard } from '../components/ui/PDFPreviewCard'
+import { PDFModal } from '../components/ui/PDFModal'
 
 // --- Helper: Detect RTL Text (Urdu/Arabic) ---
 const isRtl = (text: string) => {
@@ -305,7 +307,19 @@ const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { imag
         </div>
     )
 })
+
+// PDF Block Rendering Logic component to keep state separate
+const PDFBlockRenderer = ({ url, onOpen }: { url: string, onOpen: (url: string) => void }) => {
+    return (
+        <div style={{ margin: '40px 0' }}>
+            <PDFPreviewCard url={url} onClick={() => onOpen(url)} />
+        </div>
+    )
+}
+
 function ContentBlockRenderer({ content, isDark }: { content: string; isDark: boolean }) {
+    // State for PDF Modal
+    const [activePdf, setActivePdf] = useState<string | null>(null)
     // Parse content into blocks
     const blocks: ParsedBlock[] = useMemo(() => {
         const tempDiv = document.createElement('div')
@@ -534,8 +548,8 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                         : `${API_BASE}/uploads/pdfs/${block.pdfUrl}`
 
                     return (
-                        <div key={index} style={{ margin: '40px 0' }}>
-                            <PDFFlipbook url={fullPdfUrl} />
+                        <div key={index}>
+                            <PDFBlockRenderer url={fullPdfUrl} onOpen={setActivePdf} />
                         </div>
                     )
                 }
@@ -613,8 +627,12 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
 
 
                 return null
-            })
-            }
+            })}
+
+            {/* Global PDF Modal for this renderer */}
+            <PDFModal isOpen={!!activePdf} onClose={() => setActivePdf(null)}>
+                {activePdf && <PDFFlipbook url={activePdf} />}
+            </PDFModal>
         </>
     )
 }

@@ -30,19 +30,32 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, 
     const renderTaskRef = useRef<any>(null)
 
     useEffect(() => {
-        // optimized: if already loaded, don't re-render/re-fetch
-        if ((!shouldRender && !pageLoaded) || !pdf) return
+        // Unload if shouldn't render
+        if (!shouldRender) {
+            if (pageLoaded) {
+                if (renderTaskRef.current) {
+                    renderTaskRef.current.cancel()
+                    renderTaskRef.current = null
+                }
+                // Clear canvas to free memory
+                if (canvasRef.current) {
+                    canvasRef.current.width = 0
+                    canvasRef.current.height = 0
+                }
+                setPageLoaded(false)
+            }
+            return
+        }
+
+        // If we should render, but already loaded, do nothing
+        if (pageLoaded || !pdf) return
 
         let isCancelled = false
 
         const renderPage = async () => {
-            // If already loaded, just skip (we keep the canvas)
-            if (pageLoaded) return
-
             if (!canvasRef.current) return
 
             try {
-                // Ensure previous render is truly cancelled/cleaned up
                 if (renderTaskRef.current) {
                     renderTaskRef.current.cancel()
                     renderTaskRef.current = null
@@ -52,12 +65,10 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, 
                 if (isCancelled) return
 
                 const pr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1
-                // Cap the DPR factor so we don't create huge canvases on very high-DPR displays
                 const renderScale = scale * Math.min(pr, 1.25)
                 const viewport = page.getViewport({ scale: renderScale })
                 const canvas = canvasRef.current
 
-                // Set pixel dimensions but also reserve CSS layout size (viewport / pr) to prevent CLS
                 canvas.width = Math.ceil(viewport.width)
                 canvas.height = Math.ceil(viewport.height)
                 canvas.style.width = (canvas.width / pr) + 'px'
@@ -89,7 +100,6 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, 
 
         return () => {
             isCancelled = true
-            // Only cancel if we haven't finished loading yet
             if (renderTaskRef.current && !pageLoaded) {
                 renderTaskRef.current.cancel()
             }
@@ -124,10 +134,11 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, 
             willChange: 'transform',
             transform: 'translateZ(0)'
         }}>
-            {/* Keep canvas mounted if it has ever successfully loaded, just toggle visibility */}
-            {(shouldRender || pageLoaded) ? (
+            {/* Keep canvas mounted if likely to be needed, but hide if not loaded. 
+                Actually, for memory, we only render canvas if it SHOULD be there. 
+                But we need the ref to exist for logic. */}
+            {(shouldRender || pageLoaded) && (
                 <>
-                    {/* Key forces fresh canvas on re-mount scenarios if needed, usually mostly stable */}
                     <canvas
                         ref={canvasRef}
                         style={{
@@ -135,7 +146,7 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, 
                             height: '100%',
                             objectFit: 'contain',
                             objectPosition: isSinglePage ? 'center' : (isEven ? 'right center' : 'left center'),
-                            display: pageLoaded || shouldRender ? 'block' : 'none'
+                            display: pageLoaded ? 'block' : 'none'
                         }}
                     />
                     {!pageLoaded && (
@@ -144,7 +155,8 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, 
                         </div>
                     )}
                 </>
-            ) : (
+            )}
+            {(!shouldRender && !pageLoaded) && (
                 <div style={{ color: '#eee', fontSize: '2rem', fontWeight: 'bold' }}>
                     {number}
                 </div>
@@ -320,7 +332,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
     // Calculate rendering window
     // Render current page, +/- 2 pages for smoothness, and maybe page 1 (cover) always?
     // Page 1 is index 0.
-    const renderWindow = 10 // Increased window slightly
+    const renderWindow = 5 // Reduced window to save memory
 
     // Helper to determine if a page should force render
     const shouldRenderPage = (pageIndex: number) => {
