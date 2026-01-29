@@ -15,7 +15,7 @@ const XLogo = ({ size = 20, className = "" }: { size?: number, className?: strin
 
 const TelegramLogo = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
-        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+        <path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42l10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l-.004.002l-.317 4.743c.466 0 .672-.214.929-.472l2.228-2.15l4.641 3.429c.854.471 1.466.226 1.677-.796l3.036-14.318c.311-1.246-.474-1.808-1.394-1.396z" />
     </svg>
 )
 
@@ -114,7 +114,7 @@ export function Footer() {
                     {/* Development Credits */}
                     <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
                         <p style={{ color: 'rgba(253, 237, 203, 0.7)', fontSize: '14px', margin: 0 }}> {/* Lighter Credits */}
-                            Development by <a href="mailto:dev@siodelhi.org" style={{ color: '#efc676', textDecoration: 'none', fontWeight: 600 }}>adnan.</a>
+                            Development by <a href="https://www.0x-adnan.com" target="_blank" style={{ color: '#efc676', textDecoration: 'none', fontWeight: 600 }}>adnan.</a>
                         </p>
                         {/* <button
                             onClick={() => setShowCredits(true)}
