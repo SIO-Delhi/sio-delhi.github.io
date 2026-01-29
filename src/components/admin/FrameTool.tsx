@@ -1,1026 +1,796 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useContent } from '../../context/ContentContext'
-import { validateImage, compressImage } from '../../lib/imageProcessing'
-import { uploadImage } from '../../lib/storage'
+import JSZip from 'jszip'
+import { saveAs } from 'file-saver'
 import {
     Frame, Upload, X, Check, Loader2, Download,
     Image as ImageIcon, FolderOpen, Eye,
     ChevronLeft, ChevronRight, Settings2,
-    ZoomIn, ZoomOut, Move, RotateCcw
+    ZoomIn, Move, RotateCcw, Trash2, Plus,
+    Maximize, Minimize, MousePointer2, Copy
 } from 'lucide-react'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
+// --- Types ---
 
-interface GallerySection {
-    id: string
-    title: string
-    images: string[]
+type FitMode = 'cover' | 'contain' | 'fill'
+type CanvasMode = 'square' | 'original'
+
+interface FrameConfig {
+    scale: number
+    x: number // Percentage -50 to 50
+    y: number // Percentage -50 to 50
+    fitMode: FitMode
+    canvasMode: CanvasMode
 }
 
+interface PhotoAsset {
+    id: string
+    url: string
+    file?: File
+    name: string
+    config: FrameConfig // Moved config here
+}
+
+// --- Main Component ---
+
 export function FrameTool() {
-    // Frame state
-    const [frameFile, setFrameFile] = useState<File | null>(null)
-    const [framePreview, setFramePreview] = useState<string | null>(null)
+    // --- State ---
 
-    // Photos state
-    const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
-    const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([])
-    const [photoSource, setPhotoSource] = useState<'upload' | 'gallery'>('upload')
+    // Assets
+    const [frameURL, setFrameURL] = useState<string | null>(null)
+    const [photos, setPhotos] = useState<PhotoAsset[]>([])
+    const [activePhotoIndex, setActivePhotoIndex] = useState<number>(0)
 
-    // Gallery selector state
-    const [showGalleryPicker, setShowGalleryPicker] = useState(false)
-    const { posts } = useContent()
-
-    // Processing state
+    // UI State
     const [isProcessing, setIsProcessing] = useState(false)
-    const [progress, setProgress] = useState({ current: 0, total: 0 })
-    const [isUploading, setIsUploading] = useState(false)
+    const [processProgress, setProcessProgress] = useState({ current: 0, total: 0 })
+    const [isDragging, setIsDragging] = useState(false)
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+    const [dragStartConfig, setDragStartConfig] = useState<FrameConfig>({ scale: 1, x: 0, y: 0, fitMode: 'cover', canvasMode: 'square' })
+    const [previewAspectRatio, setPreviewAspectRatio] = useState(1)
 
-    // Preview state
-    const [previewResult, setPreviewResult] = useState<string | null>(null)
-    const [previewIndex, setPreviewIndex] = useState(0)
+    // Refs
     const canvasRef = useRef<HTMLCanvasElement>(null)
+    const containerRef = useRef<HTMLDivElement>(null)
 
-    // Cached images for instant preview updates
-    const frameImageRef = useRef<HTMLImageElement | null>(null)
-    const photoImageRef = useRef<HTMLImageElement | null>(null)
-    const [imagesLoaded, setImagesLoaded] = useState(false)
 
-    // Fit mode state
-    type FitMode = 'cover' | 'contain' | 'fill'
-    const [fitMode, setFitMode] = useState<FitMode>('cover')
+    // --- Helpers ---
 
-    // Frame position and scale controls (frame moves, not photo)
-    const [frameScale, setFrameScale] = useState(1.0) // 0.5 to 2.0
-    const [frameOffsetX, setFrameOffsetX] = useState(0) // -50 to 50 (percentage)
-    const [frameOffsetY, setFrameOffsetY] = useState(0) // -50 to 50 (percentage)
+    const currentPhoto = photos[activePhotoIndex]
 
-    // Get galleries from posts
-    const galleries = posts.filter(p =>
-        p.layout === 'gallery' && p.galleryImages &&
-        (Array.isArray(p.galleryImages) && p.galleryImages.length > 0)
-    )
+    // Helper to get default config
+    const getDefaultConfig = (): FrameConfig => ({
+        scale: 1,
+        x: 0,
+        y: 0,
+        fitMode: 'cover',
+        canvasMode: 'square'
+    })
 
-    // Handle frame upload
+    // Helper to update current photo config
+    const updateCurrentConfig = (updater: (prev: FrameConfig) => FrameConfig) => {
+        setPhotos(prevPhotos => prevPhotos.map((p, i) => {
+            if (i === activePhotoIndex) {
+                return { ...p, config: updater(p.config) }
+            }
+            return p
+        }))
+    }
+
+    // Helper to set current photo config directly
+    const setCurrentConfig = (newConfig: Partial<FrameConfig>) => {
+        setPhotos(prevPhotos => prevPhotos.map((p, i) => {
+            if (i === activePhotoIndex) {
+                return { ...p, config: { ...p.config, ...newConfig } }
+            }
+            return p
+        }))
+    }
+
+    // --- Event Handlers ---
+
+    // Frame Upload
     const handleFrameUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+        if (!file.type.includes('png')) return alert('Please upload a PNG file')
 
-        // Validate PNG
-        if (!file.type.includes('png')) {
-            alert('Frame must be a PNG file with transparency')
-            return
-        }
-
-        // Validate size (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            alert('Frame file must be less than 5MB')
-            return
-        }
-
-        setFrameFile(file)
-        setFramePreview(URL.createObjectURL(file))
+        const url = URL.createObjectURL(file)
+        if (frameURL) URL.revokeObjectURL(frameURL)
+        setFrameURL(url)
         e.target.value = ''
     }
 
-    // Handle photo uploads
-    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Photo Upload
+    const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files
-        if (!files || files.length === 0) return
+        if (!files) return
 
-        setIsUploading(true)
-        const newUrls: string[] = []
+        const newPhotos: PhotoAsset[] = Array.from(files).map(file => ({
+            id: Math.random().toString(36).substr(2, 9),
+            url: URL.createObjectURL(file),
+            file,
+            name: file.name,
+            config: getDefaultConfig()
+        }))
 
-        try {
-            for (const file of Array.from(files)) {
-                try {
-                    validateImage(file)
-                    const compressed = await compressImage(file)
-                    const url = await uploadImage(compressed)
-                    newUrls.push(url)
-                } catch (err: any) {
-                    console.error(`Failed to upload ${file.name}:`, err)
-                    alert(`Failed to upload ${file.name}: ${err.message}`)
-                }
-            }
-
-            if (newUrls.length > 0) {
-                setUploadedPhotos(prev => [...prev, ...newUrls])
-                setSelectedPhotos(prev => [...prev, ...newUrls])
-            }
-        } finally {
-            setIsUploading(false)
-            e.target.value = ''
+        setPhotos(prev => [...prev, ...newPhotos])
+        // If it was empty, select the first new one
+        if (photos.length === 0 && newPhotos.length > 0) {
+            setActivePhotoIndex(0)
         }
+        e.target.value = ''
     }
 
-    // Toggle photo selection from gallery
-    const togglePhotoSelection = (url: string) => {
-        setSelectedPhotos(prev =>
-            prev.includes(url)
-                ? prev.filter(u => u !== url)
-                : [...prev, url]
-        )
+    // Canvas Interaction
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (!frameURL || !currentPhoto) return
+        setIsDragging(true)
+        setDragStart({ x: e.clientX, y: e.clientY })
+        setDragStartConfig(currentPhoto.config) // Save snapshot of start
     }
 
-    // Remove photo from selection
-    const removePhoto = (url: string) => {
-        setSelectedPhotos(prev => prev.filter(u => u !== url))
-        setUploadedPhotos(prev => prev.filter(u => u !== url))
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging || !currentPhoto) return
+
+        // Calculate delta
+        const dx = e.clientX - dragStart.x
+        const dy = e.clientY - dragStart.y
+
+        const rect = canvasRef.current?.getBoundingClientRect()
+        if (!rect) return
+
+        const percentX = (dx / rect.width) * 100
+        const percentY = (dy / rect.height) * 100
+
+        updateCurrentConfig(prev => ({
+            ...prev,
+            x: Math.max(-100, Math.min(100, dragStartConfig.x + percentX)),
+            y: Math.max(-100, Math.min(100, dragStartConfig.y + percentY))
+        }))
     }
 
-    // Reset preview index when photos change
-    useEffect(() => {
-        if (previewIndex >= selectedPhotos.length) {
-            setPreviewIndex(Math.max(0, selectedPhotos.length - 1))
-        }
-    }, [selectedPhotos.length, previewIndex])
+    const handleMouseUp = () => setIsDragging(false)
 
-    // Generate preview using canvas
-    const generatePreview = useCallback(async () => {
-        if (!framePreview || selectedPhotos.length === 0 || !canvasRef.current) {
-            setPreviewResult(null)
+    // Zoom on wheel
+    const handleWheel = (e: React.WheelEvent) => {
+        if (!frameURL || !currentPhoto) return
+
+        const delta = e.deltaY * -0.001
+        updateCurrentConfig(prev => ({
+            ...prev,
+            scale: Math.max(0.1, Math.min(3, prev.scale + delta))
+        }))
+    }
+
+    // --- Drawing Logic ---
+
+    // Now accepts config as argument!
+    const drawToCanvas = useCallback((
+        ctx: CanvasRenderingContext2D,
+        width: number,
+        height: number,
+        photoImg: HTMLImageElement | null,
+        frameImg: HTMLImageElement | null,
+        drawConfig: FrameConfig // Explicit config passed in
+    ) => {
+        ctx.clearRect(0, 0, width, height)
+
+        // Background
+        ctx.fillStyle = '#111'
+        ctx.fillRect(0, 0, width, height)
+
+        if (!photoImg && !frameImg) {
+            ctx.fillStyle = '#222'
+            ctx.font = '20px sans-serif'
+            ctx.textAlign = 'center'
+            ctx.fillStyle = '#555'
+            ctx.fillText('No content', width / 2, height / 2)
             return
         }
 
-        const currentIndex = Math.min(previewIndex, selectedPhotos.length - 1)
+        // 1. Draw Photo
+        if (photoImg) {
+            // Calculate fit logic
+            const pRatio = photoImg.width / photoImg.height
+            const cRatio = width / height
+
+            let dw = width
+            let dh = height
+            let dx = 0
+            let dy = 0
+
+            if (drawConfig.fitMode === 'cover') {
+                if (pRatio > cRatio) {
+                    dw = height * pRatio
+                    dx = (width - dw) / 2
+                } else {
+                    dh = width / pRatio
+                    dy = (height - dh) / 2
+                }
+            } else if (drawConfig.fitMode === 'contain') {
+                if (pRatio > cRatio) {
+                    dh = width / pRatio
+                    dy = (height - dh) / 2
+                } else {
+                    dw = height * pRatio
+                    dx = (width - dw) / 2
+                }
+            }
+            // fill is default (0,0,width,height)
+
+            ctx.drawImage(photoImg, dx, dy, dw, dh)
+        }
+
+        // 2. Draw Frame
+        if (frameImg) {
+            const frameAspect = frameImg.width / frameImg.height
+            const canvasAspect = width / height
+
+            let baseW = width
+            let baseH = height
+
+            // Calculate base dimensions that effectively "contain" the frame in the canvas
+            if (frameAspect > canvasAspect) {
+                // Frame is wider relative to canvas: constrain by width
+                baseW = width
+                baseH = width / frameAspect
+            } else {
+                // Frame is taller relative to canvas: constrain by height
+                baseH = height
+                baseW = height * frameAspect
+            }
+
+            const fw = baseW * drawConfig.scale
+            const fh = baseH * drawConfig.scale
+
+            // Center + Offset
+            const fx = (width - fw) / 2 + (drawConfig.x / 100) * width
+            const fy = (height - fh) / 2 + (drawConfig.y / 100) * height
+
+            ctx.drawImage(frameImg, fx, fy, fw, fh)
+        }
+    }, [])
+
+    // Preview Effect
+    useEffect(() => {
         const canvas = canvasRef.current
+        if (!canvas) return
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        try {
-            // Load frame
-            const frameImg = new Image()
-            frameImg.crossOrigin = 'anonymous'
-            await new Promise((resolve, reject) => {
-                frameImg.onload = resolve
-                frameImg.onerror = reject
-                frameImg.src = framePreview
-            })
+        let photoImg: HTMLImageElement | null = null
+        let frameImg: HTMLImageElement | null = null
 
-            // Load current photo
-            const photoImg = new Image()
-            photoImg.crossOrigin = 'anonymous'
-            await new Promise((resolve, reject) => {
-                photoImg.onload = resolve
-                photoImg.onerror = reject
-                photoImg.src = selectedPhotos[currentIndex]
-            })
+        const activeAsset = photos[activePhotoIndex]
+        const activeConfig = activeAsset ? activeAsset.config : null
 
-            // Set canvas size to frame size
-            canvas.width = frameImg.width
-            canvas.height = frameImg.height
+        const render = () => {
+            // Determine dimensions
+            let w = 1080
+            let h = 1080
 
-            // Calculate photo scaling based on fit mode
-            const photoRatio = photoImg.width / photoImg.height
-            const frameRatio = frameImg.width / frameImg.height
-
-            let destWidth: number, destHeight: number, destX: number, destY: number
-
-            if (fitMode === 'cover') {
-                // Cover: scale to fill frame, crop overflow
-                if (photoRatio > frameRatio) {
-                    destHeight = frameImg.height
-                    destWidth = frameImg.height * photoRatio
-                    destX = (frameImg.width - destWidth) / 2
-                    destY = 0
+            if (activeConfig?.canvasMode === 'original' && photoImg) {
+                // Use photo dimensions, but cap for performance in preview
+                // Max 1080 on long side for preview
+                const maxDim = 1080
+                const ratio = photoImg.width / photoImg.height
+                if (ratio > 1) {
+                    w = maxDim
+                    h = maxDim / ratio
                 } else {
-                    destWidth = frameImg.width
-                    destHeight = frameImg.width / photoRatio
-                    destX = 0
-                    destY = (frameImg.height - destHeight) / 2
+                    h = maxDim
+                    w = maxDim * ratio
                 }
-            } else if (fitMode === 'contain') {
-                // Contain: fit entirely within frame, show background
-                if (photoRatio > frameRatio) {
-                    destWidth = frameImg.width
-                    destHeight = frameImg.width / photoRatio
-                    destX = 0
-                    destY = (frameImg.height - destHeight) / 2
-                } else {
-                    destHeight = frameImg.height
-                    destWidth = frameImg.height * photoRatio
-                    destX = (frameImg.width - destWidth) / 2
-                    destY = 0
-                }
-            } else {
-                // Fill: stretch to fill exactly
-                destWidth = frameImg.width
-                destHeight = frameImg.height
-                destX = 0
-                destY = 0
             }
 
-            // Clear and draw photo (photo stays in place based on fit mode)
-            ctx.clearRect(0, 0, canvas.width, canvas.height)
-            ctx.fillStyle = '#ffffff'
-            ctx.fillRect(0, 0, canvas.width, canvas.height)
-            ctx.drawImage(photoImg, destX, destY, destWidth, destHeight)
+            // Update aspect ratio for container
+            setPreviewAspectRatio(w / h)
 
-            // Calculate frame position and size with user adjustments
-            const scaledFrameWidth = frameImg.width * frameScale
-            const scaledFrameHeight = frameImg.height * frameScale
+            canvas.width = w
+            canvas.height = h
 
-            // Center the scaled frame, then apply offset
-            const frameX = (frameImg.width - scaledFrameWidth) / 2 + (frameOffsetX / 100) * frameImg.width
-            const frameY = (frameImg.height - scaledFrameHeight) / 2 + (frameOffsetY / 100) * frameImg.height
-
-            // Draw the frame with scale and position
-            ctx.drawImage(frameImg, frameX, frameY, scaledFrameWidth, scaledFrameHeight)
-
-            setPreviewResult(canvas.toDataURL('image/png'))
-        } catch (err) {
-            console.error('Preview generation failed:', err)
+            if (activeConfig) {
+                drawToCanvas(ctx, w, h, photoImg, frameImg, activeConfig)
+            } else {
+                // Should clear if no photo
+                ctx.clearRect(0, 0, canvas.width, canvas.height)
+            }
         }
-    }, [framePreview, selectedPhotos, previewIndex, fitMode, frameScale, frameOffsetX, frameOffsetY])
 
-    // Navigate preview
-    const goToPrevPhoto = () => {
-        setPreviewIndex(prev => (prev > 0 ? prev - 1 : selectedPhotos.length - 1))
-    }
+        const loadImages = async () => {
+            // Reset Img vars
+            photoImg = null
 
-    const goToNextPhoto = () => {
-        setPreviewIndex(prev => (prev < selectedPhotos.length - 1 ? prev + 1 : 0))
-    }
+            if (activeAsset) {
+                const img = new Image()
+                img.crossOrigin = 'anonymous'
+                img.src = activeAsset.url
+                await new Promise(r => {
+                    img.onload = r
+                    img.onerror = r // proceed anyway
+                })
+                photoImg = img
+            }
 
-    // Reset position controls
-    const resetPositionControls = () => {
-        setFrameScale(1.0)
-        setFrameOffsetX(0)
-        setFrameOffsetY(0)
-    }
+            if (frameURL) {
+                const img = new Image()
+                img.src = frameURL
+                await new Promise(r => {
+                    img.onload = r
+                    img.onerror = r
+                })
+                frameImg = img
+            }
+            render()
+        }
 
-    // Update preview when inputs change
-    useEffect(() => {
-        generatePreview()
-    }, [generatePreview])
+        loadImages()
 
-    // Process and download
+        return () => { }
+    }, [activePhotoIndex, photos, frameURL, drawToCanvas])
+    // ^ Dependency 'photos' tracks config changes inside the array
+
+
+    // --- processing ---
+
     const handleProcess = async () => {
-        if (!frameFile || selectedPhotos.length === 0) {
-            alert('Please select a frame and at least one photo')
-            return
-        }
+        if (!frameURL || photos.length === 0) return alert('Nothing to process')
 
         setIsProcessing(true)
-        setProgress({ current: 0, total: selectedPhotos.length })
+        setProcessProgress({ current: 0, total: photos.length })
 
         try {
-            const formData = new FormData()
-            formData.append('frame', frameFile)
-            formData.append('fitMode', fitMode)
-            formData.append('frameScale', frameScale.toString())
-            formData.append('frameOffsetX', frameOffsetX.toString())
-            formData.append('frameOffsetY', frameOffsetY.toString())
-            selectedPhotos.forEach(url => {
-                formData.append('images[]', url)
-            })
+            const zip = new JSZip()
+            const folder = zip.folder("frames")
 
-            const response = await fetch(`${API_BASE}/frame/apply-bulk`, {
-                method: 'POST',
-                body: formData
-            })
+            // Load Frame Once
+            const frameImg = new Image()
+            frameImg.src = frameURL
+            await new Promise(r => frameImg.onload = r)
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}))
-                throw new Error(errorData.error || 'Processing failed')
+            for (let i = 0; i < photos.length; i++) {
+                setProcessProgress({ current: i + 1, total: photos.length })
+                const photo = photos[i]
+
+                // Load Photo
+                const photoImg = new Image()
+                photoImg.crossOrigin = 'anonymous'
+                photoImg.src = photo.url
+                await new Promise((resolve, reject) => {
+                    photoImg.onload = resolve
+                    photoImg.onerror = () => resolve(null) // Skip on error
+                })
+
+                if (!photoImg) continue
+
+                // Determine dimensions
+                let w = 1080
+                let h = 1080
+
+                if (photo.config.canvasMode === 'original') {
+                    // Use FULL resolution for export
+                    w = photoImg.width
+                    h = photoImg.height
+                }
+
+                // Create offscreen canvas
+                const canvas = document.createElement('canvas')
+                canvas.width = w
+                canvas.height = h
+                const ctx = canvas.getContext('2d')!
+
+                // Draw using THIS photo's config
+                drawToCanvas(ctx, w, h, photoImg, frameImg, photo.config)
+
+                // Blob
+                const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9))
+                if (blob && folder) {
+                    folder.file(`frame_${i + 1}_${photo.name}.jpg`, blob)
+                }
             }
 
-            // Download the ZIP
-            const blob = await response.blob()
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `framed_images_${new Date().toISOString().slice(0, 10)}.zip`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
+            // Generate Zip
+            const content = await zip.generateAsync({ type: "blob" })
+            saveAs(content, "siodelhi_frames.zip")
 
-            // Clear state after success
-            setSelectedPhotos([])
-            setUploadedPhotos([])
-            setFrameFile(null)
-            if (framePreview) {
-                URL.revokeObjectURL(framePreview)
-                setFramePreview(null)
-            }
-            setPreviewResult(null)
-
-        } catch (err: any) {
-            console.error('Processing failed:', err)
-            alert('Failed to process images: ' + err.message)
+        } catch (e) {
+            console.error(e)
+            alert('Error processing images')
         } finally {
             setIsProcessing(false)
-            setProgress({ current: 0, total: 0 })
         }
     }
 
-    // Cleanup
-    useEffect(() => {
-        return () => {
-            if (framePreview) URL.revokeObjectURL(framePreview)
+    const handleApplyToAll = () => {
+        if (!currentPhoto) return
+        const configToCopy = currentPhoto.config
+
+        if (window.confirm('Apply these settings to all photos? This will overwrite their individual adjustments.')) {
+            setPhotos(prev => prev.map(p => ({
+                ...p,
+                config: { ...configToCopy }
+            })))
         }
-    }, [framePreview])
+    }
 
     return (
-        <div style={{ minHeight: '100vh', background: '#09090b', color: 'white', paddingBottom: '100px' }}>
-            {/* Header */}
+        <div style={{
+            height: '100vh',
+            background: '#09090b',
+            color: 'white',
+            display: 'flex',
+            overflow: 'hidden'
+        }}>
+
+            {/* --- LEFT SIDEBAR (Assets) --- */}
             <div style={{
-                borderBottom: '1px solid #27272a', padding: '24px',
-                display: 'flex', alignItems: 'center', gap: '16px'
+                width: '320px',
+                borderRight: '1px solid #27272a',
+                display: 'flex',
+                flexDirection: 'column',
+                background: '#121215'
             }}>
-                <div style={{
-                    width: 48, height: 48, borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #ff3b3b 0%, #ff6b6b 100%)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                    <Frame size={24} color="white" />
+                <div style={{ padding: '20px', borderBottom: '1px solid #27272a' }}>
+                    <h1 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Move className="text-red-500" size={20} />
+                        Frame Tool
+                    </h1>
                 </div>
-                <div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Frame Tool</h1>
-                    <p style={{ fontSize: '0.9rem', color: '#71717a', margin: 0 }}>
-                        Apply PNG frames to multiple photos at once
-                    </p>
+
+                <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {/* Frame Upload */}
+                    <div>
+                        <h2 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#71717a', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            1. Frame Overlay
+                        </h2>
+                        {frameURL ? (
+                            <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid #27272a' }}>
+                                <div style={{ height: '160px', background: 'repeating-conic-gradient(#18181b 0 25%, #09090b 0 50%) 50% / 10px 10px' }}>
+                                    <img src={frameURL} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="Frame" />
+                                </div>
+                                <button
+                                    onClick={() => { URL.revokeObjectURL(frameURL); setFrameURL(null) }}
+                                    style={{
+                                        position: 'absolute', top: 8, right: 8,
+                                        background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '50%',
+                                        width: 24, height: 24, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                    }}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ) : (
+                            <label style={{
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                height: '120px', border: '2px dashed #27272a', borderRadius: '12px',
+                                cursor: 'pointer', background: 'rgba(255,255,255,0.02)', color: '#71717a', gap: '8px'
+                            }}>
+                                <Upload size={24} />
+                                <span style={{ fontSize: '0.85rem' }}>Upload PNG Frame</span>
+                                <input type="file" accept="image/png" hidden onChange={handleFrameUpload} />
+                            </label>
+                        )}
+                    </div>
+
+                    {/* Photo List */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <h2 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                2. Photos ({photos.length})
+                            </h2>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <label style={{
+                                    cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    background: '#ff3b3b', padding: '6px 12px', borderRadius: '6px',
+                                    fontSize: '0.8rem', fontWeight: 600
+                                }}>
+                                    <Plus size={14} color="white" />
+                                    <span>Add Photos</span>
+                                    <input type="file" accept="image/*" multiple hidden onChange={handlePhotoUpload} />
+                                </label>
+                            </div>
+                        </div>
+
+                        {photos.length === 0 ? (
+                            <div style={{
+                                flex: 1, border: '2px dashed #27272a', borderRadius: '12px',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                color: '#52525b', gap: '12px', minHeight: '200px'
+                            }}>
+                                <ImageIcon size={32} />
+                                <p style={{ fontSize: '0.9rem', textAlign: 'center', padding: '0 20px' }}>
+                                    Drag photos here or click below to add
+                                </p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                                    <label style={{
+                                        padding: '10px 20px', background: '#27272a', border: '1px solid #3f3f46',
+                                        borderRadius: '8px', color: 'white', fontSize: '0.9rem',
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                                        fontWeight: 500
+                                    }}>
+                                        <Plus size={16} />
+                                        Upload Photos
+                                        <input type="file" accept="image/*" multiple hidden onChange={handlePhotoUpload} />
+                                    </label>
+
+                                    {/* Gallery Link Removed */}
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{
+                                display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px',
+                                overflowY: 'auto', paddingRight: '4px'
+                            }}>
+                                {photos.map((photo, i) => (
+                                    <div
+                                        key={photo.id}
+                                        onClick={() => setActivePhotoIndex(i)}
+                                        style={{
+                                            aspectRatio: '1', borderRadius: '8px', overflow: 'hidden',
+                                            border: activePhotoIndex === i ? '2px solid #ff3b3b' : '1px solid #3f3f46',
+                                            cursor: 'pointer', position: 'relative'
+                                        }}
+                                    >
+                                        <img src={photo.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setPhotos(p => p.filter((_, idx) => idx !== i)) }}
+                                            style={{
+                                                position: 'absolute', top: 2, right: 2,
+                                                background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '4px',
+                                                width: 18, height: 18, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}
+                                        >
+                                            <X size={10} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <div style={{ maxWidth: '1200px', margin: '32px auto', padding: '0 24px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-                    {/* Left Column - Inputs */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {/* Frame Upload Section */}
-                        <div style={{
-                            background: '#18181b', border: '1px solid #27272a', borderRadius: '16px',
-                            padding: '24px'
-                        }}>
-                            <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Frame size={18} />
-                                1. Upload Frame (PNG)
-                            </h2>
+            {/* --- CENTER (Canvas) --- */}
+            <div
+                ref={containerRef}
+                style={{
+                    flex: 1,
+                    background: '#09090b',
+                    backgroundImage: 'radial-gradient(#27272a 1px, transparent 1px)',
+                    backgroundSize: '20px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onWheel={handleWheel}
+            >
+                {/* Canvas Container that maintains aspect ratio */}
+                <div style={{
+                    width: 'min(90%, 80vh)',
+                    aspectRatio: previewAspectRatio,
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                    background: '#111',
+                    position: 'relative'
+                }}>
+                    <canvas
+                        ref={canvasRef}
+                        style={{ width: '100%', height: '100%', display: 'block' }}
+                    />
 
-                            {framePreview ? (
-                                <div style={{ position: 'relative' }}>
-                                    <img
-                                        src={framePreview}
-                                        alt="Frame preview"
-                                        style={{
-                                            width: '100%', maxHeight: '200px',
-                                            objectFit: 'contain', borderRadius: '8px',
-                                            background: 'repeating-conic-gradient(#27272a 0% 25%, #18181b 0% 50%) 50% / 20px 20px'
-                                        }}
-                                    />
+                </div>
+
+                {/* Overlay Controls Hint */}
+                {frameURL && currentPhoto && (
+                    <div style={{
+                        marginTop: '20px',
+                        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                        padding: '8px 16px', borderRadius: '20px',
+                        fontSize: '0.75rem', color: '#a1a1aa', display: 'flex', gap: '12px',
+                        pointerEvents: 'none'
+                    }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MousePointer2 size={12} /> Drag to Move</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><ZoomIn size={12} /> Scroll to Zoom</span>
+                    </div>
+                )}
+            </div>
+
+            {/* --- RIGHT SIDEBAR (Controls) --- */}
+            <div style={{
+                width: '300px',
+                borderLeft: '1px solid #27272a',
+                background: '#121215',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
+                <div style={{ padding: '20px', borderBottom: '1px solid #27272a' }}>
+                    <h2 style={{ fontSize: '0.9rem', fontWeight: 600 }}>Adjustments</h2>
+                </div>
+
+                <div style={{ padding: '24px', flex: 1, overflowY: 'auto' }}>
+                    {/* Controls only show if we have a photo */}
+                    {currentPhoto ? (
+                        <>
+                            {/* Canvas Mode */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', marginBottom: '12px', display: 'block' }}>
+                                    Canvas Size
+                                </label>
+                                <div style={{ display: 'flex', background: '#27272a', borderRadius: '8px', padding: '2px' }}>
                                     <button
-                                        onClick={() => {
-                                            setFrameFile(null)
-                                            if (framePreview) URL.revokeObjectURL(framePreview)
-                                            setFramePreview(null)
-                                        }}
+                                        onClick={() => setCurrentConfig({ canvasMode: 'square' })}
                                         style={{
-                                            position: 'absolute', top: 8, right: 8,
-                                            background: 'rgba(0,0,0,0.7)', color: 'white',
-                                            border: 'none', borderRadius: '50%',
-                                            width: 32, height: 32, cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            flex: 1, padding: '8px', fontSize: '0.8rem',
+                                            background: currentPhoto.config.canvasMode === 'square' ? '#3f3f46' : 'transparent',
+                                            color: currentPhoto.config.canvasMode === 'square' ? 'white' : '#a1a1aa',
+                                            border: 'none', borderRadius: '6px', cursor: 'pointer'
                                         }}
                                     >
-                                        <X size={16} />
+                                        Square (1:1)
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentConfig({ canvasMode: 'original' })}
+                                        style={{
+                                            flex: 1, padding: '8px', fontSize: '0.8rem',
+                                            background: currentPhoto.config.canvasMode === 'original' ? '#3f3f46' : 'transparent',
+                                            color: currentPhoto.config.canvasMode === 'original' ? 'white' : '#a1a1aa',
+                                            border: 'none', borderRadius: '6px', cursor: 'pointer'
+                                        }}
+                                    >
+                                        Original
                                     </button>
                                 </div>
-                            ) : (
-                                <label style={{
-                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
-                                    padding: '40px 24px', border: '2px dashed #3f3f46', borderRadius: '12px',
-                                    cursor: 'pointer', transition: 'all 0.2s',
-                                    background: 'rgba(255, 59, 59, 0.02)'
-                                }}>
-                                    <Upload size={32} color="#71717a" />
-                                    <span style={{ color: '#a1a1aa', fontSize: '0.9rem' }}>
-                                        Click to upload PNG frame
-                                    </span>
-                                    <span style={{ color: '#52525b', fontSize: '0.75rem' }}>
-                                        Max 5MB, must have transparency
-                                    </span>
-                                    <input
-                                        type="file"
-                                        accept=".png,image/png"
-                                        onChange={handleFrameUpload}
-                                        style={{ display: 'none' }}
-                                    />
-                                </label>
-                            )}
-                        </div>
-
-                        {/* Photo Selection Section */}
-                        <div style={{
-                            background: '#18181b', border: '1px solid #27272a', borderRadius: '16px',
-                            padding: '24px'
-                        }}>
-                            <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <ImageIcon size={18} />
-                                2. Select Photos
-                            </h2>
-
-                            {/* Tab Switcher */}
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                                <button
-                                    onClick={() => setPhotoSource('upload')}
-                                    style={{
-                                        flex: 1, padding: '10px', borderRadius: '8px',
-                                        border: 'none', cursor: 'pointer',
-                                        background: photoSource === 'upload' ? '#ff3b3b' : '#27272a',
-                                        color: 'white', fontWeight: 500, fontSize: '0.85rem',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                                    }}
-                                >
-                                    <Upload size={16} />
-                                    Upload New
-                                </button>
-                                <button
-                                    onClick={() => setPhotoSource('gallery')}
-                                    style={{
-                                        flex: 1, padding: '10px', borderRadius: '8px',
-                                        border: 'none', cursor: 'pointer',
-                                        background: photoSource === 'gallery' ? '#ff3b3b' : '#27272a',
-                                        color: 'white', fontWeight: 500, fontSize: '0.85rem',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                                    }}
-                                >
-                                    <FolderOpen size={16} />
-                                    From Gallery
-                                </button>
                             </div>
 
-                            {photoSource === 'upload' ? (
-                                <label style={{
-                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
-                                    padding: '32px 24px', border: '2px dashed #3f3f46', borderRadius: '12px',
-                                    cursor: isUploading ? 'wait' : 'pointer',
-                                    opacity: isUploading ? 0.6 : 1
-                                }}>
-                                    {isUploading ? (
-                                        <Loader2 size={32} color="#71717a" className="animate-spin" />
-                                    ) : (
-                                        <Upload size={32} color="#71717a" />
-                                    )}
-                                    <span style={{ color: '#a1a1aa', fontSize: '0.9rem' }}>
-                                        {isUploading ? 'Uploading...' : 'Click to upload photos'}
-                                    </span>
-                                    <span style={{ color: '#52525b', fontSize: '0.75rem' }}>
-                                        JPG, PNG, WebP - Max 5MB each
-                                    </span>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={handlePhotoUpload}
-                                        disabled={isUploading}
-                                        style={{ display: 'none' }}
-                                    />
+                            {/* Fit Mode */}
+                            <div style={{ marginBottom: '32px' }}>
+                                <label style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', marginBottom: '12px', display: 'block' }}>
+                                    Photo Fit
                                 </label>
-                            ) : (
-                                <div>
-                                    <button
-                                        onClick={() => setShowGalleryPicker(true)}
-                                        style={{
-                                            width: '100%', padding: '16px', borderRadius: '12px',
-                                            border: '2px dashed #3f3f46', background: 'transparent',
-                                            color: '#a1a1aa', cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                                        }}
-                                    >
-                                        <FolderOpen size={20} />
-                                        Browse Galleries ({galleries.length} available)
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Selected Photos Grid */}
-                        {selectedPhotos.length > 0 && (
-                            <div style={{
-                                background: '#18181b', border: '1px solid #27272a', borderRadius: '16px',
-                                padding: '24px'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0, color: '#a1a1aa' }}>
-                                        Selected Photos ({selectedPhotos.length})
-                                    </h3>
-                                    <button
-                                        onClick={() => {
-                                            setSelectedPhotos([])
-                                            setUploadedPhotos([])
-                                        }}
-                                        style={{
-                                            background: 'rgba(255, 59, 59, 0.1)', color: '#ff3b3b',
-                                            border: 'none', borderRadius: '6px', padding: '6px 12px',
-                                            fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500
-                                        }}
-                                    >
-                                        Clear All
-                                    </button>
-                                </div>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-                                    gap: '8px',
-                                    maxHeight: '200px',
-                                    overflowY: 'auto'
-                                }}>
-                                    {selectedPhotos.map((url, idx) => (
-                                        <div
-                                            key={idx}
-                                            onClick={() => setPreviewIndex(idx)}
-                                            style={{
-                                                position: 'relative', aspectRatio: '1',
-                                                borderRadius: '8px', overflow: 'hidden',
-                                                border: previewIndex === idx ? '2px solid #ff3b3b' : '1px solid #27272a',
-                                                cursor: 'pointer',
-                                                opacity: previewIndex === idx ? 1 : 0.7,
-                                                transition: 'all 0.2s'
-                                            }}
-                                        >
-                                            <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); removePhoto(url) }}
-                                                style={{
-                                                    position: 'absolute', top: 4, right: 4,
-                                                    background: 'rgba(0,0,0,0.7)', color: 'white',
-                                                    border: 'none', borderRadius: '50%',
-                                                    width: 20, height: 20, cursor: 'pointer',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                                }}
-                                            >
-                                                <X size={12} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Fit Mode Section */}
-                        {selectedPhotos.length > 0 && framePreview && (
-                            <div style={{
-                                background: '#18181b', border: '1px solid #27272a', borderRadius: '16px',
-                                padding: '24px'
-                            }}>
-                                <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Settings2 size={18} />
-                                    3. Frame Fit Mode
-                                </h2>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    {[
-                                        { id: 'cover', label: 'Cover', desc: 'Fill frame, crop overflow' },
-                                        { id: 'contain', label: 'Contain', desc: 'Fit inside, show background' },
-                                        { id: 'fill', label: 'Stretch', desc: 'Stretch to fill exactly' }
-                                    ].map(mode => (
+                                <div style={{ display: 'flex', background: '#27272a', borderRadius: '8px', padding: '2px' }}>
+                                    {(['cover', 'contain', 'fill'] as const).map(mode => (
                                         <button
-                                            key={mode.id}
-                                            onClick={() => setFitMode(mode.id as FitMode)}
+                                            key={mode}
+                                            onClick={() => setCurrentConfig({ fitMode: mode })}
                                             style={{
-                                                flex: 1, padding: '12px 8px', borderRadius: '8px',
-                                                border: fitMode === mode.id ? '2px solid #ff3b3b' : '1px solid #27272a',
-                                                background: fitMode === mode.id ? 'rgba(255, 59, 59, 0.1)' : '#09090b',
-                                                cursor: 'pointer', textAlign: 'center',
-                                                transition: 'all 0.2s'
+                                                flex: 1, padding: '8px', fontSize: '0.8rem',
+                                                background: currentPhoto.config.fitMode === mode ? '#3f3f46' : 'transparent',
+                                                color: currentPhoto.config.fitMode === mode ? 'white' : '#a1a1aa',
+                                                border: 'none', borderRadius: '6px', cursor: 'pointer',
+                                                textTransform: 'capitalize'
                                             }}
                                         >
-                                            <div style={{ color: fitMode === mode.id ? '#ff3b3b' : 'white', fontWeight: 600, fontSize: '0.85rem' }}>
-                                                {mode.label}
-                                            </div>
-                                            <div style={{ color: '#52525b', fontSize: '0.7rem', marginTop: '4px' }}>
-                                                {mode.desc}
-                                            </div>
+                                            {mode}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                        )}
 
-                        {/* Position & Scale Section */}
-                        {selectedPhotos.length > 0 && framePreview && (
-                            <div style={{
-                                background: '#18181b', border: '1px solid #27272a', borderRadius: '16px',
-                                padding: '24px'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                    <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Move size={18} />
-                                        4. Adjust Frame Position & Size
-                                    </h2>
-                                    <button
-                                        onClick={resetPositionControls}
-                                        style={{
-                                            background: 'rgba(255, 59, 59, 0.1)', color: '#ff3b3b',
-                                            border: 'none', borderRadius: '6px', padding: '6px 12px',
-                                            fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500,
-                                            display: 'flex', alignItems: 'center', gap: '4px'
-                                        }}
-                                    >
-                                        <RotateCcw size={12} />
-                                        Reset
-                                    </button>
-                                </div>
+                            {/* Frame Controls */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                <label style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase' }}>
+                                    Frame Geometry
+                                </label>
 
-                                {/* Frame Scale Slider */}
-                                <div style={{ marginBottom: '20px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                        <label style={{ color: '#a1a1aa', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <ZoomIn size={14} />
-                                            Frame Size
-                                        </label>
-                                        <span style={{ color: '#71717a', fontSize: '0.8rem' }}>
-                                            {Math.round(frameScale * 100)}%
-                                        </span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min="0.5"
-                                        max="2"
-                                        step="0.05"
-                                        value={frameScale}
-                                        onChange={e => setFrameScale(parseFloat(e.target.value))}
-                                        style={{
-                                            width: '100%', height: '6px', appearance: 'none',
-                                            background: '#27272a', borderRadius: '3px', cursor: 'pointer'
-                                        }}
-                                    />
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                                        <span style={{ color: '#52525b', fontSize: '0.7rem' }}>Smaller</span>
-                                        <span style={{ color: '#52525b', fontSize: '0.7rem' }}>Larger</span>
-                                    </div>
-                                </div>
-
-                                {/* Frame X Position Slider */}
-                                <div style={{ marginBottom: '20px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                        <label style={{ color: '#a1a1aa', fontSize: '0.85rem' }}>
-                                            Move Frame Horizontally
-                                        </label>
-                                        <span style={{ color: '#71717a', fontSize: '0.8rem' }}>
-                                            {frameOffsetX > 0 ? '+' : ''}{frameOffsetX}%
-                                        </span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min="-50"
-                                        max="50"
-                                        step="1"
-                                        value={frameOffsetX}
-                                        onChange={e => setFrameOffsetX(parseInt(e.target.value))}
-                                        style={{
-                                            width: '100%', height: '6px', appearance: 'none',
-                                            background: '#27272a', borderRadius: '3px', cursor: 'pointer'
-                                        }}
-                                    />
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                                        <span style={{ color: '#52525b', fontSize: '0.7rem' }}>Left</span>
-                                        <span style={{ color: '#52525b', fontSize: '0.7rem' }}>Right</span>
-                                    </div>
-                                </div>
-
-                                {/* Frame Y Position Slider */}
                                 <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                        <label style={{ color: '#a1a1aa', fontSize: '0.85rem' }}>
-                                            Move Frame Vertically
-                                        </label>
-                                        <span style={{ color: '#71717a', fontSize: '0.8rem' }}>
-                                            {frameOffsetY > 0 ? '+' : ''}{frameOffsetY}%
-                                        </span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <span style={{ fontSize: '0.85rem' }}>Size</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#71717a' }}>{Math.round(currentPhoto.config.scale * 100)}%</span>
                                     </div>
                                     <input
                                         type="range"
-                                        min="-50"
-                                        max="50"
-                                        step="1"
-                                        value={frameOffsetY}
-                                        onChange={e => setFrameOffsetY(parseInt(e.target.value))}
+                                        min="0.1" max="2" step="0.05"
+                                        value={currentPhoto.config.scale}
+                                        onChange={e => setCurrentConfig({ scale: parseFloat(e.target.value) })}
                                         style={{
-                                            width: '100%', height: '6px', appearance: 'none',
-                                            background: '#27272a', borderRadius: '3px', cursor: 'pointer'
+                                            width: '100%', height: '4px', background: '#27272a', appearance: 'none', borderRadius: '2px'
                                         }}
                                     />
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                                        <span style={{ color: '#52525b', fontSize: '0.7rem' }}>Up</span>
-                                        <span style={{ color: '#52525b', fontSize: '0.7rem' }}>Down</span>
-                                    </div>
                                 </div>
+
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <span style={{ fontSize: '0.85rem' }}>Pos X</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#71717a' }}>{Math.round(currentPhoto.config.x)}%</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="-100" max="100" step="1"
+                                        value={currentPhoto.config.x}
+                                        onChange={e => setCurrentConfig({ x: parseInt(e.target.value) })}
+                                        style={{
+                                            width: '100%', height: '4px', background: '#27272a', appearance: 'none', borderRadius: '2px'
+                                        }}
+                                    />
+                                </div>
+
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <span style={{ fontSize: '0.85rem' }}>Pos Y</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#71717a' }}>{Math.round(currentPhoto.config.y)}%</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="-100" max="100" step="1"
+                                        value={currentPhoto.config.y}
+                                        onChange={e => setCurrentConfig({ y: parseInt(e.target.value) })}
+                                        style={{
+                                            width: '100%', height: '4px', background: '#27272a', appearance: 'none', borderRadius: '2px'
+                                        }}
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={() => setCurrentConfig({ scale: 1, x: 0, y: 0, fitMode: 'cover' })}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                        padding: '8px', background: 'transparent', border: '1px solid #27272a',
+                                        borderRadius: '8px', color: '#a1a1aa', cursor: 'pointer', fontSize: '0.8rem'
+                                    }}
+                                >
+                                    <RotateCcw size={14} /> Reset Frame
+                                </button>
+
+                                <button
+                                    onClick={handleApplyToAll}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                        padding: '12px', background: '#27272a', border: '1px solid #3f3f46',
+                                        borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '0.85rem',
+                                        marginTop: '8px', fontWeight: 500
+                                    }}
+                                >
+                                    <Copy size={16} /> Apply Settings to All Photos
+                                </button>
                             </div>
+                        </>
+                    ) : (
+                        <div style={{ textAlign: 'center', color: '#52525b', fontSize: '0.9rem', marginTop: '40px' }}>
+                            Select a photo to adjust
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ padding: '24px', borderTop: '1px solid #27272a' }}>
+                    <button
+                        onClick={handleProcess}
+                        disabled={isProcessing || !frameURL || photos.length === 0}
+                        style={{
+                            width: '100%', padding: '16px', borderRadius: '12px',
+                            background: isProcessing ? '#27272a' : 'linear-gradient(135deg, #ff3b3b 0%, #ff6b6b 100%)',
+                            border: 'none', color: 'white', fontWeight: 600, fontSize: '1rem',
+                            cursor: isProcessing ? 'wait' : 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                            opacity: (!frameURL || photos.length === 0) ? 0.5 : 1
+                        }}
+                    >
+                        {isProcessing ? (
+                            <>
+                                <Loader2 size={20} className="animate-spin" />
+                                <span>{processProgress.current} / {processProgress.total}</span>
+                            </>
+                        ) : (
+                            <>
+                                <Download size={20} />
+                                <span>Download ZIP</span>
+                            </>
                         )}
-                    </div>
-
-                    {/* Right Column - Preview & Action */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {/* Preview Section */}
-                        <div style={{
-                            background: '#18181b', border: '1px solid #27272a', borderRadius: '16px',
-                            padding: '24px', flex: 1
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Eye size={18} />
-                                    Preview
-                                </h2>
-                                {selectedPhotos.length > 1 && (
-                                    <span style={{ color: '#71717a', fontSize: '0.85rem' }}>
-                                        {previewIndex + 1} / {selectedPhotos.length}
-                                    </span>
-                                )}
-                            </div>
-
-                            <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-                            {previewResult ? (
-                                <div style={{ position: 'relative' }}>
-                                    <div style={{
-                                        borderRadius: '12px', overflow: 'hidden',
-                                        background: 'repeating-conic-gradient(#27272a 0% 25%, #18181b 0% 50%) 50% / 20px 20px'
-                                    }}>
-                                        <img
-                                            src={previewResult}
-                                            alt="Preview"
-                                            style={{ width: '100%', display: 'block' }}
-                                        />
-                                    </div>
-
-                                    {/* Carousel Navigation */}
-                                    {selectedPhotos.length > 1 && (
-                                        <>
-                                            <button
-                                                onClick={goToPrevPhoto}
-                                                style={{
-                                                    position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
-                                                    background: 'rgba(0,0,0,0.7)', color: 'white',
-                                                    border: 'none', borderRadius: '50%',
-                                                    width: 40, height: 40, cursor: 'pointer',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 59, 59, 0.8)'}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
-                                            >
-                                                <ChevronLeft size={24} />
-                                            </button>
-                                            <button
-                                                onClick={goToNextPhoto}
-                                                style={{
-                                                    position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                                                    background: 'rgba(0,0,0,0.7)', color: 'white',
-                                                    border: 'none', borderRadius: '50%',
-                                                    width: 40, height: 40, cursor: 'pointer',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 59, 59, 0.8)'}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.7)'}
-                                            >
-                                                <ChevronRight size={24} />
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            ) : (
-                                <div style={{
-                                    height: '300px', borderRadius: '12px',
-                                    border: '2px dashed #27272a',
-                                    display: 'flex', flexDirection: 'column',
-                                    alignItems: 'center', justifyContent: 'center',
-                                    color: '#52525b', gap: '12px'
-                                }}>
-                                    <Frame size={48} />
-                                    <span style={{ fontSize: '0.9rem' }}>
-                                        {!framePreview ? 'Upload a frame first' :
-                                         selectedPhotos.length === 0 ? 'Select photos to preview' :
-                                         'Generating preview...'}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Action Button */}
-                        <button
-                            onClick={handleProcess}
-                            disabled={!frameFile || selectedPhotos.length === 0 || isProcessing}
-                            style={{
-                                width: '100%', padding: '16px 24px', borderRadius: '12px',
-                                border: 'none', cursor: isProcessing ? 'wait' : 'pointer',
-                                background: (!frameFile || selectedPhotos.length === 0)
-                                    ? '#27272a'
-                                    : 'linear-gradient(135deg, #ff3b3b 0%, #ff6b6b 100%)',
-                                color: 'white', fontWeight: 600, fontSize: '1rem',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
-                                opacity: isProcessing ? 0.7 : 1,
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            {isProcessing ? (
-                                <>
-                                    <Loader2 size={20} className="animate-spin" />
-                                    Processing {progress.current}/{progress.total}...
-                                </>
-                            ) : (
-                                <>
-                                    <Download size={20} />
-                                    Apply Frame & Download ZIP
-                                </>
-                            )}
-                        </button>
-
-                        {/* Info */}
-                        <div style={{
-                            background: 'rgba(255, 59, 59, 0.05)', border: '1px solid rgba(255, 59, 59, 0.1)',
-                            borderRadius: '12px', padding: '16px',
-                            fontSize: '0.85rem', color: '#a1a1aa', lineHeight: 1.6
-                        }}>
-                            <strong style={{ color: 'white' }}>How it works:</strong>
-                            <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
-                                <li>Upload a PNG frame with transparency</li>
-                                <li>Select or upload photos to frame</li>
-                                <li>Choose fit mode and adjust position/size</li>
-                                <li>Use arrows to preview each photo</li>
-                                <li>Download all framed images as a ZIP file</li>
-                            </ul>
-                        </div>
-                    </div>
+                    </button>
                 </div>
             </div>
 
-            {/* Gallery Picker Modal */}
-            {showGalleryPicker && (
-                <div
-                    onClick={() => setShowGalleryPicker(false)}
-                    style={{
-                        position: 'fixed', inset: 0, zIndex: 9999,
-                        background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        padding: '24px'
-                    }}
-                >
-                    <div
-                        onClick={e => e.stopPropagation()}
-                        style={{
-                            background: '#18181b', borderRadius: '16px', border: '1px solid #27272a',
-                            width: '100%', maxWidth: '800px', maxHeight: '80vh',
-                            display: 'flex', flexDirection: 'column', overflow: 'hidden'
-                        }}
-                    >
-                        <div style={{
-                            padding: '20px 24px', borderBottom: '1px solid #27272a',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                        }}>
-                            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>
-                                Select from Galleries
-                            </h2>
-                            <button
-                                onClick={() => setShowGalleryPicker(false)}
-                                style={{
-                                    background: 'none', border: 'none', color: '#71717a',
-                                    cursor: 'pointer', padding: '4px'
-                                }}
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-                            {galleries.length === 0 ? (
-                                <div style={{
-                                    textAlign: 'center', padding: '48px', color: '#52525b'
-                                }}>
-                                    No galleries found
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                    {galleries.map(gallery => {
-                                        // Parse gallery images
-                                        let images: string[] = []
-                                        if (Array.isArray(gallery.galleryImages)) {
-                                            if (typeof gallery.galleryImages[0] === 'string') {
-                                                images = gallery.galleryImages as string[]
-                                            } else {
-                                                // GallerySection format
-                                                const sections = gallery.galleryImages as unknown as GallerySection[]
-                                                images = sections.flatMap(s => s.images)
-                                            }
-                                        }
-
-                                        if (images.length === 0) return null
-
-                                        return (
-                                            <div key={gallery.id}>
-                                                <h3 style={{
-                                                    fontSize: '0.9rem', fontWeight: 600,
-                                                    margin: '0 0 12px 0', color: '#a1a1aa'
-                                                }}>
-                                                    {gallery.title} ({images.length} images)
-                                                </h3>
-                                                <div style={{
-                                                    display: 'grid',
-                                                    gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                                                    gap: '8px'
-                                                }}>
-                                                    {images.map((img, idx) => {
-                                                        const isSelected = selectedPhotos.includes(img)
-                                                        return (
-                                                            <div
-                                                                key={idx}
-                                                                onClick={() => togglePhotoSelection(img)}
-                                                                style={{
-                                                                    position: 'relative', aspectRatio: '1',
-                                                                    borderRadius: '8px', overflow: 'hidden',
-                                                                    cursor: 'pointer',
-                                                                    border: isSelected ? '2px solid #ff3b3b' : '2px solid transparent',
-                                                                    opacity: isSelected ? 1 : 0.7,
-                                                                    transition: 'all 0.2s'
-                                                                }}
-                                                            >
-                                                                <img
-                                                                    src={img}
-                                                                    alt=""
-                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                                />
-                                                                {isSelected && (
-                                                                    <div style={{
-                                                                        position: 'absolute', top: 4, right: 4,
-                                                                        background: '#ff3b3b', borderRadius: '50%',
-                                                                        width: 20, height: 20,
-                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                                                    }}>
-                                                                        <Check size={12} color="white" />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        <div style={{
-                            padding: '16px 24px', borderTop: '1px solid #27272a',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                        }}>
-                            <span style={{ color: '#71717a', fontSize: '0.85rem' }}>
-                                {selectedPhotos.length} photos selected
-                            </span>
-                            <button
-                                onClick={() => setShowGalleryPicker(false)}
-                                style={{
-                                    background: '#ff3b3b', color: 'white', border: 'none',
-                                    padding: '10px 24px', borderRadius: '8px',
-                                    fontWeight: 600, cursor: 'pointer'
-                                }}
-                            >
-                                Done
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             <style>{`
-                .animate-spin {
-                    animation: spin 1s linear infinite;
-                }
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                input[type="range"] {
-                    -webkit-appearance: none;
-                    appearance: none;
-                    background: #27272a;
-                    border-radius: 3px;
-                    height: 6px;
-                }
                 input[type="range"]::-webkit-slider-thumb {
                     -webkit-appearance: none;
-                    appearance: none;
-                    width: 16px;
-                    height: 16px;
-                    border-radius: 50%;
-                    background: #ff3b3b;
-                    cursor: pointer;
-                    border: 2px solid #18181b;
-                    transition: all 0.15s;
-                }
-                input[type="range"]::-webkit-slider-thumb:hover {
-                    transform: scale(1.2);
-                    background: #ff5555;
-                }
-                input[type="range"]::-moz-range-thumb {
-                    width: 16px;
-                    height: 16px;
-                    border-radius: 50%;
-                    background: #ff3b3b;
-                    cursor: pointer;
-                    border: 2px solid #18181b;
+                    width: 12px; height: 12px; background: #ff3b3b; borderRadius: 50%; cursor: pointer;
                 }
             `}</style>
         </div>
