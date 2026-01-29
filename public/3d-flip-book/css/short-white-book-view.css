@@ -5,7 +5,7 @@
 
 .flip-book .view {
   position: relative;
-  height: 100%;
+  height: calc(100% - 60px);
 }
 
 .flip-book .view .fnav {}
@@ -19,11 +19,11 @@
 }
 
 .flip-book .view .prev {
-  left: 20px;
+  left: 0px;
 }
 
 .flip-book .view .next {
-  right: 20px;
+  right: 0px;
 }
 
 
@@ -125,7 +125,10 @@
 }
 
 .flip-book .controls {
-  position: relative;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 60px;
 }
 
 .flip-book .controls .fnavbar {

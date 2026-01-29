@@ -20,7 +20,7 @@ export function PDFFlipbook({ url, coverImage: _coverImage }: PDFFlipbookProps) 
 
     useEffect(() => {
         const checkMobile = () => {
-            setIsMobile(window.innerWidth < 1100)
+            setIsMobile(window.innerWidth < 1400)
         }
         checkMobile()
         window.addEventListener('resize', checkMobile)
@@ -83,7 +83,13 @@ export function PDFFlipbook({ url, coverImage: _coverImage }: PDFFlipbookProps) 
 
                 const options = {
                     pdf: url,
+                    pdf: url,
                     smartTexture: true,
+                    gravity: 2.5, // Increase gravity for faster fall
+                    sheet: {
+                        startVelocity: 1.2, // Increase start velocity for faster flip
+                        bending: 11
+                    },
                     lightBox: false,
                     template: {
                         html: '/3d-flip-book/templates/default-book-view.html',
@@ -102,12 +108,12 @@ export function PDFFlipbook({ url, coverImage: _coverImage }: PDFFlipbookProps) 
                             endFlip: '/3d-flip-book/sounds/end-flip.mp3'
                         }
                     },
-                    singlePageMode: isMobile,
                     responsiveView: true,
                     controlsProps: {
                         actions: {
                             cmdBackward: { code: 37 },
                             cmdForward: { code: 39 },
+                            cmdSinglePage: { active: isMobile },
                         }
                     },
                     ready: function () {
@@ -153,16 +159,45 @@ export function PDFFlipbook({ url, coverImage: _coverImage }: PDFFlipbookProps) 
 
     }, [url, isMobile])
 
+    const handleBookClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!isReady || !containerRef.current) return;
+
+        // Ignore clicks on controls or interactive elements
+        const target = e.target as HTMLElement;
+        if (target.closest('.controls') || target.closest('.fnav') || target.closest('a') || target.closest('button') || target.closest('input')) {
+            return;
+        }
+
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const width = rect.width;
+
+        // If click is in the bottom 60px (controls area reserved space), ignore it just in case
+        const y = e.clientY - rect.top;
+        const height = rect.height;
+        if (height - y <= 60) return;
+
+        if (x < width * 0.4) {
+            // Left side click (40% zone)
+            ((window as any).$)(containerRef.current).FlipBook('cmdBackward');
+        } else if (x > width * 0.6) {
+            // Right side click (40% zone)
+            ((window as any).$)(containerRef.current).FlipBook('cmdForward');
+        }
+    }
+
     return (
         <div
             ref={containerRef}
+            onClickCapture={handleBookClick}
             data-ready={isReady}
             style={{
                 width: '100%',
                 height: '80vh',
                 minHeight: '500px',
                 position: 'relative',
-                overflow: 'hidden' // Ensure no potential overflow
+                overflow: 'hidden', // Ensure no potential overflow
+                cursor: 'pointer'
             }}
         >
             {!isReady && _coverImage && (

@@ -2913,10 +2913,14 @@
               this.progresData = { loaded: -1, total: 1 };
               this.loadingProgress = loadingProgress;
 
-              _libs.PDFJS.getDocument({
+              var loadingTask = _libs.PDFJS.getDocument({
                 url: this.src,
-                rangeChunkSize: 512 * 1024
-              }, null, null, function (data) {
+                rangeChunkSize: 512 * 1024,
+                cMapUrl: _libs.PDFJS.cMapUrl,
+                cMapPacked: _libs.PDFJS.cMapPacked
+              });
+
+              loadingTask.onProgress = function (data) {
                 if (_this.loadingProgress) {
                   var cur = Math.floor(100 * data.loaded / data.total),
                     old = Math.floor(100 * _this.progresData.loaded / _this.progresData.total);
@@ -2927,7 +2931,9 @@
                   }
                 }
                 _this.progresData = data;
-              }).then(function (handler) {
+              };
+
+              loadingTask.then(function (handler) {
                 if (handler.numPages > 1) {
                   Promise.all([handler.getPage(1), handler.getPage(2)]).then(function (pages) {
                     _this.init(handler, pages);
