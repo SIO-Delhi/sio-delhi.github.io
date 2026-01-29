@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, FileText, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, PenTool, FileText, Trash2 } from 'lucide-react'
 import { useClerk } from '@clerk/clerk-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
@@ -155,6 +155,24 @@ export function AdminLayout() {
                         <Megaphone size={20} />
                         Popup Manager
                     </Link>
+
+                    <Link
+                        to="/admin/utilities"
+                        onClick={() => isMobile && setSidebarOpen(false)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '12px', borderRadius: '8px',
+                            background: isActive('/admin/utilities') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
+                            color: isActive('/admin/utilities') ? '#ff3b3b' : 'inherit',
+                            textDecoration: 'none', fontWeight: 500,
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        <PenTool size={20} />
+                        Utilities
+                    </Link>
+
+
 
                     <Link
                         to="/admin/forms"

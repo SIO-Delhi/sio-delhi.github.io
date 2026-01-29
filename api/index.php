@@ -90,6 +90,8 @@ $routes = [
     'GET /stats/storage' => 'routes/stats.php@getStorageStats',
     'GET /stats/database' => 'routes/stats.php@getDatabaseStats',
 
+    // Frame Tool
+    'POST /frame/apply-bulk' => 'routes/frame.php@applyFrameBulk',
     // Garbage Collector
     'GET /garbage' => 'routes/stats.php@getOrphanedFiles',
     'POST /garbage/cleanup' => 'routes/stats.php@deleteOrphanedFiles',
