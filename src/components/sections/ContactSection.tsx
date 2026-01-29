@@ -1,42 +1,13 @@
-import { useEffect, useRef } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { ArrowUpRight } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 
-gsap.registerPlugin(ScrollTrigger)
 
 export function ContactSection() {
-    const sectionRef = useRef<HTMLElement>(null)
-    const containerRef = useRef<HTMLDivElement>(null)
     const { isDark } = useTheme()
-
-    useEffect(() => {
-        const ctx = gsap.context(() => {
-            gsap.fromTo(
-                '.animate-up',
-                { opacity: 0, y: 30 },
-                {
-                    opacity: 1,
-                    y: 0,
-                    duration: 0.8,
-                    stagger: 0.1,
-                    ease: 'power3.out',
-                    scrollTrigger: {
-                        trigger: containerRef.current,
-                        start: 'top 75%',
-                    },
-                }
-            )
-        }, sectionRef)
-
-        return () => ctx.revert()
-    }, [])
 
     return (
         <section
             id="contact"
-            ref={sectionRef}
             style={{
                 padding: '120px 0',
                 background: 'transparent',
@@ -49,7 +20,6 @@ export function ContactSection() {
             }}
         >
             <div
-                ref={containerRef}
                 style={{
                     display: 'flex',
                     flexDirection: 'column',
