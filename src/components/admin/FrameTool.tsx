@@ -1,13 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { useContent } from '../../context/ContentContext'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import {
-    Frame, Upload, X, Check, Loader2, Download,
-    Image as ImageIcon, FolderOpen, Eye,
-    ChevronLeft, ChevronRight, Settings2,
-    ZoomIn, Move, RotateCcw, Trash2, Plus,
-    Maximize, Minimize, MousePointer2, Copy
+    Upload, X, Loader2, Download,
+    Image as ImageIcon,
+    ZoomIn, Move, RotateCcw, Plus,
+    MousePointer2, Copy
 } from 'lucide-react'
 
 // --- Types ---
@@ -192,7 +190,7 @@ export function FrameTool() {
         // 1. Draw Photo
         if (photoImg) {
             // Calculate fit logic
-            const pRatio = photoImg.width / photoImg.height
+            const pRatio = photoImg.naturalWidth / photoImg.naturalHeight
             const cRatio = width / height
 
             let dw = width
@@ -270,17 +268,17 @@ export function FrameTool() {
             let w = 1080
             let h = 1080
 
-            if (activeConfig?.canvasMode === 'original' && photoImg) {
+            if (activeConfig?.canvasMode === 'original' && photoImg && photoImg.naturalWidth > 0) {
                 // Use photo dimensions, but cap for performance in preview
                 // Max 1080 on long side for preview
                 const maxDim = 1080
-                const ratio = photoImg.width / photoImg.height
+                const ratio = photoImg.naturalWidth / photoImg.naturalHeight
                 if (ratio > 1) {
                     w = maxDim
-                    h = maxDim / ratio
+                    h = Math.round(maxDim / ratio)
                 } else {
                     h = maxDim
-                    w = maxDim * ratio
+                    w = Math.round(maxDim * ratio)
                 }
             }
 
@@ -357,7 +355,7 @@ export function FrameTool() {
                 const photoImg = new Image()
                 photoImg.crossOrigin = 'anonymous'
                 photoImg.src = photo.url
-                await new Promise((resolve, reject) => {
+                await new Promise((resolve) => {
                     photoImg.onload = resolve
                     photoImg.onerror = () => resolve(null) // Skip on error
                 })
