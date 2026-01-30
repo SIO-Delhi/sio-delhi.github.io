@@ -19,8 +19,6 @@ import { AdminLogin } from './pages/AdminLogin'
 import { ProtectedRoute } from './components/admin/ProtectedRoute'
 import { PopupManager } from './components/admin/PopupManager'
 import { GalleryEditor } from './components/admin/GalleryEditor'
-import { FrameTool } from './components/admin/FrameTool'
-import { Utilities } from './components/admin/Utilities'
 import { AdminGarbageCollector } from './components/admin/AdminGarbageCollector'
 import { FormList } from './components/admin/FormList'
 import { FormBuilder } from './components/admin/FormBuilder'
@@ -28,6 +26,8 @@ import { FormResponseViewer } from './components/admin/FormResponseViewer'
 import { FormResponseDetail } from './components/admin/FormResponseDetail'
 import { GarbageCollector } from './components/admin/GarbageCollector'
 import { PublicForm } from './pages/PublicForm'
+import { UtilitiesPage } from './pages/UtilitiesPage'
+import { FrameToolPage } from './pages/FrameToolPage'
 
 
 function App() {
@@ -43,8 +43,6 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="sections" element={<AdminSections />} />
               <Route path="popup" element={<PopupManager />} />
-              <Route path="utilities" element={<Utilities />} />
-              <Route path="utilities/frame-tool" element={<FrameTool />} />
               <Route path="garbage" element={<AdminGarbageCollector />} />
               <Route path="section/:sectionId" element={<SectionManager />} />
               <Route path="create/:sectionId" element={<PostEditor />} />
@@ -84,6 +82,10 @@ function App() {
                 {/* Dynamic Sections Route */}
                 <Route path="/section/:sectionId/:id" element={<PostDetail sectionType="dynamic" />} />
                 <Route path="/section/:sectionId/:id/gallery" element={<GalleryPage />} />
+
+                {/* Public Utilities */}
+                <Route path="/utilities" element={<UtilitiesPage />} />
+                <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
               </Routes>
             </Layout>
           } />

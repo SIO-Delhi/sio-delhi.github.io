@@ -1,0 +1,627 @@
+/* Frame Tool CSS */
+
+/* --- Layout Containers --- */
+.frame-tool-container {
+    flex: 1;
+    height: 100%;
+    width: 100%;
+    background-color: #09090b;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+    .frame-tool-container {
+        flex-direction: row;
+    }
+}
+
+/* --- Left Sidebar (Assets) --- */
+.ft-sidebar-left {
+    display: none;
+    /* Mobile: Hidden by default */
+    flex-direction: column;
+    background-color: #121215;
+    border-bottom: 1px solid #27272a;
+}
+
+.ft-sidebar-left.ft-active {
+    display: flex;
+    flex: 1;
+    overflow: auto;
+    order: 2;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.ft-sidebar-left.ft-active::-webkit-scrollbar {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    .ft-sidebar-left {
+        display: flex;
+        /* Desktop: Always visible */
+        width: 280px !important;
+        flex: 0 0 280px !important;
+        border-bottom: none;
+        border-right: 1px solid #27272a;
+        order: 1 !important;
+        /* Desktop Order - !important to override .ft-active */
+    }
+}
+
+/* ... (hidden) ... */
+
+/* --- Right Sidebar (Controls) --- */
+.ft-sidebar-right {
+    display: none;
+    /* Mobile: Hidden by default */
+    flex-direction: column;
+    background-color: #121215;
+    border-top: 1px solid #27272a;
+}
+
+.ft-sidebar-right.ft-active {
+    display: flex;
+    flex: 1;
+    overflow: auto;
+    order: 2;
+}
+
+@media (min-width: 1024px) {
+    .ft-sidebar-right {
+        display: flex;
+        /* Desktop: Always visible */
+        width: 280px !important;
+        flex: 0 0 280px !important;
+        border-top: none;
+        border-left: 1px solid #27272a;
+        order: 3 !important;
+        /* Desktop Order - !important to override .ft-active */
+    }
+}
+
+.ft-sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid #27272a;
+}
+
+.ft-sidebar-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ft-sidebar-content {
+    flex: 1;
+    overflow: hidden;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Frame Upload Section */
+.ft-section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #71717a;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.ft-frame-preview {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #27272a;
+}
+
+.ft-frame-preview-bg {
+    height: 160px;
+    background: repeating-conic-gradient(#18181b 0 25%, #09090b 0 50%) 50% / 10px 10px;
+}
+
+.ft-img-contain {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.ft-remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.ft-upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 120px;
+    border: 2px dashed #27272a;
+    border-radius: 12px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.02);
+    color: #71717a;
+    gap: 8px;
+}
+
+.ft-upload-text {
+    font-size: 0.85rem;
+}
+
+/* Photo List Section */
+.ft-photo-list-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.ft-photo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.ft-add-btn-small {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #ff3b3b;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.ft-empty-state {
+    flex: 1;
+    border: 2px dashed #27272a;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #52525b;
+    gap: 12px;
+    min-height: 200px;
+}
+
+.ft-empty-text {
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 0 20px;
+}
+
+.ft-upload-btn-large {
+    padding: 10px 20px;
+    background: #27272a;
+    border: 1px solid #3f3f46;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.ft-photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    overflow-y: auto;
+    padding-right: 4px;
+    flex: 1;
+    min-height: 0;
+    align-content: start;
+}
+
+/* Mobile Scrolling Override: Allow full sidebar scroll */
+@media (max-width: 1023px) {
+
+    .ft-sidebar-content,
+    .ft-photo-list-container,
+    .ft-photo-grid {
+        overflow: visible;
+        flex: none;
+        height: auto;
+    }
+}
+
+.ft-photo-item {
+    width: 100%;
+    padding-bottom: 100%;
+    /* Square aspect ratio hack */
+    height: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    background: #18181b;
+}
+
+.ft-photo-number {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #a1a1aa;
+    font-size: 0.7rem;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.ft-photo-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.ft-photo-delete {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    border-radius: 4px;
+    width: 18px;
+    height: 18px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 11;
+}
+
+/* --- Center (Canvas) --- */
+.ft-center-canvas {
+    /* Mobile: Fixed height, allowing sidebar to take remaining space */
+    flex: 0 0 45vh;
+    height: 45vh;
+    background-color: #09090b;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* Improved background visibility */
+    background-image: radial-gradient(#3f3f46 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
+    overflow: hidden;
+    order: 1;
+}
+
+@media (min-width: 1024px) {
+    .ft-center-canvas {
+        flex: 1;
+        height: auto;
+        order: 2;
+        /* Desktop Order */
+        min-height: 0;
+    }
+}
+
+.ft-canvas-wrapper {
+    height: auto;
+    width: auto;
+    max-width: 90%;
+    max-height: 90%;
+
+    /* Box styling */
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    background: #111;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.ft-canvas-element {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.ft-controls-hint {
+    margin-top: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: #a1a1aa;
+    display: flex;
+    gap: 12px;
+    pointer-events: none;
+}
+
+
+
+.ft-adjustments-container {
+    padding: 24px;
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.ft-adjustments-container::-webkit-scrollbar {
+    display: none;
+}
+
+.ft-control-group {
+    margin-bottom: 24px;
+}
+
+.ft-control-label {
+    font-size: 0.75rem;
+    color: #71717a;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.ft-button-group {
+    display: flex;
+    background: #27272a;
+    border-radius: 8px;
+    padding: 2px;
+}
+
+.ft-group-btn {
+    flex: 1;
+    padding: 8px;
+    font-size: 0.8rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-transform: capitalize;
+}
+
+.ft-slider-group {
+    margin-bottom: 8px;
+}
+
+.ft-slider-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.ft-slider-label {
+    font-size: 0.85rem;
+}
+
+.ft-slider-value {
+    font-size: 0.8rem;
+    color: #71717a;
+}
+
+.ft-range-input {
+    width: 100%;
+    height: 4px;
+    background: #27272a;
+    appearance: none;
+    border-radius: 2px;
+}
+
+.ft-range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #ff3b3b;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.ft-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid #27272a;
+    border-radius: 8px;
+    color: #a1a1aa;
+    cursor: pointer;
+    font-size: 0.8rem;
+    width: 100%;
+}
+
+.ft-apply-all-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: #27272a;
+    border: 1px solid #3f3f46;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-top: 8px;
+    font-weight: 500;
+    width: 100%;
+}
+
+
+
+
+.ft-download-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    color: white;
+    font-weight: 500;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* --- Mobile Tab Bar --- */
+.ft-mobile-tabs {
+    background-color: #121215;
+    border-top: 1px solid #27272a;
+    height: 56px;
+    display: flex;
+    flex-shrink: 0;
+    order: 3;
+    /* Ensure it's at the bottom on mobile */
+}
+
+@media (min-width: 1024px) {
+    .ft-mobile-tabs {
+        display: none;
+    }
+}
+
+.ft-tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border: none;
+    background: transparent;
+}
+
+/* Utilities */
+
+@media (max-width: 1024px) {
+
+    .ft-canvas-controls,
+    .ft-canvas-instruction {
+        display: none !important;
+    }
+}
+
+/* --- Floating Controls (Crop Mode) --- */
+.ft-floating-controls {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(24, 24, 27, 0.9);
+    backdrop-filter: blur(12px);
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 20;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.ft-floating-btn {
+    background: transparent;
+    color: #a1a1aa;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    cursor: pointer;
+    border-radius: 99px;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.ft-floating-btn:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.ft-floating-btn.primary {
+    background: white;
+    color: black;
+    font-weight: 600;
+    padding: 8px 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ft-floating-btn.primary:hover {
+    background: #f4f4f5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.ft-floating-divider {
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Mobile Responsiveness */
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+    .ft-floating-controls {
+        bottom: 24px;
+        padding: 4px 6px;
+        /* Tighter padding */
+        gap: 8px;
+        width: auto;
+        /* Let content define width */
+        max-width: 90%;
+        min-width: 200px;
+        justify-content: center;
+    }
+
+    .ft-floating-btn {
+        flex: initial;
+        /* Don't stretch unnecessarily */
+        justify-content: center;
+        padding: 8px 12px;
+        /* Smaller vertical padding */
+        font-size: 0.8rem;
+        /* Smaller font */
+    }
+
+    .ft-floating-btn.primary {
+        flex: initial;
+        padding: 8px 20px;
+        /* Slightly wider for primary */
+    }
+}

@@ -2,12 +2,17 @@ import JSZip from 'jszip'
 
 // --- Types (Duplicated from FrameTool.tsx for now to avoid complexity) ---
 type FitMode = 'cover' | 'contain' | 'fill'
-type CanvasMode = 'square' | 'original'
+type CanvasMode = 'square' | 'original' | 'portrait' | 'landscape' | 'story'
 
 interface FrameConfig {
-    scale: number
-    x: number // Percentage -50 to 50
-    y: number // Percentage -50 to 50
+    // Crop region as percentage of source image (0-100)
+    cropX: number      // Left position of crop (0-100%)
+    cropY: number      // Top position of crop (0-100%)
+    cropSize: number   // Crop box size as percentage (zoomed in = smaller %)
+    // Frame positioning
+    frameScale: number // Frame scale (0.5 to 2)
+    frameX: number     // Frame X offset (-50 to 50%)
+    frameY: number     // Frame Y offset (-50 to 50%)
     fitMode: FitMode
     canvasMode: CanvasMode
 }
@@ -44,65 +49,68 @@ const drawToCanvas = (
         return
     }
 
-    // 1. Draw Photo
+    // 1. Draw Photo (cropped region)
     if (photoImg) {
-        // Calculate fit logic
-        const pRatio = photoImg.width / photoImg.height
-        const cRatio = width / height
+        const imgW = photoImg.width
+        const imgH = photoImg.height
 
-        let dw = width
-        let dh = height
-        let dx = 0
-        let dy = 0
+        // Calculate crop dimensions based on aspect ratio
+        const canvasAspect = width / height
+        const imgAspect = imgW / imgH
 
-        if (drawConfig.fitMode === 'cover') {
-            if (pRatio > cRatio) {
-                dw = height * pRatio
-                dx = (width - dw) / 2
-            } else {
-                dh = width / pRatio
-                dy = (height - dh) / 2
-            }
-        } else if (drawConfig.fitMode === 'contain') {
-            if (pRatio > cRatio) {
-                dh = width / pRatio
-                dy = (height - dh) / 2
-            } else {
-                dw = height * pRatio
-                dx = (width - dw) / 2
-            }
+        // Crop size determines the percentage of the image to show
+        let cropW: number, cropH: number
+
+        // Determine crop dimensions to maintain output aspect ratio
+        if (imgAspect > canvasAspect) {
+            // Image is wider than canvas - height is the limiting factor
+            cropH = (drawConfig.cropSize / 100) * imgH
+            cropW = cropH * canvasAspect
+        } else {
+            // Image is taller than canvas - width is the limiting factor
+            cropW = (drawConfig.cropSize / 100) * imgW
+            cropH = cropW / canvasAspect
         }
-        // fill is default (0,0,width,height)
 
-        ctx.drawImage(photoImg, dx, dy, dw, dh)
+        // Ensure crop doesn't exceed image bounds
+        cropW = Math.min(cropW, imgW)
+        cropH = Math.min(cropH, imgH)
+
+        // Calculate source position based on cropX, cropY percentage
+        const maxOffsetX = imgW - cropW
+        const maxOffsetY = imgH - cropH
+        const srcX = (drawConfig.cropX / 100) * maxOffsetX
+        const srcY = (drawConfig.cropY / 100) * maxOffsetY
+
+        // Draw the cropped region to fill the canvas
+        ctx.drawImage(
+            photoImg,
+            srcX, srcY, cropW, cropH,  // Source: crop region
+            0, 0, width, height         // Destination: full canvas
+        )
     }
 
-    // 2. Draw Frame
+    // 2. Draw Frame with positioning (AspectRatio Preserved)
     if (frameImg) {
         const frameAspect = frameImg.width / frameImg.height
         const canvasAspect = width / height
 
-        let baseW = width
-        let baseH = height
+        let baseFrameW, baseFrameH
 
-        // Calculate base dimensions that effectively "contain" the frame in the canvas
         if (frameAspect > canvasAspect) {
-            // Frame is wider relative to canvas: constrain by width
-            baseW = width
-            baseH = width / frameAspect
+            // Frame is wider than canvas - fit by width
+            baseFrameW = width
+            baseFrameH = width / frameAspect
         } else {
-            // Frame is taller relative to canvas: constrain by height
-            baseH = height
-            baseW = height * frameAspect
+            // Frame is taller than canvas - fit by height
+            baseFrameH = height
+            baseFrameW = height * frameAspect
         }
 
-        const fw = baseW * drawConfig.scale
-        const fh = baseH * drawConfig.scale
-
-        // Center + Offset
-        const fx = (width - fw) / 2 + (drawConfig.x / 100) * width
-        const fy = (height - fh) / 2 + (drawConfig.y / 100) * height
-
+        const fw = baseFrameW * drawConfig.frameScale
+        const fh = baseFrameH * drawConfig.frameScale
+        const fx = (width - fw) / 2 + (drawConfig.frameX / 100) * width
+        const fy = (height - fh) / 2 + (drawConfig.frameY / 100) * height
         ctx.drawImage(frameImg, fx, fy, fw, fh)
     }
 }
@@ -146,6 +154,15 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                     if (photo.config.canvasMode === 'original') {
                         w = photoImg.width
                         h = photoImg.height
+                    } else if (photo.config.canvasMode === 'portrait') {
+                        w = 1080
+                        h = 1350
+                    } else if (photo.config.canvasMode === 'landscape') {
+                        w = 1920
+                        h = 1080
+                    } else if (photo.config.canvasMode === 'story') {
+                        w = 1080
+                        h = 1920
                     }
 
                     // Create offscreen canvas
