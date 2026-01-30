@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
 import { Frame, ChevronRight, PenTool } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { UtilitiesSplash } from '../components/ui/UtilitiesSplash'
 
 export function UtilitiesPage() {
     const [isMobile, setIsMobile] = useState(false)
+    const [showSplash, setShowSplash] = useState(true)
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -11,6 +13,10 @@ export function UtilitiesPage() {
         window.addEventListener('resize', checkMobile)
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
+
+    if (showSplash) {
+        return <UtilitiesSplash onComplete={() => setShowSplash(false)} />
+    }
 
     const utilities = [
         {
