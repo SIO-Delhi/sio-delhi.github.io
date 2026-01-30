@@ -218,9 +218,10 @@ export function FrameTool() {
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!currentPhoto) return
 
+
         if (isPinching && e.touches.length === 2) {
             // Pinch to Zoom
-            e.preventDefault() // Prevent page scroll
+            // e.preventDefault() -> Removed to fix passive event listener error. 'touch-action: none' handles scroll locking.
             const dist = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
@@ -243,7 +244,7 @@ export function FrameTool() {
             }
         } else if (isDragging && e.touches.length === 1) {
             // Drag
-            e.preventDefault()
+            // e.preventDefault() -> Removed to fix passive event listener error.
             const dx = e.touches[0].clientX - dragStart.x
             const dy = e.touches[0].clientY - dragStart.y
 
@@ -655,54 +656,27 @@ export function FrameTool() {
 
                 {/* --- Floating Action Bar (Crop Mode) --- */}
                 {editMode === 'crop' && currentPhoto && (
-                    <div style={{
-                        position: 'absolute',
-                        bottom: '24px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        display: 'flex',
-                        gap: '12px',
-                        background: 'rgba(24, 24, 27, 0.8)',
-                        backdropFilter: 'blur(8px)',
-                        padding: '8px 16px',
-                        borderRadius: '999px',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        zIndex: 10
-                    }}>
+                    <div className="ft-floating-controls">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation()
                                 setCurrentConfig({ cropSize: 100, cropX: 0, cropY: 0 })
                             }}
-                            className="ft-action-btn"
-                            style={{
-                                background: 'transparent',
-                                color: '#a1a1aa',
-                                padding: '6px 12px',
-                                fontSize: '0.85rem'
-                            }}
+                            className="ft-floating-btn"
                             onMouseEnter={e => e.currentTarget.style.color = 'white'}
                             onMouseLeave={e => e.currentTarget.style.color = '#a1a1aa'}
                         >
-                            <RotateCcw size={14} /> Reset
+                            <RotateCcw size={16} /> Reset
                         </button>
-                        <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+                        <div className="ft-floating-divider" />
                         <button
                             onClick={(e) => {
                                 e.stopPropagation()
                                 setEditMode('frame')
                             }}
-                            className="ft-action-btn"
-                            style={{
-                                background: 'white',
-                                color: 'black',
-                                border: 'none',
-                                padding: '6px 16px',
-                                fontSize: '0.85rem',
-                                fontWeight: 500
-                            }}
+                            className="ft-floating-btn primary"
                         >
-                            <Check size={14} strokeWidth={3} /> Done
+                            <Check size={16} strokeWidth={3} /> Done
                         </button>
                     </div>
                 )}
@@ -757,9 +731,7 @@ export function FrameTool() {
                         {photos.length === 0 ? (
                             <div className="ft-empty-state">
                                 <ImageIcon size={32} />
-                                <p className="ft-empty-text">
-                                    Drag photos here or click below to add
-                                </p>
+                               
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
                                     <label className="ft-upload-btn-large">
                                         <Plus size={16} />
