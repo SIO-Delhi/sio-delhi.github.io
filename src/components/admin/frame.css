@@ -533,3 +533,95 @@
         display: none !important;
     }
 }
+
+/* --- Floating Controls (Crop Mode) --- */
+.ft-floating-controls {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(24, 24, 27, 0.9);
+    backdrop-filter: blur(12px);
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 20;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.ft-floating-btn {
+    background: transparent;
+    color: #a1a1aa;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    cursor: pointer;
+    border-radius: 99px;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.ft-floating-btn:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.ft-floating-btn.primary {
+    background: white;
+    color: black;
+    font-weight: 600;
+    padding: 8px 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ft-floating-btn.primary:hover {
+    background: #f4f4f5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.ft-floating-divider {
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Mobile Responsiveness */
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+    .ft-floating-controls {
+        bottom: 24px;
+        padding: 4px 6px;
+        /* Tighter padding */
+        gap: 8px;
+        width: auto;
+        /* Let content define width */
+        max-width: 90%;
+        min-width: 200px;
+        justify-content: center;
+    }
+
+    .ft-floating-btn {
+        flex: initial;
+        /* Don't stretch unnecessarily */
+        justify-content: center;
+        padding: 8px 12px;
+        /* Smaller vertical padding */
+        font-size: 0.8rem;
+        /* Smaller font */
+    }
+
+    .ft-floating-btn.primary {
+        flex: initial;
+        padding: 8px 20px;
+        /* Slightly wider for primary */
+    }
+}

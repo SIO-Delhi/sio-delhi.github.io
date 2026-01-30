@@ -293,31 +293,7 @@ export function FrameToolNavSidebar({ isCollapsed, setIsCollapsed, onCollapseCha
                         </a>
                     </div>
 
-                    {/* Tool Title */}
-                    {!isCollapsed && window.innerWidth >= 768 && (
-                        <div style={{
-                            padding: '12px 16px',
-                            borderRadius: '12px',
-                            background: isDark
-                                ? 'rgba(255, 59, 59, 0.1)'
-                                : 'rgba(255, 59, 59, 0.05)',
-                            border: `1px solid ${isDark ? 'rgba(255, 59, 59, 0.2)' : 'rgba(255, 59, 59, 0.15)'}`,
-                        }}>
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                color: '#efc676',
-                                fontSize: '0.85rem',
-                                fontWeight: 600,
-                                letterSpacing: '0.05em',
-                                textTransform: 'uppercase',
-                            }}>
-                                <Copy size={14} />
-                                Frame Tool
-                            </div>
-                        </div>
-                    )}
+
 
                     {/* Navigation Menu */}
                     <div ref={menuItemsRef} style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
@@ -350,18 +326,7 @@ export function FrameToolNavSidebar({ isCollapsed, setIsCollapsed, onCollapseCha
                                     <Home size={18} strokeWidth={2} />
                                     Home
                                 </div>
-                                <div style={{
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
-                                    color: isDark ? '#52525b' : '#a1a1aa',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.1em',
-                                    marginTop: '24px',
-                                    marginBottom: '8px',
-                                    paddingLeft: '16px',
-                                }}>
-                                    Tools
-                                </div>
+
 
                                 <div
                                     className="nav-item active"
