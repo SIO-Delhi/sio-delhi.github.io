@@ -4,14 +4,16 @@ import { saveAs } from 'file-saver'
 import {
     Upload, X, Loader2, Download,
     Image as ImageIcon,
-    ZoomIn, Move, RotateCcw, Plus,
-    MousePointer2, Copy
+    Plus, RotateCcw,
+    Copy, Settings
 } from 'lucide-react'
+
+import './frame.css'
 
 // --- Types ---
 
 type FitMode = 'cover' | 'contain' | 'fill'
-type CanvasMode = 'square' | 'original'
+type CanvasMode = 'square' | 'original' | 'portrait' | 'landscape' | 'story'
 
 interface FrameConfig {
     scale: number
@@ -46,6 +48,8 @@ export function FrameTool() {
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
     const [dragStartConfig, setDragStartConfig] = useState<FrameConfig>({ scale: 1, x: 0, y: 0, fitMode: 'cover', canvasMode: 'square' })
     const [previewAspectRatio, setPreviewAspectRatio] = useState(1)
+    const [activeTab, setActiveTab] = useState<'assets' | 'settings'>('assets')
+
 
     // Refs
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -161,6 +165,8 @@ export function FrameTool() {
         }))
     }
 
+
+
     // --- Drawing Logic ---
 
     // Now accepts config as argument!
@@ -268,17 +274,39 @@ export function FrameTool() {
             let w = 1080
             let h = 1080
 
-            if (activeConfig?.canvasMode === 'original' && photoImg && photoImg.naturalWidth > 0) {
-                // Use photo dimensions, but cap for performance in preview
-                // Max 1080 on long side for preview
-                const maxDim = 1080
-                const ratio = photoImg.naturalWidth / photoImg.naturalHeight
-                if (ratio > 1) {
-                    w = maxDim
-                    h = Math.round(maxDim / ratio)
-                } else {
-                    h = maxDim
-                    w = Math.round(maxDim * ratio)
+            if (activeConfig) {
+                switch (activeConfig.canvasMode) {
+                    case 'portrait': // 4:5
+                        w = 1080
+                        h = 1350
+                        break
+                    case 'landscape': // 16:9
+                        w = 1920
+                        h = 1080
+                        break
+                    case 'story': // 9:16
+                        w = 1080
+                        h = 1920
+                        break
+                    case 'original':
+                        if (photoImg && photoImg.naturalWidth > 0) {
+                            // Use photo dimensions, but cap for performance in preview
+                            const maxDim = 1920
+                            const ratio = photoImg.naturalWidth / photoImg.naturalHeight
+                            if (ratio > 1) {
+                                w = maxDim
+                                h = Math.round(maxDim / ratio)
+                            } else {
+                                h = maxDim
+                                w = Math.round(maxDim * ratio)
+                            }
+                        }
+                        break
+                    case 'square':
+                    default:
+                        w = 1080
+                        h = 1080
+                        break
                 }
             }
 
@@ -384,78 +412,85 @@ export function FrameTool() {
         }
     }
 
-    return (
-        <div style={{
-            height: '100vh',
-            background: '#09090b',
-            color: 'white',
-            display: 'flex',
-            overflow: 'hidden'
-        }}>
 
-            {/* --- LEFT SIDEBAR (Assets) --- */}
-            <div style={{
-                width: '320px',
-                borderRight: '1px solid #27272a',
-                display: 'flex',
-                flexDirection: 'column',
-                background: '#121215'
-            }}>
-                <div style={{ padding: '20px', borderBottom: '1px solid #27272a' }}>
-                    <h1 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Move className="text-red-500" size={20} />
-                        Frame Tool
-                    </h1>
+
+    return (
+        <div className="frame-tool-container">
+
+            {/* --- CENTER (Canvas) --- */}
+            <div
+                ref={containerRef}
+                className="ft-center-canvas"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onWheel={handleWheel}
+                style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+            >
+                {/* Canvas Container that maintains aspect ratio */}
+                <div
+                    className="ft-canvas-wrapper"
+                    style={{
+                        aspectRatio: previewAspectRatio,
+                        // If aspect ratio is > 1 (Landscape), constrain width
+                        // If aspect ratio is <= 1 (Portrait/Square), constrain height
+                        // This prevents overflow on mobile screens which are typically portrait
+                        width: previewAspectRatio > 1 ? '100%' : 'auto',
+                        height: previewAspectRatio > 1 ? 'auto' : '100%',
+                    }}
+                >
+                    <canvas
+                        ref={canvasRef}
+                        className="ft-canvas-element"
+                    />
+
                 </div>
 
-                <div style={{ flex: 1, overflow: 'hidden', padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+
+
+            </div>
+
+            {/* --- LEFT SIDEBAR (Assets) --- */}
+            <div className={`ft-sidebar-left ${activeTab === 'assets' ? 'ft-active' : ''} `}>
+
+
+                <div className="ft-sidebar-content">
                     {/* Frame Upload */}
                     <div>
-                        <h2 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#71717a', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <h2 className="ft-section-title">
                             1. Frame Overlay
                         </h2>
                         {frameURL ? (
-                            <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid #27272a' }}>
-                                <div style={{ height: '160px', background: 'repeating-conic-gradient(#18181b 0 25%, #09090b 0 50%) 50% / 10px 10px' }}>
-                                    <img src={frameURL} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="Frame" />
+                            <div className="ft-frame-preview">
+                                <div className="ft-frame-preview-bg">
+                                    <img src={frameURL} className="ft-img-contain" alt="Frame" />
                                 </div>
                                 <button
                                     onClick={() => { URL.revokeObjectURL(frameURL); setFrameURL(null) }}
-                                    style={{
-                                        position: 'absolute', top: 8, right: 8,
-                                        background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '50%',
-                                        width: 24, height: 24, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                                    }}
+                                    className="ft-remove-btn"
                                 >
                                     <X size={14} />
                                 </button>
                             </div>
                         ) : (
-                            <label style={{
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                height: '120px', border: '2px dashed #27272a', borderRadius: '12px',
-                                cursor: 'pointer', background: 'rgba(255,255,255,0.02)', color: '#71717a', gap: '8px'
-                            }}>
+                            <label className="ft-upload-label">
                                 <Upload size={24} />
-                                <span style={{ fontSize: '0.85rem' }}>Upload PNG Frame</span>
+                                <span className="ft-upload-text">Upload PNG Frame</span>
                                 <input type="file" accept="image/png" hidden onChange={handleFrameUpload} />
                             </label>
                         )}
                     </div>
 
                     {/* Photo List */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <h2 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div className="ft-photo-list-container">
+                        <div className="ft-photo-header">
+                            <h2 className="ft-section-title">
                                 2. Photos ({photos.length})
                             </h2>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <label style={{
-                                    cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                    background: '#ff3b3b', padding: '6px 12px', borderRadius: '6px',
-                                    fontSize: '0.8rem', fontWeight: 600
-                                }}>
+                                <label className="ft-add-btn-small">
                                     <Plus size={14} color="white" />
                                     <span>Add Photos</span>
                                     <input type="file" accept="image/*" multiple hidden onChange={handlePhotoUpload} />
@@ -464,86 +499,43 @@ export function FrameTool() {
                         </div>
 
                         {photos.length === 0 ? (
-                            <div style={{
-                                flex: 1, border: '2px dashed #27272a', borderRadius: '12px',
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                color: '#52525b', gap: '12px', minHeight: '200px'
-                            }}>
+                            <div className="ft-empty-state">
                                 <ImageIcon size={32} />
-                                <p style={{ fontSize: '0.9rem', textAlign: 'center', padding: '0 20px' }}>
+                                <p className="ft-empty-text">
                                     Drag photos here or click below to add
                                 </p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                                    <label style={{
-                                        padding: '10px 20px', background: '#27272a', border: '1px solid #3f3f46',
-                                        borderRadius: '8px', color: 'white', fontSize: '0.9rem',
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                                        fontWeight: 500
-                                    }}>
+                                    <label className="ft-upload-btn-large">
                                         <Plus size={16} />
                                         Upload Photos
                                         <input type="file" accept="image/*" multiple hidden onChange={handlePhotoUpload} />
                                     </label>
-
-                                    {/* Gallery Link Removed */}
                                 </div>
                             </div>
                         ) : (
-                            <div style={{
-                                display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px',
-                                overflowY: 'auto', paddingRight: '4px',
-                                flex: 1, minHeight: 0, alignContent: 'start'
-                            }}>
+                            <div className="ft-photo-grid">
                                 {photos.map((photo, i) => (
                                     <div
                                         key={photo.id}
                                         onClick={() => setActivePhotoIndex(i)}
+                                        className="ft-photo-item"
                                         style={{
-                                            width: '100%',
-                                            paddingBottom: '100%', // Force square aspect ratio
-                                            height: 0,
-                                            borderRadius: '8px',
-                                            overflow: 'hidden',
                                             border: activePhotoIndex === i ? '2px solid #ff3b3b' : '1px solid #3f3f46',
-                                            cursor: 'pointer',
-                                            position: 'relative',
-                                            background: '#18181b',
                                         }}
                                     >
-                                        <div style={{
-                                            position: 'absolute',
-                                            bottom: 0, left: 0, right: 0,
-                                            padding: '4px 8px',
-                                            background: 'rgba(0,0,0,0.7)',
-                                            color: '#a1a1aa',
-                                            fontSize: '0.7rem',
-                                            pointerEvents: 'none',
-                                            zIndex: 10
-                                        }}>
+                                        <div className="ft-photo-number">
                                             #{i + 1}
                                         </div>
 
                                         <img
                                             src={photo.url}
-                                            style={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'contain'
-                                            }}
+                                            className="ft-photo-img"
                                             alt=""
                                         />
 
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setPhotos(p => p.filter((_, idx) => idx !== i)) }}
-                                            style={{
-                                                position: 'absolute', top: 2, right: 2,
-                                                background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '4px',
-                                                width: 18, height: 18, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                zIndex: 11
-                                            }}
+                                            className="ft-photo-delete"
                                         >
                                             <X size={10} />
                                         </button>
@@ -555,97 +547,68 @@ export function FrameTool() {
                 </div>
             </div>
 
-            {/* --- CENTER (Canvas) --- */}
-            <div
-                ref={containerRef}
-                style={{
-                    flex: 1,
-                    background: '#09090b',
-                    backgroundImage: 'radial-gradient(#27272a 1px, transparent 1px)',
-                    backgroundSize: '20px 20px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    overflow: 'hidden'
-                }}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onWheel={handleWheel}
-            >
-                {/* Canvas Container that maintains aspect ratio */}
-                <div style={{
-                    width: 'min(90%, 80vh)',
-                    aspectRatio: previewAspectRatio,
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-                    background: '#111',
-                    position: 'relative'
-                }}>
-                    <canvas
-                        ref={canvasRef}
-                        style={{ width: '100%', height: '100%', display: 'block' }}
-                    />
-
-                </div>
-
-                {/* Overlay Controls Hint */}
-                {frameURL && currentPhoto && (
-                    <div style={{
-                        marginTop: '20px',
-                        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-                        padding: '8px 16px', borderRadius: '20px',
-                        fontSize: '0.75rem', color: '#a1a1aa', display: 'flex', gap: '12px',
-                        pointerEvents: 'none'
-                    }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MousePointer2 size={12} /> Drag to Move</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><ZoomIn size={12} /> Scroll to Zoom</span>
-                    </div>
-                )}
-            </div>
-
             {/* --- RIGHT SIDEBAR (Controls) --- */}
-            <div style={{
-                width: '300px',
-                borderLeft: '1px solid #27272a',
-                background: '#121215',
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
-                <div style={{ padding: '20px', borderBottom: '1px solid #27272a' }}>
+            <div className={`ft-sidebar-right ${activeTab === 'settings' ? 'ft-active' : ''}`}>
+                <div className="ft-sidebar-header">
                     <h2 style={{ fontSize: '0.9rem', fontWeight: 600 }}>Adjustments</h2>
                 </div>
 
-                <div style={{ padding: '24px', flex: 1, overflowY: 'auto' }}>
+                <div className="ft-adjustments-container">
                     {/* Controls only show if we have a photo */}
                     {currentPhoto ? (
                         <>
                             {/* Canvas Mode */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <label style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', marginBottom: '12px', display: 'block' }}>
+                            <div className="ft-control-group">
+                                <label className="ft-control-label">
                                     Canvas Size
                                 </label>
-                                <div style={{ display: 'flex', background: '#27272a', borderRadius: '8px', padding: '2px' }}>
+                                <div className="ft-button-group" style={{ flexWrap: 'wrap' }}>
                                     <button
                                         onClick={() => setCurrentConfig({ canvasMode: 'square' })}
+                                        className="ft-group-btn"
                                         style={{
-                                            flex: 1, padding: '8px', fontSize: '0.8rem',
                                             background: currentPhoto.config.canvasMode === 'square' ? '#3f3f46' : 'transparent',
                                             color: currentPhoto.config.canvasMode === 'square' ? 'white' : '#a1a1aa',
-                                            border: 'none', borderRadius: '6px', cursor: 'pointer'
                                         }}
                                     >
-                                        Square (1:1)
+                                        1:1
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentConfig({ canvasMode: 'portrait' })}
+                                        className="ft-group-btn"
+                                        style={{
+                                            background: currentPhoto.config.canvasMode === 'portrait' ? '#3f3f46' : 'transparent',
+                                            color: currentPhoto.config.canvasMode === 'portrait' ? 'white' : '#a1a1aa',
+                                        }}
+                                    >
+                                        4:5
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentConfig({ canvasMode: 'landscape' })}
+                                        className="ft-group-btn"
+                                        style={{
+                                            background: currentPhoto.config.canvasMode === 'landscape' ? '#3f3f46' : 'transparent',
+                                            color: currentPhoto.config.canvasMode === 'landscape' ? 'white' : '#a1a1aa',
+                                        }}
+                                    >
+                                        16:9
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentConfig({ canvasMode: 'story' })}
+                                        className="ft-group-btn"
+                                        style={{
+                                            background: currentPhoto.config.canvasMode === 'story' ? '#3f3f46' : 'transparent',
+                                            color: currentPhoto.config.canvasMode === 'story' ? 'white' : '#a1a1aa',
+                                        }}
+                                    >
+                                        9:16
                                     </button>
                                     <button
                                         onClick={() => setCurrentConfig({ canvasMode: 'original' })}
+                                        className="ft-group-btn"
                                         style={{
-                                            flex: 1, padding: '8px', fontSize: '0.8rem',
                                             background: currentPhoto.config.canvasMode === 'original' ? '#3f3f46' : 'transparent',
                                             color: currentPhoto.config.canvasMode === 'original' ? 'white' : '#a1a1aa',
-                                            border: 'none', borderRadius: '6px', cursor: 'pointer'
                                         }}
                                     >
                                         Original
@@ -654,21 +617,19 @@ export function FrameTool() {
                             </div>
 
                             {/* Fit Mode */}
-                            <div style={{ marginBottom: '32px' }}>
-                                <label style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', marginBottom: '12px', display: 'block' }}>
+                            <div className="ft-control-group" style={{ marginBottom: '32px' }}>
+                                <label className="ft-control-label">
                                     Photo Fit
                                 </label>
-                                <div style={{ display: 'flex', background: '#27272a', borderRadius: '8px', padding: '2px' }}>
+                                <div className="ft-button-group">
                                     {(['cover', 'contain', 'fill'] as const).map(mode => (
                                         <button
                                             key={mode}
                                             onClick={() => setCurrentConfig({ fitMode: mode })}
+                                            className="ft-group-btn"
                                             style={{
-                                                flex: 1, padding: '8px', fontSize: '0.8rem',
                                                 background: currentPhoto.config.fitMode === mode ? '#3f3f46' : 'transparent',
                                                 color: currentPhoto.config.fitMode === mode ? 'white' : '#a1a1aa',
-                                                border: 'none', borderRadius: '6px', cursor: 'pointer',
-                                                textTransform: 'capitalize'
                                             }}
                                         >
                                             {mode}
@@ -679,123 +640,131 @@ export function FrameTool() {
 
                             {/* Frame Controls */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                <label style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase' }}>
+                                <label className="ft-control-label">
                                     Frame Geometry
                                 </label>
 
-                                <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                        <span style={{ fontSize: '0.85rem' }}>Size</span>
-                                        <span style={{ fontSize: '0.8rem', color: '#71717a' }}>{Math.round(currentPhoto.config.scale * 100)}%</span>
+                                <div className="ft-slider-group">
+                                    <div className="ft-slider-header">
+                                        <span className="ft-slider-label">Size</span>
+                                        <span className="ft-slider-value">{Math.round(currentPhoto.config.scale * 100)}%</span>
                                     </div>
                                     <input
                                         type="range"
                                         min="0.1" max="2" step="0.05"
                                         value={currentPhoto.config.scale}
                                         onChange={e => setCurrentConfig({ scale: parseFloat(e.target.value) })}
-                                        style={{
-                                            width: '100%', height: '4px', background: '#27272a', appearance: 'none', borderRadius: '2px'
-                                        }}
+                                        className="ft-range-input"
                                     />
                                 </div>
 
-                                <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                        <span style={{ fontSize: '0.85rem' }}>Pos X</span>
-                                        <span style={{ fontSize: '0.8rem', color: '#71717a' }}>{Math.round(currentPhoto.config.x)}%</span>
+                                <div className="ft-slider-group">
+                                    <div className="ft-slider-header">
+                                        <span className="ft-slider-label">Pos X</span>
+                                        <span className="ft-slider-value">{Math.round(currentPhoto.config.x)}%</span>
                                     </div>
                                     <input
                                         type="range"
                                         min="-100" max="100" step="1"
                                         value={currentPhoto.config.x}
                                         onChange={e => setCurrentConfig({ x: parseInt(e.target.value) })}
-                                        style={{
-                                            width: '100%', height: '4px', background: '#27272a', appearance: 'none', borderRadius: '2px'
-                                        }}
+                                        className="ft-range-input"
                                     />
                                 </div>
 
-                                <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                        <span style={{ fontSize: '0.85rem' }}>Pos Y</span>
-                                        <span style={{ fontSize: '0.8rem', color: '#71717a' }}>{Math.round(currentPhoto.config.y)}%</span>
+                                <div className="ft-slider-group">
+                                    <div className="ft-slider-header">
+                                        <span className="ft-slider-label">Pos Y</span>
+                                        <span className="ft-slider-value">{Math.round(currentPhoto.config.y)}%</span>
                                     </div>
                                     <input
                                         type="range"
                                         min="-100" max="100" step="1"
                                         value={currentPhoto.config.y}
                                         onChange={e => setCurrentConfig({ y: parseInt(e.target.value) })}
-                                        style={{
-                                            width: '100%', height: '4px', background: '#27272a', appearance: 'none', borderRadius: '2px'
-                                        }}
+                                        className="ft-range-input"
                                     />
                                 </div>
 
                                 <button
                                     onClick={() => setCurrentConfig({ scale: 1, x: 0, y: 0, fitMode: 'cover' })}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                                        padding: '8px', background: 'transparent', border: '1px solid #27272a',
-                                        borderRadius: '8px', color: '#a1a1aa', cursor: 'pointer', fontSize: '0.8rem'
-                                    }}
+                                    className="ft-action-btn"
                                 >
                                     <RotateCcw size={14} /> Reset Frame
                                 </button>
 
                                 <button
                                     onClick={handleApplyToAll}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                                        padding: '12px', background: '#27272a', border: '1px solid #3f3f46',
-                                        borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '0.85rem',
-                                        marginTop: '8px', fontWeight: 500
-                                    }}
+                                    className="ft-apply-all-btn"
                                 >
                                     <Copy size={16} /> Apply Settings to All Photos
+                                </button>
+
+                                {/* Download Button Moved Here */}
+                                <button
+                                    onClick={handleProcess}
+                                    disabled={isProcessing || !frameURL || photos.length === 0}
+                                    className="ft-download-btn"
+                                    style={{
+                                        marginTop: '8px',
+                                        background: isProcessing ? '#27272a' : 'linear-gradient(135deg, #ff3b3b 0%, #ff6b6b 100%)',
+                                        cursor: isProcessing ? 'wait' : 'pointer',
+                                        opacity: (!frameURL || photos.length === 0) ? 0.5 : 1
+                                    }}
+                                >
+                                    {isProcessing ? (
+                                        <>
+                                            <Loader2 size={20} className="animate-spin" />
+                                            <span>{processProgress.current} / {processProgress.total}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Download size={20} />
+                                            <span>Download ZIP</span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </>
                     ) : (
-                        <div style={{ textAlign: 'center', color: '#52525b', fontSize: '0.9rem', marginTop: '40px' }}>
-                            Select a photo to adjust
+                        <div className="ft-empty-state" style={{
+                            height: '100%',
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: 'none',
+                            background: 'transparent'
+                        }}>
+                            <Settings size={48} color="#27272a" />
+                            <p className="ft-empty-text" style={{ color: '#71717a', textAlign: 'center', maxWidth: '280px' }}>
+                                Upload and select a photo to access adjustment controls
+                            </p>
                         </div>
                     )}
                 </div>
-
-                <div style={{ padding: '24px', borderTop: '1px solid #27272a' }}>
-                    <button
-                        onClick={handleProcess}
-                        disabled={isProcessing || !frameURL || photos.length === 0}
-                        style={{
-                            width: '100%', padding: '16px', borderRadius: '12px',
-                            background: isProcessing ? '#27272a' : 'linear-gradient(135deg, #ff3b3b 0%, #ff6b6b 100%)',
-                            border: 'none', color: 'white', fontWeight: 600, fontSize: '1rem',
-                            cursor: isProcessing ? 'wait' : 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                            opacity: (!frameURL || photos.length === 0) ? 0.5 : 1
-                        }}
-                    >
-                        {isProcessing ? (
-                            <>
-                                <Loader2 size={20} className="animate-spin" />
-                                <span>{processProgress.current} / {processProgress.total}</span>
-                            </>
-                        ) : (
-                            <>
-                                <Download size={20} />
-                                <span>Download ZIP</span>
-                            </>
-                        )}
-                    </button>
-                </div>
             </div>
 
-            <style>{`
-                input[type="range"]::-webkit-slider-thumb {
-                    -webkit-appearance: none;
-                    width: 12px; height: 12px; background: #ff3b3b; borderRadius: 50%; cursor: pointer;
-                }
-            `}</style>
+            {/* --- MOBILE TAB BAR (LG Hidden) --- */}
+            <div className="ft-mobile-tabs">
+                <button
+                    onClick={() => setActiveTab('assets')}
+                    className="ft-tab-btn"
+                    style={{ color: activeTab === 'assets' ? 'white' : '#52525b' }}
+                >
+                    <ImageIcon size={20} />
+                    Photos
+                </button>
+                <button
+                    onClick={() => setActiveTab('settings')}
+                    className="ft-tab-btn"
+                    style={{ color: activeTab === 'settings' ? 'white' : '#52525b' }}
+                >
+                    <Settings size={20} />
+                    Adjustments
+                </button>
+            </div>
         </div>
     )
 }

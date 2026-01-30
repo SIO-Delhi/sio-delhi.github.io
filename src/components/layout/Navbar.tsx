@@ -280,6 +280,8 @@ export function Navbar() {
                         </div>
                     )}
 
+
+
                     {/* Desktop: Right side buttons */}
                     {!isMobile && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

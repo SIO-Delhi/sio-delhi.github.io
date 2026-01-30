@@ -156,21 +156,7 @@ export function AdminLayout() {
                         Popup Manager
                     </Link>
 
-                    <Link
-                        to="/admin/utilities"
-                        onClick={() => isMobile && setSidebarOpen(false)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '12px',
-                            padding: '12px', borderRadius: '8px',
-                            background: isActive('/admin/utilities') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
-                            color: isActive('/admin/utilities') ? '#ff3b3b' : 'inherit',
-                            textDecoration: 'none', fontWeight: 500,
-                            transition: 'all 0.2s ease'
-                        }}
-                    >
-                        <PenTool size={20} />
-                        Utilities
-                    </Link>
+
 
 
 

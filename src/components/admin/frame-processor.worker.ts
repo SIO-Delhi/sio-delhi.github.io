@@ -2,7 +2,7 @@ import JSZip from 'jszip'
 
 // --- Types (Duplicated from FrameTool.tsx for now to avoid complexity) ---
 type FitMode = 'cover' | 'contain' | 'fill'
-type CanvasMode = 'square' | 'original'
+type CanvasMode = 'square' | 'original' | 'portrait' | 'landscape' | 'story'
 
 interface FrameConfig {
     scale: number
@@ -146,6 +146,15 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                     if (photo.config.canvasMode === 'original') {
                         w = photoImg.width
                         h = photoImg.height
+                    } else if (photo.config.canvasMode === 'portrait') {
+                        w = 1080
+                        h = 1350
+                    } else if (photo.config.canvasMode === 'landscape') {
+                        w = 1920
+                        h = 1080
+                    } else if (photo.config.canvasMode === 'story') {
+                        w = 1080
+                        h = 1920
                     }
 
                     // Create offscreen canvas
