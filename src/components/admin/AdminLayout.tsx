@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, PenTool, FileText, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, FileText, Trash2 } from 'lucide-react'
 import { useClerk } from '@clerk/clerk-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
@@ -156,7 +156,7 @@ export function AdminLayout() {
                         Popup Manager
                     </Link>
 
-                    <Link
+                    {/* <Link
                         to="/admin/utilities"
                         onClick={() => isMobile && setSidebarOpen(false)}
                         style={{
@@ -170,7 +170,7 @@ export function AdminLayout() {
                     >
                         <PenTool size={20} />
                         Utilities
-                    </Link>
+                    </Link> */}
 
 
 
