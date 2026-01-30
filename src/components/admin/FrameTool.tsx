@@ -5,7 +5,7 @@ import {
     Upload, X, Loader2, Download,
     Image as ImageIcon,
     Plus, RotateCcw,
-    Copy, Settings
+    Copy, Settings, Check
 } from 'lucide-react'
 
 import './frame.css'
@@ -14,11 +14,17 @@ import './frame.css'
 
 type FitMode = 'cover' | 'contain' | 'fill'
 type CanvasMode = 'square' | 'original' | 'portrait' | 'landscape' | 'story'
+type EditMode = 'crop' | 'frame'
 
 interface FrameConfig {
-    scale: number
-    x: number // Percentage -50 to 50
-    y: number // Percentage -50 to 50
+    // Crop region as percentage of source image (0-100)
+    cropX: number      // Left position of crop (0-100%)
+    cropY: number      // Top position of crop (0-100%)
+    cropSize: number   // Crop box size as percentage (zoomed in = smaller %)
+    // Frame positioning (on top of cropped result)
+    frameScale: number // Frame scale (0.5 to 2)
+    frameX: number     // Frame X offset (-50 to 50%)
+    frameY: number     // Frame Y offset (-50 to 50%)
     fitMode: FitMode
     canvasMode: CanvasMode
 }
@@ -46,9 +52,18 @@ export function FrameTool() {
     const [processProgress, setProcessProgress] = useState({ current: 0, total: 0 })
     const [isDragging, setIsDragging] = useState(false)
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-    const [dragStartConfig, setDragStartConfig] = useState<FrameConfig>({ scale: 1, x: 0, y: 0, fitMode: 'cover', canvasMode: 'square' })
+    const [dragStartConfig, setDragStartConfig] = useState<FrameConfig>({
+        cropX: 0, cropY: 0, cropSize: 100,
+        frameScale: 1, frameX: 0, frameY: 0,
+        fitMode: 'cover', canvasMode: 'square'
+    })
     const [previewAspectRatio, setPreviewAspectRatio] = useState(1)
+
+    // Touch State
+    const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null)
+    const [isPinching, setIsPinching] = useState(false)
     const [activeTab, setActiveTab] = useState<'assets' | 'settings'>('assets')
+    const [editMode, setEditMode] = useState<EditMode>('crop') // 'crop' or 'frame'
 
 
     // Refs
@@ -62,9 +77,12 @@ export function FrameTool() {
 
     // Helper to get default config
     const getDefaultConfig = (): FrameConfig => ({
-        scale: 1,
-        x: 0,
-        y: 0,
+        cropX: 0,         // Start at left edge
+        cropY: 0,         // Start at top edge
+        cropSize: 100,    // Full image (100% = no zoom)
+        frameScale: 1,    // Frame at 100% scale
+        frameX: 0,        // Frame centered horizontally
+        frameY: 0,        // Frame centered vertically
         fitMode: 'cover',
         canvasMode: 'square'
     })
@@ -126,7 +144,7 @@ export function FrameTool() {
 
     // Canvas Interaction
     const handleMouseDown = (e: React.MouseEvent) => {
-        if (!frameURL || !currentPhoto) return
+        if (!currentPhoto) return // Only need a photo to drag
         setIsDragging(true)
         setDragStart({ x: e.clientX, y: e.clientY })
         setDragStartConfig(currentPhoto.config) // Save snapshot of start
@@ -135,34 +153,142 @@ export function FrameTool() {
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!isDragging || !currentPhoto) return
 
-        // Calculate delta
+        // Calculate delta as percentage of canvas
         const dx = e.clientX - dragStart.x
         const dy = e.clientY - dragStart.y
 
         const rect = canvasRef.current?.getBoundingClientRect()
         if (!rect) return
 
-        const percentX = (dx / rect.width) * 100
-        const percentY = (dy / rect.height) * 100
+        if (editMode === 'crop') {
+            // Crop mode: adjust crop position
+            // Calculate dynamic sensitivity for crop to be 1:1
+            // Max offset is available space (100 - cropSize)
+            // If cropSize is 100, we can't move. If 50, we have 50% space.
+            // We want dx/width to map to the percentage of available space.
+            // We want dx/width to map to the percentage of available space.
 
-        updateCurrentConfig(prev => ({
-            ...prev,
-            x: Math.max(-100, Math.min(100, dragStartConfig.x + percentX)),
-            y: Math.max(-100, Math.min(100, dragStartConfig.y + percentY))
-        }))
+            // Using a simple 1:1 mapping for crop is tricky because cropX is relative to available space.
+            // But let's stick to the previous feeling or improve it. 
+            // Actually, simply using a constant that feels good is better than complex math that might feel rigid.
+            // user only complained about Frame running around.
+            const cropSens = 150 // Keep crop snapier
+
+            updateCurrentConfig(prev => ({
+                ...prev,
+                cropX: Math.max(0, Math.min(100, dragStartConfig.cropX + (dx / rect.width) * cropSens)),
+                cropY: Math.max(0, Math.min(100, dragStartConfig.cropY + (dy / rect.height) * cropSens))
+            }))
+        } else {
+            // Frame mode: adjust frame position
+            // Sensitivity 100 means 1:1 movement with cursor
+            const frameSensitivity = 100
+
+            updateCurrentConfig(prev => ({
+                ...prev,
+                frameX: Math.max(-50, Math.min(50, dragStartConfig.frameX + (dx / rect.width) * frameSensitivity)),
+                frameY: Math.max(-50, Math.min(50, dragStartConfig.frameY + (dy / rect.height) * frameSensitivity))
+            }))
+        }
     }
 
     const handleMouseUp = () => setIsDragging(false)
 
-    // Zoom on wheel
-    const handleWheel = (e: React.WheelEvent) => {
-        if (!frameURL || !currentPhoto) return
+    // --- Touch Interaction (Mobile) ---
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (!currentPhoto) return
 
-        const delta = e.deltaY * -0.001
-        updateCurrentConfig(prev => ({
-            ...prev,
-            scale: Math.max(0.1, Math.min(3, prev.scale + delta))
-        }))
+        if (e.touches.length === 1) {
+            // Single touch - Drag
+            setIsDragging(true)
+            setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY })
+            setDragStartConfig(currentPhoto.config)
+        } else if (e.touches.length === 2) {
+            // Two touches - Pinch/Zoom
+            setIsPinching(true)
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            )
+            setLastTouchDistance(dist)
+            setDragStartConfig(currentPhoto.config)
+        }
+    }
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!currentPhoto) return
+
+        if (isPinching && e.touches.length === 2) {
+            // Pinch to Zoom
+            e.preventDefault() // Prevent page scroll
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            )
+
+            if (lastTouchDistance) {
+                const delta = dist - lastTouchDistance
+
+                if (editMode === 'crop') {
+                    // Zoom Crop (inverted logic: pinching out increases ZOOM, which decreases cropSize)
+                    const sensitivity = 0.2
+                    const newCropSize = Math.max(10, Math.min(100, dragStartConfig.cropSize - delta * sensitivity))
+                    updateCurrentConfig(prev => ({ ...prev, cropSize: newCropSize }))
+                } else {
+                    // Scale Frame
+                    const sensitivity = 0.005
+                    const newFrameScale = Math.max(0.1, Math.min(2, dragStartConfig.frameScale + delta * sensitivity))
+                    updateCurrentConfig(prev => ({ ...prev, frameScale: newFrameScale }))
+                }
+            }
+        } else if (isDragging && e.touches.length === 1) {
+            // Drag
+            e.preventDefault()
+            const dx = e.touches[0].clientX - dragStart.x
+            const dy = e.touches[0].clientY - dragStart.y
+
+            const rect = canvasRef.current?.getBoundingClientRect()
+            if (!rect) return
+
+            if (editMode === 'crop') {
+                const cropSens = 150
+                updateCurrentConfig(prev => ({
+                    ...prev,
+                    cropX: Math.max(0, Math.min(100, dragStartConfig.cropX + (dx / rect.width) * cropSens)),
+                    cropY: Math.max(0, Math.min(100, dragStartConfig.cropY + (dy / rect.height) * cropSens))
+                }))
+            } else {
+                const frameSensitivity = 100
+                updateCurrentConfig(prev => ({
+                    ...prev,
+                    frameX: Math.max(-50, Math.min(50, dragStartConfig.frameX + (dx / rect.width) * frameSensitivity)),
+                    frameY: Math.max(-50, Math.min(50, dragStartConfig.frameY + (dy / rect.height) * frameSensitivity))
+                }))
+            }
+        }
+    }
+
+    const handleTouchEnd = () => {
+        setIsDragging(false)
+        setIsPinching(false)
+        setLastTouchDistance(null)
+    }
+
+
+
+    // Zoom on wheel - adjusts crop size or frame scale based on mode
+    const handleWheel = (e: React.WheelEvent) => {
+        if (!currentPhoto) return
+
+        if (editMode === 'crop') {
+            const delta = e.deltaY * 0.5
+            const newCropSize = Math.max(10, Math.min(100, currentPhoto.config.cropSize + delta))
+            updateCurrentConfig(prev => ({ ...prev, cropSize: newCropSize }))
+        } else {
+            const delta = e.deltaY * -0.002
+            const newFrameScale = Math.max(0.1, Math.min(2, currentPhoto.config.frameScale + delta))
+            updateCurrentConfig(prev => ({ ...prev, frameScale: newFrameScale }))
+        }
     }
 
 
@@ -176,7 +302,8 @@ export function FrameTool() {
         height: number,
         photoImg: HTMLImageElement | null,
         frameImg: HTMLImageElement | null,
-        drawConfig: FrameConfig // Explicit config passed in
+        drawConfig: FrameConfig,
+        isPreview: boolean = false // If true, show full image with crop overlay
     ) => {
         ctx.clearRect(0, 0, width, height)
 
@@ -193,66 +320,140 @@ export function FrameTool() {
             return
         }
 
-        // 1. Draw Photo
         if (photoImg) {
-            // Calculate fit logic
-            const pRatio = photoImg.naturalWidth / photoImg.naturalHeight
-            const cRatio = width / height
-
-            let dw = width
-            let dh = height
-            let dx = 0
-            let dy = 0
-
-            if (drawConfig.fitMode === 'cover') {
-                if (pRatio > cRatio) {
-                    dw = height * pRatio
-                    dx = (width - dw) / 2
-                } else {
-                    dh = width / pRatio
-                    dy = (height - dh) / 2
-                }
-            } else if (drawConfig.fitMode === 'contain') {
-                if (pRatio > cRatio) {
-                    dh = width / pRatio
-                    dy = (height - dh) / 2
-                } else {
-                    dw = height * pRatio
-                    dx = (width - dw) / 2
-                }
-            }
-            // fill is default (0,0,width,height)
-
-            ctx.drawImage(photoImg, dx, dy, dw, dh)
-        }
-
-        // 2. Draw Frame
-        if (frameImg) {
-            const frameAspect = frameImg.width / frameImg.height
+            const imgW = photoImg.naturalWidth
+            const imgH = photoImg.naturalHeight
             const canvasAspect = width / height
+            const imgAspect = imgW / imgH
 
-            let baseW = width
-            let baseH = height
+            if (isPreview) {
+                // PREVIEW MODE: Show full image with crop overlay
 
-            // Calculate base dimensions that effectively "contain" the frame in the canvas
-            if (frameAspect > canvasAspect) {
-                // Frame is wider relative to canvas: constrain by width
-                baseW = width
-                baseH = width / frameAspect
+                // 1. Draw full image scaled to fit canvas (contain mode)
+                let displayW = width
+                let displayH = height
+                let displayX = 0
+                let displayY = 0
+
+                if (imgAspect > canvasAspect) {
+                    // Image is wider - fit by width
+                    displayW = width
+                    displayH = width / imgAspect
+                    displayY = (height - displayH) / 2
+                } else {
+                    // Image is taller - fit by height
+                    displayH = height
+                    displayW = height * imgAspect
+                    displayX = (width - displayW) / 2
+                }
+
+                // Draw full image (dimmed)
+                ctx.globalAlpha = 0.4
+                ctx.drawImage(photoImg, displayX, displayY, displayW, displayH)
+                ctx.globalAlpha = 1.0
+
+                // 2. Calculate crop box position in display coordinates
+                // cropSize determines how much of the image is selected (100 = all, 50 = half)
+                let cropW: number, cropH: number
+                const outputAspect = canvasAspect // Output matches canvas aspect
+
+                if (imgAspect > outputAspect) {
+                    // Image wider than output - constrain by height
+                    cropH = (drawConfig.cropSize / 100) * displayH
+                    cropW = cropH * outputAspect
+                } else {
+                    // Image taller than output - constrain by width
+                    cropW = (drawConfig.cropSize / 100) * displayW
+                    cropH = cropW / outputAspect
+                }
+
+                // Crop position in display coordinates
+                const maxOffsetX = displayW - cropW
+                const maxOffsetY = displayH - cropH
+                const cropX = displayX + (drawConfig.cropX / 100) * maxOffsetX
+                const cropY = displayY + (drawConfig.cropY / 100) * maxOffsetY
+
+                // 3. Draw the crop region (clear window) from the original image
+                // Calculate source coordinates
+                const srcCropW = (cropW / displayW) * imgW
+                const srcCropH = (cropH / displayH) * imgH
+                const srcCropX = (drawConfig.cropX / 100) * (imgW - srcCropW)
+                const srcCropY = (drawConfig.cropY / 100) * (imgH - srcCropH)
+
+                // Draw cropped region at full brightness
+                ctx.drawImage(
+                    photoImg,
+                    srcCropX, srcCropY, srcCropW, srcCropH,
+                    cropX, cropY, cropW, cropH
+                )
+
+                // 4. Draw crop border
+                ctx.strokeStyle = '#efc676'
+                ctx.lineWidth = 2
+                ctx.setLineDash([5, 5])
+                ctx.strokeRect(cropX, cropY, cropW, cropH)
+                ctx.setLineDash([])
+
+                // 5. Draw frame overlay on crop region - HIDDEN in crop mode to avoid confusion
+                // if (frameImg) {
+                //     ctx.drawImage(frameImg, cropX, cropY, cropW, cropH)
+                // }
+
             } else {
-                // Frame is taller relative to canvas: constrain by height
-                baseH = height
-                baseW = height * frameAspect
+                // EXPORT MODE: Draw cropped region only (fills canvas)
+                let cropW: number, cropH: number
+
+                if (imgAspect > canvasAspect) {
+                    cropH = (drawConfig.cropSize / 100) * imgH
+                    cropW = cropH * canvasAspect
+                } else {
+                    cropW = (drawConfig.cropSize / 100) * imgW
+                    cropH = cropW / canvasAspect
+                }
+
+                cropW = Math.min(cropW, imgW)
+                cropH = Math.min(cropH, imgH)
+
+                const maxOffsetX = imgW - cropW
+                const maxOffsetY = imgH - cropH
+                const srcX = (drawConfig.cropX / 100) * maxOffsetX
+                const srcY = (drawConfig.cropY / 100) * maxOffsetY
+
+                ctx.drawImage(
+                    photoImg,
+                    srcX, srcY, cropW, cropH,
+                    0, 0, width, height
+                )
+
+                // Draw Frame with positioning (AspectRatio Preserved)
+                if (frameImg) {
+                    const frameAspect = frameImg.naturalWidth / frameImg.naturalHeight
+                    const canvasAspect = width / height
+
+                    let baseFrameW, baseFrameH
+
+                    if (frameAspect > canvasAspect) {
+                        // Frame is wider than canvas - fit by width
+                        baseFrameW = width
+                        baseFrameH = width / frameAspect
+                    } else {
+                        // Frame is taller than canvas - fit by height
+                        baseFrameH = height
+                        baseFrameW = height * frameAspect
+                    }
+
+                    const fw = baseFrameW * drawConfig.frameScale
+                    const fh = baseFrameH * drawConfig.frameScale
+
+                    const fx = (width - fw) / 2 + (drawConfig.frameX / 100) * width
+                    const fy = (height - fh) / 2 + (drawConfig.frameY / 100) * height
+
+                    ctx.drawImage(frameImg, fx, fy, fw, fh)
+                }
             }
-
-            const fw = baseW * drawConfig.scale
-            const fh = baseH * drawConfig.scale
-
-            // Center + Offset
-            const fx = (width - fw) / 2 + (drawConfig.x / 100) * width
-            const fy = (height - fh) / 2 + (drawConfig.y / 100) * height
-
-            ctx.drawImage(frameImg, fx, fy, fw, fh)
+        } else if (frameImg) {
+            // Only frame, no photo
+            ctx.drawImage(frameImg, 0, 0, width, height)
         }
     }, [])
 
@@ -317,7 +518,8 @@ export function FrameTool() {
             canvas.height = h
 
             if (activeConfig) {
-                drawToCanvas(ctx, w, h, photoImg, frameImg, activeConfig)
+                // isPreview=true in crop mode (show full image with overlay), false in frame mode (show result)
+                drawToCanvas(ctx, w, h, photoImg, frameImg, activeConfig, editMode === 'crop')
             } else {
                 // Should clear if no photo
                 ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -354,8 +556,8 @@ export function FrameTool() {
         loadImages()
 
         return () => { }
-    }, [activePhotoIndex, photos, frameURL, drawToCanvas])
-    // ^ Dependency 'photos' tracks config changes inside the array
+    }, [activePhotoIndex, photos, frameURL, drawToCanvas, editMode])
+    // ^ Dependency 'photos' tracks config changes inside the array, 'editMode' updates preview
 
 
     // --- processing ---
@@ -426,7 +628,11 @@ export function FrameTool() {
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
                 onWheel={handleWheel}
-                style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchEnd}
+                style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
             >
                 {/* Canvas Container that maintains aspect ratio */}
                 <div
@@ -447,9 +653,59 @@ export function FrameTool() {
 
                 </div>
 
-
-
-
+                {/* --- Floating Action Bar (Crop Mode) --- */}
+                {editMode === 'crop' && currentPhoto && (
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '24px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        display: 'flex',
+                        gap: '12px',
+                        background: 'rgba(24, 24, 27, 0.8)',
+                        backdropFilter: 'blur(8px)',
+                        padding: '8px 16px',
+                        borderRadius: '999px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        zIndex: 10
+                    }}>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                setCurrentConfig({ cropSize: 100, cropX: 0, cropY: 0 })
+                            }}
+                            className="ft-action-btn"
+                            style={{
+                                background: 'transparent',
+                                color: '#a1a1aa',
+                                padding: '6px 12px',
+                                fontSize: '0.85rem'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'white'}
+                            onMouseLeave={e => e.currentTarget.style.color = '#a1a1aa'}
+                        >
+                            <RotateCcw size={14} /> Reset
+                        </button>
+                        <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                setEditMode('frame')
+                            }}
+                            className="ft-action-btn"
+                            style={{
+                                background: 'white',
+                                color: 'black',
+                                border: 'none',
+                                padding: '6px 16px',
+                                fontSize: '0.85rem',
+                                fontWeight: 500
+                            }}
+                        >
+                            <Check size={14} strokeWidth={3} /> Done
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* --- LEFT SIDEBAR (Assets) --- */}
@@ -638,93 +894,180 @@ export function FrameTool() {
                                 </div>
                             </div>
 
-                            {/* Frame Controls */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            {/* Edit Mode Toggle */}
+                            <div className="ft-control-group" style={{ marginBottom: '32px' }}>
                                 <label className="ft-control-label">
-                                    Frame Geometry
+                                    Edit Mode
                                 </label>
-
-                                <div className="ft-slider-group">
-                                    <div className="ft-slider-header">
-                                        <span className="ft-slider-label">Size</span>
-                                        <span className="ft-slider-value">{Math.round(currentPhoto.config.scale * 100)}%</span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min="0.1" max="2" step="0.05"
-                                        value={currentPhoto.config.scale}
-                                        onChange={e => setCurrentConfig({ scale: parseFloat(e.target.value) })}
-                                        className="ft-range-input"
-                                    />
+                                <div className="ft-button-group">
+                                    <button
+                                        onClick={() => setEditMode('crop')}
+                                        className="ft-group-btn"
+                                        style={{
+                                            background: editMode === 'crop' ? '#3f3f46' : 'transparent',
+                                            color: editMode === 'crop' ? 'white' : '#a1a1aa',
+                                        }}
+                                    >
+                                        Crop
+                                    </button>
+                                    <button
+                                        onClick={() => setEditMode('frame')}
+                                        className="ft-group-btn"
+                                        style={{
+                                            background: editMode === 'frame' ? '#3f3f46' : 'transparent',
+                                            color: editMode === 'frame' ? 'white' : '#a1a1aa',
+                                        }}
+                                    >
+                                        Frame
+                                    </button>
                                 </div>
-
-                                <div className="ft-slider-group">
-                                    <div className="ft-slider-header">
-                                        <span className="ft-slider-label">Pos X</span>
-                                        <span className="ft-slider-value">{Math.round(currentPhoto.config.x)}%</span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min="-100" max="100" step="1"
-                                        value={currentPhoto.config.x}
-                                        onChange={e => setCurrentConfig({ x: parseInt(e.target.value) })}
-                                        className="ft-range-input"
-                                    />
-                                </div>
-
-                                <div className="ft-slider-group">
-                                    <div className="ft-slider-header">
-                                        <span className="ft-slider-label">Pos Y</span>
-                                        <span className="ft-slider-value">{Math.round(currentPhoto.config.y)}%</span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min="-100" max="100" step="1"
-                                        value={currentPhoto.config.y}
-                                        onChange={e => setCurrentConfig({ y: parseInt(e.target.value) })}
-                                        className="ft-range-input"
-                                    />
-                                </div>
-
-                                <button
-                                    onClick={() => setCurrentConfig({ scale: 1, x: 0, y: 0, fitMode: 'cover' })}
-                                    className="ft-action-btn"
-                                >
-                                    <RotateCcw size={14} /> Reset Frame
-                                </button>
-
-                                <button
-                                    onClick={handleApplyToAll}
-                                    className="ft-apply-all-btn"
-                                >
-                                    <Copy size={16} /> Apply Settings to All Photos
-                                </button>
-
-                                {/* Download Button Moved Here */}
-                                <button
-                                    onClick={handleProcess}
-                                    disabled={isProcessing || !frameURL || photos.length === 0}
-                                    className="ft-download-btn"
-                                    style={{
-                                        marginTop: '8px',
-                                        background: isProcessing ? '#27272a' : 'linear-gradient(135deg, #ff3b3b 0%, #ff6b6b 100%)',
-                                        cursor: isProcessing ? 'wait' : 'pointer',
-                                        opacity: (!frameURL || photos.length === 0) ? 0.5 : 1
-                                    }}
-                                >
-                                    {isProcessing ? (
-                                        <>
-                                            <Loader2 size={20} className="animate-spin" />
-                                            <span>{processProgress.current} / {processProgress.total}</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Download size={20} />
-                                            <span>Download ZIP</span>
-                                        </>
-                                    )}
-                                </button>
                             </div>
+
+                            {/* Conditional Controls based on Edit Mode */}
+                            {editMode === 'crop' ? (
+                                /* Crop Controls */
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                    <label className="ft-control-label">
+                                        Crop Region
+                                    </label>
+
+                                    <div className="ft-slider-group">
+                                        <div className="ft-slider-header">
+                                            <span className="ft-slider-label">Zoom</span>
+                                            <span className="ft-slider-value">{Math.round(100 / currentPhoto.config.cropSize * 100)}%</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="10" max="100" step="1"
+                                            value={100 - currentPhoto.config.cropSize + 10}
+                                            onChange={e => {
+                                                const newCropSize = 100 - parseInt(e.target.value) + 10
+                                                setCurrentConfig({ cropSize: newCropSize })
+                                            }}
+                                            className="ft-range-input"
+                                        />
+                                    </div>
+
+                                    <div className="ft-slider-group">
+                                        <div className="ft-slider-header">
+                                            <span className="ft-slider-label">Pos X</span>
+                                            <span className="ft-slider-value">{Math.round(currentPhoto.config.cropX)}%</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0" max="100" step="1"
+                                            value={currentPhoto.config.cropX}
+                                            onChange={e => setCurrentConfig({ cropX: parseInt(e.target.value) })}
+                                            className="ft-range-input"
+                                        />
+                                    </div>
+
+                                    <div className="ft-slider-group">
+                                        <div className="ft-slider-header">
+                                            <span className="ft-slider-label">Pos Y</span>
+                                            <span className="ft-slider-value">{Math.round(currentPhoto.config.cropY)}%</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0" max="100" step="1"
+                                            value={currentPhoto.config.cropY}
+                                            onChange={e => setCurrentConfig({ cropY: parseInt(e.target.value) })}
+                                            className="ft-range-input"
+                                        />
+                                    </div>
+
+
+                                </div>
+                            ) : (
+                                /* Frame Controls */
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                    <label className="ft-control-label">
+                                        Frame Overlay
+                                    </label>
+
+                                    <div className="ft-slider-group">
+                                        <div className="ft-slider-header">
+                                            <span className="ft-slider-label">Scale</span>
+                                            <span className="ft-slider-value">{Math.round(currentPhoto.config.frameScale * 100)}%</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="10" max="200" step="1"
+                                            value={currentPhoto.config.frameScale * 100}
+                                            onChange={e => setCurrentConfig({ frameScale: parseInt(e.target.value) / 100 })}
+                                            className="ft-range-input"
+                                        />
+                                    </div>
+
+                                    <div className="ft-slider-group">
+                                        <div className="ft-slider-header">
+                                            <span className="ft-slider-label">Pos X</span>
+                                            <span className="ft-slider-value">{Math.round(currentPhoto.config.frameX)}%</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="-50" max="50" step="1"
+                                            value={currentPhoto.config.frameX}
+                                            onChange={e => setCurrentConfig({ frameX: parseInt(e.target.value) })}
+                                            className="ft-range-input"
+                                        />
+                                    </div>
+
+                                    <div className="ft-slider-group">
+                                        <div className="ft-slider-header">
+                                            <span className="ft-slider-label">Pos Y</span>
+                                            <span className="ft-slider-value">{Math.round(currentPhoto.config.frameY)}%</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="-50" max="50" step="1"
+                                            value={currentPhoto.config.frameY}
+                                            onChange={e => setCurrentConfig({ frameY: parseInt(e.target.value) })}
+                                            className="ft-range-input"
+                                        />
+                                    </div>
+
+                                    <button
+                                        onClick={() => setCurrentConfig({ frameScale: 1, frameX: 0, frameY: 0 })}
+                                        className="ft-action-btn"
+                                    >
+                                        <RotateCcw size={14} /> Reset Frame
+                                    </button>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleApplyToAll}
+                                className="ft-apply-all-btn"
+                                style={{ marginTop: '16px' }}
+                            >
+                                <Copy size={16} /> Apply Settings to All Photos
+                            </button>
+
+                            {/* Download Button Moved Here */}
+                            <button
+                                onClick={handleProcess}
+                                disabled={isProcessing || !frameURL || photos.length === 0}
+                                className="ft-download-btn"
+                                style={{
+                                    marginTop: '8px',
+                                    background: isProcessing ? '#27272a' : 'linear-gradient(135deg, #ff3b3b 0%, #ff6b6b 100%)',
+                                    cursor: isProcessing ? 'wait' : 'pointer',
+                                    opacity: (!frameURL || photos.length === 0) ? 0.5 : 1
+                                }}
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <Loader2 size={20} className="animate-spin" />
+                                        <span>{processProgress.current} / {processProgress.total}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download size={20} />
+                                        <span>Download ZIP</span>
+                                    </>
+                                )}
+                            </button>
                         </>
                     ) : (
                         <div className="ft-empty-state" style={{
