@@ -33,29 +33,19 @@ export function FilterTool() {
     const [isExporting, setIsExporting] = useState(false)
     const [exportProgress, setExportProgress] = useState(0)
     const [activeTab, setActiveTab] = useState<'assets' | 'settings'>('assets')
-    const [previewAspectRatio, setPreviewAspectRatio] = useState(1)
 
     const activePhoto = photos.find(p => p.id === activePhotoId)
 
-    // Initialize WebGL engine when canvas becomes available
-    const lastCanvasRef = useRef<HTMLCanvasElement | null>(null)
-    const initEngine = useCallback(() => {
+    // Initialize WebGL engine once on mount (canvas is always in DOM)
+    useEffect(() => {
         if (!canvasRef.current) return
 
-        // Re-init if canvas element changed (conditional rendering)
-        if (engineRef.current && lastCanvasRef.current === canvasRef.current) return
-
-        engineRef.current?.dispose()
         try {
             engineRef.current = new FilterEngine(canvasRef.current)
-            lastCanvasRef.current = canvasRef.current
         } catch (err) {
             console.error('Failed to initialize FilterEngine:', err)
         }
-    }, [])
 
-    // Cleanup on unmount
-    useEffect(() => {
         return () => {
             engineRef.current?.dispose()
         }
@@ -63,36 +53,27 @@ export function FilterTool() {
 
     // Load active photo into engine
     useEffect(() => {
-        if (!activePhoto) return
+        if (!activePhoto || !engineRef.current) return
 
-        // Wait for canvas to be in DOM, then init engine
-        const timer = requestAnimationFrame(() => {
-            initEngine()
-            if (!engineRef.current) return
+        const img = new Image()
+        img.onload = () => {
+            previewImageRef.current = img
+            engineRef.current?.loadImage(img)
 
-            const img = new Image()
-            img.onload = () => {
-                previewImageRef.current = img
-                setPreviewAspectRatio(img.naturalWidth / img.naturalHeight)
-                engineRef.current?.loadImage(img)
-
-                // Load the photo's LUT
-                if (activePhoto.lut) {
-                    engineRef.current?.loadLUT(activePhoto.lut)
-                } else {
-                    engineRef.current?.clearLUT()
-                }
-
-                engineRef.current?.render(activePhoto.config)
+            // Load the photo's LUT
+            if (activePhoto.lut) {
+                engineRef.current?.loadLUT(activePhoto.lut)
+            } else {
+                engineRef.current?.clearLUT()
             }
-            img.src = activePhoto.url
-        })
+
+            engineRef.current?.render(activePhoto.config)
+        }
+        img.src = activePhoto.url
 
         setCurrentConfig(activePhoto.config)
         setLut(activePhoto.lut)
-
-        return () => cancelAnimationFrame(timer)
-    }, [activePhoto?.id, initEngine])
+    }, [activePhoto?.id])
 
     // Re-render when config changes
     useEffect(() => {
@@ -284,28 +265,20 @@ export function FilterTool() {
                     justifyContent: 'center',
                     overflow: 'hidden',
                     minHeight: 0,
-                    padding: '24px'
+                    padding: '24px',
+                    position: 'relative'
                 }}>
-                    {activePhoto ? (
-                        <div style={{
-                            aspectRatio: previewAspectRatio,
-                            width: previewAspectRatio >= 1 ? '100%' : 'auto',
-                            height: previewAspectRatio >= 1 ? 'auto' : '100%',
-                            maxWidth: '90%',
-                            maxHeight: '90%',
-                            position: 'relative',
+                    <canvas
+                        ref={canvasRef}
+                        style={{
+                            display: activePhoto ? 'block' : 'none',
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
                             boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                        }}>
-                            <canvas
-                                ref={canvasRef}
-                                style={{
-                                    display: 'block',
-                                    width: '100%',
-                                    height: '100%'
-                                }}
-                            />
-                        </div>
-                    ) : (
+                        }}
+                    />
+                    {!activePhoto && (
                         <div style={{
                             textAlign: 'center',
                             color: isDark ? '#444' : '#999'
