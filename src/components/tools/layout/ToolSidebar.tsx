@@ -5,7 +5,6 @@ import gsap from 'gsap'
 
 import { useTheme } from '../../../context/ThemeContext'
 import { useContent } from '../../../context/ContentContext'
-import siodelLogo from '../../../assets/logo.svg'
 import logoPng from '../../../assets/logo.png'
 import donateQr from '../../../assets/qr-code.svg'
 import { ShinyButton } from '../../ui/ShinyButton'
@@ -20,7 +19,6 @@ interface ToolSidebarProps {
 export function ToolSidebar({ isCollapsed, setIsCollapsed, onCollapseChange }: ToolSidebarProps) {
     const sidebarRef = useRef<HTMLDivElement>(null)
     const contentRef = useRef<HTMLDivElement>(null)
-    const logoRef = useRef<HTMLDivElement>(null)
     const menuItemsRef = useRef<HTMLDivElement>(null)
     const isFirstRender = useRef(true)
 
@@ -142,20 +140,18 @@ export function ToolSidebar({ isCollapsed, setIsCollapsed, onCollapseChange }: T
                 <div ref={contentRef} style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '24px 20px', gap: '32px' }}>
 
                     {/* Logo */}
-                    <div ref={logoRef} style={{ display: window.innerWidth < 768 ? 'none' : 'block' }}>
+                    {!isCollapsed && (
                         <a href="/" onClick={(e) => { e.preventDefault(); navigate('/') }} style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', cursor: 'pointer' }}>
                             <div style={{ width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <img src={siodelLogo} alt="SIO Delhi Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                <img src={logoPng} alt="SIO Delhi Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                             </div>
-                            {!isCollapsed && (
-                                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#fdedcb' }}>Students Islamic</span>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#fdedcb' }}>Organization</span>
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#ff3b3b', marginTop: '2px' }}>Delhi Zone</span>
-                                </div>
-                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                                <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#fdedcb' }}>Students Islamic</span>
+                                <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#fdedcb' }}>Organization</span>
+                                <span style={{ fontSize: '0.65rem', fontWeight: 500, color: '#ff3b3b', marginTop: '2px' }}>Delhi Zone</span>
+                            </div>
                         </a>
-                    </div>
+                    )}
 
                     {/* Navigation Menu */}
                     <div ref={menuItemsRef} style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>

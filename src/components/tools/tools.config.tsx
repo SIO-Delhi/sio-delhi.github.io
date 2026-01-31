@@ -1,4 +1,4 @@
-import { Copy } from 'lucide-react'
+import { Copy, Sliders } from 'lucide-react'
 
 export interface ToolConfig {
     id: string
@@ -18,5 +18,12 @@ export const TOOLS: ToolConfig[] = [
         activeMatch: 'frame-tool',
         description: 'Add custom frames and overlays to your photos'
     },
-    // Future tools can be added here
+    {
+        id: 'filter-tool',
+        label: 'Filter Tool',
+        path: '/utilities/filter-tool',
+        icon: Sliders,
+        activeMatch: 'filter-tool',
+        description: 'Batch image editing with LUT support'
+    },
 ]

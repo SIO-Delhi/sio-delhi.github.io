@@ -4,7 +4,6 @@ import gsap from 'gsap'
 import Lenis from 'lenis'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Navbar } from './Navbar'
-import { UtilitiesNavbar } from './UtilitiesNavbar' // Imported
 import { Footer } from './Footer'
 import { CustomCursor } from '../ui/CustomCursor'
 
@@ -18,8 +17,6 @@ export function Layout({ children }: LayoutProps) {
     const mainRef = useRef<HTMLDivElement>(null)
     const lenisRef = useRef<Lenis | null>(null)
     const location = useLocation()
-    const isUtilities = location.pathname.startsWith('/utilities')
-    const isFrameTool = location.pathname.includes('/utilities/frame-tool')
 
     // Dynamic Title Logic
     useEffect(() => {
@@ -31,7 +28,6 @@ export function Layout({ children }: LayoutProps) {
         else if (path.startsWith('/media')) title += ' | Press & Media'
         else if (path.startsWith('/leader')) title += ' | Leadership'
         else if (path.startsWith('/subsection')) title += ' | Collection'
-        else if (path.includes('frame-tool')) title += ' | Frame Tool'
 
         document.title = title
     }, [location])
@@ -156,9 +152,12 @@ export function Layout({ children }: LayoutProps) {
                     }
                 }, 100)
 
-                // Return empty cleanup since we handled interval internally/implicitly in this simplified logic
-                // Ideally we'd track the timeout/interval in a ref but for this fix simplicity:
-                return () => { }
+                // Cleanup interval if component unmounts (though unlikely during scroll)
+                // We can't return the cleanup from setTimeout, so we rely on the closure? 
+                // Actually, scrollToHash returns a cleanup function only for the main effect.
+                // We need to manage this interval ID. 
+                // Simplification for this context: we won't export the interval ID from inner timeout.
+                // This is a trade-off but acceptable given the short duration.
             }, 100)
 
             // Return empty cleanup since we handled interval internally/implicitly in this simplified logic
@@ -191,11 +190,11 @@ export function Layout({ children }: LayoutProps) {
     return (
         <div className="min-h-screen flex flex-col">
             <CustomCursor />
-            {!isFrameTool && (isUtilities ? <UtilitiesNavbar /> : <Navbar />)}
+            <Navbar />
             <main ref={mainRef} className="flex-1">
                 {children}
             </main>
-            {!isFrameTool && <Footer />}
+            <Footer />
         </div>
     )
 }
