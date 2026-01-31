@@ -4,6 +4,7 @@ import { SectionCard } from '../ui/SectionCard'
 import SectionLayout from '../layout/SectionLayout'
 import { useContent } from '../../context/ContentContext'
 import type { SectionTemplate } from '../../types/content'
+import { slugify } from '../../utils/slugify'
 
 interface GenericSectionProps {
     sectionId: string
@@ -52,7 +53,7 @@ export function GenericSection({ sectionId, title, label, template }: GenericSec
                 cards.map((card) => (
                     <SectionCard
                         key={card.id}
-                        cardId={`card-${card.id}`}
+                        cardId={`card-${slugify(card.title)}`}
                         {...card}
                         label={label}
                         labelColor="#FF3333"
@@ -62,8 +63,9 @@ export function GenericSection({ sectionId, title, label, template }: GenericSec
                         icon={card.icon}
                         variant={template || 'default'}
                         onClick={() => {
-                            window.history.replaceState(null, '', `#${sectionId}:${card.id}`)
-                            navigate(`/section/${sectionId}/${card.id}`, { state: { post: card } })
+                            const slug = slugify(card.title)
+                            window.history.replaceState(null, '', `#${sectionId}:${slug}`)
+                            navigate(`/section/${sectionId}/${slug}`, { state: { post: card } })
                         }}
                     />
                 ))

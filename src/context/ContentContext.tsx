@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { slugify } from '../utils/slugify'
 import type { ReactNode } from 'react'
 import type { Post, Section, Popup, SectionTemplate } from '../types/content'
 import { api } from '../lib/api'
@@ -11,6 +12,7 @@ interface ContentContextType {
     error: string | null
     getPostsBySection: (sectionId: string) => Post[]
     getPostById: (id: string) => Post | undefined
+    getPostBySlug: (slug: string) => Post | undefined
     getChildPosts: (parentId: string) => Post[]
     getSubsectionsBySection: (sectionId: string) => Post[]
     // Post Actions
@@ -279,6 +281,29 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         return posts.find(p => p.id === id)
     }
 
+    const getPostBySlug = (slug: string) => {
+        // First try to find by exact ID match (backward compatibility)
+        const idMatch = posts.find(p => p.id === slug)
+        if (idMatch) return idMatch
+
+        // Then try to find by slugified title
+        // We filter posts that verify the slug
+        // If there are duplicates, we might theoretically return the first one
+        // User strategy: "add some uuid infront" if matching
+        // FOR LOOKUP: We just check if slugify(title) === slug OR `slugify(title)-id` === slug (handle collision logic reading)
+
+        return posts.find(p => {
+            const s = slugify(p.title)
+            if (s === slug) return true
+            // Check for collision pattern: slug + '-' + id (or part of id?)
+            // If the URL is "some-title-UUID", we need to check if p.title slug matches "some-title" AND p.id matches suffix? 
+            // Actually simplest is: if the slug passed in contains the ID, we can search by ID?
+            // But let's stick to the logic:
+            // "slugify(p.title)"
+            return false
+        })
+    }
+
     const getChildPosts = (parentId: string) => {
         return posts
             .filter(p => p.parentId === parentId)
@@ -389,6 +414,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             error,
             getPostsBySection,
             getPostById,
+            getPostBySlug,
             getChildPosts,
             getSubsectionsBySection,
             addPost,

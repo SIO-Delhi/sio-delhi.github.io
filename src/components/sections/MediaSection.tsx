@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext'
 import { SectionCard } from '../ui/SectionCard'
 import SectionLayout from '../layout/SectionLayout'
 import { useContent } from '../../context/ContentContext'
+import { slugify } from '../../utils/slugify'
 
 export function MediaSection() {
     const { isDark } = useTheme()
@@ -37,7 +38,7 @@ export function MediaSection() {
                 cards.map((card) => (
                     <SectionCard
                         key={card.id}
-                        cardId={`card-${card.id}`}
+                        cardId={`card-${slugify(card.title)}`}
                         {...card}
                         variant="media"
                         label="MEDIA"
@@ -46,8 +47,9 @@ export function MediaSection() {
                         publishedDate={(card as any).publishedDate || card.createdAt}
                         image={(card as any).coverImage || card.image}
                         onClick={() => {
-                            window.history.replaceState(null, '', `#media:${card.id}`)
-                            navigate(`/media/${card.id}`, { state: { post: card } })
+                            const slug = slugify(card.title)
+                            window.history.replaceState(null, '', `#media:${slug}`)
+                            navigate(`/media/${slug}`, { state: { post: card } })
                         }}
                     />
                 ))

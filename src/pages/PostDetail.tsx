@@ -643,13 +643,15 @@ interface PostDetailProps {
 
 
 
+
 export function PostDetail({ sectionType }: PostDetailProps) {
-    const { id, sectionId } = useParams()
+    const { slug, sectionId } = useParams()
     const { isDark } = useTheme()
-    const { getPostById, posts, loading, sections } = useContent()
+    const { getPostBySlug, posts, loading, sections } = useContent()
     const navigate = useNavigate()
 
-    const post = id ? getPostById(id) : undefined
+    const post = slug ? getPostBySlug(slug) : undefined
+    const id = post?.id
 
     // Scroll to top on mount
     // Scroll to top on mount and ID change
@@ -731,7 +733,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     // Build gallery URL based on current route
     const galleryUrl = (() => {
         if (sectionType === 'dynamic' && sectionId) {
-            return `/section/${sectionId}/${id}/gallery`
+            return `/section/${sectionId}/${slug}/gallery`
         }
         const sectionPaths: Record<string, string> = {
             about: 'about-us',
@@ -740,7 +742,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
             leadership: 'leader',
             resources: 'resource'
         }
-        return `/${sectionPaths[sectionType] || sectionType}/${id}/gallery`
+        return `/${sectionPaths[sectionType] || sectionType}/${slug}/gallery`
     })()
 
     // Render section-specific content

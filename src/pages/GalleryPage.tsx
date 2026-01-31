@@ -282,13 +282,13 @@ function LightboxImage({
 }
 
 export function GalleryPage() {
-    const { id } = useParams()
+    const { slug } = useParams()
     const { isDark } = useTheme()
-    const { getPostById, loading } = useContent()
+    const { getPostBySlug, loading } = useContent()
     const navigate = useNavigate()
     const location = useLocation()
 
-    const post = id ? getPostById(id) : undefined
+    const post = slug ? getPostBySlug(slug) : undefined
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
     const imagesRaw = post?.galleryImages || []
@@ -311,7 +311,7 @@ export function GalleryPage() {
 
     // Build back URL based on current path
     const getBackUrl = () => {
-        if (!post || !id) return '/'
+        if (!post || !slug) return '/'
         // Remove /gallery from the end of the path
         const currentPath = location.pathname
         return currentPath.replace(/\/gallery$/, '')

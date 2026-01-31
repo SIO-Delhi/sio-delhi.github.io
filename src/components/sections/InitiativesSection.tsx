@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext'
 import { SectionCard } from '../ui/SectionCard'
 import SectionLayout from '../layout/SectionLayout'
 import { useContent } from '../../context/ContentContext'
+import { slugify } from '../../utils/slugify'
 
 export function InitiativesSection() {
     const { isDark } = useTheme()
@@ -37,7 +38,7 @@ export function InitiativesSection() {
                 cards.map((card) => (
                     <SectionCard
                         key={card.id}
-                        cardId={`card-${card.id}`}
+                        cardId={`card-${slugify(card.title)}`}
                         {...card}
                         label="INITIATIVES"
                         labelColor="#FF3333"
@@ -45,8 +46,9 @@ export function InitiativesSection() {
                         publishedDate={(card as any).publishedDate || card.createdAt}
                         image={(card as any).coverImage || card.image}
                         onClick={() => {
-                            window.history.replaceState(null, '', `#initiatives:${card.id}`)
-                            navigate(`/initiative/${card.id}`, { state: { post: card } })
+                            const slug = slugify(card.title)
+                            window.history.replaceState(null, '', `#initiatives:${slug}`)
+                            navigate(`/initiative/${slug}`, { state: { post: card } })
                         }}
                     />
                 ))

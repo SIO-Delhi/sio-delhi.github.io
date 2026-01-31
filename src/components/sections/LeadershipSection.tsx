@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext'
 import SectionLayout from '../layout/SectionLayout'
 import { useContent } from '../../context/ContentContext'
+import { slugify } from '../../utils/slugify'
 
 export function LeadershipSection() {
     const { isDark } = useTheme()
@@ -32,7 +33,7 @@ export function LeadershipSection() {
     const renderLeaderCard = (leader: any) => (
         <div
             key={leader.id}
-            id={`card-${leader.id}`}
+            id={`card-${slugify(leader.title)}`}
             data-cursor="view"
             className="section-card-shine"
             style={{
@@ -72,8 +73,9 @@ export function LeadershipSection() {
                 if (img) img.style.filter = 'grayscale(100%)'
             }}
             onClick={() => {
-                window.history.replaceState(null, '', `#leadership:${leader.id}`)
-                navigate(`/leader/${leader.id}`)
+                const slug = slugify(leader.title)
+                window.history.replaceState(null, '', `#leadership:${slug}`)
+                navigate(`/leader/${slug}`)
             }}
             draggable={false}
         >

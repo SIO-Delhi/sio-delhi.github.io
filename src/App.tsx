@@ -80,19 +80,19 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
-                  <Route path="/about-us/:id" element={<PostDetail sectionType="about" />} />
-                  <Route path="/about-us/:id/gallery" element={<GalleryPage />} />
-                  <Route path="/initiative/:id" element={<PostDetail sectionType="initiatives" />} />
-                  <Route path="/initiative/:id/gallery" element={<GalleryPage />} />
-                  <Route path="/media/:id" element={<PostDetail sectionType="media" />} />
-                  <Route path="/media/:id/gallery" element={<GalleryPage />} />
-                  <Route path="/leader/:id" element={<PostDetail sectionType="leadership" />} />
-                  <Route path="/leader/:id/gallery" element={<GalleryPage />} />
-                  <Route path="/resource/:id" element={<PostDetail sectionType="resources" />} />
-                  <Route path="/resource/:id/gallery" element={<GalleryPage />} />
+                  <Route path="/about-us/:slug" element={<PostDetail sectionType="about" />} />
+                  <Route path="/about-us/:slug/gallery" element={<GalleryPage />} />
+                  <Route path="/initiative/:slug" element={<PostDetail sectionType="initiatives" />} />
+                  <Route path="/initiative/:slug/gallery" element={<GalleryPage />} />
+                  <Route path="/media/:slug" element={<PostDetail sectionType="media" />} />
+                  <Route path="/media/:slug/gallery" element={<GalleryPage />} />
+                  <Route path="/leader/:slug" element={<PostDetail sectionType="leadership" />} />
+                  <Route path="/leader/:slug/gallery" element={<GalleryPage />} />
+                  <Route path="/resource/:slug" element={<PostDetail sectionType="resources" />} />
+                  <Route path="/resource/:slug/gallery" element={<GalleryPage />} />
                   {/* Dynamic Sections Route */}
-                  <Route path="/section/:sectionId/:id" element={<PostDetail sectionType="dynamic" />} />
-                  <Route path="/section/:sectionId/:id/gallery" element={<GalleryPage />} />
+                  <Route path="/section/:sectionId/:slug" element={<PostDetail sectionType="dynamic" />} />
+                  <Route path="/section/:sectionId/:slug/gallery" element={<GalleryPage />} />
 
                   {/* Public Utilities */}
                   <Route path="/utilities" element={<UtilitiesPage />} />

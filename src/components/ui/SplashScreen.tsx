@@ -14,12 +14,21 @@ export function SplashScreen() {
     const [isCollapsed, setIsCollapsed] = useState(alreadySeen)
     const [scrollProgress, setScrollProgress] = useState(0)
 
-    // Check if we start with a deep link (hash) to auto-dismiss splash
+    // Check if we start with a deep link (hash) OR strictly if the page is already scrolled (browser text fragment)
     useEffect(() => {
-        if (location.hash) {
-            setIsCollapsed(true)
-            sessionStorage.setItem('sio_splash_seen', 'true')
+        const checkScrollAndHash = () => {
+            if (location.hash || window.scrollY > 10) {
+                setIsCollapsed(true)
+                sessionStorage.setItem('sio_splash_seen', 'true')
+            }
         }
+
+        // Check immediately
+        checkScrollAndHash()
+
+        // Check again after a slight delay for browser auto-scroll
+        const timer = setTimeout(checkScrollAndHash, 100)
+        return () => clearTimeout(timer)
     }, [location.hash])
 
     // Refs for Splash Elements

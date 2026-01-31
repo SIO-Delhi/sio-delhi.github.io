@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext'
 import { SectionCard } from '../ui/SectionCard'
 import SectionLayout from '../layout/SectionLayout'
 import { useContent } from '../../context/ContentContext'
+import { slugify } from '../../utils/slugify'
 
 export function AboutSection() {
     const { isDark } = useTheme()
@@ -37,7 +38,7 @@ export function AboutSection() {
                 cards.map((card) => (
                     <SectionCard
                         key={card.id}
-                        cardId={`card-${card.id}`}
+                        cardId={`card-${slugify(card.title)}`}
                         {...card}
                         label="About Us"
                         labelColor="#FF3333"
@@ -46,8 +47,9 @@ export function AboutSection() {
                         image={(card as any).coverImage || card.image}
                         onClick={() => {
                             // Update hash with section:cardId for scroll restoration
-                            window.history.replaceState(null, '', `#about:${card.id}`)
-                            navigate(`/about-us/${card.id}`, { state: { post: card } })
+                            const slug = slugify(card.title)
+                            window.history.replaceState(null, '', `#about:${slug}`)
+                            navigate(`/about-us/${slug}`, { state: { post: card } })
                         }}
                     />
                 ))

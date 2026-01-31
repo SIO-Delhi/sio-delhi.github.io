@@ -2,6 +2,7 @@
 import SectionLayout from '../layout/SectionLayout'
 import { FileText, Link, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, Mail } from 'lucide-react'
 import { useContent } from '../../context/ContentContext'
+import { slugify } from '../../utils/slugify'
 
 const ICON_MAP: Record<string, any> = {
     FileText, Link, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Mail, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info
@@ -40,6 +41,7 @@ export function MoreSection() {
         return (
             <div
                 key={item.id}
+                id={`card-${slugify(item.title)}`}
                 data-cursor="view"
                 style={{
                     background: 'rgba(255, 255, 255, 0.03)', // Glass transparent
@@ -80,7 +82,7 @@ export function MoreSection() {
                     e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)'
                     e.currentTarget.style.zIndex = '5'
                 }}
-                onClick={() => navigate(`/resource/${item.id}`)}
+                onClick={() => navigate(`/resource/${slugify(item.title)}`)}
                 draggable={false}
             >
                 {/* Icon */}
