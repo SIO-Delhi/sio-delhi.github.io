@@ -123,7 +123,7 @@ void main() {
     float tint = u_tint / 100.0;
     rgb.r += temp * 0.1;
     rgb.b -= temp * 0.1;
-    rgb.g += tint * 0.1;
+    rgb.g -= tint * 0.1;
     
     // 4. Contrast (S-curve around midtones)
     float contrastFactor = (u_contrast / 100.0) * 0.5 + 1.0;
@@ -132,9 +132,9 @@ void main() {
     // 5. Highlights & Shadows (tone mapping)
     float lum = luminance(rgb);
     
-    // Highlights: compress high luminance
+    // Highlights: adjust high luminance (positive = brighter highlights)
     float highlightMask = smoothstep(0.5, 1.0, lum);
-    float highlightAdjust = -u_highlights / 100.0 * highlightMask * 0.5;
+    float highlightAdjust = u_highlights / 100.0 * highlightMask * 0.5;
     rgb += highlightAdjust;
     
     // Shadows: boost low luminance
