@@ -21,6 +21,7 @@ export interface FilterConfig {
     tint: number          // -100 to +100
     vibrance: number      // -100 to +100
     saturation: number    // -100 to +100
+    hue: number           // -180 to +180
 }
 
 export const DEFAULT_FILTER_CONFIG: FilterConfig = {
@@ -33,7 +34,8 @@ export const DEFAULT_FILTER_CONFIG: FilterConfig = {
     temperature: 0,
     tint: 0,
     vibrance: 0,
-    saturation: 0
+    saturation: 0,
+    hue: 0
 }
 
 export class FilterEngine {
@@ -141,7 +143,7 @@ export class FilterEngine {
             'u_image', 'u_lut', 'u_useLut', 'u_lutSize',
             'u_exposure', 'u_contrast', 'u_highlights', 'u_shadows',
             'u_whites', 'u_blacks', 'u_temperature', 'u_tint',
-            'u_vibrance', 'u_saturation'
+            'u_vibrance', 'u_saturation', 'u_hue'
         ]
 
         for (const name of uniformNames) {
@@ -260,6 +262,7 @@ export class FilterEngine {
         gl.uniform1f(this.uniforms['u_tint'], config.tint)
         gl.uniform1f(this.uniforms['u_vibrance'], config.vibrance)
         gl.uniform1f(this.uniforms['u_saturation'], config.saturation)
+        gl.uniform1f(this.uniforms['u_hue'], config.hue)
 
         // Draw
         gl.drawArrays(gl.TRIANGLES, 0, 6)

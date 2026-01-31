@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Upload, Download, RefreshCcw, Calendar, User, Briefcase, Palette, Eye, Edit3 } from 'lucide-react'
+import { Grid, Layers, Type, Image as ImageIcon, Briefcase, Download, Upload, AlertCircle, Plus, X, Box, Calendar, User, Palette, Edit3, RefreshCcw, Eye } from 'lucide-react'
+import { UndoRedoGroup } from '../../ui/UndoRedoGroup'
+import { useHistory } from '../../../hooks/useHistory'
 import posterSvgUrl from '../../../assets/poster.svg'
 import './poster.css'
 
@@ -36,13 +38,15 @@ const INITIAL_STATE: PosterState = {
 
 
 export function PosterTool() {
-    const [state, setState] = useState<PosterState>(INITIAL_STATE)
+    const { state, set: setState, undo, redo, canUndo, canRedo } = useHistory<PosterState>(INITIAL_STATE)
     const [svgContent, setSvgContent] = useState<string>('')
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
 
     const containerRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const isAdjustingRef = useRef(false)
+    const hasCapturedStartRef = useRef(false)
 
     useEffect(() => {
         fetch(posterSvgUrl)
@@ -89,7 +93,7 @@ export function PosterTool() {
 
                 const a = document.createElement('a')
                 a.href = jpgUrl
-                a.download = `poster-${state.date.replace(/\s+/g, '-')}.jpg`
+                a.download = `poster - ${state.date.replace(/\s+/g, '-')}.jpg`
                 document.body.appendChild(a)
                 a.click()
                 document.body.removeChild(a)
@@ -126,7 +130,7 @@ export function PosterTool() {
 
         processed = processed.replace(
             /<svg([^>]*)>/,
-            `<svg$1 width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" style="filter: hue-rotate(${state.hue}deg);">`
+            `< svg$1 width = "${width}" height = "${height}" preserveAspectRatio = "xMidYMid meet" style = "filter: hue-rotate(${state.hue}deg);" > `
         )
 
         // 1. Hide Original Elements (Text & Icons) that we are replacing
@@ -158,45 +162,45 @@ export function PosterTool() {
 
         // Hidings IDs
         idsToHide.forEach(id => {
-            processed = processed.replace(`id="${id}"`, `id="${id}" style="display: none;"`)
+            processed = processed.replace(`id = "${id}"`, `id = "${id}" style = "display: none;"`)
         })
 
         // 2. Image Replacement (Keep existing logic)
         const placeholderRect = '<rect class="st8" x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4"/>'
         if (state.image) {
             const imageTag = `
-            <defs>
-                <clipPath id="speaker-clip">
-                    <rect x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4"/>
-                </clipPath>
-            </defs>
-            <image 
-                x="411.99" 
-                y="1023.4" 
-                width="524.41" 
-                height="573.33" 
-                preserveAspectRatio="xMidYMid slice" 
-                clip-path="url(#speaker-clip)" 
-                href="${state.image}" 
-                style="filter: hue-rotate(-${state.hue}deg);"
-            />`
+    < defs >
+    <clipPath id="speaker-clip">
+        <rect x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4" />
+    </clipPath>
+            </defs >
+    <image
+        x="411.99"
+        y="1023.4"
+        width="524.41"
+        height="573.33"
+        preserveAspectRatio="xMidYMid slice"
+        clip-path="url(#speaker-clip)"
+        href="${state.image}"
+        style="filter: hue-rotate(-${state.hue}deg);"
+    />`
             processed = processed.replace(placeholderRect, imageTag)
         }
 
         // 3. Name & Profession (Keep SVG text for these as they were working fine left-aligned)
         processed = processed.replace(
             /<text class="st9" transform="translate\(1016\.19 1242\.14\)">.*?<\/text>/s,
-            `<text class="st9" text-anchor="start">
+            `< text class="st9" text - anchor="start" >
                 <tspan x="1016" y="1242">${escapeXml(state.name)}</tspan>
                 <tspan x="1016" y="1329">${escapeXml(state.name2)}</tspan>
-             </text>`
+             </text > `
         )
         processed = processed.replace(
             /<text class="st7" transform="translate\(1012\.82 1406\.84\)">.*?<\/text>/s,
-            `<text class="st7" text-anchor="start">
+            `< text class="st7" text - anchor="start" >
                 <tspan x="1013" y="1406">${escapeXml(state.position)}</tspan>
                 <tspan x="1013" y="1476">${escapeXml(state.organization)}</tspan>
-             </text>`
+             </text > `
         )
 
         // 4. ForeignObject Layer for Layout (Header, Topic, Icons+Details)
@@ -209,16 +213,16 @@ export function PosterTool() {
         // Topic -> fill: #A05415
 
         const foreignObjectOverlay = `
-            <foreignObject x="0" y="0" width="2000" height="2500" style="pointer-events: none;">
-                <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; font-family: 'Flamante Serif', serif;">
-                    
-                    <!-- Header (Top) -->
-                    <div style="position: absolute; top: 300px; width: 100%; text-align: center; color: white; font-size: 60px; font-weight: bold; font-family: FlamanteSerifBold, 'Flamante Serif', serif;">
-                        ${escapeXml(state.header)}
-                    </div>
+    < foreignObject x = "0" y = "0" width = "2000" height = "2500" style = "pointer-events: none;" >
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; font-family: 'Flamante Serif', serif;">
 
-                    <!-- Topic (Middle) - Centered Block with Wrapping -->
-                    ${state.topic ? `
+            <!-- Header (Top) -->
+            <div style="position: absolute; top: 300px; width: 100%; text-align: center; color: white; font-size: 60px; font-weight: bold; font-family: FlamanteSerifBold, 'Flamante Serif', serif;">
+                ${escapeXml(state.header)}
+            </div>
+
+            <!-- Topic (Middle) - Centered Block with Wrapping -->
+            ${state.topic ? `
                     <div style="position: absolute; top: 600px; width: 100%; display: flex; justify-content: center; align-items: center; padding: 0 100px;">
                         <div style="color: #a05415; font-size: 140px; font-weight: bold; font-family: FlamanteSerifBold, 'Flamante Serif', serif; text-align: center; line-height: 1.1; word-wrap: break-word; max-width: 1600px;">
                             ${escapeXml(state.topic)}
@@ -226,61 +230,61 @@ export function PosterTool() {
                     </div>
                     ` : ''}
 
-                    <!-- Bottom Details Section (Date, Time, Location) -->
-                    <!-- Used flexbox for perfect icon alignment -->
-                    <div style="position: absolute; top: 1730px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 60px; color: #a05415; font-size: 45px; font-weight: 500;">
-                        
-                        <!-- Date -->
-                        <div style="display: flex; align-items: center; gap: 20px;">
-                            <div style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center;">
-                                <!-- Calendar Icon SVG -->
-                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            </div>
-                            <span>${escapeXml(state.date)}</span>
-                        </div>
+            <!-- Bottom Details Section (Date, Time, Location) -->
+            <!-- Used flexbox for perfect icon alignment -->
+            <div style="position: absolute; top: 1730px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 60px; color: #a05415; font-size: 45px; font-weight: 500;">
 
-                        <!-- Time -->
-                         <div style="display: flex; align-items: center; gap: 20px;">
-                             <div style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center;">
-                                <!-- Clock Icon SVG -->
-                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            </div>
-                            <span>${escapeXml(state.time)}</span>
-                        </div>
-
-                        <!-- Location -->
-                         <div style="display: flex; align-items: center; gap: 20px; margin-top: 40px;">
-                             <div style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center;">
-                                <!-- MapPin Icon SVG -->
-                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                            </div>
-                            <span>${escapeXml(state.location)}</span>
-                        </div>
-
+                <!-- Date -->
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center;">
+                        <!-- Calendar Icon SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                     </div>
-
+                    <span>${escapeXml(state.date)}</span>
                 </div>
-            </foreignObject>
-        `
+
+                <!-- Time -->
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center;">
+                        <!-- Clock Icon SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                    </div>
+                    <span>${escapeXml(state.time)}</span>
+                </div>
+
+                <!-- Location -->
+                <div style="display: flex; align-items: center; gap: 20px; margin-top: 40px;">
+                    <div style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center;">
+                        <!-- MapPin Icon SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
+                    </div>
+                    <span>${escapeXml(state.location)}</span>
+                </div>
+
+            </div>
+
+        </div>
+            </foreignObject >
+    `
 
         // Logo Text Replacement (Bottom Right)
         if (state.logoText && state.logoText !== 'DELHI') {
             const logoTextElement = `
-                <text 
-                    x="1690" 
-                    y="2330" 
-                    text-anchor="middle" 
-                    fill="#a05415" 
-                    style="font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-size: 40px; font-weight: bold; letter-spacing: 0.2em;"
-                >
-                    ${escapeXml(state.logoText.toUpperCase())}
-                </text>
-            `
-            processed = processed.replace('</svg>', `${logoTextElement}</svg>`)
+    < text
+x = "1690"
+y = "2330"
+text - anchor="middle"
+fill = "#a05415"
+style = "font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-size: 40px; font-weight: bold; letter-spacing: 0.2em;"
+    >
+    ${escapeXml(state.logoText.toUpperCase())}
+                </text >
+    `
+            processed = processed.replace('</svg>', `${logoTextElement}</svg > `)
         }
 
         // Append foreignObject
-        processed = processed.replace('</svg>', `${foreignObjectOverlay}</svg>`)
+        processed = processed.replace('</svg>', `${foreignObjectOverlay}</svg > `)
 
         return processed
     }
@@ -288,10 +292,21 @@ export function PosterTool() {
     return (
         <div className="poster-tool-container">
             {/* Left Sidebar (Controls) */}
-            <div className={`pt-sidebar-left ${activeTab === 'edit' ? 'pt-active' : ''}`}>
+            <div className={`pt - sidebar - left ${activeTab === 'edit' ? 'pt-active' : ''} `}>
                 <div className="pt-sidebar-header">
-                    <h1 className="pt-header-title">Poster Details</h1>
-                    <p className="pt-header-subtitle">Customize your event poster</p>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h1 className="pt-header-title">Poster Details</h1>
+                            <p className="pt-header-subtitle">Customize your event poster</p>
+                        </div>
+                        <UndoRedoGroup
+                            undo={undo}
+                            redo={redo}
+                            canUndo={canUndo}
+                            canRedo={canRedo}
+                            className="bg-zinc-900/50 backdrop-blur-md border border-white/10 shadow-lg"
+                        />
+                    </div>
                 </div>
 
                 <div className="pt-sidebar-content">
@@ -470,7 +485,32 @@ export function PosterTool() {
                                     min="0"
                                     max="360"
                                     value={state.hue}
-                                    onChange={e => setState({ ...state, hue: parseInt(e.target.value) })}
+                                    onChange={e => {
+                                        const newValue = parseInt(e.target.value)
+                                        const shouldReplace = isAdjustingRef.current && hasCapturedStartRef.current
+
+                                        setState(s => ({ ...s, hue: newValue }), shouldReplace)
+
+                                        if (isAdjustingRef.current) {
+                                            hasCapturedStartRef.current = true
+                                        }
+                                    }}
+                                    onMouseDown={() => {
+                                        isAdjustingRef.current = true
+                                        hasCapturedStartRef.current = false
+                                    }}
+                                    onMouseUp={() => {
+                                        isAdjustingRef.current = false
+                                        hasCapturedStartRef.current = false
+                                    }}
+                                    onTouchStart={() => {
+                                        isAdjustingRef.current = true
+                                        hasCapturedStartRef.current = false
+                                    }}
+                                    onTouchEnd={() => {
+                                        isAdjustingRef.current = false
+                                        hasCapturedStartRef.current = false
+                                    }}
                                     className="pt-slider"
                                 />
                             </div>
@@ -530,17 +570,17 @@ export function PosterTool() {
             </div>
 
             {/* Mobile Tabs */}
-            <div className={`pt-mobile-tabs ${window.innerWidth >= 1024 ? 'hidden' : 'flex'}`}>
+            <div className={`pt - mobile - tabs ${window.innerWidth >= 1024 ? 'hidden' : 'flex'} `}>
                 <button
                     onClick={() => setActiveTab('edit')}
-                    className={`pt-tab-btn ${activeTab === 'edit' ? 'active' : ''}`}
+                    className={`pt - tab - btn ${activeTab === 'edit' ? 'active' : ''} `}
                 >
                     <Edit3 size={18} />
                     Edit Details
                 </button>
                 <button
                     onClick={() => setActiveTab('preview')}
-                    className={`pt-tab-btn ${activeTab === 'preview' ? 'active' : ''}`}
+                    className={`pt - tab - btn ${activeTab === 'preview' ? 'active' : ''} `}
                 >
                     <Eye size={18} />
                     Preview Poster

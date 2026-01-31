@@ -12,6 +12,8 @@ import {
 
 import './frame.css'
 import { CustomDialog } from '../../ui/CustomDialog'
+import { UndoRedoGroup } from '../../ui/UndoRedoGroup'
+import { useHistory } from '../../../hooks/useHistory'
 
 // --- Types ---
 
@@ -49,7 +51,7 @@ export function FrameTool() {
 
     // Assets
     const [frameURL, setFrameURL] = useState<string | null>(null)
-    const [photos, setPhotos] = useState<PhotoAsset[]>([])
+    const { state: photos, set: setPhotos, undo, redo, canUndo, canRedo } = useHistory<PhotoAsset[]>([])
     const [activePhotoIndex, setActivePhotoIndex] = useState<number>(0)
 
     const navigate = useNavigate()
@@ -91,7 +93,9 @@ export function FrameTool() {
     // Refs
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
-
+    const hasCapturedStartRef = useRef(false)
+    const isWheelingRef = useRef(false)
+    const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     // --- Helpers ---
 
@@ -110,13 +114,13 @@ export function FrameTool() {
     })
 
     // Helper to update current photo config
-    const updateCurrentConfig = (updater: (prev: FrameConfig) => FrameConfig) => {
+    const updateCurrentConfig = (updater: (prev: FrameConfig) => FrameConfig, shouldReplace = false) => {
         setPhotos(prevPhotos => prevPhotos.map((p, i) => {
             if (i === activePhotoIndex) {
                 return { ...p, config: updater(p.config) }
             }
             return p
-        }))
+        }), shouldReplace)
     }
 
     // Helper to set current photo config directly
@@ -252,6 +256,7 @@ export function FrameTool() {
         setIsDragging(true)
         setDragStart({ x: e.clientX, y: e.clientY })
         setDragStartConfig(currentPhoto.config) // Save snapshot of start
+        hasCapturedStartRef.current = false
     }
 
     const handleMouseMove = (e: React.MouseEvent) => {
@@ -282,7 +287,7 @@ export function FrameTool() {
                 ...prev,
                 cropX: Math.max(0, Math.min(100, dragStartConfig.cropX + (dx / rect.width) * cropSens)),
                 cropY: Math.max(0, Math.min(100, dragStartConfig.cropY + (dy / rect.height) * cropSens))
-            }))
+            }), hasCapturedStartRef.current)
         } else {
             // Frame mode: adjust frame position
             // Sensitivity 100 means 1:1 movement with cursor
@@ -292,8 +297,10 @@ export function FrameTool() {
                 ...prev,
                 frameX: Math.max(-50, Math.min(50, dragStartConfig.frameX + (dx / rect.width) * frameSensitivity)),
                 frameY: Math.max(-50, Math.min(50, dragStartConfig.frameY + (dy / rect.height) * frameSensitivity))
-            }))
+            }), hasCapturedStartRef.current)
         }
+
+        hasCapturedStartRef.current = true
     }
 
     const handleMouseUp = () => setIsDragging(false)
@@ -307,6 +314,7 @@ export function FrameTool() {
             setIsDragging(true)
             setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY })
             setDragStartConfig(currentPhoto.config)
+            hasCapturedStartRef.current = false
         } else if (e.touches.length === 2) {
             // Two touches - Pinch/Zoom
             setIsPinching(true)
@@ -343,8 +351,9 @@ export function FrameTool() {
                     // Scale Frame
                     const sensitivity = 0.005
                     const newFrameScale = Math.max(0.01, Math.min(2, dragStartConfig.frameScale + delta * sensitivity))
-                    updateCurrentConfig(prev => ({ ...prev, frameScale: newFrameScale }))
+                    updateCurrentConfig(prev => ({ ...prev, frameScale: newFrameScale }), hasCapturedStartRef.current)
                 }
+                hasCapturedStartRef.current = true
             }
         } else if (isDragging && e.touches.length === 1) {
             // Drag
@@ -368,8 +377,9 @@ export function FrameTool() {
                     ...prev,
                     frameX: Math.max(-50, Math.min(50, dragStartConfig.frameX + (dx / rect.width) * frameSensitivity)),
                     frameY: Math.max(-50, Math.min(50, dragStartConfig.frameY + (dy / rect.height) * frameSensitivity))
-                }))
+                }), hasCapturedStartRef.current)
             }
+            hasCapturedStartRef.current = true
         }
     }
 
@@ -393,16 +403,28 @@ export function FrameTool() {
             if (editMode === 'crop') {
                 const delta = e.deltaY * 0.5
                 const newCropSize = Math.max(10, Math.min(100, currentPhoto.config.cropSize + delta))
-                updateCurrentConfig(prev => ({ ...prev, cropSize: newCropSize }))
+                updateCurrentConfig(prev => ({ ...prev, cropSize: newCropSize }), hasCapturedStartRef.current)
             } else {
                 const delta = e.deltaY * -0.002
                 const newFrameScale = Math.max(0.01, Math.min(2, currentPhoto.config.frameScale + delta))
-                updateCurrentConfig(prev => ({ ...prev, frameScale: newFrameScale }))
+                updateCurrentConfig(prev => ({ ...prev, frameScale: newFrameScale }), hasCapturedStartRef.current)
             }
+
+            hasCapturedStartRef.current = true
+
+            // Debounce the end of wheeling
+            if (wheelTimeoutRef.current) clearTimeout(wheelTimeoutRef.current)
+            wheelTimeoutRef.current = setTimeout(() => {
+                isWheelingRef.current = false
+                hasCapturedStartRef.current = false
+            }, 500)
         }
 
         container.addEventListener('wheel', onWheel, { passive: false })
-        return () => container.removeEventListener('wheel', onWheel)
+        return () => {
+            container.removeEventListener('wheel', onWheel)
+            if (wheelTimeoutRef.current) clearTimeout(wheelTimeoutRef.current)
+        }
     }, [currentPhoto, editMode, updateCurrentConfig])
 
 
@@ -805,6 +827,22 @@ export function FrameTool() {
                             <Check size={16} strokeWidth={3} /> Done
                         </button>
                     </div>
+                )}
+
+                {/* --- Undo/Redo Floating Bar --- */}
+                {!isDragging && (
+                    <UndoRedoGroup
+                        undo={undo}
+                        redo={redo}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
+                        style={{
+                            position: 'absolute',
+                            top: '24px',
+                            left: '50%',
+                            transform: 'translateX(-50%)'
+                        }}
+                    />
                 )}
             </div>
 

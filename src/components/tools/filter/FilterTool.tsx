@@ -5,6 +5,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Image as ImageIcon, Settings } from 'lucide-react'
+import { UndoRedoGroup } from '../../ui/UndoRedoGroup'
+import { useHistory } from '../../../hooks/useHistory'
 import { useToolContext } from '../../../context/ToolContext'
 import { type SharedPhoto } from '../../../context/ToolContext'
 import { CustomDialog } from '../../ui/CustomDialog'
@@ -30,9 +32,11 @@ export function FilterTool() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const engineRef = useRef<FilterEngine | null>(null)
     const previewImageRef = useRef<HTMLImageElement | null>(null)
+    const isAdjustingRef = useRef(false)
+    const hasCapturedStartRef = useRef(false)
 
-    const [photos, setPhotos] = useState<PhotoWithConfig[]>([])
     const [activePhotoId, setActivePhotoId] = useState<string | null>(null)
+    const { state: photos, set: setPhotos, undo, redo, canUndo, canRedo } = useHistory<PhotoWithConfig[]>([])
     const [currentConfig, setCurrentConfig] = useState<FilterConfig>(DEFAULT_FILTER_CONFIG)
     const [lut, setLut] = useState<LUTData | null>(null)
     const [isExporting, setIsExporting] = useState(false)
@@ -131,13 +135,22 @@ export function FilterTool() {
     const handleConfigChange = useCallback((newConfig: FilterConfig) => {
         setCurrentConfig(newConfig)
 
-        // Update the photo's config
-        if (activePhotoId) {
-            setPhotos(prev => prev.map(p =>
-                p.id === activePhotoId ? { ...p, config: newConfig } : p
-            ))
+        if (!activePhotoId) return
+
+        // If we are adjusting (dragging slider), use replace=true to avoid flooding history
+        // BUT make sure we captured the start state at least once
+        const shouldReplace = isAdjustingRef.current && hasCapturedStartRef.current
+
+        setPhotos(prev => prev.map(p =>
+            p.id === activePhotoId
+                ? { ...p, config: newConfig }
+                : p
+        ), shouldReplace)
+
+        if (isAdjustingRef.current) {
+            hasCapturedStartRef.current = true
         }
-    }, [activePhotoId])
+    }, [activePhotoId, setPhotos])
 
     const handleLutChange = useCallback((newLut: LUTData | null) => {
         setLut(newLut)
@@ -375,6 +388,7 @@ export function FilterTool() {
             <div className="ft-filter-center">
                 {/* Toolbar */}
                 <div style={{
+                    position: 'relative',
                     padding: '12px 16px',
                     borderBottom: `1px solid ${isDark ? '#222' : '#e0e0e0'}`,
                     display: 'flex',
@@ -390,6 +404,18 @@ export function FilterTool() {
                         {activePhoto ? activePhoto.file.name : 'No photo selected'}
                     </span>
 
+                    <UndoRedoGroup
+                        undo={undo}
+                        redo={redo}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
+                        style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '55%',
+                            transform: 'translate(-50%, -50%)'
+                        }}
+                    />
                 </div>
 
                 {/* Canvas Area */}
@@ -445,6 +471,14 @@ export function FilterTool() {
                     transferProgress={transferProgress}
                     isApplying={isApplying}
                     applySuccess={applySuccess}
+                    onAdjustStart={() => {
+                        isAdjustingRef.current = true
+                        hasCapturedStartRef.current = false
+                    }}
+                    onAdjustEnd={() => {
+                        isAdjustingRef.current = false
+                        hasCapturedStartRef.current = false
+                    }}
                 />
             </div>
 

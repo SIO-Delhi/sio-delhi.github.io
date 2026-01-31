@@ -26,6 +26,8 @@ interface DevelopPanelProps {
     transferProgress?: number
     isApplying?: boolean
     applySuccess?: boolean
+    onAdjustStart?: () => void
+    onAdjustEnd?: () => void
 }
 
 interface SliderProps {
@@ -35,11 +37,13 @@ interface SliderProps {
     max: number
     step?: number
     onChange: (value: number) => void
+    onStart?: () => void
+    onEnd?: () => void
     color?: string
     gradient?: string // CSS gradient for the track background
 }
 
-function Slider({ label, value, min, max, step = 1, onChange, color, gradient }: SliderProps) {
+function Slider({ label, value, min, max, step = 1, onChange, onStart, onEnd, color, gradient }: SliderProps) {
     const { isDark } = useTheme()
     const percentage = ((value - min) / (max - min)) * 100
     const isNeutral = value === 0 || value === (min + max) / 2
@@ -157,6 +161,10 @@ function Slider({ label, value, min, max, step = 1, onChange, color, gradient }:
                     step={step}
                     value={value}
                     onChange={(e) => onChange(parseFloat(e.target.value))}
+                    onMouseDown={onStart}
+                    onMouseUp={onEnd}
+                    onTouchStart={onStart}
+                    onTouchEnd={onEnd}
                     style={{
                         position: 'absolute',
                         inset: 0,
@@ -249,7 +257,9 @@ export function DevelopPanel({
     isTransferring,
     transferProgress,
     isApplying,
-    applySuccess
+    applySuccess,
+    onAdjustStart,
+    onAdjustEnd,
 }: DevelopPanelProps) {
     const { isDark } = useTheme()
     const lutInputRef = useRef<HTMLInputElement>(null)
@@ -504,6 +514,8 @@ export function DevelopPanel({
                         max={5}
                         step={0.05}
                         onChange={(v) => updateConfig('exposure', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
                     />
                     <Slider
                         label="Contrast"
@@ -511,6 +523,8 @@ export function DevelopPanel({
                         min={-100}
                         max={100}
                         onChange={(v) => updateConfig('contrast', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
                     />
                     <Slider
                         label="Highlights"
@@ -518,6 +532,8 @@ export function DevelopPanel({
                         min={-100}
                         max={100}
                         onChange={(v) => updateConfig('highlights', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
                     />
                     <Slider
                         label="Shadows"
@@ -525,6 +541,8 @@ export function DevelopPanel({
                         min={-100}
                         max={100}
                         onChange={(v) => updateConfig('shadows', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
                     />
                     <Slider
                         label="Whites"
@@ -532,6 +550,8 @@ export function DevelopPanel({
                         min={-100}
                         max={100}
                         onChange={(v) => updateConfig('whites', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
                     />
                     <Slider
                         label="Blacks"
@@ -539,6 +559,8 @@ export function DevelopPanel({
                         min={-100}
                         max={100}
                         onChange={(v) => updateConfig('blacks', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
                     />
                 </Section>
 
@@ -594,11 +616,23 @@ export function DevelopPanel({
                         </select>
                     </div>
                     <Slider
+                        label="Hue"
+                        value={config.hue}
+                        min={-180}
+                        max={180}
+                        onChange={(v) => updateConfig('hue', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
+                        gradient="linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)"
+                    />
+                    <Slider
                         label="Temp"
                         value={config.temperature}
                         min={-100}
                         max={100}
                         onChange={(v) => updateConfig('temperature', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
                         gradient="linear-gradient(to right, #3b82f6, #fbbf24, #f97316)"
                     />
                     <Slider
@@ -607,6 +641,8 @@ export function DevelopPanel({
                         min={-100}
                         max={100}
                         onChange={(v) => updateConfig('tint', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
                         gradient="linear-gradient(to right, #10b981, #e5e5e5, #ec4899)"
                     />
                     <Slider
@@ -615,6 +651,8 @@ export function DevelopPanel({
                         min={-100}
                         max={100}
                         onChange={(v) => updateConfig('vibrance', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
                         gradient="linear-gradient(to right, #6b7280, #a855f7, #ec4899)"
                     />
                     <Slider
@@ -623,6 +661,8 @@ export function DevelopPanel({
                         min={-100}
                         max={100}
                         onChange={(v) => updateConfig('saturation', v)}
+                        onStart={onAdjustStart}
+                        onEnd={onAdjustEnd}
                         gradient="linear-gradient(to right, #9ca3af, #f43f5e, #ef4444)"
                     />
                 </Section>

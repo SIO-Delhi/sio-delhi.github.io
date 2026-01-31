@@ -18,6 +18,7 @@ uniform float u_temperature;  // -100 to +100
 uniform float u_tint;         // -100 to +100
 uniform float u_vibrance;     // -100 to +100
 uniform float u_saturation;   // -100 to +100
+uniform float u_hue;          // -180 to +180
 
 // Helper: Convert RGB to HSL
 vec3 rgb2hsl(vec3 c) {
@@ -147,11 +148,18 @@ void main() {
     float blacksAdjust = u_blacks / 100.0 * 0.1;
     rgb = rgb * (1.0 + whitesAdjust) + blacksAdjust;
     
-    // 7. Vibrance (selective saturation - protects skin tones)
+    // 7. Vibrance & Hue (Combined HSL ops)
     vec3 hsl = rgb2hsl(rgb);
+    
+    // Apply Hue
+    float hueShift = u_hue / 360.0;
+    hsl.x = fract(hsl.x + hueShift); // Wrap around 0.0-1.0
+
+    // Apply Vibrance
     float vibranceAmount = u_vibrance / 100.0;
     float saturationBoost = vibranceAmount * (1.0 - hsl.y); // Less boost for already saturated
     hsl.y = clamp(hsl.y + saturationBoost * 0.5, 0.0, 1.0);
+    
     rgb = hsl2rgb(hsl);
     
     // 8. Saturation (global)
