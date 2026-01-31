@@ -5,7 +5,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Image as ImageIcon, Settings } from 'lucide-react'
-import { UndoRedoGroup } from '../../ui/UndoRedoGroup'
 import { useHistory } from '../../../hooks/useHistory'
 import { useToolContext } from '../../../context/ToolContext'
 import { type SharedPhoto } from '../../../context/ToolContext'
@@ -36,7 +35,7 @@ export function FilterTool() {
     const hasCapturedStartRef = useRef(false)
 
     const [activePhotoId, setActivePhotoId] = useState<string | null>(null)
-    const { state: photos, set: setPhotos, undo, redo, canUndo, canRedo } = useHistory<PhotoWithConfig[]>([])
+    const { state: photos, set: setPhotos } = useHistory<PhotoWithConfig[]>([])
     const [currentConfig, setCurrentConfig] = useState<FilterConfig>(DEFAULT_FILTER_CONFIG)
     const [lut, setLut] = useState<LUTData | null>(null)
     const [isExporting, setIsExporting] = useState(false)
@@ -404,18 +403,6 @@ export function FilterTool() {
                         {activePhoto ? activePhoto.file.name : 'No photo selected'}
                     </span>
 
-                    <UndoRedoGroup
-                        undo={undo}
-                        redo={redo}
-                        canUndo={canUndo}
-                        canRedo={canRedo}
-                        style={{
-                            position: 'absolute',
-                            left: '50%',
-                            top: '55%',
-                            transform: 'translate(-50%, -50%)'
-                        }}
-                    />
                 </div>
 
                 {/* Canvas Area */}

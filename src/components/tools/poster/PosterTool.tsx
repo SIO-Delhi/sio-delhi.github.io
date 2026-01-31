@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Grid, Layers, Type, Image as ImageIcon, Briefcase, Download, Upload, AlertCircle, Plus, X, Box, Calendar, User, Palette, Edit3, RefreshCcw, Eye } from 'lucide-react'
-import { UndoRedoGroup } from '../../ui/UndoRedoGroup'
 import { useHistory } from '../../../hooks/useHistory'
 import posterSvgUrl from '../../../assets/poster.svg'
 import './poster.css'
@@ -38,7 +37,7 @@ const INITIAL_STATE: PosterState = {
 
 
 export function PosterTool() {
-    const { state, set: setState, undo, redo, canUndo, canRedo } = useHistory<PosterState>(INITIAL_STATE)
+    const { state, set: setState, reset: resetState } = useHistory<PosterState>(INITIAL_STATE)
     const [svgContent, setSvgContent] = useState<string>('')
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
@@ -299,13 +298,6 @@ style = "font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-size: 40p
                             <h1 className="pt-header-title">Poster Details</h1>
                             <p className="pt-header-subtitle">Customize your event poster</p>
                         </div>
-                        <UndoRedoGroup
-                            undo={undo}
-                            redo={redo}
-                            canUndo={canUndo}
-                            canRedo={canRedo}
-                            className="bg-zinc-900/50 backdrop-blur-md border border-white/10 shadow-lg"
-                        />
                     </div>
                 </div>
 

@@ -12,7 +12,6 @@ import {
 
 import './frame.css'
 import { CustomDialog } from '../../ui/CustomDialog'
-import { UndoRedoGroup } from '../../ui/UndoRedoGroup'
 import { useHistory } from '../../../hooks/useHistory'
 
 // --- Types ---
@@ -51,7 +50,7 @@ export function FrameTool() {
 
     // Assets
     const [frameURL, setFrameURL] = useState<string | null>(null)
-    const { state: photos, set: setPhotos, undo, redo, canUndo, canRedo } = useHistory<PhotoAsset[]>([])
+    const { state: photos, set: setPhotos } = useHistory<PhotoAsset[]>([])
     const [activePhotoIndex, setActivePhotoIndex] = useState<number>(0)
 
     const navigate = useNavigate()
@@ -829,21 +828,7 @@ export function FrameTool() {
                     </div>
                 )}
 
-                {/* --- Undo/Redo Floating Bar --- */}
-                {!isDragging && (
-                    <UndoRedoGroup
-                        undo={undo}
-                        redo={redo}
-                        canUndo={canUndo}
-                        canRedo={canRedo}
-                        style={{
-                            position: 'absolute',
-                            top: '24px',
-                            left: '50%',
-                            transform: 'translateX(-50%)'
-                        }}
-                    />
-                )}
+                {/* --- Undo/Redo Floating Bar REMOVED --- */}
             </div>
 
             {/* --- LEFT SIDEBAR (Assets) --- */}
