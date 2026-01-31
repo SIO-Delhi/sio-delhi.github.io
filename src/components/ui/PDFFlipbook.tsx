@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, forwardRef } from 'react'
 import HTMLFlipBook from 'react-pageflip'
-import { ChevronLeft, ChevronRight, Loader2, Maximize, Download } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Maximize, Download, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 
 interface PDFFlipbookProps {
     url: string
@@ -107,9 +107,6 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, 
     }, [pdf, number, scale, shouldRender, pageLoaded])
 
     const isEven = number % 2 === 0
-    // Spine shadow: Darker on the edge that touches the spine
-    // Left page (Even) -> Spine is on Right edge
-    // Right page (Odd) -> Spine is on Left edge
     const spineShadow = isEven
         ? 'inset -10px 0 20px -10px rgba(0,0,0,0.2)'
         : 'inset 10px 0 20px -10px rgba(0,0,0,0.2)'
@@ -121,22 +118,14 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, 
             justifyContent: 'center',
             alignItems: 'center',
             overflow: 'hidden',
-            // Reserve explicit layout size to prevent CLS
             width: width ? `${width}px` : '100%',
             height: height ? `${height}px` : '100%',
-            // Combine general depth shadow with spine shadow
             boxShadow: `${spineShadow}, inset 0 0 5px rgba(0,0,0,0.05)`,
-            // Make flips originate from the spine for realistic directionality
             transformOrigin: isEven ? 'right center' : 'left center',
-            // Only animate box-shadow here; the flip library animates transforms directly.
-            // Also enable GPU acceleration for smoother transforms.
             transition: 'box-shadow 220ms ease',
             willChange: 'transform',
             transform: 'translateZ(0)'
         }}>
-            {/* Keep canvas mounted if likely to be needed, but hide if not loaded. 
-                Actually, for memory, we only render canvas if it SHOULD be there. 
-                But we need the ref to exist for logic. */}
             {(shouldRender || pageLoaded) && (
                 <>
                     <canvas
@@ -182,23 +171,150 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
     })
     const flipBookRef = useRef<any>(null)
     const containerRef = useRef<HTMLDivElement>(null)
+    const zoomWrapperRef = useRef<HTMLDivElement>(null)
 
     // Track current page index (0-based) from flipbook events
     const [currentPageIndex, setCurrentPageIndex] = useState(0)
+    const savedPageRef = useRef(0)
 
     // Layout State
     const [usePortrait, setUsePortrait] = useState(false)
 
+    // Zoom state
+    const [zoom, setZoom] = useState(1)
+    const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
+    const isPanningRef = useRef(false)
+    const panStartRef = useRef({ x: 0, y: 0 })
+    const lastPanOffset = useRef({ x: 0, y: 0 })
+
+    const MIN_ZOOM = 1
+    const MAX_ZOOM = 3
+    const ZOOM_STEP = 0.25
+
+    const handleZoomIn = useCallback(() => {
+        setZoom(prev => Math.min(prev + ZOOM_STEP, MAX_ZOOM))
+    }, [])
+
+    const handleZoomOut = useCallback(() => {
+        setZoom(prev => {
+            const next = Math.max(prev - ZOOM_STEP, MIN_ZOOM)
+            if (next === 1) setPanOffset({ x: 0, y: 0 })
+            return next
+        })
+    }, [])
+
+    const handleZoomReset = useCallback(() => {
+        setZoom(1)
+        setPanOffset({ x: 0, y: 0 })
+    }, [])
+
+    // Pinch-to-zoom
+    const pinchRef = useRef<{ dist: number; zoom: number } | null>(null)
+
+    const getTouchDistance = (touches: TouchList) => {
+        const dx = touches[0].clientX - touches[1].clientX
+        const dy = touches[0].clientY - touches[1].clientY
+        return Math.sqrt(dx * dx + dy * dy)
+    }
+
+    const touchPanRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null)
+
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            // Pinch start
+            e.preventDefault()
+            touchPanRef.current = null
+            pinchRef.current = {
+                dist: getTouchDistance(e.touches),
+                zoom: zoom
+            }
+        } else if (e.touches.length === 1 && zoom > 1) {
+            // Single finger pan when zoomed
+            e.preventDefault()
+            touchPanRef.current = {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY,
+                panX: panOffset.x,
+                panY: panOffset.y
+            }
+        }
+    }, [zoom, panOffset])
+
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        if (e.touches.length === 2 && pinchRef.current) {
+            // Pinch zoom
+            e.preventDefault()
+            touchPanRef.current = null
+            const newDist = getTouchDistance(e.touches)
+            const scale = newDist / pinchRef.current.dist
+            const newZoom = Math.min(Math.max(pinchRef.current.zoom * scale, MIN_ZOOM), MAX_ZOOM)
+            setZoom(newZoom)
+            if (newZoom === 1) setPanOffset({ x: 0, y: 0 })
+        } else if (e.touches.length === 1 && touchPanRef.current && zoom > 1) {
+            // Single finger drag to pan
+            e.preventDefault()
+            const dx = e.touches[0].clientX - touchPanRef.current.x
+            const dy = e.touches[0].clientY - touchPanRef.current.y
+            setPanOffset({
+                x: touchPanRef.current.panX + dx,
+                y: touchPanRef.current.panY + dy
+            })
+        }
+    }, [zoom])
+
+    const handleTouchEnd = useCallback(() => {
+        pinchRef.current = null
+        touchPanRef.current = null
+    }, [])
+
+    // Mouse wheel zoom
+    const handleWheel = useCallback((e: React.WheelEvent) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            const delta = e.deltaY > 0 ? -0.1 : 0.1
+            setZoom(prev => {
+                const next = Math.min(Math.max(prev + delta, MIN_ZOOM), MAX_ZOOM)
+                if (next === 1) setPanOffset({ x: 0, y: 0 })
+                return next
+            })
+        }
+    }, [])
+
+    // Pan when zoomed (mouse drag)
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        if (zoom <= 1) return
+        isPanningRef.current = true
+        panStartRef.current = { x: e.clientX, y: e.clientY }
+        lastPanOffset.current = { ...panOffset }
+        e.preventDefault()
+    }, [zoom, panOffset])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        if (!isPanningRef.current || zoom <= 1) return
+        const dx = e.clientX - panStartRef.current.x
+        const dy = e.clientY - panStartRef.current.y
+        setPanOffset({
+            x: lastPanOffset.current.x + dx,
+            y: lastPanOffset.current.y + dy
+        })
+    }, [zoom])
+
+    const handleMouseUp = useCallback(() => {
+        isPanningRef.current = false
+    }, [])
 
     // Controls logic
     const [isFullscreen, setIsFullscreen] = useState(false)
-    const toggleFullscreen = () => {
+
+    const toggleFullscreen = useCallback(() => {
+        // Save current page before toggling
+        savedPageRef.current = currentPageIndex
         if (!document.fullscreenElement && containerRef.current) {
             containerRef.current.requestFullscreen().catch(err => console.error(err))
         } else {
             document.exitFullscreen()
         }
-    }
+    }, [currentPageIndex])
 
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -207,6 +323,24 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
         document.addEventListener('fullscreenchange', handleFullscreenChange)
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
     }, [])
+
+    // Restore page after fullscreen toggle causes remount
+    useEffect(() => {
+        if (flipBookRef.current && savedPageRef.current > 0) {
+            // The HTMLFlipBook remounts due to key change, so we use startPage via key
+            // But we also try to flip to the saved page after a short delay
+            const timer = setTimeout(() => {
+                if (flipBookRef.current) {
+                    try {
+                        flipBookRef.current.pageFlip().flip(savedPageRef.current)
+                    } catch {
+                        // flip method might not exist on all versions
+                    }
+                }
+            }, 100)
+            return () => clearTimeout(timer)
+        }
+    }, [isFullscreen, usePortrait])
 
     // Load PDF
     useEffect(() => {
@@ -219,7 +353,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                 }
                 const loadingTask = window.pdfjsLib.getDocument({
                     url,
-                    verbosity: 0 // Suppress "missing font" warnings
+                    verbosity: 0
                 })
                 const doc = await loadingTask.promise
                 setPdf(doc)
@@ -240,32 +374,22 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
         const updateSize = () => {
             if (!containerRef.current) return
 
-            // 1. Determine Mode based on Window Width (User preference mostly)
-            // If explicit fullscreen, we use the screen dimensions
             const windowWidth = window.innerWidth
-            const isMobile = windowWidth < 768 // Standard Tablet/Desktop breakpoint
+            const isMobile = windowWidth < 768
             setUsePortrait(isMobile)
 
-            // 2. Calculate Available Space
-            // In fullscreen, we use the bounding box of the container (which should be 100% of viewport)
-            // In normal mode, we use the container's width, bounded by a max.
             const { width: boundsWidth, height: boundsHeight } = containerRef.current.getBoundingClientRect()
 
             let w = boundsWidth
             let h = boundsHeight
 
-            // Normal mode limits
             if (!isFullscreen) {
-                // Max width for the viewer in rendering
                 const MAX_APP_WIDTH = 1200
                 if (w > MAX_APP_WIDTH) w = MAX_APP_WIDTH
 
-                // Height calculation
                 const aspectRatio = 1.41
                 h = isMobile ? w * aspectRatio : (w / 2) * aspectRatio
 
-                // Cap height to viewport
-                // Subtract top padding (Navbar ~80px + margin)
                 const maxHeight = isFullscreen
                     ? window.innerHeight * 0.95
                     : window.innerHeight - (isMobile ? 180 : 120)
@@ -275,17 +399,13 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                     w = isMobile ? h / aspectRatio : (h / aspectRatio) * 2
                 }
             } else {
-                // Fullscreen Mode
-                // We want to fit within the screen with some padding
-                const safeH = window.innerHeight - 80 // Leave room for controls
+                const safeH = window.innerHeight - 80
                 const safeW = window.innerWidth - 40
 
                 const aspectRatio = 1.41
-                // Try fitting by height first
                 h = safeH
                 w = isMobile ? h / aspectRatio : (h / aspectRatio) * 2
 
-                // If width overflows, fit by width
                 if (w > safeW) {
                     w = safeW
                     h = isMobile ? w * aspectRatio : (w / 2) * aspectRatio
@@ -293,26 +413,25 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
             }
 
             setContainerSize({ width: w, height: h })
-            // Adjust scale slightly for cleaner rendering if needed
         }
 
         const observer = new ResizeObserver(() => {
-            // Debounce or just run? React state mismatch might occur if too fast, but usually fine.
             window.requestAnimationFrame(updateSize)
         })
 
         observer.observe(containerRef.current)
-        updateSize() // Initial call
+        updateSize()
 
         return () => observer.disconnect()
-    }, [isFullscreen]) // Re-calc when fullscreen toggles
+    }, [isFullscreen])
 
     const flipRafRef = useRef<number | null>(null)
 
     const onFlip = useCallback((e: any) => {
         if (flipRafRef.current) cancelAnimationFrame(flipRafRef.current)
         flipRafRef.current = requestAnimationFrame(() => {
-            setCurrentPageIndex(e.data) // update page index on next frame
+            setCurrentPageIndex(e.data)
+            savedPageRef.current = e.data
             flipRafRef.current = null
         })
     }, [])
@@ -329,23 +448,33 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
     // Page list helper
     const pages = Array.from({ length: numPages }, (_, i) => i + 1)
 
-    // Calculate rendering window
-    // Render current page, +/- 2 pages for smoothness, and maybe page 1 (cover) always?
-    // Page 1 is index 0.
-    const renderWindow = 5 // Reduced window to save memory
+    const renderWindow = 5
 
-    // Helper to determine if a page should force render
     const shouldRenderPage = (pageIndex: number) => {
-        // Always render cover (page 0)
         if (pageIndex === 0) return true
-
-        // Range check
         const distance = Math.abs(pageIndex - currentPageIndex)
         return distance <= renderWindow
     }
 
-    // Page width calculation: add 1px on wide screens so two page widths fully cover the container (prevents gaps)
     const pageWidth = Math.max(300, Math.ceil(containerSize.width / (usePortrait ? 1 : 2) + (usePortrait ? 0 : 1)))
+
+    const controlBtnStyle: React.CSSProperties = {
+        background: 'transparent',
+        border: 'none',
+        color: '#ccc',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '4px',
+        borderRadius: '4px',
+        transition: 'color 0.15s'
+    }
+
+    const separatorStyle: React.CSSProperties = {
+        width: '1px',
+        height: '16px',
+        background: '#444'
+    }
 
     return (
         <div
@@ -359,9 +488,8 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                 background: isFullscreen ? '#1a1a1a' : 'transparent',
                 padding: isFullscreen ? '20px' : '0',
                 minHeight: '300px',
-                zIndex: isFullscreen ? 100 : 10, // Ensure below Navbar (z=50) normally, but above in fullscreen
-                isolation: 'isolate', // Create new stacking context so children don't leak z-index
-
+                zIndex: isFullscreen ? 100 : 10,
+                isolation: 'isolate',
             }}
         >
             {/* Loading / Cover State */}
@@ -416,54 +544,69 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                 </div>
             )}
 
-            {/* FlipBook */}
+            {/* FlipBook with zoom wrapper */}
             {!isLoading && pdf && containerSize.width > 0 && (
-                <div style={{
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-                    overflow: 'hidden',
-                    // Center the cover when closed (Page 0) on Desktop
-                    // Closed book (cover) is the right half of the spread.
-                    // We translate -25% (half of the right page width relative to total) to move the visual center of the cover to the center of the container.
-                    transform: !usePortrait && currentPageIndex === 0 ? 'translateX(-25%)' : 'translateX(0)',
-                    transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)'
-                }} >
-                    {/* @ts-ignore */}
-                    <HTMLFlipBook
-                        key={`${usePortrait}-${isFullscreen}`}
-                        width={pageWidth}
-                        height={containerSize.height}
-                        size="fixed"
-                        minWidth={300}
-                        maxWidth={1000}
-                        minHeight={400}
-                        maxHeight={1533}
-                        // Stronger shadow and slightly slower flipping (applies to all sizes now)
-                        maxShadowOpacity={0.45}
-                        showCover={true}
-                        mobileScrollSupport={true}
-                        usePortrait={usePortrait}
-                        startPage={0}
-                        className="demo-book"
-                        style={{ margin: '0 auto' }}
-                        ref={flipBookRef}
-                        flippingTime={750}
-                        useMouseEvents={true}
-                        swipeDistance={30}
-                        onFlip={onFlip}
-                    >
-                        {pages.map((pageNum, index) => (
-                            <Page
-                                key={pageNum}
-                                number={pageNum}
-                                pdf={pdf}
-                                scale={1.0}
-                                width={pageWidth}
-                                height={containerSize.height}
-                                shouldRender={shouldRenderPage(index)}
-                                isSinglePage={usePortrait}
-                            />
-                        ))}
-                    </HTMLFlipBook>
+                <div
+                    ref={zoomWrapperRef}
+                    style={{
+                        overflow: zoom > 1 ? 'hidden' : 'visible',
+                        cursor: zoom > 1 ? 'grab' : 'default',
+                        touchAction: 'none'
+                    }}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onWheel={handleWheel}
+                    onMouseDown={zoom > 1 ? handleMouseDown : undefined}
+                    onMouseMove={zoom > 1 ? handleMouseMove : undefined}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                >
+                    <div style={{
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+                        overflow: 'hidden',
+                        transform: `scale(${zoom}) translate(${panOffset.x / zoom}px, ${panOffset.y / zoom}px)` +
+                            (!usePortrait && currentPageIndex === 0 ? ' translateX(-25%)' : ''),
+                        transformOrigin: 'center center',
+                        transition: isPanningRef.current ? 'none' : 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
+                    }}>
+                        {/* @ts-ignore */}
+                        <HTMLFlipBook
+                            key={`${usePortrait}-${isFullscreen}`}
+                            width={pageWidth}
+                            height={containerSize.height}
+                            size="fixed"
+                            minWidth={300}
+                            maxWidth={1000}
+                            minHeight={400}
+                            maxHeight={1533}
+                            maxShadowOpacity={0.45}
+                            showCover={true}
+                            mobileScrollSupport={zoom <= 1}
+                            usePortrait={usePortrait}
+                            startPage={savedPageRef.current}
+                            className="demo-book"
+                            style={{ margin: '0 auto' }}
+                            ref={flipBookRef}
+                            flippingTime={750}
+                            useMouseEvents={zoom <= 1}
+                            swipeDistance={30}
+                            onFlip={onFlip}
+                        >
+                            {pages.map((pageNum, index) => (
+                                <Page
+                                    key={pageNum}
+                                    number={pageNum}
+                                    pdf={pdf}
+                                    scale={1.0}
+                                    width={pageWidth}
+                                    height={containerSize.height}
+                                    shouldRender={shouldRenderPage(index)}
+                                    isSinglePage={usePortrait}
+                                />
+                            ))}
+                        </HTMLFlipBook>
+                    </div>
                 </div>
             )}
 
@@ -471,8 +614,8 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                padding: '10px 20px',
+                gap: '8px',
+                padding: '10px 16px',
                 background: 'rgba(20, 20, 20, 0.9)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '30px',
@@ -483,27 +626,60 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                 justifyContent: 'center',
                 zIndex: 30
             }}>
-                <button
-                    onClick={prevFlip}
-                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}
-                >
+                {/* Navigation */}
+                <button onClick={prevFlip} style={controlBtnStyle} title="Previous page">
                     <ChevronLeft size={20} />
                 </button>
 
-                <div style={{ color: '#ccc', fontSize: '0.9rem' }}>
+                <div style={{ color: '#ccc', fontSize: '0.9rem', minWidth: '60px', textAlign: 'center' }}>
                     {currentPageIndex + 1} / {numPages}
                 </div>
 
-                <button
-                    onClick={nextFlip}
-                    style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}
-                >
+                <button onClick={nextFlip} style={controlBtnStyle} title="Next page">
                     <ChevronRight size={20} />
                 </button>
 
-                <div style={{ width: '1px', height: '16px', background: '#444' }} />
+                <div style={separatorStyle} />
 
-                <button onClick={toggleFullscreen} title="Fullscreen" style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer' }}>
+                {/* Zoom Controls */}
+                <button
+                    onClick={handleZoomOut}
+                    style={{ ...controlBtnStyle, opacity: zoom <= MIN_ZOOM ? 0.4 : 1 }}
+                    disabled={zoom <= MIN_ZOOM}
+                    title="Zoom out"
+                >
+                    <ZoomOut size={18} />
+                </button>
+
+                <div style={{
+                    color: '#999',
+                    fontSize: '0.75rem',
+                    minWidth: '36px',
+                    textAlign: 'center',
+                    fontVariantNumeric: 'tabular-nums'
+                }}>
+                    {Math.round(zoom * 100)}%
+                </div>
+
+                <button
+                    onClick={handleZoomIn}
+                    style={{ ...controlBtnStyle, opacity: zoom >= MAX_ZOOM ? 0.4 : 1 }}
+                    disabled={zoom >= MAX_ZOOM}
+                    title="Zoom in"
+                >
+                    <ZoomIn size={18} />
+                </button>
+
+                {zoom > 1 && (
+                    <button onClick={handleZoomReset} style={controlBtnStyle} title="Reset zoom">
+                        <RotateCcw size={16} />
+                    </button>
+                )}
+
+                <div style={separatorStyle} />
+
+                {/* Fullscreen & Download */}
+                <button onClick={toggleFullscreen} title="Fullscreen" style={controlBtnStyle}>
                     <Maximize size={18} />
                 </button>
                 <button
@@ -521,12 +697,11 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                             window.URL.revokeObjectURL(blobUrl);
                         } catch (error) {
                             console.error('Download failed:', error);
-                            // Fallback to simple link navigation if fetch fails
                             window.location.href = url;
                         }
                     }}
                     title="Download PDF"
-                    style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    style={controlBtnStyle}
                 >
                     <Download size={18} />
                 </button>
@@ -538,20 +713,14 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
 
                     /* Pageflip smoothing + gap fixes */
                     .demo-book { perspective: 3500px; }
-                    /* Ensure the viewport hides any subpixel hairlines */
                     .demo-book .book-viewport, .demo-book .book { overflow: hidden !important; }
                     .demo-book .page-wrapper, .demo-book .page { margin: 0 !important; box-sizing: border-box; padding: 0 !important; transform-style: preserve-3d; backface-visibility: hidden; will-change: transform, opacity; border: none !important; }
                     .demo-book .page > canvas { display:block; width:100% !important; height:100% !important; transform: translateZ(0); will-change: transform; }
-                    /* Small negative overlap to avoid a hairline gutter from rounding; harmless and invisible when pages meet exactly */
                     .demo-book .page, .demo-book .page-wrapper { margin-right: -1px !important; }
                     .demo-book .page:last-child, .demo-book .page-wrapper:last-child { margin-right: 0 !important; }
-                    /* remove any internal borders/shadows that create the hairline */
                     .demo-book .page, .demo-book .page * { outline: none !important; box-shadow: none !important; }
                     .demo-book .page-shadow, .demo-book .page__shadow { transition: opacity 0.22s ease, transform 0.22s ease; }
-
-                    /* Avoid CSS transition on the element the library is animating (prevents jank). */
                     .demo-book .page-wrapper { will-change: transform; transform: translateZ(0); }
-                    /* Ensure the outer wrapper transition matches our translate logic */
                     .demo-book { transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
                 `}</style>
         </div>
