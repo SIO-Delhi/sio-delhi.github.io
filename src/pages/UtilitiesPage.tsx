@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Frame, ChevronRight, PenTool } from 'lucide-react'
+import { Frame, Sliders, ChevronRight, PenTool } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { UtilitiesSplash } from '../components/ui/UtilitiesSplash'
 
@@ -22,10 +22,18 @@ export function UtilitiesPage() {
         {
             id: 'frame-tool',
             title: 'Frame Tool',
-            description: 'Apply branding frames and overlays to photos for social media sharing.',
+            description: 'Apply branding frames and overlays to photos in bulk for social media sharing.',
             icon: <Frame size={24} color="#ff3b3b" />,
             path: '/utilities/frame-tool',
             color: '#ff3b3b'
+        },
+        {
+            id: 'filter-tool',
+            title: 'Filter Tool',
+            description: 'Batch image processing with LUT profiles, color grading, and export in bulk.',
+            icon: <Sliders size={24} color="#a78bfa" />,
+            path: '/utilities/filter-tool',
+            color: '#a78bfa'
         },
     ]
 
@@ -54,7 +62,7 @@ export function UtilitiesPage() {
                         maxWidth: '600px',
                         lineHeight: 1.6
                     }}>
-                        Helper tools and utilities for SIO Delhi content management and branding.
+                        Helper tools and utilities for content management and branding.
                         More tools will be added to this collection.
                     </p>
                 </div>

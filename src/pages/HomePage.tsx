@@ -102,6 +102,10 @@ export function HomePage() {
         }
     }, [])
 
+    if (loading) {
+        return <HomePageSkeleton />
+    }
+
     return (
         <>
             {/* Global Fixed Flag Background - Only on Home */}
@@ -167,5 +171,61 @@ export function HomePage() {
 
             <ContactSection />
         </>
+    )
+}
+
+function SkeletonBlock({ width = '100%', height = '20px', borderRadius = '8px', style = {} }: {
+    width?: string; height?: string; borderRadius?: string; style?: React.CSSProperties
+}) {
+    return (
+        <div style={{
+            width, height, borderRadius,
+            background: 'linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'skeletonShimmer 1.5s ease-in-out infinite',
+            ...style
+        }} />
+    )
+}
+
+function HomePageSkeleton() {
+    return (
+        <div style={{
+            minHeight: '100vh',
+            background: '#09090b',
+            color: 'white',
+            fontFamily: '"DM Sans", sans-serif',
+            overflow: 'hidden'
+        }}>
+            <style>{`
+                @keyframes skeletonShimmer {
+                    0% { background-position: 200% 0; }
+                    100% { background-position: -200% 0; }
+                }
+            `}</style>
+
+            {/* Hero skeleton */}
+            <div style={{ padding: '160px 40px 80px', maxWidth: '1400px', margin: '0 auto' }}>
+                <SkeletonBlock width="120px" height="14px" style={{ marginBottom: '24px' }} />
+                <SkeletonBlock width="60%" height="48px" borderRadius="12px" style={{ marginBottom: '16px' }} />
+                <SkeletonBlock width="40%" height="48px" borderRadius="12px" style={{ marginBottom: '32px' }} />
+                <SkeletonBlock width="80%" height="18px" style={{ marginBottom: '12px' }} />
+                <SkeletonBlock width="50%" height="18px" style={{ marginBottom: '40px' }} />
+                <SkeletonBlock width="160px" height="48px" borderRadius="100px" />
+            </div>
+
+            {/* Section skeletons */}
+            {[1, 2, 3].map(i => (
+                <div key={i} style={{ padding: '80px 40px', maxWidth: '1400px', margin: '0 auto' }}>
+                    <SkeletonBlock width="80px" height="12px" style={{ marginBottom: '16px' }} />
+                    <SkeletonBlock width="300px" height="32px" borderRadius="10px" style={{ marginBottom: '32px' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+                        {[1, 2, 3].map(j => (
+                            <SkeletonBlock key={j} height="200px" borderRadius="16px" />
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
     )
 }

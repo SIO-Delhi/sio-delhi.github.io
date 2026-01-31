@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { Heart, FlaskConical, X, Copy } from 'lucide-react'
+import { Heart, X, Copy } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
 import { useTheme } from '../../context/ThemeContext'
@@ -54,7 +54,7 @@ export function UtilitiesNavbar() {
                         maxWidth: '1400px'
                     }}
                 >
-                    {/* Left: SIO Logo & Flask */}
+                    {/* Left: SIO Logo */}
                     <a
                         href="/"
                         onClick={(e) => {
@@ -64,9 +64,10 @@ export function UtilitiesNavbar() {
                         style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '12px',
-                            padding: '8px 16px 8px 8px',
-                            borderRadius: '100px',
+                            justifyContent: 'center',
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '50%',
                             background: isDark
                                 ? 'rgba(30, 30, 32, 0.5)'
                                 : 'rgba(255, 255, 255, 0.25)',
@@ -79,77 +80,14 @@ export function UtilitiesNavbar() {
                                 ? '0 4px 20px rgba(0, 0, 0, 0.3)'
                                 : '0 4px 30px rgba(0, 0, 0, 0.1)',
                             transition: 'all 0.3s ease',
-                            flexShrink: 0,
-                            cursor: 'pointer',
                             textDecoration: 'none',
-                            position: 'relative'
                         }}
                     >
-                        <div style={{ position: 'relative' }}>
-                            <div
-                                style={{
-                                    width: '36px',
-                                    height: '36px',
-                                    borderRadius: '50%',
-                                    background: 'transparent',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    overflow: 'hidden'
-                                }}
-                            >
-                                <img
-                                    src={siodelLogo}
-                                    alt="SIO Delhi Logo"
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                />
-                            </div>
-
-                            {/* Flask Icon Overlay */}
-                            <div style={{
-                                position: 'absolute',
-                                top: -12,
-                                right: -12,
-                                width: '24px',
-                                height: '24px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}>
-                                {/* Glass Circle */}
-                                <div style={{
-                                    position: 'absolute',
-                                    width: '20px',
-                                    height: '20px',
-                                    borderRadius: '50%',
-                                    background: 'radial-gradient(circle at 30% 30%, rgba(255, 59, 59, 0.2), rgba(255, 0, 0, 0.05))',
-                                    backdropFilter: 'blur(2px)',
-                                    border: '1px solid rgba(255, 59, 59, 0.3)',
-                                    zIndex: -1
-                                }} />
-                                <FlaskConical size={12} strokeWidth={2} color="#FCA5A5" style={{ filter: 'drop-shadow(0 0 4px rgba(255,59,59,0.5))', marginBottom: '-2px' }} />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-                            <span style={{
-                                fontSize: '0.75rem',
-                                fontWeight: 500,
-                                color: '#fdedcb',
-                                letterSpacing: '-0.01em',
-                                mixBlendMode: 'difference'
-                            }}>
-                                Students Islamic Organization
-                            </span>
-                            <span style={{
-                                fontSize: '0.7rem',
-                                fontWeight: 500,
-                                color: '#ff3b3b',
-                                letterSpacing: '-0.01em',
-                            }}>
-                                Delhi Zone
-                            </span>
-                        </div>
+                        <img
+                            src={siodelLogo}
+                            alt="SIO Delhi Logo"
+                            style={{ width: '28px', height: '28px', objectFit: 'contain' }}
+                        />
                     </a>
 
                     {/* Right: Support Button */}

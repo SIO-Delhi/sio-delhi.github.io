@@ -238,7 +238,7 @@ export function FrameTool() {
                 } else {
                     // Scale Frame
                     const sensitivity = 0.005
-                    const newFrameScale = Math.max(0.1, Math.min(2, dragStartConfig.frameScale + delta * sensitivity))
+                    const newFrameScale = Math.max(0.01, Math.min(2, dragStartConfig.frameScale + delta * sensitivity))
                     updateCurrentConfig(prev => ({ ...prev, frameScale: newFrameScale }))
                 }
             }
@@ -287,7 +287,7 @@ export function FrameTool() {
             updateCurrentConfig(prev => ({ ...prev, cropSize: newCropSize }))
         } else {
             const delta = e.deltaY * -0.002
-            const newFrameScale = Math.max(0.1, Math.min(2, currentPhoto.config.frameScale + delta))
+            const newFrameScale = Math.max(0.01, Math.min(2, currentPhoto.config.frameScale + delta))
             updateCurrentConfig(prev => ({ ...prev, frameScale: newFrameScale }))
         }
     }
@@ -964,7 +964,7 @@ export function FrameTool() {
                                         </div>
                                         <input
                                             type="range"
-                                            min="10" max="200" step="1"
+                                            min="1" max="200" step="1"
                                             value={currentPhoto.config.frameScale * 100}
                                             onChange={e => setCurrentConfig({ frameScale: parseInt(e.target.value) / 100 })}
                                             className="ft-range-input"

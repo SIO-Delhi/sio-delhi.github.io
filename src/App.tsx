@@ -28,6 +28,7 @@ import { GarbageCollector } from './components/admin/GarbageCollector'
 import { PublicForm } from './pages/PublicForm'
 import { UtilitiesPage } from './pages/UtilitiesPage'
 import { FrameToolPage } from './pages/FrameToolPage'
+import { FilterToolPage } from './pages/FilterToolPage'
 
 
 function App() {
@@ -63,6 +64,13 @@ function App() {
 
           {/* Public Form Route - outside admin, no main layout */}
           <Route path="/f/:formId" element={<PublicForm />} />
+
+          {/* Filter Tool - outside Layout to hide top navbar */}
+          <Route path="/utilities/filter-tool" element={<FilterToolPage />} />
+          <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
+          <Route path="/utilities" element={<UtilitiesPage />} />
+
+
 
           {/* Main Site Routes - wildcard catch-all wrapped in Layout */}
           <Route path="/*" element={
