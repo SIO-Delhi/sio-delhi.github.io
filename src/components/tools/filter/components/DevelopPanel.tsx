@@ -230,11 +230,9 @@ export function DevelopPanel({
 
     return (
         <div style={{
-            width: '280px',
-            minWidth: '280px',
+            width: '100%',
             height: '100%',
             background: isDark ? '#0a0a0a' : '#f8f8f8',
-            borderLeft: `1px solid ${isDark ? '#222' : '#e0e0e0'}`,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
@@ -516,16 +514,14 @@ export function DevelopPanel({
                         gradient="linear-gradient(to right, #9ca3af, #f43f5e, #ef4444)"
                     />
                 </Section>
-            </div>
 
-            {/* Footer Actions */}
-            <div style={{
-                padding: '14px 16px',
-                borderTop: `1px solid ${isDark ? '#1a1a1a' : '#eee'}`,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-            }}>
+                {/* Action Buttons */}
+                <div style={{
+                    padding: '14px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                }}>
                 <button
                     onClick={onApplyToAll}
                     disabled={!hasMultiplePhotos}
@@ -585,6 +581,7 @@ export function DevelopPanel({
                         </>
                     )}
                 </button>
+                </div>
             </div>
         </div>
     )

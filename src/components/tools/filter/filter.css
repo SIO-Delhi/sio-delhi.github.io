@@ -84,8 +84,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
     background-image: radial-gradient(#3f3f46 1.5px, transparent 1.5px);
     background-size: 24px 24px;
     overflow: hidden;
@@ -95,7 +94,7 @@
 @media (min-width: 1024px) {
     .ft-filter-center {
         flex: 1;
-        height: auto;
+        height: 100%;
         order: 2;
         min-height: 0;
     }

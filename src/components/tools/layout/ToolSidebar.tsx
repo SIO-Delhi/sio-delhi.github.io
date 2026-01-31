@@ -139,8 +139,8 @@ export function ToolSidebar({ isCollapsed, setIsCollapsed, onCollapseChange }: T
 
                 <div ref={contentRef} style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '24px 20px', gap: '32px' }}>
 
-                    {/* Logo */}
-                    {!isCollapsed && (
+                    {/* Logo - hidden on mobile since mobile header already shows it */}
+                    {!isCollapsed && window.innerWidth >= 768 && (
                         <a href="/" onClick={(e) => { e.preventDefault(); navigate('/') }} style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', cursor: 'pointer' }}>
                             <div style={{ width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <img src={logoPng} alt="SIO Delhi Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />

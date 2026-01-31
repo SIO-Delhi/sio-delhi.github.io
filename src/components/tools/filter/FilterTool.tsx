@@ -3,6 +3,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { Image as ImageIcon, Settings } from 'lucide-react'
 import { useTheme } from '../../../context/ThemeContext'
 import type { FilterConfig } from './FilterEngine'
 import { FilterEngine, DEFAULT_FILTER_CONFIG } from './FilterEngine'
@@ -12,6 +13,7 @@ import { DevelopPanel } from './components/DevelopPanel'
 import type { LUTData } from './utils/lutParser'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
+import './filter.css'
 
 interface PhotoWithConfig extends PhotoAsset {
     config: FilterConfig
@@ -30,6 +32,7 @@ export function FilterTool() {
     const [lut, setLut] = useState<LUTData | null>(null)
     const [isExporting, setIsExporting] = useState(false)
     const [exportProgress, setExportProgress] = useState(0)
+    const [activeTab, setActiveTab] = useState<'assets' | 'settings'>('assets')
 
     const activePhoto = photos.find(p => p.id === activePhotoId)
 
@@ -222,29 +225,20 @@ export function FilterTool() {
     }, [photos, lut, activePhoto, currentConfig])
 
     return (
-        <div style={{
-            display: 'flex',
-            height: '100%',
-            width: '100%',
-            background: isDark ? '#000' : '#f0f0f0',
-            overflow: 'hidden'
-        }}>
+        <div className="filter-tool-container">
             {/* Left Sidebar - Assets */}
-            <AssetSidebar
-                photos={photos}
-                activePhotoId={activePhotoId}
-                onPhotosAdd={handlePhotosAdd}
-                onPhotoRemove={handlePhotoRemove}
-                onPhotoSelect={handlePhotoSelect}
-            />
+            <div className={`ft-filter-sidebar-left ${activeTab === 'assets' ? 'ft-active' : ''}`}>
+                <AssetSidebar
+                    photos={photos}
+                    activePhotoId={activePhotoId}
+                    onPhotosAdd={handlePhotosAdd}
+                    onPhotoRemove={handlePhotoRemove}
+                    onPhotoSelect={handlePhotoSelect}
+                />
+            </div>
 
             {/* Center - Preview */}
-            <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
-            }}>
+            <div className="ft-filter-center">
                 {/* Toolbar */}
                 <div style={{
                     padding: '12px 16px',
@@ -273,7 +267,6 @@ export function FilterTool() {
                     padding: '24px',
                     background: isDark ? '#111' : '#e8e8e8'
                 }}>
-                    {/* Always render canvas for WebGL context */}
                     <canvas
                         ref={canvasRef}
                         style={{
@@ -292,28 +285,46 @@ export function FilterTool() {
                             <p style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
                                 No photo selected
                             </p>
-                            <p style={{ fontSize: '0.85rem' }}>
-                                Add photos from the left sidebar
-                            </p>
+                         
                         </div>
                     )}
                 </div>
             </div>
 
             {/* Right Sidebar - Develop Panel */}
-            <DevelopPanel
-                config={currentConfig}
-                onChange={handleConfigChange}
-                lut={lut}
-                onLutChange={setLut}
-                onReset={handleReset}
-                onApplyToAll={handleApplyToAll}
-                hasMultiplePhotos={photos.length > 1}
-                onExport={handleExport}
-                isExporting={isExporting}
-                exportProgress={exportProgress}
-                photoCount={photos.length}
-            />
+            <div className={`ft-filter-sidebar-right ${activeTab === 'settings' ? 'ft-active' : ''}`}>
+                <DevelopPanel
+                    config={currentConfig}
+                    onChange={handleConfigChange}
+                    lut={lut}
+                    onLutChange={setLut}
+                    onReset={handleReset}
+                    onApplyToAll={handleApplyToAll}
+                    hasMultiplePhotos={photos.length > 1}
+                    onExport={handleExport}
+                    isExporting={isExporting}
+                    exportProgress={exportProgress}
+                    photoCount={photos.length}
+                />
+            </div>
+
+            {/* Mobile Tab Bar */}
+            <div className="ft-filter-mobile-tabs">
+                <button
+                    onClick={() => setActiveTab('assets')}
+                    className={`ft-filter-tab-btn ${activeTab === 'assets' ? 'active' : ''}`}
+                >
+                    <ImageIcon size={20} />
+                    Photos
+                </button>
+                <button
+                    onClick={() => setActiveTab('settings')}
+                    className={`ft-filter-tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+                >
+                    <Settings size={20} />
+                    Develop
+                </button>
+            </div>
         </div>
     )
 }
