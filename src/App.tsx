@@ -32,78 +32,80 @@ import { PosterToolPage } from './pages/PosterToolPage'
 import { FilterToolPage } from './pages/FilterToolPage'
 
 
+import { ToolProvider } from './context/ToolContext'
+
 function App() {
   return (
     <ThemeProvider>
       <ContentProvider>
-        <Routes>
-          {/* Admin Routes - NOT wrapped in Layout */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route element={<ProtectedRoute />}>
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="sections" element={<AdminSections />} />
-              <Route path="popup" element={<PopupManager />} />
-              <Route path="garbage" element={<AdminGarbageCollector />} />
-              <Route path="section/:sectionId" element={<SectionManager />} />
-              <Route path="create/:sectionId" element={<PostEditor />} />
-              <Route path="create-post/:sectionId" element={<PostEditor />} />
-              <Route path="create-subsection/:sectionId" element={<SubsectionEditor />} />
-              <Route path="create-gallery/:sectionId" element={<GalleryEditor />} />
-              <Route path="post/:id" element={<PostEditor />} />
-              <Route path="subsection/:id" element={<SubsectionEditor />} />
-              <Route path="gallery-editor/:id" element={<GalleryEditor />} />
-              <Route path="forms" element={<FormList />} />
-              <Route path="forms/new" element={<FormBuilder />} />
-              <Route path="forms/:id" element={<FormBuilder />} />
-              <Route path="forms/:formId/responses" element={<FormResponseViewer />} />
-              <Route path="forms/:formId/responses/:responseId" element={<FormResponseDetail />} />
-              <Route path="garbage" element={<GarbageCollector />} />
+        <ToolProvider>
+          <Routes>
+            {/* Admin Routes - NOT wrapped in Layout */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="sections" element={<AdminSections />} />
+                <Route path="popup" element={<PopupManager />} />
+                <Route path="garbage" element={<AdminGarbageCollector />} />
+                <Route path="section/:sectionId" element={<SectionManager />} />
+                <Route path="create/:sectionId" element={<PostEditor />} />
+                <Route path="create-post/:sectionId" element={<PostEditor />} />
+                <Route path="create-subsection/:sectionId" element={<SubsectionEditor />} />
+                <Route path="create-gallery/:sectionId" element={<GalleryEditor />} />
+                <Route path="post/:id" element={<PostEditor />} />
+                <Route path="subsection/:id" element={<SubsectionEditor />} />
+                <Route path="gallery-editor/:id" element={<GalleryEditor />} />
+                <Route path="forms" element={<FormList />} />
+                <Route path="forms/new" element={<FormBuilder />} />
+                <Route path="forms/:id" element={<FormBuilder />} />
+                <Route path="forms/:formId/responses" element={<FormResponseViewer />} />
+                <Route path="forms/:formId/responses/:responseId" element={<FormResponseDetail />} />
+                <Route path="garbage" element={<GarbageCollector />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Public Form Route - outside admin, no main layout */}
-          <Route path="/f/:formId" element={<PublicForm />} />
+            {/* Public Form Route - outside admin, no main layout */}
+            <Route path="/f/:formId" element={<PublicForm />} />
 
-          {/* Filter Tool - outside Layout to hide top navbar */}
-          <Route path="/utilities/filter-tool" element={<FilterToolPage />} />
-          <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
-          <Route path="/utilities/poster-tool" element={<PosterToolPage />} />
-          <Route path="/utilities" element={<UtilitiesPage />} />
+            {/* Filter Tool - outside Layout to hide top navbar */}
+            <Route path="/utilities/filter-tool" element={<FilterToolPage />} />
+            <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
+            <Route path="/utilities/poster-tool" element={<PosterToolPage />} />
+            <Route path="/utilities" element={<UtilitiesPage />} />
 
+            {/* Main Site Routes - wildcard catch-all wrapped in Layout */}
+            <Route path="/*" element={
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/about-us/:id" element={<PostDetail sectionType="about" />} />
+                  <Route path="/about-us/:id/gallery" element={<GalleryPage />} />
+                  <Route path="/initiative/:id" element={<PostDetail sectionType="initiatives" />} />
+                  <Route path="/initiative/:id/gallery" element={<GalleryPage />} />
+                  <Route path="/media/:id" element={<PostDetail sectionType="media" />} />
+                  <Route path="/media/:id/gallery" element={<GalleryPage />} />
+                  <Route path="/leader/:id" element={<PostDetail sectionType="leadership" />} />
+                  <Route path="/leader/:id/gallery" element={<GalleryPage />} />
+                  <Route path="/resource/:id" element={<PostDetail sectionType="resources" />} />
+                  <Route path="/resource/:id/gallery" element={<GalleryPage />} />
+                  {/* Dynamic Sections Route */}
+                  <Route path="/section/:sectionId/:id" element={<PostDetail sectionType="dynamic" />} />
+                  <Route path="/section/:sectionId/:id/gallery" element={<GalleryPage />} />
 
-
-          {/* Main Site Routes - wildcard catch-all wrapped in Layout */}
-          <Route path="/*" element={
-            <Layout>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/about-us/:id" element={<PostDetail sectionType="about" />} />
-                <Route path="/about-us/:id/gallery" element={<GalleryPage />} />
-                <Route path="/initiative/:id" element={<PostDetail sectionType="initiatives" />} />
-                <Route path="/initiative/:id/gallery" element={<GalleryPage />} />
-                <Route path="/media/:id" element={<PostDetail sectionType="media" />} />
-                <Route path="/media/:id/gallery" element={<GalleryPage />} />
-                <Route path="/leader/:id" element={<PostDetail sectionType="leadership" />} />
-                <Route path="/leader/:id/gallery" element={<GalleryPage />} />
-                <Route path="/resource/:id" element={<PostDetail sectionType="resources" />} />
-                <Route path="/resource/:id/gallery" element={<GalleryPage />} />
-                {/* Dynamic Sections Route */}
-                <Route path="/section/:sectionId/:id" element={<PostDetail sectionType="dynamic" />} />
-                <Route path="/section/:sectionId/:id/gallery" element={<GalleryPage />} />
-
-                {/* Public Utilities */}
-                <Route path="/utilities" element={<UtilitiesPage />} />
-                <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
-                <Route path="/utilities/poster-tool" element={<PosterToolPage />} />
-              </Routes>
-            </Layout>
-          } />
-        </Routes>
-        <CustomCursor />
-        <SplashScreen />
-        <EventPopup />
+                  {/* Public Utilities */}
+                  <Route path="/utilities" element={<UtilitiesPage />} />
+                  <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
+                  <Route path="/utilities/poster-tool" element={<PosterToolPage />} />
+                </Routes>
+              </Layout>
+            } />
+          </Routes>
+          <CustomCursor />
+          <SplashScreen />
+          <EventPopup />
+        </ToolProvider>
       </ContentProvider>
     </ThemeProvider>
   )

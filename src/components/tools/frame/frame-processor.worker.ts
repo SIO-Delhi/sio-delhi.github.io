@@ -18,10 +18,11 @@ interface FrameConfig {
 }
 
 interface WorkerMessage {
-    type: 'START'
+    type: 'START' | 'TRANSFER_START'
     payload: {
         frameURL: string // Blob URL passed from main thread
         photos: {
+            id: string // Needed for transfer matching
             url: string // Blob URL
             name: string
             config: FrameConfig
@@ -120,12 +121,14 @@ const drawToCanvas = (
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     const { type, payload } = e.data
 
-    if (type === 'START') {
+    if (type === 'START' || type === 'TRANSFER_START') {
         const { frameURL, photos } = payload
+        const isTransfer = type === 'TRANSFER_START'
 
         try {
-            const zip = new JSZip()
-            const folder = zip.folder("frames")
+            const zip = isTransfer ? null : new JSZip()
+            const folder = zip ? zip.folder("frames") : null
+            const renderedPhotos: { id: string, blob: Blob, name: string }[] = []
 
             // Load Frame Once using fetch -> blob -> createImageBitmap
             // We use fetch because we have blob URLs
@@ -175,9 +178,11 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                     drawToCanvas(ctx, w, h, photoImg, frameImg, photo.config)
 
                     // Get Blob
-                    const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.9 })
+                    const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.92 })
 
-                    if (folder) {
+                    if (isTransfer) {
+                        renderedPhotos.push({ id: photo.id, blob, name: photo.name })
+                    } else if (folder) {
                         folder.file(`frame_${i + 1}_${photo.name}.jpg`, blob)
                     }
 
@@ -187,11 +192,15 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
                 }
             }
 
-            // Generate Zip
-            const content = await zip.generateAsync({ type: "blob" })
+            if (isTransfer) {
+                self.postMessage({ type: 'TRANSFER_COMPLETE', payload: renderedPhotos })
+            } else if (zip) {
+                // Generate Zip
+                const content = await zip.generateAsync({ type: "blob" })
 
-            // Send back result
-            self.postMessage({ type: 'COMPLETE', payload: content })
+                // Send back result
+                self.postMessage({ type: 'COMPLETE', payload: content })
+            }
 
         } catch (error) {
             console.error('Worker Error:', error)

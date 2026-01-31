@@ -2,8 +2,8 @@
  * DevelopPanel - Right panel with Lightroom-style adjustment sliders
  */
 
-import { useState, useRef, useCallback } from 'react'
-import { ChevronDown, ChevronRight, X, RotateCcw, Download, Loader2 } from 'lucide-react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { ChevronDown, ChevronRight, X, RotateCcw, Download, Loader2, CheckCircle2, Repeat } from 'lucide-react'
 import { useTheme } from '../../../../context/ThemeContext'
 import type { FilterConfig } from '../FilterEngine'
 import { parseCubeFile } from '../utils/lutParser'
@@ -21,6 +21,11 @@ interface DevelopPanelProps {
     isExporting: boolean
     exportProgress: number
     photoCount: number
+    onTransfer?: () => void
+    isTransferring?: boolean
+    transferProgress?: number
+    isApplying?: boolean
+    applySuccess?: boolean
 }
 
 interface SliderProps {
@@ -44,13 +49,35 @@ function Slider({ label, value, min, max, step = 1, onChange, color, gradient }:
 
     const handleDoubleClick = () => onChange(centerValue)
 
+    const containerRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container) return
+
+        const onWheel = (e: WheelEvent) => {
+            e.preventDefault()
+            const delta = -Math.sign(e.deltaY) * step
+            const newValue = Math.max(min, Math.min(max, value + delta))
+            if (newValue !== value) {
+                onChange(newValue)
+            }
+        }
+
+        container.addEventListener('wheel', onWheel, { passive: false })
+        return () => container.removeEventListener('wheel', onWheel)
+    }, [value, min, max, step, onChange])
+
     return (
-        <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '4px 0'
-        }}>
+        <div
+            ref={containerRef}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '4px 0'
+            }}
+        >
             <span style={{
                 width: '76px',
                 fontSize: '0.72rem',
@@ -217,7 +244,12 @@ export function DevelopPanel({
     onExport,
     isExporting,
     exportProgress,
-    photoCount
+    photoCount,
+    onTransfer,
+    isTransferring,
+    transferProgress,
+    isApplying,
+    applySuccess
 }: DevelopPanelProps) {
     const { isDark } = useTheme()
     const lutInputRef = useRef<HTMLInputElement>(null)
@@ -225,6 +257,105 @@ export function DevelopPanel({
     const updateConfig = useCallback((key: keyof FilterConfig, value: number) => {
         onChange({ ...config, [key]: value })
     }, [config, onChange])
+
+    const handleLutSelect = async (value: string) => {
+        if (value === 'none') {
+            onLutChange(null)
+        } else if (value === 'import') {
+            lutInputRef.current?.click()
+        } else {
+            try {
+                const response = await fetch(`/luts/${encodeURIComponent(value)}`)
+                if (!response.ok) throw new Error(`HTTP ${response.status}`)
+                const content = await response.text()
+                const lutData = parseCubeFile(content)
+                lutData.title = value
+                onLutChange(lutData)
+            } catch (err) {
+                console.error('Failed to load preset LUT:', err)
+            }
+        }
+    }
+
+    const handleWBSelect = useCallback((value: string) => {
+        const presets: Record<string, { temp: number; tint: number }> = {
+            auto: { temp: 0, tint: 0 },
+            daylight: { temp: 10, tint: 5 },
+            cloudy: { temp: 25, tint: 10 },
+            shade: { temp: 35, tint: 15 },
+            tungsten: { temp: -55, tint: -10 },
+            fluorescent: { temp: -20, tint: 25 }
+        }
+        const preset = presets[value]
+        if (preset) {
+            onChange({
+                ...config,
+                temperature: preset.temp,
+                tint: preset.tint
+            })
+        }
+    }, [config, onChange])
+
+    const lutSelectRef = useRef<HTMLSelectElement>(null)
+    const wbSelectRef = useRef<HTMLSelectElement>(null)
+
+    useEffect(() => {
+        const select = lutSelectRef.current
+        if (!select) return
+
+        const onWheel = (e: WheelEvent) => {
+            e.preventDefault()
+            const options = Array.from(select.querySelectorAll('option'))
+                .filter(opt => opt.value !== 'import')
+
+            const currentIndex = options.findIndex(opt => opt.value === (lut?.title || 'none'))
+            if (currentIndex === -1) return
+
+            const delta = Math.sign(e.deltaY)
+            let nextIndex = currentIndex + delta
+
+            if (nextIndex < 0) nextIndex = options.length - 1
+            if (nextIndex >= options.length) nextIndex = 0
+
+            handleLutSelect(options[nextIndex].value)
+        }
+
+        select.addEventListener('wheel', onWheel, { passive: false })
+        return () => select.removeEventListener('wheel', onWheel)
+    }, [lut, handleLutSelect])
+
+    useEffect(() => {
+        const select = wbSelectRef.current
+        if (!select) return
+
+        const onWheel = (e: WheelEvent) => {
+            e.preventDefault()
+            const options = Array.from(select.querySelectorAll('option'))
+                .filter(opt => !opt.disabled)
+
+            const currentValue = config.temperature === 0 && config.tint === 0 ? 'auto' :
+                config.temperature === 10 && config.tint === 5 ? 'daylight' :
+                    config.temperature === 25 && config.tint === 10 ? 'cloudy' :
+                        config.temperature === 35 && config.tint === 15 ? 'shade' :
+                            config.temperature === -55 && config.tint === -10 ? 'tungsten' :
+                                config.temperature === -20 && config.tint === 25 ? 'fluorescent' :
+                                    'custom'
+
+            const currentIndex = options.findIndex(opt => opt.value === currentValue)
+            if (currentIndex === -1) return
+
+            const delta = Math.sign(e.deltaY)
+            let nextIndex = currentIndex + delta
+
+            if (nextIndex < 0) nextIndex = options.length - 1
+            if (nextIndex >= options.length) nextIndex = 0
+
+            handleWBSelect(options[nextIndex].value)
+        }
+
+        select.addEventListener('wheel', onWheel, { passive: false })
+        return () => select.removeEventListener('wheel', onWheel)
+    }, [config, handleWBSelect])
 
     const handleLutUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -295,26 +426,9 @@ export function DevelopPanel({
                     {/* LUT Dropdown Selector */}
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <select
+                            ref={lutSelectRef}
                             value={lut?.title || 'none'}
-                            onChange={async (e) => {
-                                const value = e.target.value
-                                if (value === 'none') {
-                                    onLutChange(null)
-                                } else if (value === 'import') {
-                                    lutInputRef.current?.click()
-                                } else {
-                                    try {
-                                        const response = await fetch(`/luts/${encodeURIComponent(value)}`)
-                                        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-                                        const content = await response.text()
-                                        const lutData = parseCubeFile(content)
-                                        lutData.title = value
-                                        onLutChange(lutData)
-                                    } catch (err) {
-                                        console.error('Failed to load preset LUT:', err)
-                                    }
-                                }
-                            }}
+                            onChange={(e) => handleLutSelect(e.target.value)}
                             style={{
                                 flex: 1,
                                 padding: '8px 12px',
@@ -451,24 +565,8 @@ export function DevelopPanel({
                                                     config.temperature === -20 && config.tint === 25 ? 'fluorescent' :
                                                         'custom'
                             }
-                            onChange={(e) => {
-                                const presets: Record<string, { temp: number; tint: number }> = {
-                                    auto: { temp: 0, tint: 0 },
-                                    daylight: { temp: 10, tint: 5 },
-                                    cloudy: { temp: 25, tint: 10 },
-                                    shade: { temp: 35, tint: 15 },
-                                    tungsten: { temp: -55, tint: -10 },
-                                    fluorescent: { temp: -20, tint: 25 }
-                                }
-                                const preset = presets[e.target.value]
-                                if (preset) {
-                                    onChange({
-                                        ...config,
-                                        temperature: preset.temp,
-                                        tint: preset.tint
-                                    })
-                                }
-                            }}
+                            onChange={(e) => handleWBSelect(e.target.value)}
+                            ref={wbSelectRef}
                             style={{
                                 width: '100%',
                                 padding: '8px 12px',
@@ -536,65 +634,114 @@ export function DevelopPanel({
                     flexDirection: 'column',
                     gap: '8px'
                 }}>
-                <button
-                    onClick={onApplyToAll}
-                    disabled={!hasMultiplePhotos}
-                    title={hasMultiplePhotos ? 'Apply current settings to all photos' : 'Upload 2+ photos to enable'}
-                    style={{
-                        width: '100%',
-                        padding: '10px',
-                        borderRadius: '8px',
-                        background: hasMultiplePhotos ? '#27272a' : (isDark ? '#1a1a1a' : '#eee'),
-                        border: `1px solid ${hasMultiplePhotos ? '#3f3f46' : 'transparent'}`,
-                        color: hasMultiplePhotos ? 'white' : (isDark ? '#444' : '#aaa'),
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        cursor: hasMultiplePhotos ? 'pointer' : 'not-allowed',
-                        fontFamily: 'inherit',
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
-                    }}
-                >
-                    Apply to All Photos
-                </button>
-                <button
-                    onClick={onExport}
-                    disabled={photoCount === 0 || isExporting}
-                    title={photoCount > 0 ? 'Export all photos as ZIP' : 'Add photos first'}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        background: photoCount > 0 ? '#ff3b3b' : (isDark ? '#222' : '#ddd'),
-                        border: 'none',
-                        color: 'white',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        cursor: photoCount > 0 && !isExporting ? 'pointer' : 'not-allowed',
-                        fontFamily: 'inherit',
-                        opacity: isExporting ? 0.7 : 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    {isExporting ? (
-                        <>
-                            <Loader2 size={16} className="animate-spin" />
-                            Exporting {Math.round(exportProgress)}%
-                        </>
-                    ) : (
-                        <>
-                            <Download size={16} />
-                            Export All as ZIP
-                        </>
+                    <button
+                        onClick={onApplyToAll}
+                        disabled={isApplying || !hasMultiplePhotos}
+                        title={hasMultiplePhotos ? 'Apply current settings to all photos' : 'Upload 2+ photos to enable'}
+                        style={{
+                            width: '100%',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            background: applySuccess ? 'rgba(16, 185, 129, 0.1)' : (isDark ? '#27272a' : '#eee'),
+                            border: `1px solid ${applySuccess ? '#10b981' : (isDark ? '#3f3f46' : 'transparent')}`,
+                            color: applySuccess ? '#10b981' : (isDark ? 'white' : '#444'),
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            cursor: (isApplying || !hasMultiplePhotos) ? 'not-allowed' : 'pointer',
+                            fontFamily: 'inherit',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px'
+                        }}
+                    >
+                        {isApplying ? (
+                            <>
+                                <Loader2 size={14} className="animate-spin" />
+                                Applying...
+                            </>
+                        ) : applySuccess ? (
+                            <>
+                                <CheckCircle2 size={14} />
+                                Applied to All
+                            </>
+                        ) : (
+                            <>
+                                <Repeat size={14} />
+                                Apply Settings to All
+                            </>
+                        )}
+                    </button>
+
+                    {onTransfer && (
+                        <button
+                            onClick={onTransfer}
+                            disabled={isTransferring || isExporting || photoCount === 0}
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                background: isTransferring ? (isDark ? '#1a1a1a' : '#eee') : 'rgba(167, 139, 250, 0.1)',
+                                border: `1px solid ${isTransferring ? 'transparent' : 'rgba(167, 139, 250, 0.2)'}`,
+                                color: isTransferring ? '#666' : '#a78bfa',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                cursor: isTransferring ? 'not-allowed' : 'pointer',
+                                fontFamily: 'inherit',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            {isTransferring ? (
+                                <>
+                                    <Loader2 size={14} className="animate-spin" />
+                                    Transferring {Math.round(transferProgress || 0)}%
+                                </>
+                            ) : (
+                                'Transfer to Frame Tool'
+                            )}
+                        </button>
                     )}
-                </button>
+
+                    <button
+                        onClick={onExport}
+                        disabled={photoCount === 0 || isExporting}
+                        title={photoCount > 0 ? 'Export all photos as ZIP' : 'Add photos first'}
+                        style={{
+                            width: '100%',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            background: photoCount > 0 ? '#ff3b3b' : (isDark ? '#222' : '#ddd'),
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            cursor: photoCount > 0 && !isExporting ? 'pointer' : 'not-allowed',
+                            fontFamily: 'inherit',
+                            opacity: isExporting ? 0.7 : 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        {isExporting ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                Exporting {Math.round(exportProgress)}%
+                            </>
+                        ) : (
+                            <>
+                                <Download size={16} />
+                                Export All as ZIP
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
         </div>

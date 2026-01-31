@@ -3,7 +3,11 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Image as ImageIcon, Settings } from 'lucide-react'
+import { useToolContext } from '../../../context/ToolContext'
+import { type SharedPhoto } from '../../../context/ToolContext'
+import { CustomDialog } from '../../ui/CustomDialog'
 import { useTheme } from '../../../context/ThemeContext'
 import type { FilterConfig } from './FilterEngine'
 import { FilterEngine, DEFAULT_FILTER_CONFIG } from './FilterEngine'
@@ -18,6 +22,7 @@ import './filter.css'
 interface PhotoWithConfig extends PhotoAsset {
     config: FilterConfig
     lut: LUTData | null
+    frameConfig?: any // Deep state preservation
 }
 
 export function FilterTool() {
@@ -32,7 +37,26 @@ export function FilterTool() {
     const [lut, setLut] = useState<LUTData | null>(null)
     const [isExporting, setIsExporting] = useState(false)
     const [exportProgress, setExportProgress] = useState(0)
+    const [isTransferring, setIsTransferring] = useState(false)
+    const [transferProgress, setTransferProgress] = useState(0)
+    const [isApplying, setIsApplying] = useState(false)
+    const [applySuccess, setApplySuccess] = useState(false)
+    const [dialog, setDialog] = useState<{
+        isOpen: boolean
+        title: string
+        message: string
+        type: 'info' | 'confirm' | 'warning' | 'success'
+        onConfirm?: () => void
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info'
+    })
     const [activeTab, setActiveTab] = useState<'assets' | 'settings'>('assets')
+
+    const navigate = useNavigate()
+    const { sharedPhotos, setSharedPhotos, clearSharedPhotos } = useToolContext()
 
     const activePhoto = photos.find(p => p.id === activePhotoId)
 
@@ -115,6 +139,16 @@ export function FilterTool() {
         }
     }, [activePhotoId])
 
+    const handleLutChange = useCallback((newLut: LUTData | null) => {
+        setLut(newLut)
+
+        if (activePhotoId) {
+            setPhotos(prev => prev.map(p =>
+                p.id === activePhotoId ? { ...p, lut: newLut } : p
+            ))
+        }
+    }, [activePhotoId])
+
     // Add photos
     const handlePhotosAdd = useCallback((newPhotos: PhotoAsset[]) => {
         const photosWithConfig: PhotoWithConfig[] = newPhotos.map(p => ({
@@ -130,6 +164,89 @@ export function FilterTool() {
             setActivePhotoId(photosWithConfig[0].id)
         }
     }, [activePhotoId])
+
+    // Transfer to Frame Tool
+    const handleTransferToFrame = useCallback(async () => {
+        if (!engineRef.current || photos.length === 0) return alert('No photos to transfer')
+
+        setIsTransferring(true)
+        setTransferProgress(0)
+
+        try {
+            const engine = engineRef.current
+            const results: { blob: Blob, name: string }[] = []
+
+            for (let i = 0; i < photos.length; i++) {
+                const photo = photos[i]
+
+                // Load image
+                const img = await loadImage(photo.url)
+                engine.loadImage(img)
+
+                // Apply photo's individual LUT
+                if (photo.lut) {
+                    engine.loadLUT(photo.lut)
+                } else {
+                    engine.clearLUT()
+                }
+
+                // Render with photo's config
+                engine.render(photo.config)
+
+                // Get blob
+                const blob = await engine.toBlob('image/jpeg', 0.92)
+                results.push({ blob, name: photo.file.name })
+
+                setTransferProgress(((i + 1) / photos.length) * 100)
+            }
+
+            const renderedPhotos: SharedPhoto[] = photos.map((p, i) => {
+                const baked = results[i]
+                return {
+                    id: p.id,
+                    file: new File([baked.blob], p.file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }),
+                    url: URL.createObjectURL(baked.blob),
+                    name: p.file.name,
+                    thumbnail: p.thumbnail,
+                    // Bake filters into image, so reset filter state on transfer
+                    filterConfig: null,
+                    lut: null,
+                    frameConfig: p.frameConfig, // Preserve existing frame config
+                    origin: 'filter' as const
+                }
+            })
+
+            setSharedPhotos(renderedPhotos)
+            setIsTransferring(false)
+            navigate('/utilities/frame-tool')
+        } catch (err) {
+            console.error('Transfer failed:', err)
+            alert('Failed to render images for transfer')
+            setIsTransferring(false)
+        }
+    }, [photos, setSharedPhotos, navigate])
+
+    // Auto-import from ToolContext
+    useEffect(() => {
+        if (sharedPhotos.length > 0 && sharedPhotos[0].origin === 'frame') {
+            const imported = sharedPhotos.map(p => ({
+                id: p.id,
+                file: p.file,
+                url: p.url,
+                thumbnail: p.thumbnail || p.url,
+                config: p.filterConfig || { ...DEFAULT_FILTER_CONFIG },
+                lut: p.lut || null,
+                frameConfig: p.frameConfig // Stash it
+            }))
+
+            setPhotos(imported)
+            if (imported.length > 0) {
+                const exists = imported.find(p => p.id === activePhotoId)
+                if (!exists) setActivePhotoId(imported[0].id)
+            }
+            clearSharedPhotos()
+        }
+    }, [sharedPhotos, clearSharedPhotos])
 
     // Remove photo
     const handlePhotoRemove = useCallback((id: string) => {
@@ -159,12 +276,29 @@ export function FilterTool() {
 
     // Apply to all photos
     const handleApplyToAll = useCallback(() => {
-        setPhotos(prev => prev.map(p => ({
-            ...p,
-            config: { ...currentConfig },
-            lut: lut
-        })))
-    }, [currentConfig, lut])
+        if (photos.length <= 1) return
+
+        setDialog({
+            isOpen: true,
+            title: 'Apply to All',
+            message: 'Apply current filter settings and LUT to all photos? This will overwrite their individual adjustments.',
+            type: 'confirm',
+            onConfirm: () => {
+                setIsApplying(true)
+                setPhotos(prev => prev.map(p => ({
+                    ...p,
+                    config: { ...currentConfig },
+                    lut: lut
+                })))
+
+                setTimeout(() => {
+                    setIsApplying(false)
+                    setApplySuccess(true)
+                    setTimeout(() => setApplySuccess(false), 2000)
+                }, 800)
+            }
+        })
+    }, [currentConfig, lut, photos.length])
 
     // Export all photos
     const handleExport = useCallback(async () => {
@@ -255,6 +389,7 @@ export function FilterTool() {
                     }}>
                         {activePhoto ? activePhoto.file.name : 'No photo selected'}
                     </span>
+
                 </div>
 
                 {/* Canvas Area */}
@@ -297,7 +432,7 @@ export function FilterTool() {
                     config={currentConfig}
                     onChange={handleConfigChange}
                     lut={lut}
-                    onLutChange={setLut}
+                    onLutChange={handleLutChange}
                     onReset={handleReset}
                     onApplyToAll={handleApplyToAll}
                     hasMultiplePhotos={photos.length > 1}
@@ -305,8 +440,22 @@ export function FilterTool() {
                     isExporting={isExporting}
                     exportProgress={exportProgress}
                     photoCount={photos.length}
+                    onTransfer={handleTransferToFrame}
+                    isTransferring={isTransferring}
+                    transferProgress={transferProgress}
+                    isApplying={isApplying}
+                    applySuccess={applySuccess}
                 />
             </div>
+
+            <CustomDialog
+                isOpen={dialog.isOpen}
+                onClose={() => setDialog({ ...dialog, isOpen: false })}
+                onConfirm={dialog.onConfirm}
+                title={dialog.title}
+                message={dialog.message}
+                type={dialog.type}
+            />
 
             {/* Mobile Tab Bar */}
             <div className="ft-filter-mobile-tabs">

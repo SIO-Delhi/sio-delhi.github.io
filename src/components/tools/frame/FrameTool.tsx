@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 
+import { useNavigate } from 'react-router-dom'
 import { saveAs } from 'file-saver'
+import { useToolContext } from '../../../context/ToolContext'
 import {
     Upload, X, Loader2, Download,
     Image as ImageIcon,
     Plus, RotateCcw,
-    Copy, Settings, Check
+    Copy, Settings, Check, Sliders, CheckCircle2
 } from 'lucide-react'
 
 import './frame.css'
+import { CustomDialog } from '../../ui/CustomDialog'
 
 // --- Types ---
 
@@ -34,7 +37,9 @@ interface PhotoAsset {
     url: string
     file?: File
     name: string
-    config: FrameConfig // Moved config here
+    config: FrameConfig
+    filterConfig?: any // Deep state preservation
+    lut?: any
 }
 
 // --- Main Component ---
@@ -46,6 +51,9 @@ export function FrameTool() {
     const [frameURL, setFrameURL] = useState<string | null>(null)
     const [photos, setPhotos] = useState<PhotoAsset[]>([])
     const [activePhotoIndex, setActivePhotoIndex] = useState<number>(0)
+
+    const navigate = useNavigate()
+    const { setSharedPhotos, sharedPhotos, clearSharedPhotos } = useToolContext()
 
     // UI State
     const [isProcessing, setIsProcessing] = useState(false)
@@ -64,6 +72,20 @@ export function FrameTool() {
     const [isPinching, setIsPinching] = useState(false)
     const [activeTab, setActiveTab] = useState<'assets' | 'settings'>('assets')
     const [editMode, setEditMode] = useState<EditMode>('crop') // 'crop' or 'frame'
+    const [isApplying, setIsApplying] = useState(false)
+    const [applySuccess, setApplySuccess] = useState(false)
+    const [dialog, setDialog] = useState<{
+        isOpen: boolean
+        title: string
+        message: string
+        type: 'info' | 'confirm' | 'warning' | 'success'
+        onConfirm?: () => void
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info'
+    })
 
 
     // Refs
@@ -141,6 +163,88 @@ export function FrameTool() {
         }
         e.target.value = ''
     }
+
+    const [isTransferring, setIsTransferring] = useState(false)
+
+    // Transfer to Filter Tool
+    const handleTransferToFilter = () => {
+        if (photos.length === 0) return alert('No photos to transfer')
+
+        // Use an empty string if no frame is selected, worker handles null frameImg
+        const finalFrameURL = frameURL || ''
+
+        setIsTransferring(true)
+        setProcessProgress({ current: 0, total: photos.length })
+
+        const worker = new Worker(new URL('./frame-processor.worker.ts', import.meta.url), { type: 'module' })
+
+        worker.onmessage = (e) => {
+            const { type, payload } = e.data
+
+            if (type === 'PROGRESS') {
+                setProcessProgress(payload)
+            } else if (type === 'TRANSFER_COMPLETE') {
+                const renderedPhotos = payload as { id: string, blob: Blob, name: string }[]
+
+                const shared = renderedPhotos.map(p => {
+                    const originalPhoto = photos.find(op => op.id === p.id)
+                    return {
+                        id: p.id,
+                        file: new File([p.blob], p.name.endsWith('.jpg') ? p.name : `${p.name}.jpg`, { type: 'image/jpeg' }),
+                        url: URL.createObjectURL(p.blob),
+                        name: p.name,
+                        // When transferring from Frame to Filter, we bake the frame.
+                        // So we send frameConfig: null to avoid double-framing if it returns.
+                        frameConfig: null,
+                        filterConfig: originalPhoto?.filterConfig,
+                        lut: originalPhoto?.lut,
+                        origin: 'frame' as const
+                    }
+                })
+
+                setSharedPhotos(shared)
+                setIsTransferring(false)
+                worker.terminate()
+                navigate('/utilities/filter-tool')
+            } else if (type === 'ERROR') {
+                console.error(payload)
+                alert('Error rendering images for transfer')
+                setIsTransferring(false)
+                worker.terminate()
+            }
+        }
+
+        worker.postMessage({
+            type: 'TRANSFER_START',
+            payload: {
+                frameURL: finalFrameURL,
+                photos: photos.map(p => ({
+                    id: p.id,
+                    url: p.url,
+                    name: p.name,
+                    config: p.config
+                }))
+            }
+        })
+    }
+
+    // Auto-import from ToolContext
+    useEffect(() => {
+        if (sharedPhotos.length > 0 && sharedPhotos[0].origin === 'filter') {
+            const imported = sharedPhotos.map(p => ({
+                id: p.id,
+                url: p.url,
+                file: p.file,
+                name: p.name,
+                config: p.frameConfig || getDefaultConfig(),
+                filterConfig: p.filterConfig, // Stash it
+                lut: p.lut
+            }))
+            setPhotos(imported)
+            setActivePhotoIndex(0)
+            clearSharedPhotos()
+        }
+    }, [sharedPhotos, clearSharedPhotos])
 
     // Canvas Interaction
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -278,19 +382,28 @@ export function FrameTool() {
 
 
     // Zoom on wheel - adjusts crop size or frame scale based on mode
-    const handleWheel = (e: React.WheelEvent) => {
-        if (!currentPhoto) return
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container) return
 
-        if (editMode === 'crop') {
-            const delta = e.deltaY * 0.5
-            const newCropSize = Math.max(10, Math.min(100, currentPhoto.config.cropSize + delta))
-            updateCurrentConfig(prev => ({ ...prev, cropSize: newCropSize }))
-        } else {
-            const delta = e.deltaY * -0.002
-            const newFrameScale = Math.max(0.01, Math.min(2, currentPhoto.config.frameScale + delta))
-            updateCurrentConfig(prev => ({ ...prev, frameScale: newFrameScale }))
+        const onWheel = (e: WheelEvent) => {
+            if (!currentPhoto) return
+            e.preventDefault()
+
+            if (editMode === 'crop') {
+                const delta = e.deltaY * 0.5
+                const newCropSize = Math.max(10, Math.min(100, currentPhoto.config.cropSize + delta))
+                updateCurrentConfig(prev => ({ ...prev, cropSize: newCropSize }))
+            } else {
+                const delta = e.deltaY * -0.002
+                const newFrameScale = Math.max(0.01, Math.min(2, currentPhoto.config.frameScale + delta))
+                updateCurrentConfig(prev => ({ ...prev, frameScale: newFrameScale }))
+            }
         }
-    }
+
+        container.addEventListener('wheel', onWheel, { passive: false })
+        return () => container.removeEventListener('wheel', onWheel)
+    }, [currentPhoto, editMode, updateCurrentConfig])
 
 
 
@@ -605,14 +718,28 @@ export function FrameTool() {
 
     const handleApplyToAll = () => {
         if (!currentPhoto) return
-        const configToCopy = currentPhoto.config
+        if (photos.length <= 1) return
 
-        if (window.confirm('Apply these settings to all photos? This will overwrite their individual adjustments.')) {
-            setPhotos(prev => prev.map(p => ({
-                ...p,
-                config: { ...configToCopy }
-            })))
-        }
+        setDialog({
+            isOpen: true,
+            title: 'Apply to All',
+            message: 'Apply current scale and position to all photos? This will overwrite their individual adjustments.',
+            type: 'confirm',
+            onConfirm: () => {
+                setIsApplying(true)
+                const sourceConfig = photos[activePhotoIndex].config
+                setPhotos(prev => prev.map(p => ({
+                    ...p,
+                    config: { ...sourceConfig }
+                })))
+
+                setTimeout(() => {
+                    setIsApplying(false)
+                    setApplySuccess(true)
+                    setTimeout(() => setApplySuccess(false), 2000)
+                }, 800)
+            }
+        })
     }
 
 
@@ -628,7 +755,6 @@ export function FrameTool() {
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
-                onWheel={handleWheel}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -731,7 +857,7 @@ export function FrameTool() {
                         {photos.length === 0 ? (
                             <div className="ft-empty-state">
                                 <ImageIcon size={32} />
-                               
+
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
                                     <label className="ft-upload-btn-large">
                                         <Plus size={16} />
@@ -1010,10 +1136,47 @@ export function FrameTool() {
 
                             <button
                                 onClick={handleApplyToAll}
+                                disabled={isApplying || photos.length <= 1}
                                 className="ft-apply-all-btn"
-                                style={{ marginTop: '16px' }}
+                                style={{
+                                    marginTop: '16px',
+                                    borderColor: applySuccess ? '#10b981' : 'rgba(255,255,255,0.1)',
+                                    background: applySuccess ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                                    color: applySuccess ? '#10b981' : 'white'
+                                }}
                             >
-                                <Copy size={16} /> Apply Settings to All Photos
+                                {isApplying ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : applySuccess ? (
+                                    <CheckCircle2 size={16} />
+                                ) : (
+                                    <Copy size={16} />
+                                )}
+                                {applySuccess ? ' Applied to All' : ' Apply Settings to All Photos'}
+                            </button>
+
+                            <button
+                                onClick={handleTransferToFilter}
+                                disabled={isTransferring || isProcessing || !frameURL || photos.length === 0}
+                                className="ft-apply-all-btn"
+                                style={{
+                                    marginTop: '8px',
+                                    background: isTransferring ? '#27272a' : 'rgba(167, 139, 250, 0.1)',
+                                    border: '1px solid rgba(167, 139, 250, 0.2)',
+                                    color: isTransferring ? '#666' : '#a78bfa',
+                                    opacity: isTransferring ? 0.7 : 1
+                                }}
+                            >
+                                {isTransferring ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        Transferring {Math.round((processProgress.current / processProgress.total) * 100)}%
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sliders size={16} /> Transfer to Filter Tool
+                                    </>
+                                )}
                             </button>
 
                             {/* Download Button Moved Here */}
@@ -1080,6 +1243,14 @@ export function FrameTool() {
                     Adjustments
                 </button>
             </div>
+            <CustomDialog
+                isOpen={dialog.isOpen}
+                onClose={() => setDialog({ ...dialog, isOpen: false })}
+                onConfirm={dialog.onConfirm}
+                title={dialog.title}
+                message={dialog.message}
+                type={dialog.type}
+            />
         </div>
     )
 }
