@@ -267,18 +267,23 @@ export function FilterTool() {
                 }}>
                     <div style={{
                         position: 'absolute',
-                        inset: '24px',
+                        inset: 0,
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
+                        justifyContent: 'center',
+                        padding: '24px'
                     }}>
                         <canvas
                             ref={canvasRef}
                             style={{
+                                display: activePhoto ? 'block' : 'none',
                                 maxWidth: '100%',
                                 maxHeight: '100%',
-                                boxShadow: activePhoto ? '0 8px 32px rgba(0,0,0,0.3)' : 'none',
-                                display: activePhoto ? 'block' : 'none'
+                                minWidth: 0,
+                                minHeight: 0,
+                                width: 'auto',
+                                height: 'auto',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
                             }}
                         />
                         {!activePhoto && (
