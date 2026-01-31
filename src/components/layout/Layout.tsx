@@ -35,9 +35,9 @@ export function Layout({ children }: LayoutProps) {
     // Initialize Lenis smooth scrolling
     useEffect(() => {
         // Prevent browser from checking scroll position on refresh/back
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual'
-        }
+        // if ('scrollRestoration' in history) {
+        //     history.scrollRestoration = 'manual'
+        // }
 
         const lenis = new Lenis({
             duration: 1.2,
