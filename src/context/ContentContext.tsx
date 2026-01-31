@@ -176,8 +176,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             const popupData = {
                 image,
                 isActive,
-                buttonText: buttonText || undefined,
-                buttonLink: buttonLink || undefined
+                buttonText,
+                buttonLink
             }
 
             if (existing) {
@@ -196,6 +196,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             throw err
         }
     }
+
 
     const deletePopup = async () => {
         try {
