@@ -33,6 +33,7 @@ export function FilterTool() {
     const [isExporting, setIsExporting] = useState(false)
     const [exportProgress, setExportProgress] = useState(0)
     const [activeTab, setActiveTab] = useState<'assets' | 'settings'>('assets')
+    const [previewAspectRatio, setPreviewAspectRatio] = useState(1)
 
     const activePhoto = photos.find(p => p.id === activePhotoId)
 
@@ -58,6 +59,7 @@ export function FilterTool() {
         const img = new Image()
         img.onload = () => {
             previewImageRef.current = img
+            setPreviewAspectRatio(img.naturalWidth / img.naturalHeight)
             engineRef.current?.loadImage(img)
 
             // Load the photo's LUT
@@ -260,43 +262,42 @@ export function FilterTool() {
                 {/* Canvas Area */}
                 <div style={{
                     flex: 1,
-                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     overflow: 'hidden',
-                    background: isDark ? '#111' : '#e8e8e8',
-                    minHeight: 0
+                    minHeight: 0,
+                    padding: '24px'
                 }}>
                     <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '24px'
+                        aspectRatio: previewAspectRatio,
+                        width: previewAspectRatio >= 1 ? '100%' : 'auto',
+                        height: previewAspectRatio >= 1 ? 'auto' : '100%',
+                        maxWidth: '90%',
+                        maxHeight: '90%',
+                        position: 'relative',
+                        boxShadow: activePhoto ? '0 8px 32px rgba(0,0,0,0.3)' : 'none',
+                        display: activePhoto ? 'block' : 'none'
                     }}>
                         <canvas
                             ref={canvasRef}
                             style={{
-                                display: activePhoto ? 'block' : 'none',
-                                maxWidth: '100%',
-                                maxHeight: '100%',
-                                minWidth: 0,
-                                minHeight: 0,
-                                width: 'auto',
-                                height: 'auto',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                                display: 'block',
+                                width: '100%',
+                                height: '100%'
                             }}
                         />
-                        {!activePhoto && (
-                            <div style={{
-                                textAlign: 'center',
-                                color: isDark ? '#444' : '#999'
-                            }}>
-                                <p style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
-                                    No photo selected
-                                </p>
-                            </div>
-                        )}
                     </div>
+                    {!activePhoto && (
+                        <div style={{
+                            textAlign: 'center',
+                            color: isDark ? '#444' : '#999'
+                        }}>
+                            <p style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
+                                No photo selected
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
 
