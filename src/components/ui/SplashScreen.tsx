@@ -14,6 +14,14 @@ export function SplashScreen() {
     const [isCollapsed, setIsCollapsed] = useState(alreadySeen)
     const [scrollProgress, setScrollProgress] = useState(0)
 
+    // Check if we start with a deep link (hash) to auto-dismiss splash
+    useEffect(() => {
+        if (location.hash) {
+            setIsCollapsed(true)
+            sessionStorage.setItem('sio_splash_seen', 'true')
+        }
+    }, [location.hash])
+
     // Refs for Splash Elements
     const splashContainerRef = useRef<HTMLDivElement>(null)
     const splashContentRef = useRef<HTMLDivElement>(null)
