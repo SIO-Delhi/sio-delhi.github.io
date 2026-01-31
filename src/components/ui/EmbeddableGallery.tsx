@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ZoomIn, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Lazy loading image component with Intersection Observer
@@ -159,16 +160,12 @@ function LightboxImage({
                 zIndex: 1001,
                 background: 'rgba(0,0,0,0.95)',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '20px',
-                gap: '16px'
             }}
             onClick={onClose}
             onContextMenu={(e) => e.preventDefault()}
         >
-
 
             {/* Navigation Buttons */}
             {hasPrev && (
@@ -199,6 +196,9 @@ function LightboxImage({
             {!isLoaded && (
                 <div style={{
                     position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -210,7 +210,7 @@ function LightboxImage({
             )}
 
             <img
-                key={src} // Force re-render on src change for animation
+                key={src}
                 src={src}
                 alt="Full size"
                 draggable={false}
@@ -218,7 +218,7 @@ function LightboxImage({
                 onContextMenu={(e) => e.preventDefault()}
                 style={{
                     maxWidth: '95vw',
-                    maxHeight: '80vh',
+                    maxHeight: '90vh',
                     objectFit: 'contain',
                     borderRadius: '8px',
                     boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
@@ -230,12 +230,16 @@ function LightboxImage({
                 onClick={(e) => e.stopPropagation()}
             />
 
-            {/* Download Button - Sleek Glassy Design */}
+            {/* Download Button - fixed at bottom center */}
             {isLoaded && (
                 <button
                     onClick={handleDownload}
                     disabled={isDownloading}
                     style={{
+                        position: 'absolute',
+                        bottom: '24px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
@@ -356,7 +360,7 @@ export function EmbeddableGallery({ imagesRaw, isDark }: EmbeddableGalleryProps)
                 const allImages = gallerySections.flatMap(s => s.images)
                 const currentIndex = allImages.indexOf(selectedImage)
 
-                return (
+                return createPortal(
                     <LightboxImage
                         src={selectedImage}
                         onClose={() => setSelectedImage(null)}
@@ -372,7 +376,8 @@ export function EmbeddableGallery({ imagesRaw, isDark }: EmbeddableGalleryProps)
                                 setSelectedImage(allImages[currentIndex - 1])
                             }
                         }}
-                    />
+                    />,
+                    document.body
                 )
             })()}
 
