@@ -1,0 +1,329 @@
+/**
+ * FilterTool - Main orchestrator for the batch image editor
+ */
+
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useTheme } from '../../../context/ThemeContext'
+import type { FilterConfig } from './FilterEngine'
+import { FilterEngine, DEFAULT_FILTER_CONFIG } from './FilterEngine'
+import type { PhotoAsset } from './components/AssetSidebar'
+import { AssetSidebar } from './components/AssetSidebar'
+import { DevelopPanel } from './components/DevelopPanel'
+import type { LUTData } from './utils/lutParser'
+import JSZip from 'jszip'
+import { saveAs } from 'file-saver'
+
+interface PhotoWithConfig extends PhotoAsset {
+    config: FilterConfig
+    lut: LUTData | null
+}
+
+export function FilterTool() {
+    const { isDark } = useTheme()
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+    const engineRef = useRef<FilterEngine | null>(null)
+    const previewImageRef = useRef<HTMLImageElement | null>(null)
+
+    const [photos, setPhotos] = useState<PhotoWithConfig[]>([])
+    const [activePhotoId, setActivePhotoId] = useState<string | null>(null)
+    const [currentConfig, setCurrentConfig] = useState<FilterConfig>(DEFAULT_FILTER_CONFIG)
+    const [lut, setLut] = useState<LUTData | null>(null)
+    const [isExporting, setIsExporting] = useState(false)
+    const [exportProgress, setExportProgress] = useState(0)
+
+    const activePhoto = photos.find(p => p.id === activePhotoId)
+
+    // Initialize WebGL engine
+    useEffect(() => {
+        if (!canvasRef.current) return
+
+        try {
+            engineRef.current = new FilterEngine(canvasRef.current)
+        } catch (err) {
+            console.error('Failed to initialize FilterEngine:', err)
+        }
+
+        return () => {
+            engineRef.current?.dispose()
+        }
+    }, [])
+
+    // Load active photo into engine
+    useEffect(() => {
+        if (!activePhoto || !engineRef.current) return
+
+        const img = new Image()
+        img.onload = () => {
+            previewImageRef.current = img
+            engineRef.current?.loadImage(img)
+
+            // Load the photo's LUT
+            if (activePhoto.lut) {
+                engineRef.current?.loadLUT(activePhoto.lut)
+            } else {
+                engineRef.current?.clearLUT()
+            }
+
+            engineRef.current?.render(activePhoto.config)
+        }
+        img.src = activePhoto.url
+
+        setCurrentConfig(activePhoto.config)
+        setLut(activePhoto.lut)
+    }, [activePhoto?.id])
+
+    // Re-render when config changes
+    useEffect(() => {
+        if (!engineRef.current || !previewImageRef.current) return
+        engineRef.current.render(currentConfig)
+    }, [currentConfig])
+
+    // Apply LUT when changed and save to current photo
+    useEffect(() => {
+        if (!engineRef.current) return
+
+        if (lut) {
+            engineRef.current.loadLUT(lut)
+        } else {
+            engineRef.current.clearLUT()
+        }
+
+        // Save LUT to current photo
+        if (activePhotoId) {
+            setPhotos(prev => prev.map(p =>
+                p.id === activePhotoId ? { ...p, lut } : p
+            ))
+        }
+
+        if (previewImageRef.current) {
+            engineRef.current.render(currentConfig)
+        }
+    }, [lut, activePhotoId])
+
+    // Handle config change from slider
+    const handleConfigChange = useCallback((newConfig: FilterConfig) => {
+        setCurrentConfig(newConfig)
+
+        // Update the photo's config
+        if (activePhotoId) {
+            setPhotos(prev => prev.map(p =>
+                p.id === activePhotoId ? { ...p, config: newConfig } : p
+            ))
+        }
+    }, [activePhotoId])
+
+    // Add photos
+    const handlePhotosAdd = useCallback((newPhotos: PhotoAsset[]) => {
+        const photosWithConfig: PhotoWithConfig[] = newPhotos.map(p => ({
+            ...p,
+            config: { ...DEFAULT_FILTER_CONFIG },
+            lut: null
+        }))
+
+        setPhotos(prev => [...prev, ...photosWithConfig])
+
+        // Auto-select first photo
+        if (!activePhotoId && photosWithConfig.length > 0) {
+            setActivePhotoId(photosWithConfig[0].id)
+        }
+    }, [activePhotoId])
+
+    // Remove photo
+    const handlePhotoRemove = useCallback((id: string) => {
+        setPhotos(prev => prev.filter(p => p.id !== id))
+
+        if (activePhotoId === id) {
+            setActivePhotoId(photos.find(p => p.id !== id)?.id || null)
+        }
+    }, [activePhotoId, photos])
+
+    // Select photo
+    const handlePhotoSelect = useCallback((id: string) => {
+        setActivePhotoId(id)
+    }, [])
+
+    // Reset config
+    const handleReset = useCallback(() => {
+        const resetConfig = { ...DEFAULT_FILTER_CONFIG }
+        setCurrentConfig(resetConfig)
+
+        if (activePhotoId) {
+            setPhotos(prev => prev.map(p =>
+                p.id === activePhotoId ? { ...p, config: resetConfig } : p
+            ))
+        }
+    }, [activePhotoId])
+
+    // Apply to all photos
+    const handleApplyToAll = useCallback(() => {
+        setPhotos(prev => prev.map(p => ({
+            ...p,
+            config: { ...currentConfig },
+            lut: lut
+        })))
+    }, [currentConfig, lut])
+
+    // Export all photos
+    const handleExport = useCallback(async () => {
+        if (!engineRef.current || photos.length === 0) return
+
+        setIsExporting(true)
+        setExportProgress(0)
+
+        try {
+            const zip = new JSZip()
+            const engine = engineRef.current
+
+            for (let i = 0; i < photos.length; i++) {
+                const photo = photos[i]
+
+                // Load image
+                const img = await loadImage(photo.url)
+                engine.loadImage(img)
+
+                // Apply photo's individual LUT
+                if (photo.lut) {
+                    engine.loadLUT(photo.lut)
+                } else {
+                    engine.clearLUT()
+                }
+
+                // Render with photo's config
+                engine.render(photo.config)
+
+                // Get blob
+                const blob = await engine.toBlob('image/jpeg', 0.92)
+
+                // Add to zip
+                const filename = photo.file.name.replace(/\.[^/.]+$/, '') + '_edited.jpg'
+                zip.file(filename, blob)
+
+                setExportProgress(((i + 1) / photos.length) * 100)
+            }
+
+            // Generate and download zip
+            const zipBlob = await zip.generateAsync({ type: 'blob' })
+            saveAs(zipBlob, `filtered_photos_${Date.now()}.zip`)
+
+        } catch (err) {
+            console.error('Export failed:', err)
+            alert('Failed to export photos. Please try again.')
+        } finally {
+            setIsExporting(false)
+            setExportProgress(0)
+
+            // Reload active photo
+            if (activePhoto && previewImageRef.current) {
+                engineRef.current?.loadImage(previewImageRef.current)
+                if (lut) engineRef.current?.loadLUT(lut)
+                engineRef.current?.render(currentConfig)
+            }
+        }
+    }, [photos, lut, activePhoto, currentConfig])
+
+    return (
+        <div style={{
+            display: 'flex',
+            height: '100%',
+            width: '100%',
+            background: isDark ? '#000' : '#f0f0f0',
+            overflow: 'hidden'
+        }}>
+            {/* Left Sidebar - Assets */}
+            <AssetSidebar
+                photos={photos}
+                activePhotoId={activePhotoId}
+                onPhotosAdd={handlePhotosAdd}
+                onPhotoRemove={handlePhotoRemove}
+                onPhotoSelect={handlePhotoSelect}
+            />
+
+            {/* Center - Preview */}
+            <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+            }}>
+                {/* Toolbar */}
+                <div style={{
+                    padding: '12px 16px',
+                    borderBottom: `1px solid ${isDark ? '#222' : '#e0e0e0'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: isDark ? '#0a0a0a' : '#f8f8f8'
+                }}>
+                    <span style={{
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        color: isDark ? '#fff' : '#111'
+                    }}>
+                        {activePhoto ? activePhoto.file.name : 'No photo selected'}
+                    </span>
+                </div>
+
+                {/* Canvas Area */}
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'auto',
+                    padding: '24px',
+                    background: isDark ? '#111' : '#e8e8e8'
+                }}>
+                    {/* Always render canvas for WebGL context */}
+                    <canvas
+                        ref={canvasRef}
+                        style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                            boxShadow: activePhoto ? '0 8px 32px rgba(0,0,0,0.3)' : 'none',
+                            display: activePhoto ? 'block' : 'none'
+                        }}
+                    />
+                    {!activePhoto && (
+                        <div style={{
+                            textAlign: 'center',
+                            color: isDark ? '#444' : '#999'
+                        }}>
+                            <p style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
+                                No photo selected
+                            </p>
+                            <p style={{ fontSize: '0.85rem' }}>
+                                Add photos from the left sidebar
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Right Sidebar - Develop Panel */}
+            <DevelopPanel
+                config={currentConfig}
+                onChange={handleConfigChange}
+                lut={lut}
+                onLutChange={setLut}
+                onReset={handleReset}
+                onApplyToAll={handleApplyToAll}
+                hasMultiplePhotos={photos.length > 1}
+                onExport={handleExport}
+                isExporting={isExporting}
+                exportProgress={exportProgress}
+                photoCount={photos.length}
+            />
+        </div>
+    )
+}
+
+// Helper: Load image as promise
+function loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.onerror = reject
+        img.src = src
+    })
+}
