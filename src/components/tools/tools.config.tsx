@@ -26,4 +26,12 @@ export const TOOLS: ToolConfig[] = [
         activeMatch: 'filter-tool',
         description: 'Batch image editing with LUT support'
     },
+    {
+        id: 'poster-tool',
+        label: 'Poster Tool',
+        path: '/utilities/poster-tool',
+        icon: Copy, // You might want to import a different icon
+        activeMatch: 'poster-tool',
+        description: 'Create custom posters from templates'
+    },
 ]

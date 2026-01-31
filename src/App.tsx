@@ -28,6 +28,7 @@ import { GarbageCollector } from './components/admin/GarbageCollector'
 import { PublicForm } from './pages/PublicForm'
 import { UtilitiesPage } from './pages/UtilitiesPage'
 import { FrameToolPage } from './pages/FrameToolPage'
+import { PosterToolPage } from './pages/PosterToolPage'
 import { FilterToolPage } from './pages/FilterToolPage'
 
 
@@ -68,6 +69,7 @@ function App() {
           {/* Filter Tool - outside Layout to hide top navbar */}
           <Route path="/utilities/filter-tool" element={<FilterToolPage />} />
           <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
+          <Route path="/utilities/poster-tool" element={<PosterToolPage />} />
           <Route path="/utilities" element={<UtilitiesPage />} />
 
 
@@ -94,6 +96,7 @@ function App() {
                 {/* Public Utilities */}
                 <Route path="/utilities" element={<UtilitiesPage />} />
                 <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
+                <Route path="/utilities/poster-tool" element={<PosterToolPage />} />
               </Routes>
             </Layout>
           } />
