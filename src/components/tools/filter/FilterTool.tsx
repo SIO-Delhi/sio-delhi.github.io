@@ -37,16 +37,25 @@ export function FilterTool() {
 
     const activePhoto = photos.find(p => p.id === activePhotoId)
 
-    // Initialize WebGL engine
-    useEffect(() => {
+    // Initialize WebGL engine when canvas becomes available
+    const lastCanvasRef = useRef<HTMLCanvasElement | null>(null)
+    const initEngine = useCallback(() => {
         if (!canvasRef.current) return
 
+        // Re-init if canvas element changed (conditional rendering)
+        if (engineRef.current && lastCanvasRef.current === canvasRef.current) return
+
+        engineRef.current?.dispose()
         try {
             engineRef.current = new FilterEngine(canvasRef.current)
+            lastCanvasRef.current = canvasRef.current
         } catch (err) {
             console.error('Failed to initialize FilterEngine:', err)
         }
+    }, [])
 
+    // Cleanup on unmount
+    useEffect(() => {
         return () => {
             engineRef.current?.dispose()
         }
@@ -54,28 +63,36 @@ export function FilterTool() {
 
     // Load active photo into engine
     useEffect(() => {
-        if (!activePhoto || !engineRef.current) return
+        if (!activePhoto) return
 
-        const img = new Image()
-        img.onload = () => {
-            previewImageRef.current = img
-            setPreviewAspectRatio(img.naturalWidth / img.naturalHeight)
-            engineRef.current?.loadImage(img)
+        // Wait for canvas to be in DOM, then init engine
+        const timer = requestAnimationFrame(() => {
+            initEngine()
+            if (!engineRef.current) return
 
-            // Load the photo's LUT
-            if (activePhoto.lut) {
-                engineRef.current?.loadLUT(activePhoto.lut)
-            } else {
-                engineRef.current?.clearLUT()
+            const img = new Image()
+            img.onload = () => {
+                previewImageRef.current = img
+                setPreviewAspectRatio(img.naturalWidth / img.naturalHeight)
+                engineRef.current?.loadImage(img)
+
+                // Load the photo's LUT
+                if (activePhoto.lut) {
+                    engineRef.current?.loadLUT(activePhoto.lut)
+                } else {
+                    engineRef.current?.clearLUT()
+                }
+
+                engineRef.current?.render(activePhoto.config)
             }
-
-            engineRef.current?.render(activePhoto.config)
-        }
-        img.src = activePhoto.url
+            img.src = activePhoto.url
+        })
 
         setCurrentConfig(activePhoto.config)
         setLut(activePhoto.lut)
-    }, [activePhoto?.id])
+
+        return () => cancelAnimationFrame(timer)
+    }, [activePhoto?.id, initEngine])
 
     // Re-render when config changes
     useEffect(() => {
@@ -269,26 +286,26 @@ export function FilterTool() {
                     minHeight: 0,
                     padding: '24px'
                 }}>
-                    <div style={{
-                        aspectRatio: previewAspectRatio,
-                        width: previewAspectRatio >= 1 ? '100%' : 'auto',
-                        height: previewAspectRatio >= 1 ? 'auto' : '100%',
-                        maxWidth: '90%',
-                        maxHeight: '90%',
-                        position: 'relative',
-                        boxShadow: activePhoto ? '0 8px 32px rgba(0,0,0,0.3)' : 'none',
-                        display: activePhoto ? 'block' : 'none'
-                    }}>
-                        <canvas
-                            ref={canvasRef}
-                            style={{
-                                display: 'block',
-                                width: '100%',
-                                height: '100%'
-                            }}
-                        />
-                    </div>
-                    {!activePhoto && (
+                    {activePhoto ? (
+                        <div style={{
+                            aspectRatio: previewAspectRatio,
+                            width: previewAspectRatio >= 1 ? '100%' : 'auto',
+                            height: previewAspectRatio >= 1 ? 'auto' : '100%',
+                            maxWidth: '90%',
+                            maxHeight: '90%',
+                            position: 'relative',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                        }}>
+                            <canvas
+                                ref={canvasRef}
+                                style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    height: '100%'
+                                }}
+                            />
+                        </div>
+                    ) : (
                         <div style={{
                             textAlign: 'center',
                             color: isDark ? '#444' : '#999'
