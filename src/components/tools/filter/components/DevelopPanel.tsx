@@ -38,32 +38,35 @@ function Slider({ label, value, min, max, step = 1, onChange, color, gradient }:
     const { isDark } = useTheme()
     const percentage = ((value - min) / (max - min)) * 100
     const isNeutral = value === 0 || value === (min + max) / 2
-    const trackColor = color || (isDark ? '#e0e0e0' : '#555')
-
-    // For bi-directional sliders (min < 0), calculate fill from center
+    const trackColor = color || (isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)')
     const isBidirectional = min < 0
+    const centerValue = isBidirectional ? 0 : (min + max) / 2
+
+    const handleDoubleClick = () => onChange(centerValue)
 
     return (
         <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            padding: '5px 0'
+            padding: '4px 0'
         }}>
             <span style={{
                 width: '76px',
                 fontSize: '0.72rem',
-                color: isDark ? '#888' : '#777',
+                color: isDark ? '#777' : '#777',
                 flexShrink: 0,
-                letterSpacing: '0.01em'
+                letterSpacing: '0.01em',
+                userSelect: 'none'
             }}>
                 {label}
             </span>
             <div
+                onDoubleClick={handleDoubleClick}
                 style={{
                     flex: 1,
                     position: 'relative',
-                    height: '24px',
+                    height: '20px',
                     display: 'flex',
                     alignItems: 'center',
                     cursor: 'pointer'
@@ -74,23 +77,35 @@ function Slider({ label, value, min, max, step = 1, onChange, color, gradient }:
                     position: 'absolute',
                     left: 0,
                     right: 0,
-                    height: '4px',
-                    background: gradient || (isDark ? '#2a2a2a' : '#e0e0e0'),
-                    borderRadius: '2px',
-                    border: gradient ? `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}` : 'none'
-                }} />
-                {/* Fill indicator - only show for non-gradient sliders */}
-                {!gradient && (
+                    height: gradient ? '3px' : '2px',
+                    background: gradient || (isDark ? '#2a2a2a' : '#ddd'),
+                    borderRadius: '1.5px',
+                    overflow: 'hidden'
+                }}>
+                    {/* Fill indicator - inside track for clean look */}
+                    {!gradient && (
+                        <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            bottom: 0,
+                            left: isBidirectional ? (value < 0 ? `${percentage}%` : '50%') : 0,
+                            width: isBidirectional ? `${Math.abs(percentage - 50)}%` : `${percentage}%`,
+                            background: trackColor,
+                            borderRadius: '1.5px'
+                        }} />
+                    )}
+                </div>
+                {/* Center tick for bidirectional */}
+                {isBidirectional && !gradient && (
                     <div style={{
                         position: 'absolute',
+                        left: '50%',
                         top: '50%',
-                        transform: 'translateY(-50%)',
-                        left: isBidirectional ? (value < 0 ? `${percentage}%` : '50%') : 0,
-                        width: isBidirectional ? `${Math.abs(percentage - 50)}%` : `${percentage}%`,
-                        height: '4px',
-                        background: trackColor,
-                        borderRadius: '2px',
-                        transition: 'width 0.05s, left 0.05s'
+                        transform: 'translate(-50%, -50%)',
+                        width: '1px',
+                        height: '6px',
+                        background: isDark ? '#444' : '#bbb',
+                        pointerEvents: 'none'
                     }} />
                 )}
                 {/* Thumb */}
@@ -98,18 +113,16 @@ function Slider({ label, value, min, max, step = 1, onChange, color, gradient }:
                     position: 'absolute',
                     left: `${percentage}%`,
                     transform: 'translateX(-50%)',
-                    width: '12px',
-                    height: '12px',
+                    width: '10px',
+                    height: '10px',
                     borderRadius: '50%',
-                    background: isDark ? '#e8e8e8' : '#222',
-                    border: `2px solid ${isDark ? '#fff' : '#111'}`,
+                    background: isDark ? '#fff' : '#222',
                     boxShadow: isDark
-                        ? '0 1px 3px rgba(0,0,0,0.5)'
-                        : '0 1px 3px rgba(0,0,0,0.15)',
-                    pointerEvents: 'none',
-                    transition: 'box-shadow 0.15s'
+                        ? '0 0 0 1.5px rgba(255,255,255,0.15), 0 1px 4px rgba(0,0,0,0.4)'
+                        : '0 0 0 1.5px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.12)',
+                    pointerEvents: 'none'
                 }} />
-                {/* Hidden range input for interaction */}
+                {/* Hidden range input */}
                 <input
                     type="range"
                     min={min}
@@ -130,16 +143,17 @@ function Slider({ label, value, min, max, step = 1, onChange, color, gradient }:
             </div>
             <span
                 style={{
-                    width: '38px',
+                    width: '36px',
                     textAlign: 'right',
-                    fontSize: '0.7rem',
+                    fontSize: '0.68rem',
                     fontWeight: 500,
-                    color: isNeutral ? (isDark ? '#555' : '#bbb') : (isDark ? '#ccc' : '#333'),
+                    color: isNeutral ? (isDark ? '#444' : '#bbb') : (isDark ? '#999' : '#444'),
                     fontFamily: 'monospace',
                     cursor: 'pointer',
-                    letterSpacing: '-0.02em'
+                    letterSpacing: '-0.02em',
+                    userSelect: 'none'
                 }}
-                onDoubleClick={() => onChange(isBidirectional ? 0 : min)}
+                onDoubleClick={handleDoubleClick}
                 title="Double-click to reset"
             >
                 {value > 0 && min < 0 ? '+' : ''}{step < 1 ? value.toFixed(2) : value}
