@@ -304,7 +304,7 @@ export function DevelopPanel({
                                     lutInputRef.current?.click()
                                 } else {
                                     try {
-                                        const response = await fetch(`/src/assets/luts/${encodeURIComponent(value)}`)
+                                        const response = await fetch(`/luts/${encodeURIComponent(value)}`)
                                         if (!response.ok) throw new Error(`HTTP ${response.status}`)
                                         const content = await response.text()
                                         const lutData = parseCubeFile(content)
