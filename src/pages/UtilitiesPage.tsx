@@ -35,6 +35,14 @@ export function UtilitiesPage() {
             path: '/utilities/filter-tool',
             color: '#a78bfa'
         },
+        {
+            id: 'poster-tool',
+            title: 'Poster Maker',
+            description: 'Create professional weekly program posters with customizable details and themes.',
+            icon: <PenTool size={24} color="#f59e0b" />,
+            path: '/utilities/poster-tool',
+            color: '#f59e0b'
+        },
     ]
 
     return (
