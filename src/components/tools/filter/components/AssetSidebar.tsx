@@ -70,11 +70,9 @@ export function AssetSidebar({
 
     return (
         <div style={{
-            width: '220px',
-            minWidth: '220px',
+            width: '100%',
             height: '100%',
             background: isDark ? '#0a0a0a' : '#f8f8f8',
-            borderRight: `1px solid ${isDark ? '#222' : '#e0e0e0'}`,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
