@@ -260,34 +260,38 @@ export function FilterTool() {
                 {/* Canvas Area */}
                 <div style={{
                     flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'auto',
-                    padding: '24px',
-                    background: isDark ? '#111' : '#e8e8e8'
+                    position: 'relative',
+                    overflow: 'hidden',
+                    background: isDark ? '#111' : '#e8e8e8',
+                    minHeight: 0
                 }}>
-                    <canvas
-                        ref={canvasRef}
-                        style={{
-                            maxWidth: '100%',
-                            maxHeight: '100%',
-                            objectFit: 'contain',
-                            boxShadow: activePhoto ? '0 8px 32px rgba(0,0,0,0.3)' : 'none',
-                            display: activePhoto ? 'block' : 'none'
-                        }}
-                    />
-                    {!activePhoto && (
-                        <div style={{
-                            textAlign: 'center',
-                            color: isDark ? '#444' : '#999'
-                        }}>
-                            <p style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
-                                No photo selected
-                            </p>
-                         
-                        </div>
-                    )}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <canvas
+                            ref={canvasRef}
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                boxShadow: activePhoto ? '0 8px 32px rgba(0,0,0,0.3)' : 'none',
+                                display: activePhoto ? 'block' : 'none'
+                            }}
+                        />
+                        {!activePhoto && (
+                            <div style={{
+                                textAlign: 'center',
+                                color: isDark ? '#444' : '#999'
+                            }}>
+                                <p style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
+                                    No photo selected
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
