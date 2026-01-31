@@ -1196,37 +1196,51 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     {post.title}
                 </h1>
 
-                {/* Gallery Description (for gallery layout) */}
-                {post.layout === 'gallery' && post.content && (
-                    <div
-                        className="post-content"
-                        style={{
-                            color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.7)',
-                            fontSize: '1.2rem',
-                            lineHeight: 1.5,
-                            textAlign: 'center',
-                            maxWidth: '800px',
-                            margin: '0 auto 32px'
-                        }}
-                    >
-                        {/* Simple text render or block renderer? Let's use simple for description */}
-                        <p>{post.content}</p>
+                {/* Gallery Description (for gallery layout) - only plain text, not block markup */}
+                {post.layout === 'gallery' && post.content && !post.content.includes('siodel-block') && (
+                    <div style={{
+                        background: isDark
+                            ? 'linear-gradient(145deg, rgba(18,18,21,0.9), rgba(13,13,16,0.9))'
+                            : 'rgba(255,255,255,0.8)',
+                        border: `1px solid ${isDark ? '#27272a' : '#e4e4e7'}`,
+                        borderBottom: `2px solid ${isDark ? 'rgba(255,59,59,0.4)' : 'rgba(255,59,59,0.3)'}`,
+                        borderRadius: '16px',
+                        padding: 'clamp(24px, 4vw, 40px)',
+                        maxWidth: '800px',
+                        margin: '0 auto 32px',
+                        position: 'relative' as const,
+                        overflow: 'hidden'
+                    }}>
+                        {/* Red gradient accent at bottom */}
+                        <div style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: '60px',
+                            background: 'linear-gradient(to top, rgba(255,59,59,0.08), transparent)',
+                            pointerEvents: 'none'
+                        }} />
+                        <p style={{
+                            color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)',
+                            fontSize: 'clamp(0.95rem, 2vw, 1.1rem)',
+                            lineHeight: 1.7,
+                            margin: 0,
+                            whiteSpace: 'pre-line',
+                            position: 'relative' as const
+                        }}>
+                            {post.content}
+                        </p>
                     </div>
                 )}
 
 
 
-                {/* Gallery Display */}
-                {hasGallery && (
-                    <>
-                        {post.layout === 'gallery' ? (
-                            <EmbeddableGallery imagesRaw={post.galleryImages} isDark={isDark} />
-                        ) : galleryUrl && (
-                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-                                <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="default" />
-                            </div>
-                        )}
-                    </>
+                {/* Non-gallery display (View Gallery button) */}
+                {hasGallery && post.layout !== 'gallery' && galleryUrl && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="default" />
+                    </div>
                 )}
 
                 {/* Read Article Button - Only show for non-subsection posts with audio enabled */}
@@ -1256,6 +1270,19 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     </div>
                 )}
             </div >
+
+            {/* Gallery Display - break out of 900px container to full viewport width */}
+            {hasGallery && post.layout === 'gallery' && (
+                <div style={{
+                    width: '100vw',
+                    position: 'relative',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    padding: '0 16px'
+                }}>
+                    <EmbeddableGallery imagesRaw={post.galleryImages} isDark={isDark} />
+                </div>
+            )}
 
             {/* Child Cards Grid for Subsection Posts */}
             {

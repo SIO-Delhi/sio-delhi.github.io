@@ -458,8 +458,51 @@ export function GalleryPage() {
                 </span>
             </div>
 
+            {/* Description Card - only show plain text content, not block markup */}
+            {post.content && !post.content.includes('siodel-block') && (
+                <div style={{
+                    maxWidth: '1400px',
+                    margin: '0 auto 40px',
+                    padding: '0 24px'
+                }}>
+                    <div style={{
+                        background: isDark
+                            ? 'linear-gradient(145deg, rgba(18,18,21,0.9), rgba(13,13,16,0.9))'
+                            : 'rgba(255,255,255,0.8)',
+                        border: `1px solid ${isDark ? '#27272a' : '#e4e4e7'}`,
+                        borderBottom: `2px solid ${isDark ? 'rgba(255,59,59,0.4)' : 'rgba(255,59,59,0.3)'}`,
+                        borderRadius: '16px',
+                        padding: 'clamp(24px, 4vw, 40px)',
+                        maxWidth: '800px',
+                        margin: '0 auto',
+                        position: 'relative' as const,
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: '60px',
+                            background: 'linear-gradient(to top, rgba(255,59,59,0.08), transparent)',
+                            pointerEvents: 'none'
+                        }} />
+                        <p style={{
+                            color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)',
+                            fontSize: 'clamp(0.95rem, 2vw, 1.1rem)',
+                            lineHeight: 1.7,
+                            margin: 0,
+                            whiteSpace: 'pre-line',
+                            position: 'relative' as const
+                        }}>
+                            {post.content}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Masonry Gallery */}
-            <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
+            <main style={{ padding: '0 16px' }}>
                 {gallerySections.map((section, idx) => (
                     <div key={section.id || idx} style={{ marginBottom: '48px' }}>
                         {section.title && (

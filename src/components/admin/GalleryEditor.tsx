@@ -32,6 +32,7 @@ export function GalleryEditor() {
 
     // Upload State
     const [isUploading, setIsUploading] = useState(false)
+    const [uploadingSectionId, setUploadingSectionId] = useState<string | null>(null)
 
     // Crop Queue
     const [cropQueue, setCropQueue] = useState<{ file: File, sectionId: string | 'cover', preview: string }[]>([])
@@ -170,6 +171,7 @@ export function GalleryEditor() {
         if (!files || files.length === 0) return
 
         setIsUploading(true)
+        setUploadingSectionId(targetSectionId)
         try {
             const newUrls: string[] = []
             const newPendingFiles: Record<string, File> = {}
@@ -201,6 +203,7 @@ export function GalleryEditor() {
             console.error('Batch processing error:', err)
         } finally {
             setIsUploading(false)
+            setUploadingSectionId(null)
             e.target.value = ''
         }
     }
@@ -541,8 +544,14 @@ export function GalleryEditor() {
                                 </label>
                             </div>
 
-                            <div style={{ fontSize: '0.8rem', color: '#52525b' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#52525b', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {section.images.length} images
+                                {uploadingSectionId === section.id && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ff3b3b', fontWeight: 500 }}>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Processing...
+                                    </span>
+                                )}
                             </div>
                         </div>
                     ))}
