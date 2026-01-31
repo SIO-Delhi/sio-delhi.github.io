@@ -68,6 +68,7 @@ function App() {
           {/* Filter Tool - outside Layout to hide top navbar */}
           <Route path="/utilities/filter-tool" element={<FilterToolPage />} />
           <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
+          <Route path="/utilities" element={<UtilitiesPage />} />
 
 
 
