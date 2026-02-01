@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import * as THREE from 'three'
 import flagImg from '../../assets/flag.png'
@@ -44,22 +44,44 @@ function FlagScene({ isMobile }: { isMobile: boolean }) {
         return { flag, wind }
     }, [flagTexture])
 
+    // Physics state
+    const physicsState = useRef({
+        accumulator: 0,
+        lastTime: 0
+    })
+
+    const FIXED_TIME_STEP = 1 / 60
+    const MAX_ACCUMULATOR = 0.25 // Prevent spiral of death
+
     // Update Loop
-    useFrame((_, delta) => {
-        // Limit delta to avoid instability on lag spikes
-        const d = Math.min(delta, 0.05)
+    useFrame(({ clock }) => {
+        const currentTime = clock.getElapsedTime()
+        // Calculate delta ourselves since r3f delta can be affected by other factors
+        // or just use r3f delta, but manual calculation is sometimes safer with accumulators
+        let frameTime = currentTime - physicsState.current.lastTime
+        physicsState.current.lastTime = currentTime
 
-        // 1. Update Wind
-        wind.update()
+        // Clamp frame time to avoid huge jumps if tab was backgrounded
+        if (frameTime > MAX_ACCUMULATOR) frameTime = MAX_ACCUMULATOR
 
-        // 2. Apply Forces
-        applyGravityToCloth(flag.cloth, flag.object)
-        applyWindForceToCloth(flag.cloth, wind, flag.object)
+        physicsState.current.accumulator += frameTime
 
-        // 3. Simulate
-        flag.simulate(d)
+        // Consume accumulator in fixed steps
+        while (physicsState.current.accumulator >= FIXED_TIME_STEP) {
+            // 1. Update Wind
+            wind.update()
 
-        // 4. Render Updates (Geometry etc)
+            // 2. Apply Forces
+            applyGravityToCloth(flag.cloth, flag.object)
+            applyWindForceToCloth(flag.cloth, wind, flag.object)
+
+            // 3. Simulate with fixed step
+            flag.simulate(FIXED_TIME_STEP)
+
+            physicsState.current.accumulator -= FIXED_TIME_STEP
+        }
+
+        // 4. Render Updates (interpolating would be even better but simple render is fine for cloth)
         flag.render()
     })
 
