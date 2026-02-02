@@ -8,7 +8,8 @@ require_once __DIR__ . '/../db.php';
 /**
  * Auto-create/migrate the page_visits table
  */
-function ensureAnalyticsTable() {
+function ensureAnalyticsTable()
+{
     $db = getDB();
     $db->exec("
         CREATE TABLE IF NOT EXISTS page_visits (
@@ -41,28 +42,102 @@ function ensureAnalyticsTable() {
             ");
         }
     } catch (Exception $e) {
-        // Columns may already exist, ignore
     }
+
+    // Migrate: add browser/os/referrer columns
+    try {
+        $cols = $db->query("SHOW COLUMNS FROM page_visits LIKE 'browser'")->fetchAll();
+        if (empty($cols)) {
+            $db->exec("ALTER TABLE page_visits
+                ADD COLUMN browser VARCHAR(50) DEFAULT NULL,
+                ADD COLUMN os VARCHAR(50) DEFAULT NULL,
+                ADD COLUMN device_type VARCHAR(20) DEFAULT NULL,
+                ADD COLUMN referrer VARCHAR(255) DEFAULT NULL
+            ");
+        }
+    } catch (Exception $e) {
+    }
+
+    // Migrate: add isp/organization columns
+    try {
+        $cols = $db->query("SHOW COLUMNS FROM page_visits LIKE 'isp'")->fetchAll();
+        if (empty($cols)) {
+            $db->exec("ALTER TABLE page_visits
+                ADD COLUMN isp VARCHAR(100) DEFAULT NULL,
+                ADD COLUMN organization VARCHAR(100) DEFAULT NULL
+            ");
+        }
+    } catch (Exception $e) {
+    }
+}
+
+/**
+ * Simple User-Agent parser to avoid heavy dependencies
+ */
+function parseUserAgent($ua)
+{
+    $browser = 'Unknown';
+    $os = 'Unknown';
+    $device = 'Desktop';
+
+    // Detect OS
+    if (preg_match('/android/i', $ua)) {
+        $os = 'Android';
+        $device = 'Mobile';
+    } elseif (preg_match('/iphone|ipad|ipod/i', $ua)) {
+        $os = 'iOS';
+        $device = 'Mobile';
+    } elseif (preg_match('/windows nt/i', $ua)) {
+        $os = 'Windows';
+    } elseif (preg_match('/macintosh|mac os x/i', $ua)) {
+        $os = 'Mac OS';
+    } elseif (preg_match('/linux/i', $ua)) {
+        $os = 'Linux';
+    }
+
+    // Detect Browser
+    if (preg_match('/edg/i', $ua)) {
+        $browser = 'Edge';
+    } elseif (preg_match('/chrome/i', $ua)) {
+        $browser = 'Chrome';
+    } elseif (preg_match('/firefox/i', $ua)) {
+        $browser = 'Firefox';
+    } elseif (preg_match('/safari/i', $ua)) {
+        $browser = 'Safari';
+    } elseif (preg_match('/opera|opr/i', $ua)) {
+        $browser = 'Opera';
+    }
+
+    return ['browser' => $browser, 'os' => $os, 'device' => $device];
 }
 
 /**
  * Lookup geolocation for an IP address using ip-api.com (free, no key needed)
  */
-function geolocateIp($ip) {
+function geolocateIp($ip)
+{
     // Skip private/local IPs
     if ($ip === 'unknown' || $ip === '127.0.0.1' || $ip === '::1' || strpos($ip, '192.168.') === 0 || strpos($ip, '10.') === 0) {
         return null;
     }
 
-    $ctx = stream_context_create(['http' => ['timeout' => 2]]);
+    $ctx = stream_context_create([
+        'http' => ['timeout' => 5],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+        ]
+    ]);
     $url = "https://ipwho.is/" . urlencode($ip);
 
     try {
         $response = @file_get_contents($url, false, $ctx);
-        if ($response === false) return null;
+        if ($response === false)
+            return null;
 
         $data = json_decode($response, true);
-        if (!$data || !($data['success'] ?? false)) return null;
+        if (!$data || !($data['success'] ?? false))
+            return null;
 
         return [
             'city' => $data['city'] ?? null,
@@ -70,6 +145,8 @@ function geolocateIp($ip) {
             'country' => $data['country_code'] ?? null,
             'lat' => $data['latitude'] ?? null,
             'lon' => $data['longitude'] ?? null,
+            'isp' => $data['connection']['isp'] ?? null,
+            'organization' => $data['connection']['org'] ?? null,
         ];
     } catch (Exception $e) {
         return null;
@@ -80,7 +157,8 @@ function geolocateIp($ip) {
  * POST /analytics/track
  * Track a page visit with geolocation. Deduplicates by IP hash + page + day.
  */
-function trackVisit() {
+function trackVisit()
+{
     ensureAnalyticsTable();
 
     $input = json_decode(file_get_contents('php://input'), true);
@@ -104,10 +182,23 @@ function trackVisit() {
     // Geolocate the IP
     $geo = geolocateIp($ip);
 
+    // Parse User Agent
+    $uaStr = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    $uaInfo = parseUserAgent($uaStr);
+
+    // Get Referrer
+    $referrer = $_SERVER['HTTP_REFERER'] ?? null;
+    if ($referrer) {
+        $parsed = parse_url($referrer);
+        $referrer = $parsed['host'] ?? null; // Store domain only
+    }
+
     $db = getDB();
     $stmt = $db->prepare("
-        INSERT IGNORE INTO page_visits (page, ip_hash, visit_date, visited_at, city, region, country, lat, lon)
-        VALUES (:page, :ip_hash, :visit_date, NOW(), :city, :region, :country, :lat, :lon)
+        INSERT IGNORE INTO page_visits
+        (page, ip_hash, visit_date, visited_at, city, region, country, lat, lon, browser, os, device_type, referrer, isp, organization)
+        VALUES
+        (:page, :ip_hash, :visit_date, NOW(), :city, :region, :country, :lat, :lon, :browser, :os, :device_type, :referrer, :isp, :organization)
     ");
     $stmt->execute([
         ':page' => $page,
@@ -118,6 +209,12 @@ function trackVisit() {
         ':country' => $geo['country'] ?? null,
         ':lat' => $geo['lat'] ?? null,
         ':lon' => $geo['lon'] ?? null,
+        ':browser' => $uaInfo['browser'],
+        ':os' => $uaInfo['os'],
+        ':device_type' => $uaInfo['device'],
+        ':referrer' => $referrer,
+        ':isp' => $geo['isp'] ?? null,
+        ':organization' => $geo['organization'] ?? null,
     ]);
 
     return ['success' => true];
@@ -127,7 +224,8 @@ function trackVisit() {
  * GET /analytics/stats
  * Returns page visit statistics for the admin dashboard.
  */
-function getVisitStats() {
+function getVisitStats()
+{
     ensureAnalyticsTable();
 
     $db = getDB();
@@ -172,10 +270,30 @@ function getVisitStats() {
     $stmt->execute([':today' => $today]);
     $trend = $stmt->fetchAll();
 
+    // Browser stats
+    $browsers = $db->query("SELECT browser, COUNT(*) as count FROM page_visits WHERE browser IS NOT NULL GROUP BY browser ORDER BY count DESC LIMIT 10")->fetchAll();
+
+    // OS stats
+    $oss = $db->query("SELECT os, COUNT(*) as count FROM page_visits WHERE os IS NOT NULL GROUP BY os ORDER BY count DESC LIMIT 10")->fetchAll();
+
+    // Referrer stats
+    $referrers = $db->query("SELECT referrer, COUNT(*) as count FROM page_visits WHERE referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10")->fetchAll();
+
+    // ISP stats
+    $isps = $db->query("SELECT isp, COUNT(*) as count FROM page_visits WHERE isp IS NOT NULL GROUP BY isp ORDER BY count DESC LIMIT 10")->fetchAll();
+
+    // Organization stats
+    $orgs = $db->query("SELECT organization, COUNT(*) as count FROM page_visits WHERE organization IS NOT NULL GROUP BY organization ORDER BY count DESC LIMIT 10")->fetchAll();
+
     return [
         'totals' => $totals,
         'pages' => $pages,
-        'trend' => $trend
+        'trend' => $trend,
+        'browsers' => $browsers,
+        'oss' => $oss,
+        'referrers' => $referrers,
+        'isps' => $isps,
+        'organizations' => $orgs
     ];
 }
 
@@ -183,7 +301,8 @@ function getVisitStats() {
  * GET /analytics/locations
  * Returns aggregated visitor locations for map visualization.
  */
-function getVisitorLocations() {
+function getVisitorLocations()
+{
     ensureAnalyticsTable();
 
     $db = getDB();

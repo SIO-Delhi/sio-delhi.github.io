@@ -12,6 +12,11 @@ export function AdminAnalytics() {
         totals: { total_visits: number; unique_visitors: number; today_visits: number } | null;
         pages: { page: string; total_visits: number; unique_visitors: number; today_visits: number; first_visit: string; last_visit: string }[];
         trend: { visit_date: string; visits: number; unique_visitors: number }[];
+        browsers?: { browser: string; count: number }[];
+        oss?: { os: string; count: number }[];
+        referrers?: { referrer: string; count: number }[];
+        isps?: { isp: string; count: number }[];
+        organizations?: { organization: string; count: number }[];
         loading: boolean;
     }>({ totals: null, pages: [], trend: [], loading: true })
     const [locations, setLocations] = useState<{
@@ -30,7 +35,17 @@ export function AdminAnalytics() {
     useEffect(() => {
         fetch(`${API_BASE}/analytics/stats`)
             .then(res => res.json())
-            .then(data => setAnalytics({ totals: data.totals, pages: data.pages || [], trend: data.trend || [], loading: false }))
+            .then(data => setAnalytics({
+                totals: data.totals,
+                pages: data.pages || [],
+                trend: data.trend || [],
+                browsers: data.browsers || [],
+                oss: data.oss || [],
+                referrers: data.referrers || [],
+                isps: data.isps || [],
+                organizations: data.organizations || [],
+                loading: false
+            }))
             .catch(() => setAnalytics(prev => ({ ...prev, loading: false })))
 
         fetch(`${API_BASE}/analytics/locations`)
@@ -52,6 +67,46 @@ export function AdminAnalytics() {
 
     const maxVisitCount = Math.max(...locations.locations.map(l => l.visit_count), 1)
 
+    // Helper for simple listing tables
+    const SimpleTable = ({ title, icon: Icon, color, data }: { title: string, icon: any, color: string, data: { name: string, count: number }[] }) => (
+        <div style={{
+            borderRadius: '14px', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden',
+            display: 'flex', flexDirection: 'column'
+        }}>
+            <div style={{
+                padding: '12px 16px', background: 'rgba(255,255,255,0.03)',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                borderBottom: '1px solid rgba(255,255,255,0.04)'
+            }}>
+                <Icon size={14} color={color} />
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {title}
+                </span>
+            </div>
+            <div style={{ flex: 1 }}>
+                {data.length === 0 ? (
+                    <div style={{ padding: '16px', textAlign: 'center', color: '#666', fontSize: '0.8rem' }}>No data</div>
+                ) : (
+                    data.map((item, i) => (
+                        <div key={i} style={{
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            padding: '10px 16px',
+                            borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.04)',
+                            background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)'
+                        }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#eee', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70%' }}>
+                                {item.name || 'Unknown'}
+                            </span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: color }}>
+                                {item.count}
+                            </span>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    )
+
     return (
         <div>
             <h1 style={{
@@ -60,7 +115,7 @@ export function AdminAnalytics() {
                 marginBottom: '8px'
             }}>Page Analytics</h1>
             <p style={{ color: '#888', marginBottom: isMobile ? '20px' : '32px', fontSize: isMobile ? '0.9rem' : '1rem' }}>
-                Track visitor activity and geographic distribution.
+                Track visitor activity, demographics, and network sources.
             </p>
 
             {/* Page Analytics Section */}
@@ -186,6 +241,53 @@ export function AdminAnalytics() {
                             </div>
                         )}
 
+                        {/* New Audience & Network Metrics */}
+                        <div style={{ marginTop: '32px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Users size={16} color="#bbb" />
+                                </div>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ddd' }}>Audience & Network</h3>
+                            </div>
+
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
+                                gap: '16px'
+                            }}>
+                                <SimpleTable
+                                    title="Top Browsers"
+                                    icon={BarChart3}
+                                    color="#3b82f6"
+                                    data={analytics.browsers?.map(b => ({ name: b.browser, count: b.count })) || []}
+                                />
+                                <SimpleTable
+                                    title="Top OS"
+                                    icon={MapPin}
+                                    color="#10b981"
+                                    data={analytics.oss?.map(o => ({ name: o.os, count: o.count })) || []}
+                                />
+                                <SimpleTable
+                                    title="Referrers"
+                                    icon={TrendingUp}
+                                    color="#f59e0b"
+                                    data={analytics.referrers?.map(r => ({ name: r.referrer, count: r.count })) || []}
+                                />
+                                <SimpleTable
+                                    title="Top ISPs"
+                                    icon={TrendingUp}
+                                    color="#8b5cf6"
+                                    data={analytics.isps?.map(i => ({ name: i.isp, count: i.count })) || []}
+                                />
+                                <SimpleTable
+                                    title="Organizations"
+                                    icon={Users}
+                                    color="#ec4899"
+                                    data={analytics.organizations?.map(o => ({ name: o.organization, count: o.count })) || []}
+                                />
+                            </div>
+                        </div>
+
                         {analytics.pages.length === 0 && (
                             <div style={{ textAlign: 'center', padding: '32px', color: '#666', fontSize: '0.9rem' }}>
                                 No visits recorded yet. Analytics will appear as visitors browse the site.
@@ -303,7 +405,7 @@ export function AdminAnalytics() {
                                 letterSpacing: '0.05em'
                             }}>
                                 <span>Location</span>
-                                <span style={{ textAlign: 'center' }}>Visits</span>
+                                <span>Visits</span>
                                 {!isMobile && <span style={{ textAlign: 'center' }}>Unique</span>}
                             </div>
                             {locations.locations.slice(0, 10).map((loc, i) => (
