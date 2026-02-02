@@ -11,6 +11,7 @@ import { ViewGalleryButton } from '../components/ui/ViewGalleryButton'
 import { EmbeddableGallery } from '../components/ui/EmbeddableGallery'
 import { PDFPreviewCard } from '../components/ui/PDFPreviewCard'
 import { PDFModal } from '../components/ui/PDFModal'
+import { slugify } from '../utils/slugify'
 
 // --- Helper: Detect RTL Text (Urdu/Arabic) ---
 const isRtl = (text: string) => {
@@ -1317,7 +1318,7 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                                             'leadership': 'leader'
                                         }
                                         const routePath = routeMap[post.sectionId] || 'about-us'
-                                        window.location.href = `/${routePath}/${child.id}`
+                                        window.location.href = `/${routePath}/${slugify(child.title)}`
                                     }}
                                 />
                             ))}
