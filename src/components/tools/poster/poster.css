@@ -32,6 +32,38 @@
     font-display: swap;
 }
 
+@font-face {
+    font-family: 'KobuzanHeavy';
+    src: url('../../../fonts/kobuzan-prostir-sans-display-heavy.otf') format('opentype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'GoudyOldStyle';
+    src: url('../../../fonts/goudy-old-style/GOUDOS.TTF') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenSansSemibold';
+    src: url('../../../fonts/open-sans/OpenSans-Semibold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'OpenSansBold';
+    src: url('../../../fonts/open-sans/OpenSans-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* --- Variables & Tokens --- */
 :root {
     --pt-bg-main: #09090b;

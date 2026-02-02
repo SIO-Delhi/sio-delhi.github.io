@@ -4,6 +4,37 @@ import { useHistory } from '../../../hooks/useHistory'
 import posterSvgUrl from '../../../assets/poster.svg'
 import './poster.css'
 
+import flamanteSerifBoldUrl from '../../../fonts/flamante-serif/Flamante Serif -demo versions FFP-/Flamante-Serif-Bold-FFP.ttf'
+import ascendantSerifUrl from '../../../fonts/ascendant_serif/AscendantSerif-PersonalUse-Regular.otf'
+import ascenderSerifBoldUrl from '../../../fonts/Ascender-Serif-W02-Bold/Ascender Serif W02 Bold.ttf'
+import openSansBoldUrl from '../../../fonts/open-sans/OpenSans-Bold.ttf'
+
+const fontDefs = [
+    { family: 'FlamanteSerifBold', url: flamanteSerifBoldUrl, format: 'truetype' },
+    { family: 'AscendantSerif', url: ascendantSerifUrl, format: 'opentype' },
+    { family: 'AscenderSerifBold', url: ascenderSerifBoldUrl, format: 'truetype' },
+    { family: 'OpenSansBold', url: openSansBoldUrl, format: 'truetype' },
+]
+
+async function buildEmbeddedFontStyles(): Promise<string> {
+    const rules: string[] = []
+    for (const font of fontDefs) {
+        try {
+            const resp = await fetch(font.url)
+            const blob = await resp.blob()
+            const base64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result as string)
+                reader.readAsDataURL(blob)
+            })
+            rules.push(`@font-face { font-family: '${font.family}'; src: url('${base64}') format('${font.format}'); }`)
+        } catch (e) {
+            console.warn(`Failed to embed font ${font.family}`, e)
+        }
+    }
+    return rules.join('\n')
+}
+
 interface PosterState {
     header: string
     topic: string
@@ -71,10 +102,13 @@ export function PosterTool() {
         }
     }
 
-    const downloadPoster = () => {
+    const downloadPoster = async () => {
         if (!containerRef.current) return
 
-        const svgData = getProcessedSvg(true)
+        const fontStyles = await buildEmbeddedFontStyles()
+        let svgData = getProcessedSvg(true)
+        // Inject embedded font styles into the SVG
+        svgData = svgData.replace(/<svg([^>]*)>/, `<svg$1><defs><style>${fontStyles}</style></defs>`)
         const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData)
         const img = new Image()
         img.crossOrigin = 'anonymous'
@@ -239,21 +273,39 @@ export function PosterTool() {
             processed = processed.replace(placeholderRect, placeholderTag)
         }
 
-        // 3. Name & Profession (Keep SVG text for these as they were working fine left-aligned)
+        // 3. Name & Profession - using foreignObject for dynamic sizing
+        // Hide original SVG text elements
         processed = processed.replace(
             /<text class="st9" transform="translate\(1016\.19 1242\.14\)">.*?<\/text>/s,
-            `<text class="st9" text-anchor="start" style="font-family: AscendantSerif, serif;">
-                <tspan x="1016" y="1242">${escapeXml(state.name)}</tspan>
-                <tspan x="1016" y="1329">${escapeXml(state.name2)}</tspan>
-            </text>`
+            `<text class="st9" transform="translate(1016.19 1242.14)" style="display:none"></text>`
         )
         processed = processed.replace(
             /<text class="st7" transform="translate\(1012\.82 1406\.84\)">.*?<\/text>/s,
-            `<text class="st7" text-anchor="start" style="font-family: AscendantSerif, serif;">
-                <tspan x="1013" y="1406">${escapeXml(state.position)}</tspan>
-                <tspan x="1013" y="1476">${escapeXml(state.organization)}</tspan>
-            </text>`
+            `<text class="st7" transform="translate(1012.82 1406.84)" style="display:none"></text>`
         )
+
+        // Dynamic name sizing
+        const nameLen = Math.max(state.name.length, state.name2.length)
+        const nameFontSize = nameLen > 20 ? 55 : nameLen > 15 ? 65 : 80
+
+        // Dynamic position sizing
+        const posLen = Math.max(state.position.length, state.organization.length)
+        const posFontSize = posLen > 25 ? 38 : posLen > 18 ? 45 : 52
+
+        const namePositionOverlay = `
+    <foreignObject x="1010" y="1180" width="920" height="360">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 8px;">
+            <div style="font-family: AscendantSerif, serif; color: #d3830f; font-size: ${nameFontSize}px; line-height: 1.15; font-weight: bold;">
+                <div>${escapeXml(state.name)}</div>
+                <div>${escapeXml(state.name2)}</div>
+            </div>
+            <div style="font-family: AscendantSerif, serif; color: #a05415; font-size: ${posFontSize}px; line-height: 1.25;">
+                <div>${escapeXml(state.position)}</div>
+                <div>${escapeXml(state.organization)}</div>
+            </div>
+        </div>
+    </foreignObject>
+    `
 
         // 4. ForeignObject Layer for Layout (Header, Topic, Icons+Details)
         // Using a 100% width/height overlay to place HTML elements precisely
@@ -276,25 +328,29 @@ export function PosterTool() {
                     <div style="width: 34px; height: 34px; border-radius: 50%; background: #fff2e3; flex-shrink: 0; margin-left: -17px; z-index: 1;"></div>
                 </div>
             </div>
-            ${state.topic ? (() => {
-                const len = state.topic.length
+            ${(() => {
+                const topicText = state.topic || 'Topic Title Here'
+                const isPlaceholder = !state.topic
+                const len = topicText.length
                 const fontSize = len > 200 ? 70 : len > 150 ? 85 : len > 100 ? 100 : len > 60 ? 120 : 140
                 return `
             <div style="position: absolute; top: 500px; width: 100%; display: flex; justify-content: center; align-items: center; padding: 0 40px; max-height: 480px;">
-                <div style="color: #a05415; font-size: ${fontSize}px; font-weight: bold; font-family: FlamanteSerifBold, 'Flamante Serif', serif; text-align: center; line-height: 0.98; letter-spacing: -0.02em; word-wrap: break-word; max-width: 1600px;">
-                    ${escapeXml(state.topic).replace(/\n/g, '<br/>')}
+                <div style="color: #a05415; font-size: ${fontSize}px; font-weight: bold; font-family: FlamanteSerifBold, 'Flamante Serif', serif; text-align: center; line-height: 0.98; letter-spacing: -0.02em; word-wrap: break-word; max-width: 1600px;${isPlaceholder ? ' opacity: 0.3;' : ''}">
+                    ${escapeXml(topicText).replace(/\n/g, '<br/>')}
                 </div>
             </div>`
-            })() : ''}
-            <div style="position: absolute; top: 1720px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; color: #a05415; font-size: 62px; font-weight: bold; font-family: AscenderSerifBold, AscendantSerifBold, serif;">
+            })()}
+            <div style="position: absolute; top: 1720px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; color: #a05415; font-size: 62px; font-weight: bold; font-family: OpenSansBold, AscenderSerifBold, sans-serif;">
                 <div style="display: flex; align-items: center; gap: 24px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#c8884d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                     <span>${escapeXml(state.date)}</span>
                 </div>
+                <div style="width: 220px; height: 2px; background: #a05415; opacity: 0.4;"></div>
                 <div style="display: flex; align-items: center; gap: 24px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#c8884d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <span>${escapeXml(formatTime(state.time))}</span>
                 </div>
+                <div style="width: 220px; height: 2px; background: #a05415; opacity: 0.4;"></div>
                 <div style="display: flex; align-items: center; gap: 24px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#c8884d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
                     <span>${escapeXml(state.location)}</span>
@@ -305,7 +361,7 @@ export function PosterTool() {
     `
 
         // Logo Text Replacement (Bottom Right)
-        if (state.logoText && state.logoText !== 'DELHI') {
+        if (state.logoText) {
             const len = state.logoText.length
             const fontSize = len > 14 ? '26' : len > 10 ? '30' : len > 6 ? '36' : '40'
             const spacing = len > 10 ? '0.02em' : len > 6 ? '0.08em' : '0.15em'
@@ -322,9 +378,9 @@ export function PosterTool() {
             processed = processed.slice(0, lastSvgIdx1) + logoTextElement + processed.slice(lastSvgIdx1)
         }
 
-        // Append foreignObject before the last closing </svg>
+        // Append foreignObject overlays before the last closing </svg>
         const lastSvgIdx2 = processed.lastIndexOf('</svg>')
-        processed = processed.slice(0, lastSvgIdx2) + foreignObjectOverlay + processed.slice(lastSvgIdx2)
+        processed = processed.slice(0, lastSvgIdx2) + namePositionOverlay + foreignObjectOverlay + processed.slice(lastSvgIdx2)
 
         return processed
     }
@@ -337,7 +393,7 @@ export function PosterTool() {
                     <div className="flex justify-between items-start">
                         <div>
                             <h1 className="pt-header-title">Poster Details</h1>
-                            <p className="pt-header-subtitle">Customize your event poster</p>
+                            <p className="pt-header-subtitle">Customize your program poster</p>
                         </div>
                     </div>
                 </div>
