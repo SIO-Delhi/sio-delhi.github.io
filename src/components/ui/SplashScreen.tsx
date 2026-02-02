@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import gsap from 'gsap'
 import logoImage from '../../assets/logo.svg'
-import pngEggImage from '../../assets/pngegg.png'
+import pngEggImage from '../../assets/pngegg.webp'
 import { useContent } from '../../context/ContentContext'
 
 export function SplashScreen() {
@@ -59,6 +59,26 @@ export function SplashScreen() {
             ease: 'power3.inOut'
         })
     }
+
+    // NEW: Entry Animation
+    useEffect(() => {
+        if (isCollapsed) return
+        if (!splashContentRef.current) return
+
+        const elements = splashContentRef.current.children
+        // Animate content in from slightly lower position
+        gsap.fromTo(elements,
+            { y: 20, opacity: 0 },
+            {
+                y: 0,
+                opacity: 1,
+                duration: 0.8,
+                stagger: 0.1,
+                ease: 'power3.out',
+                delay: 0.2 // Small delay after mount
+            }
+        )
+    }, [isCollapsed])
 
     const finishSplash = () => {
         sessionStorage.setItem('sio_splash_seen', 'true')
@@ -149,16 +169,22 @@ export function SplashScreen() {
                         }}
                     >
                         {/* Decorative Bismillah/Calligraphy */}
-                        <img
-                            src={pngEggImage}
-                            alt="Bismillah"
+                        {/* Using mask to tint the PNG */}
+                        <div
                             style={{
-                                width: 'clamp(140px, 30vw, 200px)',
-                                height: 'auto',
-                                objectFit: 'contain',
-                                filter: 'brightness(0) invert(1)', // White silhouette
-                                opacity: 0.9,
-                                marginBottom: '0' // Tight to logo
+                                width: 'clamp(350px, 75vw, 600px)', // Even bigger
+                                height: 'clamp(120px, 25vw, 200px)', // Proportionally larger
+                                backgroundColor: '#fdedcb',
+                                WebkitMaskImage: `url(${pngEggImage})`,
+                                maskImage: `url(${pngEggImage})`,
+                                WebkitMaskSize: 'contain',
+                                maskSize: 'contain',
+                                WebkitMaskRepeat: 'no-repeat',
+                                maskRepeat: 'no-repeat',
+                                WebkitMaskPosition: 'center',
+                                maskPosition: 'center',
+                                opacity: 0, // Hidden initially for animation
+                                marginBottom: '0'
                             }}
                         />
 
@@ -170,20 +196,22 @@ export function SplashScreen() {
                                 width: 'clamp(80px, 18vw, 120px)',
                                 height: 'auto',
                                 objectFit: 'contain',
-                                marginBottom: 'clamp(0.5rem, 1.5vh, 1rem)', // Reduced gap to text
+                                marginBottom: 'clamp(0.5rem, 1.5vh, 1rem)',
+                                opacity: 0, // Hidden initially for animation
                             }}
                         />
 
                         {/* Mission Statement */}
                         <p
                             style={{
-                                color: 'rgba(255, 255, 255, 0.8)',
+                                color: '#fdedcb',
                                 fontSize: 'clamp(0.9rem, 3.5vw, 1.2rem)',
                                 lineHeight: 1.5,
                                 fontWeight: 300,
                                 letterSpacing: '-0.02em',
                                 maxWidth: '90%',
                                 margin: 0,
+                                opacity: 0, // Hidden initially for animation
                             }}
                         >
                             The mission of the <span style={{ color: '#ff6b6b', fontWeight: 500 }}>Students Islamic Organisation of India (SIO)</span> is to{' '}
@@ -196,7 +224,8 @@ export function SplashScreen() {
                         <div
                             className="shiny-button-container"
                             style={{
-                                marginTop: 'clamp(1.5rem, 3vh, 2.5rem)', // Separation for button
+                                marginTop: 'clamp(1.5rem, 3vh, 2.5rem)',
+                                opacity: 0, // Hidden initially for animation
                             }}
                         >
                             <button
@@ -210,7 +239,7 @@ export function SplashScreen() {
                                     WebkitBackdropFilter: 'blur(12px)',
                                     border: '1px solid rgba(255, 255, 255, 0.2)',
                                     borderRadius: 100,
-                                    color: 'rgba(255, 255, 255, 0.95)',
+                                    color: '#fdedcb',
                                     fontSize: 'clamp(0.85rem, 3vw, 1rem)',
                                     fontWeight: 500,
                                     letterSpacing: '0.15em',
@@ -317,7 +346,7 @@ export function SplashScreen() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 8,
-                        color: 'rgba(255, 255, 255, 0.4)',
+                        color: 'rgba(253, 237, 203, 0.4)',
                         fontFamily: '"DM Sans", sans-serif',
                         letterSpacing: '-0.02em',
                         fontSize: 10,

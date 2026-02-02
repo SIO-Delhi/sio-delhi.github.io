@@ -1,5 +1,37 @@
 /* Poster Tool CSS - Premium Dark/Gold Theme */
 
+@font-face {
+    font-family: 'FlamanteSerifBold';
+    src: url('../../../fonts/flamante-serif/Flamante Serif -demo versions FFP-/Flamante-Serif-Bold-FFP.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'AscendantSerif';
+    src: url('../../../fonts/ascendant_serif/AscendantSerif-PersonalUse-Regular.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'AscendantSerifBold';
+    src: url('../../../fonts/ascendant_serif/AscendantSerif-PersonalUse-Bold.otf') format('opentype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'AscenderSerifBold';
+    src: url('../../../fonts/Ascender-Serif-W02-Bold/Ascender Serif W02 Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* --- Variables & Tokens --- */
 :root {
     --pt-bg-main: #09090b;
@@ -309,11 +341,9 @@
 
 /* --- Center (Preview) --- */
 .pt-center-preview {
-    flex: 0 0 60vh;
-    /* Mobile height */
-    height: 60vh;
+    flex: 1;
+    min-height: 0;
     background-color: #050505;
-    /* Blacker than main bg for focus */
     position: relative;
     display: flex;
     flex-direction: column;
@@ -326,7 +356,6 @@
     overflow: hidden;
     order: 1;
     padding: 0;
-    /* Maximize space */
 }
 
 @media (min-width: 1024px) {
@@ -344,6 +373,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    padding: 24px;
 }
 
 /* Floating Actions Toolbar in Preview Area */
@@ -376,21 +406,36 @@
     border-color: transparent;
 }
 
+.pt-download-btn {
+    background: var(--pt-accent);
+    color: black;
+    padding: 10px 20px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.pt-download-btn:hover {
+    background: var(--pt-accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+}
+
 
 /* Mobile Tabs */
 .pt-mobile-tabs {
     background-color: var(--pt-bg-main);
     border-top: 1px solid var(--pt-border);
-    height: 60px;
+    height: 56px;
     display: flex;
     flex-shrink: 0;
-    order: 3;
-}
-
-@media (min-width: 1024px) {
-    .pt-mobile-tabs {
-        display: none;
-    }
 }
 
 .pt-tab-btn {

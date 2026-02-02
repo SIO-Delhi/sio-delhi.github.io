@@ -720,8 +720,10 @@ section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px; /* reduced gap so items sit closer vertically */
-  padding-top: 24px; /* bring items closer to the top */
+  gap: 20px;
+  /* reduced gap so items sit closer vertically */
+  padding-top: 24px;
+  /* bring items closer to the top */
   opacity: 0;
   transform: translateY(20px);
   transition: all 0.4s ease 0.1s;
@@ -738,7 +740,8 @@ section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px; /* tightened spacing between link blocks */
+  gap: 12px;
+  /* tightened spacing between link blocks */
   padding: 0;
 }
 

@@ -24,7 +24,7 @@ const INITIAL_STATE: PosterState = {
     topic: '',
     name: 'First Name',
     name2: 'Last Name',
-    position: 'Position / Title,',
+    position: 'Position',
     organization: 'Organization Name',
     location: 'Abul Fazal Enclave, Okhla',
     time: '00:00 PM',
@@ -74,11 +74,10 @@ export function PosterTool() {
     const downloadPoster = () => {
         if (!containerRef.current) return
 
-
         const svgData = getProcessedSvg(true)
-        const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-        const url = URL.createObjectURL(blob)
+        const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData)
         const img = new Image()
+        img.crossOrigin = 'anonymous'
 
         img.onload = () => {
             const canvas = document.createElement('canvas')
@@ -87,19 +86,51 @@ export function PosterTool() {
             const ctx = canvas.getContext('2d')
 
             if (ctx) {
-                ctx.drawImage(img, 0, 0)
-                const jpgUrl = canvas.toDataURL('image/jpeg', 0.95)
+                // Fill white background for JPEG (no transparency)
+                ctx.fillStyle = '#ffffff'
+                ctx.fillRect(0, 0, canvas.width, canvas.height)
+                ctx.drawImage(img, 0, 0, 2000, 2500)
 
-                const a = document.createElement('a')
-                a.href = jpgUrl
-                a.download = `poster - ${state.date.replace(/\s+/g, '-')}.jpg`
-                document.body.appendChild(a)
-                a.click()
-                document.body.removeChild(a)
-                URL.revokeObjectURL(url)
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const blobUrl = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = blobUrl
+                        a.download = `poster-${state.date.replace(/\s+/g, '-')}.jpg`
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                        URL.revokeObjectURL(blobUrl)
+                    }
+                }, 'image/jpeg', 0.95)
             }
         }
-        img.src = url
+
+        img.onerror = () => {
+            // Fallback: download as SVG if JPEG conversion fails
+            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `poster-${state.date.replace(/\s+/g, '-')}.svg`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+        }
+
+        img.src = svgDataUrl
+    }
+
+    const formatTime = (value: string) => {
+        // Auto-format time to include colon between hours and minutes
+        // Handles: "0630 PM", "06 30 PM", "06:30 PM", "0630PM", etc.
+        const match = value.trim().match(/^(\d{1,2})[\s:.]?(\d{2})\s*(AM|PM|am|pm|Am|Pm)?$/i)
+        if (match) {
+            const [, hrs, mins, period] = match
+            return `${hrs}:${mins}${period ? ' ' + period.toUpperCase() : ''}`
+        }
+        return value
     }
 
     const escapeXml = (unsafe: string) => {
@@ -129,7 +160,7 @@ export function PosterTool() {
 
         processed = processed.replace(
             /<svg([^>]*)>/,
-            `< svg$1 width = "${width}" height = "${height}" preserveAspectRatio = "xMidYMid meet" style = "filter: hue-rotate(${state.hue}deg);" > `
+            `<svg$1 width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" style="filter: hue-rotate(${state.hue}deg);">`
         )
 
         // 1. Hide Original Elements (Text & Icons) that we are replacing
@@ -152,7 +183,15 @@ export function PosterTool() {
             // Time
             '<text class="st5" transform="translate(911.07 1905.45)">': '<text class="st5" transform="translate(911.07 1905.45)" style="display:none">',
             // Date
-            '<text class="st5" transform="translate(883.55 1780.68)">': '<text class="st5" transform="translate(883.55 1780.68)" style="display:none">'
+            '<text class="st5" transform="translate(883.55 1780.68)">': '<text class="st5" transform="translate(883.55 1780.68)" style="display:none">',
+            // Separator lines between date/time and time/location
+            '<rect class="st6" x="885.55" y="1819.51" width="212.5" height="3.02"/>': '<rect class="st6" x="885.55" y="1819.51" width="212.5" height="3.02" style="display:none"/>',
+            '<rect class="st6" x="885.55" y="1949.61" width="212.5" height="3.02"/>': '<rect class="st6" x="885.55" y="1949.61" width="212.5" height="3.02" style="display:none"/>',
+            // Header pill/strip background - hide the static one, we render a dynamic one
+            '<rect class="st11" x="657.1" y="287.63" width="685.8" height="91.22" rx="15.64" ry="15.64"/>': '<rect class="st11" x="657.1" y="287.63" width="685.8" height="91.22" rx="15.64" ry="15.64" style="display:none"/>',
+            // Hide the static decorative circles on the strip edges - we'll re-render them dynamically
+            '<circle class="st1" cx="1342.9" cy="333.24" r="16.95"/>': '<circle class="st1" cx="1342.9" cy="333.24" r="16.95" style="display:none"/>',
+            '<circle class="st1" cx="657.1" cy="333.24" r="16.95"/>': '<circle class="st1" cx="657.1" cy="333.24" r="16.95" style="display:none"/>'
         }
 
         Object.entries(textHidingReplacements).forEach(([key, value]) => {
@@ -161,18 +200,20 @@ export function PosterTool() {
 
         // Hidings IDs
         idsToHide.forEach(id => {
-            processed = processed.replace(`id = "${id}"`, `id = "${id}" style = "display: none;"`)
+            processed = processed.replace(`id="${id}"`, `id="${id}" style="display:none;"`)
+            processed = processed.replace(`id = "${id}"`, `id="${id}" style="display:none;"`)
         })
 
         // 2. Image Replacement (Keep existing logic)
         const placeholderRect = '<rect class="st8" x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4"/>'
         if (state.image) {
             const imageTag = `
-    < defs >
-    <clipPath id="speaker-clip">
-        <rect x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4" />
-    </clipPath>
-            </defs >
+    <defs>
+        <clipPath id="speaker-clip">
+            <rect x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4"/>
+        </clipPath>
+    </defs>
+    <rect x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4" fill="#f5e6d3" stroke="#d4a574" stroke-width="2"/>
     <image
         x="411.99"
         y="1023.4"
@@ -184,22 +225,34 @@ export function PosterTool() {
         style="filter: hue-rotate(-${state.hue}deg);"
     />`
             processed = processed.replace(placeholderRect, imageTag)
+        } else {
+            // Show placeholder with user icon when no image uploaded
+            // Using SVG primitives (not nested <svg>) to avoid breaking </svg> replacement later
+            const cx = 674.2  // center x of the rect
+            const cy = 1280   // center of the icon area
+            const placeholderTag = `
+    <rect x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4" fill="#e8d5c0" stroke="#d4a574" stroke-width="2"/>
+    <g transform="translate(${cx - 60}, ${cy - 70})" fill="none" stroke="#c8884d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="60" cy="40" r="30"/>
+        <path d="M0 120 C0 90, 25 70, 60 70 C95 70, 120 90, 120 120"/>
+    </g>`
+            processed = processed.replace(placeholderRect, placeholderTag)
         }
 
         // 3. Name & Profession (Keep SVG text for these as they were working fine left-aligned)
         processed = processed.replace(
             /<text class="st9" transform="translate\(1016\.19 1242\.14\)">.*?<\/text>/s,
-            `< text class="st9" text - anchor="start" >
+            `<text class="st9" text-anchor="start" style="font-family: AscendantSerif, serif;">
                 <tspan x="1016" y="1242">${escapeXml(state.name)}</tspan>
                 <tspan x="1016" y="1329">${escapeXml(state.name2)}</tspan>
-             </text > `
+            </text>`
         )
         processed = processed.replace(
             /<text class="st7" transform="translate\(1012\.82 1406\.84\)">.*?<\/text>/s,
-            `< text class="st7" text - anchor="start" >
+            `<text class="st7" text-anchor="start" style="font-family: AscendantSerif, serif;">
                 <tspan x="1013" y="1406">${escapeXml(state.position)}</tspan>
                 <tspan x="1013" y="1476">${escapeXml(state.organization)}</tspan>
-             </text > `
+            </text>`
         )
 
         // 4. ForeignObject Layer for Layout (Header, Topic, Icons+Details)
@@ -212,78 +265,66 @@ export function PosterTool() {
         // Topic -> fill: #A05415
 
         const foreignObjectOverlay = `
-    < foreignObject x = "0" y = "0" width = "2000" height = "2500" style = "pointer-events: none;" >
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; font-family: 'Flamante Serif', serif;">
-
-            <!-- Header (Top) -->
-            <div style="position: absolute; top: 300px; width: 100%; text-align: center; color: white; font-size: 60px; font-weight: bold; font-family: FlamanteSerifBold, 'Flamante Serif', serif;">
-                ${escapeXml(state.header)}
+    <foreignObject x="0" y="0" width="2000" height="2500" style="pointer-events: none;">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; position: relative;">
+            <div style="position: absolute; top: 270px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0;">
+                    <div style="width: 34px; height: 34px; border-radius: 50%; background: #fff2e3; flex-shrink: 0; margin-right: -17px; z-index: 1;"></div>
+                    <div style="background: #d3830f; color: white; font-size: 60px; font-family: AscendantSerif, serif; padding: 16px 60px; border-radius: 16px; white-space: nowrap;">
+                        ${escapeXml(state.header)}
+                    </div>
+                    <div style="width: 34px; height: 34px; border-radius: 50%; background: #fff2e3; flex-shrink: 0; margin-left: -17px; z-index: 1;"></div>
+                </div>
             </div>
-
-            <!-- Topic (Middle) - Centered Block with Wrapping -->
-            ${state.topic ? `
-                    <div style="position: absolute; top: 600px; width: 100%; display: flex; justify-content: center; align-items: center; padding: 0 100px;">
-                        <div style="color: #a05415; font-size: 140px; font-weight: bold; font-family: FlamanteSerifBold, 'Flamante Serif', serif; text-align: center; line-height: 1.1; word-wrap: break-word; max-width: 1600px;">
-                            ${escapeXml(state.topic)}
-                        </div>
-                    </div>
-                    ` : ''}
-
-            <!-- Bottom Details Section (Date, Time, Location) -->
-            <!-- Used flexbox for perfect icon alignment -->
-            <div style="position: absolute; top: 1730px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 60px; color: #a05415; font-size: 45px; font-weight: 500;">
-
-                <!-- Date -->
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <div style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center;">
-                        <!-- Calendar Icon SVG -->
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                    </div>
+            ${state.topic ? (() => {
+                const len = state.topic.length
+                const fontSize = len > 200 ? 70 : len > 150 ? 85 : len > 100 ? 100 : len > 60 ? 120 : 140
+                return `
+            <div style="position: absolute; top: 500px; width: 100%; display: flex; justify-content: center; align-items: center; padding: 0 40px; max-height: 480px;">
+                <div style="color: #a05415; font-size: ${fontSize}px; font-weight: bold; font-family: FlamanteSerifBold, 'Flamante Serif', serif; text-align: center; line-height: 0.98; letter-spacing: -0.02em; word-wrap: break-word; max-width: 1600px;">
+                    ${escapeXml(state.topic).replace(/\n/g, '<br/>')}
+                </div>
+            </div>`
+            })() : ''}
+            <div style="position: absolute; top: 1720px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; color: #a05415; font-size: 62px; font-weight: bold; font-family: AscenderSerifBold, AscendantSerifBold, serif;">
+                <div style="display: flex; align-items: center; gap: 24px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#c8884d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                     <span>${escapeXml(state.date)}</span>
                 </div>
-
-                <!-- Time -->
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <div style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center;">
-                        <!-- Clock Icon SVG -->
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                    </div>
-                    <span>${escapeXml(state.time)}</span>
+                <div style="display: flex; align-items: center; gap: 24px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#c8884d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>${escapeXml(formatTime(state.time))}</span>
                 </div>
-
-                <!-- Location -->
-                <div style="display: flex; align-items: center; gap: 20px; margin-top: 40px;">
-                    <div style="width: 50px; height: 50px; display: flex; justify-content: center; align-items: center;">
-                        <!-- MapPin Icon SVG -->
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
-                    </div>
+                <div style="display: flex; align-items: center; gap: 24px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#c8884d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
                     <span>${escapeXml(state.location)}</span>
                 </div>
-
             </div>
-
         </div>
-            </foreignObject >
+    </foreignObject>
     `
 
         // Logo Text Replacement (Bottom Right)
         if (state.logoText && state.logoText !== 'DELHI') {
+            const len = state.logoText.length
+            const fontSize = len > 14 ? '26' : len > 10 ? '30' : len > 6 ? '36' : '40'
+            const spacing = len > 10 ? '0.02em' : len > 6 ? '0.08em' : '0.15em'
             const logoTextElement = `
-    < text
-x = "1690"
-y = "2330"
-text - anchor="middle"
-fill = "#a05415"
-style = "font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-size: 40px; font-weight: bold; letter-spacing: 0.2em;"
-    >
-    ${escapeXml(state.logoText.toUpperCase())}
-                </text >
+    <foreignObject x="1560" y="2300" width="260" height="120">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-start;">
+            <div style="color: #a05415; font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-weight: bold; text-align: center; line-height: 1.5; letter-spacing: ${spacing}; font-size: ${fontSize}px;">
+                ${escapeXml(state.logoText.toUpperCase())}
+            </div>
+        </div>
+    </foreignObject>
     `
-            processed = processed.replace('</svg>', `${logoTextElement}</svg > `)
+            const lastSvgIdx1 = processed.lastIndexOf('</svg>')
+            processed = processed.slice(0, lastSvgIdx1) + logoTextElement + processed.slice(lastSvgIdx1)
         }
 
-        // Append foreignObject
-        processed = processed.replace('</svg>', `${foreignObjectOverlay}</svg > `)
+        // Append foreignObject before the last closing </svg>
+        const lastSvgIdx2 = processed.lastIndexOf('</svg>')
+        processed = processed.slice(0, lastSvgIdx2) + foreignObjectOverlay + processed.slice(lastSvgIdx2)
 
         return processed
     }
@@ -291,7 +332,7 @@ style = "font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-size: 40p
     return (
         <div className="poster-tool-container">
             {/* Left Sidebar (Controls) */}
-            <div className={`pt - sidebar - left ${activeTab === 'edit' ? 'pt-active' : ''} `}>
+            <div className={`pt-sidebar-left ${activeTab === 'edit' ? 'pt-active' : ''}`}>
                 <div className="pt-sidebar-header">
                     <div className="flex justify-between items-start">
                         <div>
@@ -331,7 +372,7 @@ style = "font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-size: 40p
                         </div>
 
                         <div className="pt-input-group">
-                            <label className="pt-label">Logo Text (Bottom Right)</label>
+                            <label className="pt-label">Unit Name (Bottom Right)</label>
                             <input
                                 type="text"
                                 value={state.logoText}
@@ -444,7 +485,7 @@ style = "font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-size: 40p
                                 <input
                                     type="text"
                                     value={state.time}
-                                    onChange={e => setState({ ...state, time: e.target.value })}
+                                    onChange={e => setState({ ...state, time: formatTime(e.target.value) })}
                                     className="pt-input"
                                 />
                             </div>
@@ -526,18 +567,18 @@ style = "font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-size: 40p
             <div
                 className="pt-center-preview"
                 style={{
-                    // On mobile, if preview tab is active, use full height. If edit tab, use mobile default height.
-                    display: window.innerWidth < 1024 && activeTab !== 'preview' ? 'none' : 'flex'
+                    display: window.innerWidth < 1024 && activeTab !== 'preview' ? 'none' : 'flex',
+                    ...(window.innerWidth < 1024 ? { flex: '1 1 0', height: 'auto' } : {})
                 }}
             >
-                {/* Floating Toolbar */}
-                <div className="pt-preview-toolbar">
+                {/* Floating Toolbar - desktop only */}
+                <div className="pt-preview-toolbar" style={{ display: window.innerWidth < 1024 ? 'none' : 'flex' }}>
                     <button
                         onClick={downloadPoster}
-                        className="pt-toolbar-btn"
+                        className="pt-download-btn"
                     >
-                        <Download size={16} />
-                        <span className="font-semibold">Download</span>
+                        <Download size={18} />
+                        <span>Download</span>
                     </button>
                 </div>
 
@@ -549,11 +590,10 @@ style = "font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-size: 40p
                         </div>
                     ) : (
                         <div
-                            className="bg-white shadow-2xl overflow-hidden h-[85vh] w-auto aspect-[4/5]"
+                            className="bg-white shadow-2xl overflow-hidden w-auto aspect-[4/5]"
                             style={{
-                                transition: 'all 0.3s ease',
-                                transform: 'scale(1)',
-                                maxHeight: '1200px'
+                                height: '95%',
+                                maxHeight: 'calc(100vh - 80px)',
                             }}
                             dangerouslySetInnerHTML={{ __html: getProcessedSvg(false) }}
                         />
@@ -561,23 +601,39 @@ style = "font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-size: 40p
                 </div>
             </div>
 
-            {/* Mobile Tabs */}
-            <div className={`pt - mobile - tabs ${window.innerWidth >= 1024 ? 'hidden' : 'flex'} `}>
-                <button
-                    onClick={() => setActiveTab('edit')}
-                    className={`pt - tab - btn ${activeTab === 'edit' ? 'active' : ''} `}
-                >
-                    <Edit3 size={18} />
-                    Edit Details
-                </button>
-                <button
-                    onClick={() => setActiveTab('preview')}
-                    className={`pt - tab - btn ${activeTab === 'preview' ? 'active' : ''} `}
-                >
-                    <Eye size={18} />
-                    Preview Poster
-                </button>
-            </div>
+            {/* Mobile Bottom: Download + Tabs */}
+            {window.innerWidth < 1024 && (
+                <div style={{ order: 3, flexShrink: 0, width: '100%' }}>
+                    {activeTab === 'preview' && (
+                        <div style={{ padding: '8px 16px', background: 'var(--pt-bg-main)' }}>
+                            <button
+                                onClick={downloadPoster}
+                                className="pt-btn pt-btn-primary"
+                                style={{ width: '100%' }}
+                            >
+                                <Download size={16} />
+                                Download Poster
+                            </button>
+                        </div>
+                    )}
+                    <div className="pt-mobile-tabs">
+                        <button
+                            onClick={() => setActiveTab('edit')}
+                            className={`pt-tab-btn ${activeTab === 'edit' ? 'active' : ''}`}
+                        >
+                            <Edit3 size={18} />
+                            Edit Details
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('preview')}
+                            className={`pt-tab-btn ${activeTab === 'preview' ? 'active' : ''}`}
+                        >
+                            <Eye size={18} />
+                            Preview Poster
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
