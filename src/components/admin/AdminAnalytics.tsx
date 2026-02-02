@@ -242,7 +242,7 @@ export function AdminAnalytics() {
                                 center={[20, 78]}
                                 zoom={3}
                                 minZoom={2.5}
-                                maxZoom={12}
+                                maxZoom={18}
                                 style={{ height: '100%', width: '100%', background: '#0a0a14' }}
                                 scrollWheelZoom={true}
                                 zoomSnap={0.25}

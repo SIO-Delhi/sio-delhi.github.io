@@ -55,21 +55,21 @@ function geolocateIp($ip) {
     }
 
     $ctx = stream_context_create(['http' => ['timeout' => 2]]);
-    $url = "http://ip-api.com/json/" . urlencode($ip) . "?fields=status,city,regionName,countryCode,lat,lon";
+    $url = "https://ipwho.is/" . urlencode($ip);
 
     try {
         $response = @file_get_contents($url, false, $ctx);
         if ($response === false) return null;
 
         $data = json_decode($response, true);
-        if (!$data || $data['status'] !== 'success') return null;
+        if (!$data || !($data['success'] ?? false)) return null;
 
         return [
             'city' => $data['city'] ?? null,
-            'region' => $data['regionName'] ?? null,
-            'country' => $data['countryCode'] ?? null,
-            'lat' => $data['lat'] ?? null,
-            'lon' => $data['lon'] ?? null,
+            'region' => $data['region'] ?? null,
+            'country' => $data['country_code'] ?? null,
+            'lat' => $data['latitude'] ?? null,
+            'lon' => $data['longitude'] ?? null,
         ];
     } catch (Exception $e) {
         return null;
