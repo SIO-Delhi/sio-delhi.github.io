@@ -65,7 +65,7 @@ export function AdminAnalytics() {
         return labels[page] || page
     }
 
-    const maxVisitCount = Math.max(...locations.locations.map(l => l.visit_count), 1)
+
 
     // Helper for simple listing tables
     const SimpleTable = ({ title, icon: Icon, color, data }: { title: string, icon: any, color: string, data: { name: string, count: number }[] }) => (
