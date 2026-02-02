@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Frame, Sliders, ChevronRight, PenTool } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { UtilitiesSplash } from '../components/ui/UtilitiesSplash'
 
 export function UtilitiesPage() {
     const [isMobile, setIsMobile] = useState(false)
-    const [showSplash, setShowSplash] = useState(true)
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -14,11 +13,76 @@ export function UtilitiesPage() {
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
 
-    if (showSplash) {
-        return <UtilitiesSplash onComplete={() => setShowSplash(false)} />
+    useEffect(() => {
+        // Simulate brief load for smooth skeleton transition
+        const timer = requestAnimationFrame(() => setLoading(false))
+        return () => cancelAnimationFrame(timer)
+    }, [])
+
+    if (loading) {
+        return (
+            <div style={{
+                padding: isMobile ? '120px 16px 40px' : '140px 40px 60px',
+                minHeight: 'calc(100vh - 400px)',
+                background: '#09090b',
+                color: 'white',
+                fontFamily: '"DM Sans", sans-serif'
+            }}>
+                <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                    <div style={{ marginBottom: isMobile ? '32px' : '48px' }}>
+                        <div style={{ width: '240px', height: isMobile ? '40px' : '56px', borderRadius: '12px', background: 'linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%)', backgroundSize: '200% 100%', animation: 'utilitySkeleton 1.5s ease-in-out infinite', marginBottom: '16px' }} />
+                        <div style={{ width: '400px', maxWidth: '100%', height: '18px', borderRadius: '8px', background: 'linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%)', backgroundSize: '200% 100%', animation: 'utilitySkeleton 1.5s ease-in-out infinite', animationDelay: '0.1s', marginBottom: '8px' }} />
+                        <div style={{ width: '300px', maxWidth: '80%', height: '18px', borderRadius: '8px', background: 'linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%)', backgroundSize: '200% 100%', animation: 'utilitySkeleton 1.5s ease-in-out infinite', animationDelay: '0.2s' }} />
+                    </div>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))',
+                        gap: isMobile ? '16px' : '32px'
+                    }}>
+                        {[0, 1, 2, 3].map(i => (
+                            <div key={i} style={{
+                                padding: isMobile ? '24px' : '32px',
+                                borderRadius: '24px',
+                                background: 'linear-gradient(145deg, #121215, #0d0d10)',
+                                border: '1px solid #27272a',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '20px',
+                                minHeight: '240px'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%)', backgroundSize: '200% 100%', animation: 'utilitySkeleton 1.5s ease-in-out infinite', animationDelay: `${i * 0.15}s` }} />
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#1a1a1e' }} />
+                                </div>
+                                <div>
+                                    <div style={{ width: '60%', height: '24px', borderRadius: '8px', background: 'linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%)', backgroundSize: '200% 100%', animation: 'utilitySkeleton 1.5s ease-in-out infinite', animationDelay: `${i * 0.15 + 0.1}s`, marginBottom: '12px' }} />
+                                    <div style={{ width: '100%', height: '14px', borderRadius: '6px', background: 'linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%)', backgroundSize: '200% 100%', animation: 'utilitySkeleton 1.5s ease-in-out infinite', animationDelay: `${i * 0.15 + 0.2}s`, marginBottom: '8px' }} />
+                                    <div style={{ width: '80%', height: '14px', borderRadius: '6px', background: 'linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%)', backgroundSize: '200% 100%', animation: 'utilitySkeleton 1.5s ease-in-out infinite', animationDelay: `${i * 0.15 + 0.3}s` }} />
+                                </div>
+                                <div style={{ width: '80px', height: '14px', borderRadius: '6px', background: 'linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%)', backgroundSize: '200% 100%', animation: 'utilitySkeleton 1.5s ease-in-out infinite', animationDelay: `${i * 0.15 + 0.4}s`, marginTop: '12px' }} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <style>{`
+                    @keyframes utilitySkeleton {
+                        0% { background-position: 200% 0; }
+                        100% { background-position: -200% 0; }
+                    }
+                `}</style>
+            </div>
+        )
     }
 
     const utilities = [
+        {
+            id: 'poster-tool',
+            title: 'Poster Maker',
+            description: 'Create professional weekly program posters with customizable details and themes.',
+            icon: <PenTool size={24} color="#f59e0b" />,
+            path: '/utilities/poster-tool',
+            color: '#f59e0b'
+        },
         {
             id: 'frame-tool',
             title: 'Frame Tool',
@@ -34,14 +98,6 @@ export function UtilitiesPage() {
             icon: <Sliders size={24} color="#a78bfa" />,
             path: '/utilities/filter-tool',
             color: '#a78bfa'
-        },
-        {
-            id: 'poster-tool',
-            title: 'Poster Maker',
-            description: 'Create professional weekly program posters with customizable details and themes.',
-            icon: <PenTool size={24} color="#f59e0b" />,
-            path: '/utilities/poster-tool',
-            color: '#f59e0b'
         },
     ]
 
@@ -71,7 +127,6 @@ export function UtilitiesPage() {
                         lineHeight: 1.6
                     }}>
                         Helper tools and utilities for content management and branding.
-                        More tools will be added to this collection.
                     </p>
                 </div>
 
@@ -169,23 +224,6 @@ export function UtilitiesPage() {
                         </Link>
                     ))}
 
-                    {/* Coming Soon Placeholder */}
-                    <div style={{
-                        padding: isMobile ? '24px' : '32px',
-                        borderRadius: '24px',
-                        background: 'rgba(255, 255, 255, 0.01)',
-                        border: '2px dashed #27272a',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '16px',
-                        color: '#52525b',
-                        minHeight: '240px'
-                    }}>
-                        <PenTool size={32} strokeWidth={1.5} />
-                        <span style={{ fontSize: '1rem', fontWeight: 500 }}>More tools coming soon</span>
-                    </div>
                 </div>
             </div>
         </div>

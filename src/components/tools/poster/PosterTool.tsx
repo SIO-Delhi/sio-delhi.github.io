@@ -366,9 +366,9 @@ export function PosterTool() {
             const fontSize = len > 14 ? '26' : len > 10 ? '30' : len > 6 ? '36' : '40'
             const spacing = len > 10 ? '0.02em' : len > 6 ? '0.08em' : '0.15em'
             const logoTextElement = `
-    <foreignObject x="1560" y="2300" width="260" height="120">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-start;">
-            <div style="color: #a05415; font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-weight: bold; text-align: center; line-height: 1.5; letter-spacing: ${spacing}; font-size: ${fontSize}px;">
+    <foreignObject x="1560" y="2295" width="260" height="140">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-start; padding-top: 14px;">
+            <div style="color: #a05415; font-family: FlamanteSerifBold, 'Flamante Serif', serif; font-weight: bold; text-align: center; line-height: 1.05; letter-spacing: ${spacing}; font-size: ${fontSize}px;">
                 ${escapeXml(state.logoText.toUpperCase())}
             </div>
         </div>
@@ -384,6 +384,36 @@ export function PosterTool() {
 
         return processed
     }
+
+    const hueSlider = (
+        <div className="pt-input-group">
+            <div className="flex justify-between items-center mb-2">
+                <label className="pt-label">Color Theme (Hue)</label>
+                <span className="pt-slider-value">{state.hue}°</span>
+            </div>
+            <div className="pt-slider-container">
+                <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    value={state.hue}
+                    onChange={e => {
+                        const newValue = parseInt(e.target.value)
+                        const shouldReplace = isAdjustingRef.current && hasCapturedStartRef.current
+                        setState(s => ({ ...s, hue: newValue }), shouldReplace)
+                        if (isAdjustingRef.current) {
+                            hasCapturedStartRef.current = true
+                        }
+                    }}
+                    onMouseDown={() => { isAdjustingRef.current = true; hasCapturedStartRef.current = false }}
+                    onMouseUp={() => { isAdjustingRef.current = false; hasCapturedStartRef.current = false }}
+                    onTouchStart={() => { isAdjustingRef.current = true; hasCapturedStartRef.current = false }}
+                    onTouchEnd={() => { isAdjustingRef.current = false; hasCapturedStartRef.current = false }}
+                    className="pt-slider"
+                />
+            </div>
+        </div>
+    )
 
     return (
         <div className="poster-tool-container">
@@ -558,53 +588,15 @@ export function PosterTool() {
                         </div>
                     </div>
 
-                    {/* Appearance Section */}
+                    {/* Appearance Section - desktop only (on mobile it's in preview) */}
+                    {window.innerWidth >= 1024 && (
                     <div className="pt-section">
                         <div className="pt-section-title">
                             <Palette size={12} /> Styles
                         </div>
-                        <div className="pt-input-group">
-                            <div className="flex justify-between items-center mb-2">
-                                <label className="pt-label">Color Theme (Hue)</label>
-                                <span className="pt-slider-value">{state.hue}°</span>
-                            </div>
-                            <div className="pt-slider-container">
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="360"
-                                    value={state.hue}
-                                    onChange={e => {
-                                        const newValue = parseInt(e.target.value)
-                                        const shouldReplace = isAdjustingRef.current && hasCapturedStartRef.current
-
-                                        setState(s => ({ ...s, hue: newValue }), shouldReplace)
-
-                                        if (isAdjustingRef.current) {
-                                            hasCapturedStartRef.current = true
-                                        }
-                                    }}
-                                    onMouseDown={() => {
-                                        isAdjustingRef.current = true
-                                        hasCapturedStartRef.current = false
-                                    }}
-                                    onMouseUp={() => {
-                                        isAdjustingRef.current = false
-                                        hasCapturedStartRef.current = false
-                                    }}
-                                    onTouchStart={() => {
-                                        isAdjustingRef.current = true
-                                        hasCapturedStartRef.current = false
-                                    }}
-                                    onTouchEnd={() => {
-                                        isAdjustingRef.current = false
-                                        hasCapturedStartRef.current = false
-                                    }}
-                                    className="pt-slider"
-                                />
-                            </div>
-                        </div>
+                        {hueSlider}
                     </div>
+                    )}
 
                     <div className="pt-section mt-auto pt-8">
                         <button
@@ -661,7 +653,8 @@ export function PosterTool() {
             {window.innerWidth < 1024 && (
                 <div style={{ order: 3, flexShrink: 0, width: '100%' }}>
                     {activeTab === 'preview' && (
-                        <div style={{ padding: '8px 16px', background: 'var(--pt-bg-main)' }}>
+                        <div style={{ padding: '12px 22px 12px', background: 'var(--pt-bg-main)', display: 'flex', flexDirection: 'column', gap: '36px' }}>
+                            {hueSlider}
                             <button
                                 onClick={downloadPoster}
                                 className="pt-btn pt-btn-primary"

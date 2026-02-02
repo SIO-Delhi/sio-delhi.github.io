@@ -73,7 +73,7 @@ function App() {
             <Route path="/utilities/filter-tool" element={<FilterToolPage />} />
             <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
             <Route path="/utilities/poster-tool" element={<PosterToolPage />} />
-            <Route path="/utilities" element={<UtilitiesPage />} />
+            {/* <Route path="/utilities" element={<UtilitiesPage />} /> */}
 
             {/* Main Site Routes - wildcard catch-all wrapped in Layout */}
             <Route path="/*" element={
