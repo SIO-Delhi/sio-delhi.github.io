@@ -28,6 +28,8 @@ export function AdminAnalytics() {
     const [isPagesExpanded, setIsPagesExpanded] = useState(true)
     const [sortBy, setSortBy] = useState<'total' | 'unique' | 'today'>('total')
     const [page, setPage] = useState(1)
+    const [isAudienceExpanded, setIsAudienceExpanded] = useState(true)
+    const [searchQuery, setSearchQuery] = useState('')
     const itemsPerPage = 7
 
     useEffect(() => {
@@ -70,7 +72,12 @@ export function AdminAnalytics() {
         return labels[pagePath] || pagePath
     }
 
-    const sortedPages = [...analytics.pages].sort((a, b) => {
+    const filteredPages = analytics.pages.filter(p =>
+        getPageLabel(p.page).toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.page.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
+    const sortedPages = [...filteredPages].sort((a, b) => {
         if (sortBy === 'unique') return b.unique_visitors - a.unique_visitors;
         if (sortBy === 'today') return b.today_visits - a.today_visits;
         return b.total_visits - a.total_visits;
@@ -79,10 +86,10 @@ export function AdminAnalytics() {
     const totalPages = Math.ceil(sortedPages.length / itemsPerPage)
     const paginatedPages = sortedPages.slice((page - 1) * itemsPerPage, page * itemsPerPage)
 
-    // Reset page when sorting changes
+    // Reset page when sorting or searching changes
     useEffect(() => {
         setPage(1)
-    }, [sortBy])
+    }, [sortBy, searchQuery])
 
 
 
@@ -246,29 +253,49 @@ export function AdminAnalytics() {
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     {isPagesExpanded && (
-                                        <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-                                            <select
-                                                value={sortBy}
-                                                onChange={(e) => setSortBy(e.target.value as any)}
-                                                style={{
-                                                    appearance: 'none',
-                                                    background: '#1a1a20',
-                                                    border: '1px solid rgba(255,255,255,0.1)',
-                                                    borderRadius: '6px',
-                                                    color: '#ddd',
-                                                    fontSize: '0.8rem',
-                                                    padding: '6px 28px 6px 12px',
-                                                    outline: 'none',
-                                                    cursor: 'pointer',
-                                                    minWidth: '130px'
-                                                }}
-                                            >
-                                                <option value="total" style={{ background: '#1a1a20', color: '#ddd' }}>Most Visited</option>
-                                                <option value="unique" style={{ background: '#1a1a20', color: '#ddd' }}>Most Unique</option>
-                                                <option value="today" style={{ background: '#1a1a20', color: '#ddd' }}>Trending Today</option>
-                                            </select>
-                                            <div style={{ pointerEvents: 'none', position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                                        <div style={{ display: 'flex', gap: '8px' }} onClick={e => e.stopPropagation()}>
+                                            <div style={{ position: 'relative' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search pages..."
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    style={{
+                                                        background: '#1a1a20',
+                                                        border: '1px solid rgba(255,255,255,0.1)',
+                                                        borderRadius: '6px',
+                                                        color: '#ddd',
+                                                        fontSize: '0.8rem',
+                                                        padding: '6px 12px',
+                                                        outline: 'none',
+                                                        width: isMobile ? '100px' : '150px'
+                                                    }}
+                                                />
+                                            </div>
+                                            <div style={{ position: 'relative' }}>
+                                                <select
+                                                    value={sortBy}
+                                                    onChange={(e) => setSortBy(e.target.value as any)}
+                                                    style={{
+                                                        appearance: 'none',
+                                                        background: '#1a1a20',
+                                                        border: '1px solid rgba(255,255,255,0.1)',
+                                                        borderRadius: '6px',
+                                                        color: '#ddd',
+                                                        fontSize: '0.8rem',
+                                                        padding: '6px 28px 6px 12px',
+                                                        outline: 'none',
+                                                        cursor: 'pointer',
+                                                        minWidth: '130px'
+                                                    }}
+                                                >
+                                                    <option value="total" style={{ background: '#1a1a20', color: '#ddd' }}>Most Visited</option>
+                                                    <option value="unique" style={{ background: '#1a1a20', color: '#ddd' }}>Most Unique</option>
+                                                    <option value="today" style={{ background: '#1a1a20', color: '#ddd' }}>Trending Today</option>
+                                                </select>
+                                                <div style={{ pointerEvents: 'none', position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -380,50 +407,74 @@ export function AdminAnalytics() {
                         </div>
 
                         {/* New Audience & Network Metrics */}
-                        <div style={{ marginTop: '32px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Users size={16} color="#bbb" />
+                        <div style={{
+                            marginTop: '24px',
+                            borderRadius: '14px',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            overflow: 'hidden'
+                        }}>
+                            <div
+                                style={{
+                                    padding: '16px 20px',
+                                    background: 'rgba(255,255,255,0.03)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    cursor: 'pointer',
+                                    userSelect: 'none'
+                                }}
+                                onClick={() => setIsAudienceExpanded(!isAudienceExpanded)}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Users size={16} color="#bbb" />
+                                    </div>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ddd' }}>Audience & Network</h3>
                                 </div>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ddd' }}>Audience & Network</h3>
+                                <div style={{ transform: isAudienceExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#888' }}><path d="M6 9l6 6 6-6" /></svg>
+                                </div>
                             </div>
 
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
-                                gap: '16px'
-                            }}>
-                                <SimpleTable
-                                    title="Top Browsers"
-                                    icon={BarChart3}
-                                    color="#3b82f6"
-                                    data={analytics.browsers?.map(b => ({ name: b.browser, count: b.count })) || []}
-                                />
-                                <SimpleTable
-                                    title="Top OS"
-                                    icon={MapPin}
-                                    color="#10b981"
-                                    data={analytics.oss?.map(o => ({ name: o.os, count: o.count })) || []}
-                                />
-                                <SimpleTable
-                                    title="Referrers"
-                                    icon={TrendingUp}
-                                    color="#f59e0b"
-                                    data={analytics.referrers?.map(r => ({ name: r.referrer, count: r.count })) || []}
-                                />
-                                <SimpleTable
-                                    title="Top ISPs"
-                                    icon={TrendingUp}
-                                    color="#8b5cf6"
-                                    data={analytics.isps?.map(i => ({ name: i.isp, count: i.count })) || []}
-                                />
-                                <SimpleTable
-                                    title="Organizations"
-                                    icon={Users}
-                                    color="#ec4899"
-                                    data={analytics.organizations?.map(o => ({ name: o.organization, count: o.count })) || []}
-                                />
-                            </div>
+                            {isAudienceExpanded && (
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
+                                    gap: '16px',
+                                    padding: '20px'
+                                }}>
+                                    <SimpleTable
+                                        title="Top Browsers"
+                                        icon={BarChart3}
+                                        color="#3b82f6"
+                                        data={analytics.browsers?.map(b => ({ name: b.browser, count: b.count })) || []}
+                                    />
+                                    <SimpleTable
+                                        title="Top OS"
+                                        icon={MapPin}
+                                        color="#10b981"
+                                        data={analytics.oss?.map(o => ({ name: o.os, count: o.count })) || []}
+                                    />
+                                    <SimpleTable
+                                        title="Referrers"
+                                        icon={TrendingUp}
+                                        color="#f59e0b"
+                                        data={analytics.referrers?.map(r => ({ name: r.referrer, count: r.count })) || []}
+                                    />
+                                    <SimpleTable
+                                        title="Top ISPs"
+                                        icon={TrendingUp}
+                                        color="#8b5cf6"
+                                        data={analytics.isps?.map(i => ({ name: i.isp, count: i.count })) || []}
+                                    />
+                                    <SimpleTable
+                                        title="Organizations"
+                                        icon={Users}
+                                        color="#ec4899"
+                                        data={analytics.organizations?.map(o => ({ name: o.organization, count: o.count })) || []}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {analytics.pages.length === 0 && (
