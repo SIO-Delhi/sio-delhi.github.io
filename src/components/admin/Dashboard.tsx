@@ -80,6 +80,7 @@ export function Dashboard() {
         loadStats()
     }, [])
 
+
     const getPostCount = (sectionId: string) => posts.filter(p => p.sectionId === sectionId).length
 
     const formatSize = (bytes: number) => {

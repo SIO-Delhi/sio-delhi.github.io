@@ -110,6 +110,11 @@ $routes = [
     'PUT /forms/([^/]+)' => 'routes/forms.php@updateForm',
     'DELETE /forms/([^/]+)/responses/([^/]+)' => 'routes/forms.php@deleteFormResponse',
     'DELETE /forms/([^/]+)' => 'routes/forms.php@deleteForm',
+
+    // Analytics
+    'POST /analytics/track' => 'routes/analytics.php@trackVisit',
+    'GET /analytics/stats' => 'routes/analytics.php@getVisitStats',
+    'GET /analytics/locations' => 'routes/analytics.php@getVisitorLocations',
 ];
 
 // Find matching route

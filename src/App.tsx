@@ -20,6 +20,7 @@ import { ProtectedRoute } from './components/admin/ProtectedRoute'
 import { PopupManager } from './components/admin/PopupManager'
 import { GalleryEditor } from './components/admin/GalleryEditor'
 import { AdminGarbageCollector } from './components/admin/AdminGarbageCollector'
+import { AdminAnalytics } from './components/admin/AdminAnalytics'
 import { FormList } from './components/admin/FormList'
 import { FormBuilder } from './components/admin/FormBuilder'
 import { FormResponseViewer } from './components/admin/FormResponseViewer'
@@ -33,12 +34,19 @@ import { FilterToolPage } from './pages/FilterToolPage'
 
 
 import { ToolProvider } from './context/ToolContext'
+import { usePageTracker } from './hooks/usePageTracker'
+
+function PageTracker() {
+  usePageTracker()
+  return null
+}
 
 function App() {
   return (
     <ThemeProvider>
       <ContentProvider>
         <ToolProvider>
+          <PageTracker />
           <Routes>
             {/* Admin Routes - NOT wrapped in Layout */}
             <Route path="/admin/login" element={<AdminLogin />} />
@@ -49,6 +57,7 @@ function App() {
                 <Route path="sections" element={<AdminSections />} />
                 <Route path="popup" element={<PopupManager />} />
                 <Route path="garbage" element={<AdminGarbageCollector />} />
+                <Route path="analytics" element={<AdminAnalytics />} />
                 <Route path="section/:sectionId" element={<SectionManager />} />
                 <Route path="create/:sectionId" element={<PostEditor />} />
                 <Route path="create-post/:sectionId" element={<PostEditor />} />
