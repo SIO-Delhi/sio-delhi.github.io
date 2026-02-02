@@ -241,7 +241,7 @@ export function AdminAnalytics() {
                             <MapContainer
                                 center={[20, 78]}
                                 zoom={3}
-                                minZoom={2}
+                                minZoom={2.5}
                                 maxZoom={12}
                                 style={{ height: '100%', width: '100%', background: '#0a0a14' }}
                                 scrollWheelZoom={true}
@@ -250,9 +250,12 @@ export function AdminAnalytics() {
                                 wheelDebounceTime={80}
                                 wheelPxPerZoomLevel={120}
                                 attributionControl={false}
+                                maxBounds={[[-85, -180], [85, 180]]}
+                                maxBoundsViscosity={1.0}
                             >
                                 <TileLayer
                                     url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                                    noWrap={true}
                                 />
                                 {locations.locations.map((loc, i) => {
                                     // Absolute scaling: sqrt for visual proportionality, capped at reasonable range
