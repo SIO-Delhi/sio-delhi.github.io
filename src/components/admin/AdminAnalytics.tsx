@@ -25,6 +25,11 @@ export function AdminAnalytics() {
         loading: boolean;
     }>({ locations: [], countries: [], loading: true })
 
+    const [isPagesExpanded, setIsPagesExpanded] = useState(true)
+    const [sortBy, setSortBy] = useState<'total' | 'unique' | 'today'>('total')
+    const [page, setPage] = useState(1)
+    const itemsPerPage = 7
+
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768)
         checkMobile()
@@ -54,7 +59,7 @@ export function AdminAnalytics() {
             .catch(() => setLocations(prev => ({ ...prev, loading: false })))
     }, [])
 
-    const getPageLabel = (page: string) => {
+    const getPageLabel = (pagePath: string) => {
         const labels: Record<string, string> = {
             '/': 'Home',
             '/utilities': 'Utilities',
@@ -62,8 +67,22 @@ export function AdminAnalytics() {
             '/utilities/frame-tool': 'Frame Tool',
             '/utilities/filter-tool': 'Filter Tool',
         }
-        return labels[page] || page
+        return labels[pagePath] || pagePath
     }
+
+    const sortedPages = [...analytics.pages].sort((a, b) => {
+        if (sortBy === 'unique') return b.unique_visitors - a.unique_visitors;
+        if (sortBy === 'today') return b.today_visits - a.today_visits;
+        return b.total_visits - a.total_visits;
+    })
+
+    const totalPages = Math.ceil(sortedPages.length / itemsPerPage)
+    const paginatedPages = sortedPages.slice((page - 1) * itemsPerPage, page * itemsPerPage)
+
+    // Reset page when sorting changes
+    useEffect(() => {
+        setPage(1)
+    }, [sortBy])
 
 
 
@@ -94,7 +113,7 @@ export function AdminAnalytics() {
                             borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.04)',
                             background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)'
                         }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#eee', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70%' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#eee', maxWidth: '80%' }}>
                                 {item.name || 'Unknown'}
                             </span>
                             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: color }}>
@@ -194,52 +213,171 @@ export function AdminAnalytics() {
                             </div>
                         </div>
 
-                        {/* Per-page breakdown */}
-                        {analytics.pages.length > 0 && (
-                            <div style={{ borderRadius: '14px', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: isMobile ? '1fr auto auto' : '2fr 1fr 1fr 1fr',
-                                    padding: '12px 16px',
+                        {/* Collapsible Page Analytics Section */}
+                        <div style={{
+                            borderRadius: '14px',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            overflow: 'hidden',
+                            marginTop: '24px'
+                        }}>
+                            <div
+                                style={{
+                                    padding: '16px 20px',
                                     background: 'rgba(255,255,255,0.03)',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 600,
-                                    color: '#888',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.05em'
-                                }}>
-                                    <span>Page</span>
-                                    <span style={{ textAlign: 'center' }}>Total</span>
-                                    <span style={{ textAlign: 'center' }}>Unique</span>
-                                    {!isMobile && <span style={{ textAlign: 'center' }}>Today</span>}
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    cursor: 'pointer',
+                                    userSelect: 'none'
+                                }}
+                                onClick={() => setIsPagesExpanded(!isPagesExpanded)}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{
+                                        padding: '6px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <TrendingUp size={16} color="#ddd" />
+                                    </div>
+                                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#eee' }}>Page Performance</span>
                                 </div>
-                                {analytics.pages.map((page, i) => (
-                                    <div key={page.page} style={{
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    {isPagesExpanded && (
+                                        <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+                                            <select
+                                                value={sortBy}
+                                                onChange={(e) => setSortBy(e.target.value as any)}
+                                                style={{
+                                                    appearance: 'none',
+                                                    background: '#1a1a20',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    borderRadius: '6px',
+                                                    color: '#ddd',
+                                                    fontSize: '0.8rem',
+                                                    padding: '6px 28px 6px 12px',
+                                                    outline: 'none',
+                                                    cursor: 'pointer',
+                                                    minWidth: '130px'
+                                                }}
+                                            >
+                                                <option value="total" style={{ background: '#1a1a20', color: '#ddd' }}>Most Visited</option>
+                                                <option value="unique" style={{ background: '#1a1a20', color: '#ddd' }}>Most Unique</option>
+                                                <option value="today" style={{ background: '#1a1a20', color: '#ddd' }}>Trending Today</option>
+                                            </select>
+                                            <div style={{ pointerEvents: 'none', position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div style={{ transform: isPagesExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', cursor: 'pointer' }}>
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#888' }}><path d="M6 9l6 6 6-6" /></svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {isPagesExpanded && (
+                                <div>
+                                    <div style={{
                                         display: 'grid',
                                         gridTemplateColumns: isMobile ? '1fr auto auto' : '2fr 1fr 1fr 1fr',
-                                        padding: '14px 16px',
-                                        borderTop: '1px solid rgba(255,255,255,0.04)',
-                                        background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
-                                        alignItems: 'center'
+                                        padding: '12px 16px',
+                                        background: 'rgba(0,0,0,0.2)',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        color: '#888',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                        borderTop: '1px solid rgba(255,255,255,0.04)'
                                     }}>
-                                        <span style={{ fontWeight: 600, fontSize: isMobile ? '0.85rem' : '0.95rem' }}>
-                                            {getPageLabel(page.page)}
-                                        </span>
-                                        <span style={{ textAlign: 'center', fontWeight: 700, fontSize: '1.1rem' }}>
-                                            {page.total_visits}
-                                        </span>
-                                        <span style={{ textAlign: 'center', color: '#3b82f6', fontWeight: 600 }}>
-                                            {page.unique_visitors}
-                                        </span>
-                                        {!isMobile && (
-                                            <span style={{ textAlign: 'center', color: '#10b981', fontWeight: 600 }}>
-                                                {page.today_visits}
-                                            </span>
-                                        )}
+                                        <span>Page</span>
+                                        <span style={{ textAlign: 'center' }}>Total</span>
+                                        <span style={{ textAlign: 'center' }}>Unique</span>
+                                        {!isMobile && <span style={{ textAlign: 'center' }}>Today</span>}
                                     </div>
-                                ))}
-                            </div>
-                        )}
+
+                                    {paginatedPages.map((page, i) => (
+                                        <div key={page.page} style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: isMobile ? '1fr auto auto' : '2fr 1fr 1fr 1fr',
+                                            padding: '14px 16px',
+                                            borderTop: '1px solid rgba(255,255,255,0.04)',
+                                            background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                                            alignItems: 'center'
+                                        }}>
+                                            <span style={{ fontWeight: 600, fontSize: isMobile ? '0.85rem' : '0.95rem' }}>
+                                                {getPageLabel(page.page)}
+                                            </span>
+                                            <span style={{ textAlign: 'center', fontWeight: 700, fontSize: '1.1rem' }}>
+                                                {page.total_visits}
+                                            </span>
+                                            <span style={{ textAlign: 'center', color: '#3b82f6', fontWeight: 600 }}>
+                                                {page.unique_visitors}
+                                            </span>
+                                            {!isMobile && (
+                                                <span style={{ textAlign: 'center', color: '#10b981', fontWeight: 600 }}>
+                                                    {page.today_visits}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    {/* Pagination Controls */}
+                                    {totalPages > 1 && (
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            padding: '16px',
+                                            borderTop: '1px solid rgba(255,255,255,0.04)'
+                                        }}>
+                                            <button
+                                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                                disabled={page === 1}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    borderRadius: '6px',
+                                                    background: 'rgba(255,255,255,0.05)',
+                                                    border: 'none',
+                                                    color: page === 1 ? '#666' : '#eee',
+                                                    cursor: page === 1 ? 'default' : 'pointer',
+                                                    fontSize: '0.85rem'
+                                                }}
+                                            >
+                                                Previous
+                                            </button>
+                                            <span style={{ fontSize: '0.85rem', color: '#888' }}>
+                                                Page <span style={{ color: '#eee' }}>{page}</span> of {totalPages}
+                                            </span>
+                                            <button
+                                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                                disabled={page === totalPages}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    borderRadius: '6px',
+                                                    background: 'rgba(255,255,255,0.05)',
+                                                    border: 'none',
+                                                    color: page === totalPages ? '#666' : '#eee',
+                                                    cursor: page === totalPages ? 'default' : 'pointer',
+                                                    fontSize: '0.85rem'
+                                                }}
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {analytics.pages.length === 0 && (
+                                        <div style={{ textAlign: 'center', padding: '32px', color: '#666', fontSize: '0.9rem' }}>
+                                            No page data yet.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         {/* New Audience & Network Metrics */}
                         <div style={{ marginTop: '32px' }}>

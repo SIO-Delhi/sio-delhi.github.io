@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Go up one level from 'scripts' to root
 const ROOT_DIR = path.join(__dirname, '..');
-const CSV_PATH = path.join(ROOT_DIR, 'posts_rows.csv');
+const CSV_PATH = path.join(ROOT_DIR, 'posts.csv');
 const SITEMAP_PATH = path.join(ROOT_DIR, 'public', 'sitemap.xml');
 
 const BASE_URL = 'https://siodelhi.org';
@@ -88,7 +88,7 @@ async function generateSitemap() {
     console.log(`Reading CSV from ${CSV_PATH}...`);
 
     if (!fs.existsSync(CSV_PATH)) {
-        console.error('posts_rows.csv not found!');
+        console.error('posts.csv not found!');
         process.exit(1);
     }
 
@@ -128,10 +128,17 @@ async function generateSitemap() {
     const dataRows = rows.slice(1);
     console.log(`Found ${dataRows.length} rows.`);
 
-    // Columns: id, section_id, ..., created_at, updated_at, ..., is_published (index 10 or so)
-    // We need to parse strictly.
-    // Header: id,section_id,title,subtitle,content,image,layout,created_at,updated_at,pdf_url,is_published,...
-    // Indices: 0, 1,        2,    3,       4,      5,    6,     7,          8,         9,       10
+    // Columns found in posts.csv:
+    // 0: id
+    // 1: section_id
+    // 2: parent_id
+    // 3: is_subsection
+    // 4: title
+    // 5: subtitle
+    // ...
+    // 14: is_published
+    // ...
+    // 19: updated_at
 
     const urls = [...STATIC_URLS.map(u => ({ ...u, loc: BASE_URL + u.loc }))];
 
@@ -141,13 +148,14 @@ async function generateSitemap() {
 
         const id = cols[0];
         const sectionId = cols[1];
-        const title = cols[2];
-        const updatedAt = cols[8]; // Timestamp
-        const isPublished = cols[10]; // "true" or "false"
+        const title = cols[4]; // Changed from 2 to 4
+        const updatedAt = cols[19]; // Changed from 8 to 19
+        const isPublished = cols[14]; // Changed from 10 to 14
 
         // Basic validation
         if (!id || !sectionId) return;
-        if (isPublished !== 'true') return;
+        // Check for '1' (true) or 'true' string
+        if (isPublished !== '1' && isPublished !== 'true') return;
 
         const path = getUrlForPost(id, sectionId, title);
         if (path) {

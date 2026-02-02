@@ -271,19 +271,19 @@ function getVisitStats()
     $trend = $stmt->fetchAll();
 
     // Browser stats
-    $browsers = $db->query("SELECT browser, COUNT(*) as count FROM page_visits WHERE browser IS NOT NULL GROUP BY browser ORDER BY count DESC LIMIT 10")->fetchAll();
+    $browsers = $db->query("SELECT browser, COUNT(DISTINCT ip_hash) as count FROM page_visits WHERE browser IS NOT NULL GROUP BY browser ORDER BY count DESC LIMIT 10")->fetchAll();
 
     // OS stats
-    $oss = $db->query("SELECT os, COUNT(*) as count FROM page_visits WHERE os IS NOT NULL GROUP BY os ORDER BY count DESC LIMIT 10")->fetchAll();
+    $oss = $db->query("SELECT os, COUNT(DISTINCT ip_hash) as count FROM page_visits WHERE os IS NOT NULL GROUP BY os ORDER BY count DESC LIMIT 10")->fetchAll();
 
     // Referrer stats
-    $referrers = $db->query("SELECT referrer, COUNT(*) as count FROM page_visits WHERE referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10")->fetchAll();
+    $referrers = $db->query("SELECT referrer, COUNT(DISTINCT ip_hash) as count FROM page_visits WHERE referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10")->fetchAll();
 
     // ISP stats
-    $isps = $db->query("SELECT isp, COUNT(*) as count FROM page_visits WHERE isp IS NOT NULL GROUP BY isp ORDER BY count DESC LIMIT 10")->fetchAll();
+    $isps = $db->query("SELECT isp, COUNT(DISTINCT ip_hash) as count FROM page_visits WHERE isp IS NOT NULL GROUP BY isp ORDER BY count DESC LIMIT 10")->fetchAll();
 
     // Organization stats
-    $orgs = $db->query("SELECT organization, COUNT(*) as count FROM page_visits WHERE organization IS NOT NULL GROUP BY organization ORDER BY count DESC LIMIT 10")->fetchAll();
+    $orgs = $db->query("SELECT organization, COUNT(DISTINCT ip_hash) as count FROM page_visits WHERE organization IS NOT NULL GROUP BY organization ORDER BY count DESC LIMIT 10")->fetchAll();
 
     return [
         'totals' => $totals,
