@@ -4,6 +4,7 @@ import { BarChart3, Eye, Users, TrendingUp, MapPin, Loader2, Clock, LogOut, User
 import jsPDF from 'jspdf'
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import logo from '../../assets/logo.png'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 
@@ -151,7 +152,7 @@ export function AdminAnalytics() {
             fetch(`${API_BASE}/analytics/live`)
                 .then(res => res.json())
                 .then(data => setLiveCount(data.live_count ?? 0))
-                .catch(() => {})
+                .catch(() => { })
         }
         fetchLive()
         const interval = setInterval(fetchLive, 30000)
@@ -253,7 +254,7 @@ export function AdminAnalytics() {
         URL.revokeObjectURL(url)
     }
 
-    const exportPdf = () => {
+    const exportPdf = async () => {
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
         const W = 210
         const margin = 16
@@ -262,6 +263,28 @@ export function AdminAnalytics() {
 
         const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
         const rangeStr = dateRange.from && dateRange.to ? `${dateRange.from} — ${dateRange.to}` : 'All Time'
+
+        // Helper: Resize image
+        const resizeImage = (img: HTMLImageElement, width: number): string => {
+            const canvas = document.createElement('canvas')
+            const scale = width / img.width
+            canvas.width = width
+            canvas.height = img.height * scale
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+                return canvas.toDataURL('image/png', 0.8)
+            }
+            return img.src
+        }
+
+        // Load logo with resizing
+        const logoImg = await new Promise<string | null>((resolve) => {
+            const img = new Image()
+            img.src = logo
+            img.onload = () => resolve(resizeImage(img, 300))
+            img.onerror = () => resolve(null)
+        })
 
         // Colors
         const amber = [245, 158, 11] as const
@@ -279,6 +302,12 @@ export function AdminAnalytics() {
         doc.setFontSize(22)
         doc.setFont('helvetica', 'bold')
         doc.text('Page Analytics Report', margin, 22)
+
+        if (logoImg) {
+            const logoDim = 24
+            doc.addImage(logoImg, 'PNG', W - margin - logoDim + 4, 10, logoDim, logoDim, undefined, 'FAST')
+        }
+
         doc.setFontSize(9)
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(180, 180, 190)
@@ -384,7 +413,7 @@ export function AdminAnalytics() {
 
         // Table rows
         doc.setFont('helvetica', 'normal')
-        analytics.pages.forEach((p, idx) => {
+        analytics.pages.slice(0, 10).forEach((p, idx) => {
             checkPage(7)
             if (idx % 2 === 0) {
                 doc.setFillColor(250, 250, 252)
@@ -409,71 +438,202 @@ export function AdminAnalytics() {
 
         // --- Landing Pages ---
         if (analytics.landing_pages && analytics.landing_pages.length > 0) {
-            checkPage(30)
-            doc.setFontSize(11)
+            checkPage(40)
+            doc.setFontSize(13)
             doc.setFont('helvetica', 'bold')
             doc.setTextColor(...dark)
             doc.text('Top Landing Pages', margin, y)
             y += 6
-            analytics.landing_pages.forEach((lp, i) => {
-                checkPage(6)
-                doc.setFontSize(7.5)
+
+            // Table Header
+            doc.setFillColor(240, 240, 243)
+            doc.rect(margin, y, contentW, 7, 'F')
+            doc.setFontSize(7)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...gray)
+            doc.text('Rank', margin + 3, y + 5)
+            doc.text('Page Path', margin + 18, y + 5)
+            doc.text('Sessions', margin + contentW - 5, y + 5, { align: 'right' })
+            y += 7
+
+            // Rows
+            analytics.landing_pages.slice(0, 10).forEach((lp, i) => {
+                checkPage(7)
+                if (i % 2 === 0) {
+                    doc.setFillColor(250, 250, 252)
+                    doc.rect(margin, y - 1, contentW, 7, 'F')
+                }
+                doc.setFontSize(8)
                 doc.setFont('helvetica', 'normal')
                 doc.setTextColor(...dark)
-                doc.text(`${i + 1}. ${getPageLabel(lp.page)}`, margin + 2, y + 4)
+
+                doc.text(String(i + 1), margin + 3, y + 4)
+
+                const label = getPageLabel(lp.page)
+                const truncate = (str: string, max: number) => str.length > max ? str.slice(0, max - 3) + '...' : str
+                doc.text(truncate(label, 60), margin + 18, y + 4)
+
                 doc.setTextColor(...gray)
-                doc.text(`${lp.count} sessions`, margin + contentW - 30, y + 4)
-                y += 6
+                doc.text(String(lp.count), margin + contentW - 5, y + 4, { align: 'right' })
+                y += 7
             })
-            y += 4
+            y += 8
         }
 
-        // --- Audience Tables ---
-        const audienceSections: { title: string; data: { name: string; count: number }[] | undefined }[] = [
-            { title: 'Browsers', data: analytics.browsers?.map(b => ({ name: b.browser, count: b.count })) },
-            { title: 'Operating Systems', data: analytics.oss?.map(o => ({ name: o.os, count: o.count })) },
-            { title: 'Devices', data: analytics.devices?.map(d => ({ name: d.device_type, count: d.count })) },
-            { title: 'Referrers', data: analytics.referrers?.map(r => ({ name: r.referrer || 'Direct', count: r.count })) },
-        ]
+        // --- Audience Section (Charts) ---
+        checkPage(80)
+        doc.setFontSize(13)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...dark)
+        doc.text('Audience Overview', margin, y)
+        y += 10
 
-        audienceSections.forEach(section => {
-            if (!section.data || section.data.length === 0) return
-            checkPage(20)
-            doc.setFontSize(11)
+        // Helpers for Charts
+        const drawBarChart = (title: string, data: { name: string; count: number }[] | undefined, x: number, y: number, w: number, color: [number, number, number]) => {
+            doc.setFontSize(10)
             doc.setFont('helvetica', 'bold')
             doc.setTextColor(...dark)
-            doc.text(section.title, margin, y)
-            y += 6
-            section.data.slice(0, 8).forEach(item => {
-                checkPage(6)
-                doc.setFontSize(7.5)
+            doc.text(title, x, y)
+            let cy = y + 6
+
+            if (!data || data.length === 0) {
+                doc.setFontSize(8)
+                doc.setFont('helvetica', 'italic')
+                doc.setTextColor(150, 150, 150)
+                doc.text('No data', x, cy)
+                return 15
+            }
+
+            const max = Math.max(...data.map(d => d.count), 1)
+
+            data.slice(0, 5).forEach((item) => {
+                const pct = item.count / max
+                // Label
+                doc.setFontSize(7)
+                doc.setFont('helvetica', 'bold')
+                doc.setTextColor(50, 50, 60)
+                const label = item.name.length > 20 ? item.name.slice(0, 18) + '...' : item.name
+                doc.text(label, x, cy)
                 doc.setFont('helvetica', 'normal')
-                doc.setTextColor(...dark)
-                doc.text(item.name, margin + 2, y + 4)
                 doc.setTextColor(...gray)
-                doc.text(String(item.count), margin + contentW - 10, y + 4, { align: 'right' })
-                y += 6
+                doc.text(String(item.count), x + w, cy, { align: 'right' })
+
+                // Bar Track
+                cy += 2
+                doc.setFillColor(240, 240, 243)
+                doc.roundedRect(x, cy, w, 4, 1, 1, 'F')
+                // Bar Value
+                doc.setFillColor(...color)
+                doc.roundedRect(x, cy, Math.max(w * pct, 2), 4, 1, 1, 'F')
+
+                cy += 8
             })
-            y += 4
-        })
+            return cy - y
+        }
+
+        const drawPieChart = (title: string, data: { name: string; count: number }[] | undefined, cx: number, cy: number, radius: number) => {
+            doc.setFontSize(10)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...dark)
+            doc.text(title, cx - radius, cy - radius - 6)
+
+            if (!data || data.length === 0) return 20
+
+            // Fix: Ensure counts are treated as numbers to avoid string concatenation
+            const total = data.reduce((sum, d) => sum + Number(d.count), 0)
+            let startAngle = 0
+            const colors: [number, number, number][] = [
+                [59, 130, 246], // Blue
+                [16, 185, 129], // Green
+                [245, 158, 11], // Orange
+                [239, 68, 68],  // Red
+            ]
+
+            data.forEach((item, i) => {
+                const value = Number(item.count)
+                if (value === 0) return
+                const sliceAngle = (value / total) * 2 * Math.PI
+
+                doc.setFillColor(...colors[i % colors.length])
+                const segments = Math.max(Math.floor(sliceAngle * 10), 5)
+                for (let j = 0; j < segments; j++) {
+                    const a1 = startAngle + (sliceAngle * j / segments)
+                    const a2 = startAngle + (sliceAngle * (j + 1) / segments)
+                    doc.triangle(
+                        cx, cy,
+                        cx + radius * Math.cos(a1), cy + radius * Math.sin(a1),
+                        cx + radius * Math.cos(a2), cy + radius * Math.sin(a2),
+                        'F'
+                    )
+                }
+                startAngle += sliceAngle
+            })
+
+            // Legend
+            let ly = cy - radius + 2
+            const lx = cx + radius + 12
+            data.forEach((item, i) => {
+                const count = Number(item.count)
+                doc.setFillColor(...colors[i % colors.length])
+                doc.circle(lx, ly, 2, 'F')
+                doc.setFontSize(8)
+                doc.setTextColor(...dark)
+                doc.text(`${item.name} (${Math.round(count / total * 100)}%)`, lx + 5, ly + 1)
+                ly += 6
+            })
+        }
+
+        const gap = 16
+        const halfW = (contentW - gap) / 2
+
+        // Row 1: Browsers (Bar) - OS (Bar)
+        const row1StartY = y
+        drawBarChart('Top Browsers', analytics.browsers?.map(b => ({ name: b.browser, count: b.count })), margin, row1StartY, halfW, [59, 130, 246])
+        const h2 = drawBarChart('Operating Systems', analytics.oss?.map(o => ({ name: o.os, count: o.count })), margin + halfW + gap, row1StartY, halfW, [16, 185, 129])
+        y += Math.max(60, h2 + 10)
+
+        // Row 2: Devices (Pie) - Referrers (Bar)
+        checkPage(60)
+        drawPieChart('Devices', analytics.devices?.map(d => ({ name: d.device_type, count: d.count })), margin + 20, y + 30, 18)
+        drawBarChart('Top Referrers', analytics.referrers?.map(r => ({ name: r.referrer || 'Direct', count: r.count })), margin + halfW + gap, y, halfW, [245, 158, 11])
+        y += 60
 
         // --- Country Breakdown ---
         if (locations.countries.length > 0) {
-            checkPage(20)
-            doc.setFontSize(11)
+            checkPage(30)
+            doc.setFontSize(13)
             doc.setFont('helvetica', 'bold')
             doc.setTextColor(...dark)
             doc.text('Top Countries', margin, y)
             y += 6
-            locations.countries.slice(0, 10).forEach(c => {
-                checkPage(6)
-                doc.setFontSize(7.5)
+
+            // Table Header
+            doc.setFillColor(240, 240, 243)
+            doc.rect(margin, y, contentW, 7, 'F')
+            doc.setFontSize(7)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...gray)
+            doc.text('Country', margin + 3, y + 5)
+            doc.text('Total Visits', margin + contentW * 0.6, y + 5)
+            doc.text('Unique Visitors', margin + contentW - 5, y + 5, { align: 'right' })
+            y += 7
+
+            locations.countries.slice(0, 10).forEach((c, i) => {
+                checkPage(7)
+                if (i % 2 === 0) {
+                    doc.setFillColor(250, 250, 252)
+                    doc.rect(margin, y - 1, contentW, 7, 'F')
+                }
+                doc.setFontSize(8)
                 doc.setFont('helvetica', 'normal')
                 doc.setTextColor(...dark)
-                doc.text(`${countryFlag(c.country)} ${c.country}`, margin + 2, y + 4)
-                doc.setTextColor(...gray)
-                doc.text(`${c.visit_count} visits, ${c.unique_visitors} unique`, margin + contentW - 40, y + 4, { align: 'right' })
-                y += 6
+
+                // NO EMOJI - Fixes rendering issue
+                doc.text(c.country, margin + 3, y + 4)
+
+                doc.text(String(c.visit_count), margin + contentW * 0.6, y + 4)
+                doc.text(String(c.unique_visitors), margin + contentW - 5, y + 4, { align: 'right' })
+                y += 7
             })
             y += 4
         }
