@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import { FormFooter } from '../../ui/FormFooter'
 
 export interface Speaker {
@@ -22,7 +22,7 @@ export interface EventPosterProps {
     unitName?: string
 }
 
-export const EventPosterSvg = React.forwardRef<SVGSVGElement, EventPosterProps>(
+export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPosterProps>(
     function EventPosterSvg(props, ref) {
         const { title, date, day, timeStart, timeEnd, venue, speakerCount, speakers, hue, forDownload, unitName = 'DELHI' } = props
 
@@ -470,4 +470,4 @@ export const EventPosterSvg = React.forwardRef<SVGSVGElement, EventPosterProps>(
             </svg>
         )
     }
-)
+))

@@ -84,6 +84,12 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
     const [activeSpeaker, setActiveSpeaker] = useState(0)
     const [downloading, setDownloading] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
+    const [localHue, setLocalHue] = useState(state.hue)
+
+    // Sync localHue when state.hue changes (e.g. from history undo/redo)
+    React.useEffect(() => {
+        setLocalHue(state.hue)
+    }, [state.hue])
 
     React.useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 1024)
@@ -361,13 +367,14 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
                             type="range"
                             min={0}
                             max={360}
-                            value={state.hue}
-                            onChange={(e) => updateField('hue', Number(e.target.value))}
+                            value={localHue}
+                            onChange={(e) => setLocalHue(Number(e.target.value))}
+                            onPointerUp={() => updateField('hue', localHue)}
                             className="pt-slider"
                             style={{ flex: 1 }}
                         />
                         <span style={{ fontSize: '0.8rem', color: '#a1a1aa', minWidth: '36px' }}>
-                            {state.hue}°
+                            {localHue}°
                         </span>
                     </div>
                 </div>
@@ -386,10 +393,20 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
         </div>
     )
 
-    // Preview SVG
+    // Preview SVG - Performance Optimized
     const previewSvg = (
-        <div className="ep-preview-container">
-            <EventPosterSvg {...state} />
+        <div
+            className="ep-preview-container"
+            style={{
+                filter: localHue !== 0 ? `hue-rotate(${localHue}deg)` : undefined,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100%',
+                height: '100%'
+            }}
+        >
+            <EventPosterSvg {...state} hue={0} />
         </div>
     )
 
@@ -424,12 +441,13 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
                                         type="range"
                                         min={0}
                                         max={360}
-                                        value={state.hue}
-                                        onChange={(e) => updateField('hue', Number(e.target.value))}
+                                        value={localHue}
+                                        onChange={(e) => setLocalHue(Number(e.target.value))}
+                                        onPointerUp={() => updateField('hue', localHue)}
                                         className="pt-slider"
                                         style={{ flex: 1 }}
                                     />
-                                    <span style={{ fontSize: '0.8rem', color: '#a1a1aa', width: '3ch', textAlign: 'right' }}>{state.hue}°</span>
+                                    <span style={{ fontSize: '0.8rem', color: '#a1a1aa', width: '3ch', textAlign: 'right' }}>{localHue}°</span>
                                 </div>
                             </div>
                             <button
