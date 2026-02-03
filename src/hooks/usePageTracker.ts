@@ -76,4 +76,18 @@ export function usePageTracker() {
             document.removeEventListener('visibilitychange', handleVisibility)
         }
     }, [sendDuration])
+
+    // Heartbeat: ping every 30s so the visitor stays "live" in the dashboard
+    useEffect(() => {
+        const sendHeartbeat = () => {
+            if (!currentPage.current) return
+            fetch(`${API_BASE}/analytics/heartbeat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ visitor_id: getVisitorId() })
+            }).catch(() => {})
+        }
+        const interval = setInterval(sendHeartbeat, 30000)
+        return () => clearInterval(interval)
+    }, [])
 }

@@ -1,6 +1,7 @@
 
-import { useEffect, useState, useCallback } from 'react'
-import { BarChart3, Eye, Users, TrendingUp, MapPin, Loader2, Clock, LogOut, UserPlus, UserCheck, Smartphone, Download, ArrowUpRight, ArrowDownRight, Radio, Navigation } from 'lucide-react'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { BarChart3, Eye, Users, TrendingUp, MapPin, Loader2, Clock, LogOut, UserPlus, UserCheck, Smartphone, Download, ArrowUpRight, ArrowDownRight, Radio, Navigation, Info, FileText, FileSpreadsheet, ChevronDown } from 'lucide-react'
+import jsPDF from 'jspdf'
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -10,6 +11,40 @@ const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 const countryFlag = (code: string) => {
     if (!code || code.length !== 2) return ''
     return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0)))
+}
+
+const InfoTip = ({ text }: { text: string }) => {
+    const ref = useRef<HTMLSpanElement>(null)
+    const bubbleRef = useRef<HTMLSpanElement>(null)
+    const show = () => {
+        if (!ref.current || !bubbleRef.current) return
+        const rect = ref.current.getBoundingClientRect()
+        const bubble = bubbleRef.current
+        bubble.style.display = 'block'
+        // Position below the icon
+        bubble.style.top = `${rect.bottom + 6}px`
+        bubble.style.left = `${rect.left + rect.width / 2}px`
+        bubble.style.transform = 'translateX(-50%)'
+        // Check if it goes off-screen right
+        requestAnimationFrame(() => {
+            const bRect = bubble.getBoundingClientRect()
+            if (bRect.right > window.innerWidth - 8) {
+                bubble.style.left = `${window.innerWidth - bRect.width - 8}px`
+                bubble.style.transform = 'none'
+            }
+            if (bRect.left < 8) {
+                bubble.style.left = '8px'
+                bubble.style.transform = 'none'
+            }
+        })
+    }
+    const hide = () => { if (bubbleRef.current) bubbleRef.current.style.display = 'none' }
+    return (
+        <span className="analytics-infotip-wrap" ref={ref} onMouseEnter={show} onMouseLeave={hide}>
+            <Info size={13} className="analytics-infotip-icon" />
+            <span className="analytics-infotip-bubble" ref={bubbleRef}>{text}</span>
+        </span>
+    )
 }
 
 export function AdminAnalytics() {
@@ -49,6 +84,8 @@ export function AdminAnalytics() {
     const [isLandingExpanded, setIsLandingExpanded] = useState(false)
     const [isFlowExpanded, setIsFlowExpanded] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
+    const [isExportOpen, setIsExportOpen] = useState(false)
+    const exportRef = useRef<HTMLDivElement>(null)
     const itemsPerPage = 7
 
     useEffect(() => {
@@ -120,6 +157,17 @@ export function AdminAnalytics() {
         const interval = setInterval(fetchLive, 30000)
         return () => clearInterval(interval)
     }, [])
+
+    // Close export dropdown on outside click
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+                setIsExportOpen(false)
+            }
+        }
+        if (isExportOpen) document.addEventListener('mousedown', handleClick)
+        return () => document.removeEventListener('mousedown', handleClick)
+    }, [isExportOpen])
 
     const getPageLabel = (pagePath: string) => {
         const labels: Record<string, string> = {
@@ -205,6 +253,245 @@ export function AdminAnalytics() {
         URL.revokeObjectURL(url)
     }
 
+    const exportPdf = () => {
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+        const W = 210
+        const margin = 16
+        const contentW = W - margin * 2
+        let y = 16
+
+        const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        const rangeStr = dateRange.from && dateRange.to ? `${dateRange.from} — ${dateRange.to}` : 'All Time'
+
+        // Colors
+        const amber = [245, 158, 11] as const
+        const dark = [30, 30, 38] as const
+        const gray = [120, 120, 130] as const
+
+        const checkPage = (needed: number) => {
+            if (y + needed > 280) { doc.addPage(); y = 16 }
+        }
+
+        // --- Title ---
+        doc.setFillColor(...dark)
+        doc.rect(0, 0, W, 44, 'F')
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(22)
+        doc.setFont('helvetica', 'bold')
+        doc.text('Page Analytics Report', margin, 22)
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(180, 180, 190)
+        doc.text(`Generated: ${dateStr}  •  Range: ${rangeStr}`, margin, 32)
+        doc.text('siodelhi.org', W - margin, 32, { align: 'right' })
+        y = 54
+
+        // --- Summary Cards ---
+        doc.setFontSize(13)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...dark)
+        doc.text('Overview', margin, y)
+        y += 8
+
+        const cards = [
+            { label: 'Total Visits', value: String(analytics.totals?.total_visits ?? 0) },
+            { label: 'Unique Visitors', value: String(analytics.totals?.unique_visitors ?? 0) },
+            { label: 'Today', value: String(analytics.totals?.today_visits ?? 0) },
+            { label: 'Avg. Time', value: formatDuration(analytics.totals?.avg_duration ?? null) },
+            { label: 'Bounce Rate', value: analytics.bounce_rate != null ? `${analytics.bounce_rate}%` : '—' },
+            { label: 'New Today', value: String(analytics.new_vs_returning?.new ?? 0) },
+            { label: 'Returning', value: String(analytics.new_vs_returning?.returning ?? 0) },
+        ]
+
+        const cardW = (contentW - 8) / 4
+        cards.forEach((card, i) => {
+            const col = i % 4
+            const row = Math.floor(i / 4)
+            const cx = margin + col * (cardW + 2.5)
+            const cy = y + row * 22
+            doc.setFillColor(245, 245, 248)
+            doc.roundedRect(cx, cy, cardW, 19, 3, 3, 'F')
+            doc.setFontSize(7.5)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(...gray)
+            doc.text(card.label.toUpperCase(), cx + 4, cy + 7)
+            doc.setFontSize(16)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...dark)
+            doc.text(card.value, cx + 4, cy + 15)
+        })
+        y += Math.ceil(cards.length / 4) * 22 + 10
+
+        // --- Trend Chart ---
+        if (analytics.trend.length > 0) {
+            checkPage(50)
+            doc.setFontSize(13)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...dark)
+            doc.text(`Traffic Trend (${trendDays}d)`, margin, y)
+            y += 6
+
+            const chartH = 30
+            const maxVisits = Math.max(...analytics.trend.map(t => t.visits), 1)
+            const barW = Math.min((contentW) / analytics.trend.length - 1, 12)
+            const chartStartX = margin + (contentW - analytics.trend.length * (barW + 1)) / 2
+
+            // Y-axis baseline
+            doc.setDrawColor(220, 220, 225)
+            doc.setLineWidth(0.3)
+            doc.line(margin, y + chartH, margin + contentW, y + chartH)
+
+            analytics.trend.forEach((day, i) => {
+                const h = (day.visits / maxVisits) * chartH
+                const bx = chartStartX + i * (barW + 1)
+                doc.setFillColor(...amber)
+                doc.roundedRect(bx, y + chartH - h, barW, h, 1, 1, 'F')
+                // Date label
+                doc.setFontSize(5)
+                doc.setTextColor(...gray)
+                const label = day.visit_date.slice(5) // MM-DD
+                doc.text(label, bx + barW / 2, y + chartH + 4, { align: 'center' })
+                // Count on top
+                doc.setFontSize(5)
+                doc.setTextColor(...amber)
+                doc.text(String(day.visits), bx + barW / 2, y + chartH - h - 1.5, { align: 'center' })
+            })
+            y += chartH + 12
+        }
+
+        // --- Page Performance Table ---
+        checkPage(40)
+        doc.setFontSize(13)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...dark)
+        doc.text('Page Performance', margin, y)
+        y += 6
+
+        // Table header
+        const colWidths = [contentW * 0.38, contentW * 0.15, contentW * 0.15, contentW * 0.15, contentW * 0.17]
+        const colLabels = ['Page', 'Total', 'Unique', 'Today', 'Avg Time']
+        doc.setFillColor(240, 240, 243)
+        doc.rect(margin, y, contentW, 7, 'F')
+        doc.setFontSize(7)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...gray)
+        let cx = margin + 3
+        colLabels.forEach((label, i) => {
+            doc.text(label, cx, y + 5)
+            cx += colWidths[i]
+        })
+        y += 8
+
+        // Table rows
+        doc.setFont('helvetica', 'normal')
+        analytics.pages.forEach((p, idx) => {
+            checkPage(7)
+            if (idx % 2 === 0) {
+                doc.setFillColor(250, 250, 252)
+                doc.rect(margin, y - 1, contentW, 7, 'F')
+            }
+            doc.setFontSize(7)
+            doc.setTextColor(...dark)
+            let rx = margin + 3
+            const name = getPageLabel(p.page)
+            doc.text(name.length > 35 ? name.slice(0, 32) + '...' : name, rx, y + 4)
+            rx += colWidths[0]
+            doc.text(String(p.total_visits), rx, y + 4)
+            rx += colWidths[1]
+            doc.text(String(p.unique_visitors), rx, y + 4)
+            rx += colWidths[2]
+            doc.text(String(p.today_visits), rx, y + 4)
+            rx += colWidths[3]
+            doc.text(formatDuration(p.avg_duration), rx, y + 4)
+            y += 7
+        })
+        y += 6
+
+        // --- Landing Pages ---
+        if (analytics.landing_pages && analytics.landing_pages.length > 0) {
+            checkPage(30)
+            doc.setFontSize(11)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...dark)
+            doc.text('Top Landing Pages', margin, y)
+            y += 6
+            analytics.landing_pages.forEach((lp, i) => {
+                checkPage(6)
+                doc.setFontSize(7.5)
+                doc.setFont('helvetica', 'normal')
+                doc.setTextColor(...dark)
+                doc.text(`${i + 1}. ${getPageLabel(lp.page)}`, margin + 2, y + 4)
+                doc.setTextColor(...gray)
+                doc.text(`${lp.count} sessions`, margin + contentW - 30, y + 4)
+                y += 6
+            })
+            y += 4
+        }
+
+        // --- Audience Tables ---
+        const audienceSections: { title: string; data: { name: string; count: number }[] | undefined }[] = [
+            { title: 'Browsers', data: analytics.browsers?.map(b => ({ name: b.browser, count: b.count })) },
+            { title: 'Operating Systems', data: analytics.oss?.map(o => ({ name: o.os, count: o.count })) },
+            { title: 'Devices', data: analytics.devices?.map(d => ({ name: d.device_type, count: d.count })) },
+            { title: 'Referrers', data: analytics.referrers?.map(r => ({ name: r.referrer || 'Direct', count: r.count })) },
+        ]
+
+        audienceSections.forEach(section => {
+            if (!section.data || section.data.length === 0) return
+            checkPage(20)
+            doc.setFontSize(11)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...dark)
+            doc.text(section.title, margin, y)
+            y += 6
+            section.data.slice(0, 8).forEach(item => {
+                checkPage(6)
+                doc.setFontSize(7.5)
+                doc.setFont('helvetica', 'normal')
+                doc.setTextColor(...dark)
+                doc.text(item.name, margin + 2, y + 4)
+                doc.setTextColor(...gray)
+                doc.text(String(item.count), margin + contentW - 10, y + 4, { align: 'right' })
+                y += 6
+            })
+            y += 4
+        })
+
+        // --- Country Breakdown ---
+        if (locations.countries.length > 0) {
+            checkPage(20)
+            doc.setFontSize(11)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...dark)
+            doc.text('Top Countries', margin, y)
+            y += 6
+            locations.countries.slice(0, 10).forEach(c => {
+                checkPage(6)
+                doc.setFontSize(7.5)
+                doc.setFont('helvetica', 'normal')
+                doc.setTextColor(...dark)
+                doc.text(`${countryFlag(c.country)} ${c.country}`, margin + 2, y + 4)
+                doc.setTextColor(...gray)
+                doc.text(`${c.visit_count} visits, ${c.unique_visitors} unique`, margin + contentW - 40, y + 4, { align: 'right' })
+                y += 6
+            })
+            y += 4
+        }
+
+        // --- Footer on every page ---
+        const totalPages = doc.getNumberOfPages()
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i)
+            doc.setFontSize(7)
+            doc.setTextColor(160, 160, 170)
+            doc.text(`Page ${i} of ${totalPages}`, W - margin, 290, { align: 'right' })
+            doc.text('SIO Delhi Analytics', margin, 290)
+        }
+
+        doc.save(`analytics-${new Date().toISOString().split('T')[0]}.pdf`)
+        setIsExportOpen(false)
+    }
+
     // Date range presets
     const setPreset = (preset: 'all' | '7d' | '30d' | '90d') => {
         if (preset === 'all') {
@@ -276,7 +563,7 @@ export function AdminAnalytics() {
         </div>
     )
 
-    const sectionHeader = (icon: React.ReactNode, title: string, expanded: boolean, toggle: () => void, extra?: React.ReactNode) => (
+    const sectionHeader = (icon: React.ReactNode, title: string, expanded: boolean, toggle: () => void, extra?: React.ReactNode, tooltip?: string) => (
         <div
             style={{
                 padding: '16px 20px',
@@ -296,7 +583,7 @@ export function AdminAnalytics() {
                 }}>
                     {icon}
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#eee' }}>{title}</span>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#eee', display: 'flex', alignItems: 'center' }}>{title}{tooltip && <InfoTip text={tooltip} />}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {extra}
@@ -327,23 +614,65 @@ export function AdminAnalytics() {
                                 boxShadow: '0 0 6px #10b981',
                                 animation: 'pulse 2s infinite'
                             }} />
-                            <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>
+                            <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
                                 {liveCount} online now
+                                <InfoTip text="Visitors who loaded a page in the last 5 minutes. Updates every 30 seconds." />
                             </span>
                         </div>
                     )}
-                    <button
-                        onClick={exportCsv}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            padding: '8px 14px', borderRadius: '10px',
-                            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                            color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600
-                        }}
-                    >
-                        <Download size={14} />
-                        CSV
-                    </button>
+                    <div ref={exportRef} style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => setIsExportOpen(!isExportOpen)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                padding: '8px 14px', borderRadius: '10px',
+                                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                                color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600
+                            }}
+                        >
+                            <Download size={14} />
+                            Export
+                            <ChevronDown size={12} style={{ opacity: 0.5 }} />
+                        </button>
+                        {isExportOpen && (
+                            <div style={{
+                                position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                                background: '#1e1e28', border: '1px solid rgba(255,255,255,0.12)',
+                                borderRadius: '10px', overflow: 'hidden', zIndex: 100,
+                                boxShadow: '0 8px 30px rgba(0,0,0,0.5)', minWidth: '160px'
+                            }}>
+                                <button
+                                    onClick={() => { exportCsv(); setIsExportOpen(false) }}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                                        padding: '10px 14px', background: 'none', border: 'none',
+                                        color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500,
+                                        textAlign: 'left'
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                >
+                                    <FileSpreadsheet size={15} color="#10b981" />
+                                    CSV Spreadsheet
+                                </button>
+                                <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+                                <button
+                                    onClick={exportPdf}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                                        padding: '10px 14px', background: 'none', border: 'none',
+                                        color: '#ccc', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500,
+                                        textAlign: 'left'
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                >
+                                    <FileText size={15} color="#ef4444" />
+                                    PDF Report
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -390,7 +719,19 @@ export function AdminAnalytics() {
                 </div>
             </div>
 
-            <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+            <style>{`
+                @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+                .analytics-infotip-wrap { position: relative; display: inline-flex; align-items: center; cursor: help; margin-left: 4px; }
+                .analytics-infotip-icon { opacity: 0.4; flex-shrink: 0; transition: opacity 0.15s; }
+                .analytics-infotip-wrap:hover .analytics-infotip-icon { opacity: 0.9; }
+                .analytics-infotip-bubble {
+                    display: none; position: fixed;
+                    background: #1e1e28; color: #ccc; font-size: 0.72rem; font-weight: 400; text-transform: none; letter-spacing: normal;
+                    padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12);
+                    white-space: normal; width: max-content; max-width: 260px; line-height: 1.45;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 9999; pointer-events: none;
+                }
+            `}</style>
 
             {/* Visit Statistics Section */}
             <div style={{
@@ -412,7 +753,7 @@ export function AdminAnalytics() {
                         <BarChart3 size={20} color="#000" />
                     </div>
                     <div>
-                        <h2 style={{ fontSize: isMobile ? '1.1rem' : '1.3rem', fontWeight: 700, margin: 0 }}>Visit Statistics</h2>
+                        <h2 style={{ fontSize: isMobile ? '1.1rem' : '1.3rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center' }}>Visit Statistics<InfoTip text="Overview of site traffic with summary cards, trend charts, and detailed page-level breakdowns." /></h2>
                         <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Unique visitors tracked per browser</p>
                     </div>
                 </div>
@@ -438,6 +779,7 @@ export function AdminAnalytics() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                     <Eye size={16} color="#f59e0b" />
                                     <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600, textTransform: 'uppercase' }}>Total Visits</span>
+                                    <InfoTip text="Total number of page views across all pages, including repeat visits by the same visitor." />
                                 </div>
                                 <span style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 800, lineHeight: 1 }}>
                                     {analytics.totals?.total_visits || 0}
@@ -462,6 +804,7 @@ export function AdminAnalytics() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                     <Users size={16} color="#3b82f6" />
                                     <span style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 600, textTransform: 'uppercase' }}>Unique Visitors</span>
+                                    <InfoTip text="Distinct visitors identified by a browser-generated UUID. Each browser/device counts as one unique visitor." />
                                 </div>
                                 <span style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 800, lineHeight: 1 }}>
                                     {analytics.totals?.unique_visitors || 0}
@@ -486,6 +829,7 @@ export function AdminAnalytics() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                     <TrendingUp size={16} color="#10b981" />
                                     <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, textTransform: 'uppercase' }}>Today</span>
+                                    <InfoTip text="Page views recorded today (server timezone). Resets at midnight." />
                                 </div>
                                 <span style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 800, lineHeight: 1 }}>
                                     {analytics.totals?.today_visits || 0}
@@ -499,6 +843,7 @@ export function AdminAnalytics() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                     <Clock size={16} color="#a855f7" />
                                     <span style={{ fontSize: '0.75rem', color: '#a855f7', fontWeight: 600, textTransform: 'uppercase' }}>Avg. Time</span>
+                                    <InfoTip text="Average time visitors spend on a page before navigating away or closing the tab." />
                                 </div>
                                 <span style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 800, lineHeight: 1 }}>
                                     {formatDuration(analytics.totals?.avg_duration ?? null)}
@@ -521,6 +866,7 @@ export function AdminAnalytics() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                     <LogOut size={16} color="#ef4444" />
                                     <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600, textTransform: 'uppercase' }}>Bounce Rate</span>
+                                    <InfoTip text="Percentage of visitors who viewed only one page and left without navigating further. Lower is better." />
                                 </div>
                                 <span style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 800, lineHeight: 1 }}>
                                     {analytics.bounce_rate != null ? `${analytics.bounce_rate}%` : '—'}
@@ -534,6 +880,7 @@ export function AdminAnalytics() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                     <UserPlus size={16} color="#14b8a6" />
                                     <span style={{ fontSize: '0.75rem', color: '#14b8a6', fontWeight: 600, textTransform: 'uppercase' }}>New Today</span>
+                                    <InfoTip text="Visitors whose very first visit to the site was today. They have never been seen before." />
                                 </div>
                                 <span style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 800, lineHeight: 1 }}>
                                     {analytics.new_vs_returning?.new ?? 0}
@@ -547,6 +894,7 @@ export function AdminAnalytics() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                     <UserCheck size={16} color="#6366f1" />
                                     <span style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 600, textTransform: 'uppercase' }}>Returning Today</span>
+                                    <InfoTip text="Visitors who came back today but have visited the site on a previous day." />
                                 </div>
                                 <span style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 800, lineHeight: 1 }}>
                                     {analytics.new_vs_returning?.returning ?? 0}
@@ -564,8 +912,9 @@ export function AdminAnalytics() {
                                     padding: '12px 16px', background: 'rgba(255,255,255,0.03)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'space-between'
                                 }}>
-                                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center' }}>
                                         Traffic Trend
+                                        <InfoTip text="Daily visit counts over the selected period. Each bar represents one day. Toggle 7d/30d/90d to change the time window." />
                                     </span>
                                     <div style={{ display: 'flex', gap: '4px' }}>
                                         {([7, 30, 90] as const).map(d => (
@@ -585,31 +934,37 @@ export function AdminAnalytics() {
                                         ))}
                                     </div>
                                 </div>
-                                <div style={{ padding: '16px', display: 'flex', alignItems: 'flex-end', gap: '2px', height: '180px', overflowX: 'auto' }}>
-                                    {analytics.trend.map((day, i) => {
+                                <div style={{ padding: '16px', overflowX: 'auto' }}>
+                                    {(() => {
                                         const maxVisits = Math.max(...analytics.trend.map(d => d.visits), 1)
-                                        const height = (day.visits / maxVisits) * 100
-                                        const date = new Date(day.visit_date)
-                                        const label = `${date.getMonth() + 1}/${date.getDate()}`
                                         const barWidth = analytics.trend.length <= 7 ? 40 : analytics.trend.length <= 14 ? 28 : analytics.trend.length <= 30 ? 18 : 12
+                                        const chartHeight = 140
                                         return (
-                                            <div key={i} style={{
-                                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                                                minWidth: `${barWidth}px`, flex: analytics.trend.length >= trendDays * 0.5 ? 1 : 'none'
-                                            }}>
-                                                <span style={{ fontSize: '0.65rem', color: '#f59e0b', fontWeight: 700 }}>{day.visits}</span>
-                                                <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                                                    <div style={{
-                                                        width: `${Math.min(barWidth - 4, 24)}px`,
-                                                        height: `${Math.max(height, 6)}%`,
-                                                        background: 'linear-gradient(to top, rgba(245,158,11,0.7), rgba(245,158,11,0.25))',
-                                                        borderRadius: '4px 4px 0 0'
-                                                    }} />
-                                                </div>
-                                                <span style={{ fontSize: '0.6rem', color: '#666' }}>{label}</span>
+                                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px' }}>
+                                                {analytics.trend.map((day, i) => {
+                                                    const ratio = day.visits / maxVisits
+                                                    const barH = Math.max(ratio * chartHeight, 4)
+                                                    const date = new Date(day.visit_date)
+                                                    const label = `${date.getMonth() + 1}/${date.getDate()}`
+                                                    return (
+                                                        <div key={i} style={{
+                                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                                                            minWidth: `${barWidth}px`, flex: analytics.trend.length >= trendDays * 0.5 ? 1 : 'none'
+                                                        }}>
+                                                            <span style={{ fontSize: '0.65rem', color: '#f59e0b', fontWeight: 700 }}>{day.visits}</span>
+                                                            <div style={{
+                                                                width: `${Math.min(barWidth - 4, 24)}px`,
+                                                                height: `${barH}px`,
+                                                                background: 'linear-gradient(to top, #f59e0b, #d97706)',
+                                                                borderRadius: '4px 4px 0 0',
+                                                            }} />
+                                                            <span style={{ fontSize: '0.6rem', color: '#666' }}>{label}</span>
+                                                        </div>
+                                                    )
+                                                })}
                                             </div>
                                         )
-                                    })}
+                                    })()}
                                 </div>
                             </div>
                         )}
@@ -623,7 +978,9 @@ export function AdminAnalytics() {
                                 <BarChart3 size={16} color="#ddd" />,
                                 'Hourly Traffic Heatmap',
                                 isHeatmapExpanded,
-                                () => setIsHeatmapExpanded(!isHeatmapExpanded)
+                                () => setIsHeatmapExpanded(!isHeatmapExpanded),
+                                undefined,
+                                'Shows when visitors are most active. Rows are days of the week, columns are hours (0-23). Brighter cells mean more traffic.'
                             )}
                             {isHeatmapExpanded && analytics.heatmap && analytics.heatmap.length > 0 && (
                                 <div style={{ padding: '16px', overflowX: 'auto' }}>
@@ -660,7 +1017,13 @@ export function AdminAnalytics() {
                                                                         borderRadius: '3px',
                                                                         background: count === 0
                                                                             ? 'rgba(255,255,255,0.03)'
-                                                                            : `rgba(245, 158, 11, ${0.15 + intensity * 0.75})`,
+                                                                            : intensity < 0.25
+                                                                                ? '#78350f'
+                                                                                : intensity < 0.5
+                                                                                    ? '#b45309'
+                                                                                    : intensity < 0.75
+                                                                                        ? '#d97706'
+                                                                                        : '#f59e0b',
                                                                         cursor: 'default',
                                                                         minHeight: '16px'
                                                                     }}
@@ -706,7 +1069,7 @@ export function AdminAnalytics() {
                                     }}>
                                         <TrendingUp size={16} color="#ddd" />
                                     </div>
-                                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#eee' }}>Page Performance</span>
+                                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#eee', display: 'flex', alignItems: 'center' }}>Page Performance<InfoTip text="Breakdown of visits per page. Total = all page views, Unique = distinct visitors, Today = views today, Avg Time = average time spent on the page." /></span>
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -885,7 +1248,9 @@ export function AdminAnalytics() {
                                 <Navigation size={16} color="#ddd" />,
                                 'Top Landing Pages',
                                 isLandingExpanded,
-                                () => setIsLandingExpanded(!isLandingExpanded)
+                                () => setIsLandingExpanded(!isLandingExpanded),
+                                undefined,
+                                'The first page a visitor sees when they arrive at the site. Shows which pages attract visitors from external links or direct access.'
                             )}
                             {isLandingExpanded && (
                                 <div style={{ padding: 0 }}>
@@ -927,7 +1292,9 @@ export function AdminAnalytics() {
                                 <Radio size={16} color="#ddd" />,
                                 'Page Flow / Journey',
                                 isFlowExpanded,
-                                () => setIsFlowExpanded(!isFlowExpanded)
+                                () => setIsFlowExpanded(!isFlowExpanded),
+                                undefined,
+                                'Shows the most common page-to-page transitions. Reveals how visitors navigate through the site after landing.'
                             )}
                             {isFlowExpanded && (
                                 <div style={{ padding: 0 }}>
@@ -980,7 +1347,7 @@ export function AdminAnalytics() {
                                     <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <Users size={16} color="#bbb" />
                                     </div>
-                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ddd' }}>Audience & Network</h3>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ddd', display: 'flex', alignItems: 'center' }}>Audience & Network<InfoTip text="Technical profile of your visitors: browsers, operating systems, device types, traffic sources, ISPs, and organizations." /></h3>
                                 </div>
                                 {chevron(isAudienceExpanded)}
                             </div>
@@ -1061,7 +1428,7 @@ export function AdminAnalytics() {
                         <MapPin size={20} color="#fff" />
                     </div>
                     <div>
-                        <h2 style={{ fontSize: isMobile ? '1.1rem' : '1.3rem', fontWeight: 700, margin: 0 }}>Visitor Map</h2>
+                        <h2 style={{ fontSize: isMobile ? '1.1rem' : '1.3rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center' }}>Visitor Map<InfoTip text="Geographic locations of visitors based on IP geolocation. Larger circles indicate more visits from that area." /></h2>
                         <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Geographic distribution of visitors</p>
                     </div>
                 </div>

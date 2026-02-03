@@ -92,6 +92,20 @@ function ensureAnalyticsTable()
         }
     } catch (Exception $e) {
     }
+
+    // Migrate: add last_seen column for live visitor heartbeat
+    try {
+        $cols = $db->query("SHOW COLUMNS FROM page_visits LIKE 'last_seen'")->fetchAll();
+        if (empty($cols)) {
+            $db->exec("ALTER TABLE page_visits
+                ADD COLUMN last_seen DATETIME DEFAULT NULL,
+                ADD INDEX idx_last_seen (last_seen)
+            ");
+            // Backfill existing rows
+            $db->exec("UPDATE page_visits SET last_seen = visited_at WHERE last_seen IS NULL");
+        }
+    } catch (Exception $e) {
+    }
 }
 
 /**
@@ -226,10 +240,11 @@ function trackVisit()
 
     $db = getDB();
     $stmt = $db->prepare("
-        INSERT IGNORE INTO page_visits
-        (page, ip_hash, visit_date, visited_at, city, region, country, lat, lon, browser, os, device_type, referrer, isp, organization, visitor_id)
+        INSERT INTO page_visits
+        (page, ip_hash, visit_date, visited_at, last_seen, city, region, country, lat, lon, browser, os, device_type, referrer, isp, organization, visitor_id)
         VALUES
-        (:page, :ip_hash, :visit_date, NOW(), :city, :region, :country, :lat, :lon, :browser, :os, :device_type, :referrer, :isp, :organization, :visitor_id)
+        (:page, :ip_hash, :visit_date, NOW(), NOW(), :city, :region, :country, :lat, :lon, :browser, :os, :device_type, :referrer, :isp, :organization, :visitor_id)
+        ON DUPLICATE KEY UPDATE last_seen = NOW()
     ");
     $stmt->execute([
         ':page' => $page,
@@ -602,9 +617,39 @@ function getLiveVisitors()
     $stmt = $db->query("
         SELECT COUNT(DISTINCT $uniqueExpr) as live_count
         FROM page_visits
-        WHERE visited_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+        WHERE last_seen >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
     ");
     $row = $stmt->fetch();
 
     return ['live_count' => (int) ($row['live_count'] ?? 0)];
+}
+
+/**
+ * POST /analytics/heartbeat
+ * Updates last_seen for a visitor to keep them "live".
+ */
+function heartbeat()
+{
+    ensureAnalyticsTable();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $visitorId = $input['visitor_id'] ?? null;
+
+    if (!$visitorId || !is_string($visitorId)) {
+        http_response_code(400);
+        return ['error' => 'Missing visitor_id'];
+    }
+
+    $visitorId = substr(trim($visitorId), 0, 36);
+    $today = date('Y-m-d');
+
+    $db = getDB();
+    $stmt = $db->prepare("
+        UPDATE page_visits SET last_seen = NOW()
+        WHERE visitor_id = :visitor_id AND visit_date = :today
+        ORDER BY visited_at DESC LIMIT 1
+    ");
+    $stmt->execute([':visitor_id' => $visitorId, ':today' => $today]);
+
+    return ['success' => true];
 }
