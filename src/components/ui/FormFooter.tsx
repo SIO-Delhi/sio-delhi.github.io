@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface FormFooterProps {
+interface FormFooterProps extends React.SVGProps<SVGSVGElement> {
   bgColor?: string;
   textColor?: string;
   patternColor?: string;
@@ -9,9 +9,10 @@ interface FormFooterProps {
 export const FormFooter: React.FC<FormFooterProps> = ({
   bgColor = '#6a63fe',
   textColor = '#fff',
-  patternColor = '#6e6ef9'
+  patternColor = '#6e6ef9',
+  ...props
 }) => (
-  <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="57.57 57.34 964.85 182.04">
+  <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="57.57 57.34 964.85 182.04" {...props}>
     <defs>
       <style>{`
       .st0 { fill: ${textColor}; }
