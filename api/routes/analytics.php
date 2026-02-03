@@ -298,6 +298,7 @@ function trackDuration()
 /**
  * GET /analytics/stats
  * Returns page visit statistics for the admin dashboard.
+ * Optional query params: from, to (YYYY-MM-DD), trend_days (7|30|90)
  */
 function getVisitStats()
 {
@@ -306,7 +307,19 @@ function getVisitStats()
     $db = getDB();
     $today = date('Y-m-d');
 
-    // Use visitor_id for unique counts (falls back to ip_hash for older records without visitor_id)
+    // Date range filtering
+    $from = $_GET['from'] ?? null;
+    $to = $_GET['to'] ?? null;
+    $trendDays = (int) ($_GET['trend_days'] ?? 7);
+    if (!in_array($trendDays, [7, 30, 90])) $trendDays = 7;
+
+    $dateFilter = '';
+    $dateParams = [];
+    if ($from && $to) {
+        $dateFilter = ' AND visit_date BETWEEN :from AND :to';
+        $dateParams = [':from' => $from, ':to' => $to];
+    }
+
     $uniqueExpr = "COALESCE(visitor_id, ip_hash)";
 
     // Per-page stats
@@ -321,10 +334,11 @@ function getVisitStats()
             MAX(visit_date) as last_visit,
             ROUND(AVG(CASE WHEN duration_seconds > 0 THEN duration_seconds ELSE NULL END)) as avg_duration
         FROM page_visits
+        WHERE 1=1 $dateFilter
         GROUP BY page
         ORDER BY total_visits DESC
     ");
-    $stmt->execute([':today' => $today, ':today2' => $today]);
+    $stmt->execute(array_merge([':today' => $today, ':today2' => $today], $dateParams));
     $pages = $stmt->fetchAll();
 
     // Overall totals
@@ -335,40 +349,177 @@ function getVisitStats()
             SUM(CASE WHEN visit_date = :today THEN 1 ELSE 0 END) as today_visits,
             ROUND(AVG(CASE WHEN duration_seconds > 0 THEN duration_seconds ELSE NULL END)) as avg_duration
         FROM page_visits
+        WHERE 1=1 $dateFilter
     ");
-    $stmt->execute([':today' => $today]);
+    $stmt->execute(array_merge([':today' => $today], $dateParams));
     $totals = $stmt->fetch();
 
-    // Last 7 days trend
+    // Trend (parameterized days)
     $stmt = $db->prepare("
         SELECT visit_date, COUNT(*) as visits, COUNT(DISTINCT $uniqueExpr) as unique_visitors
         FROM page_visits
-        WHERE visit_date >= DATE_SUB(:today, INTERVAL 7 DAY)
+        WHERE visit_date >= DATE_SUB(:today, INTERVAL $trendDays DAY) $dateFilter
         GROUP BY visit_date
         ORDER BY visit_date ASC
     ");
-    $stmt->execute([':today' => $today]);
+    $stmt->execute(array_merge([':today' => $today], $dateParams));
     $trend = $stmt->fetchAll();
 
+    // Previous period comparison (last 7 days vs 7 days before that)
+    $stmt = $db->prepare("
+        SELECT
+            COUNT(*) as prev_visits,
+            COUNT(DISTINCT $uniqueExpr) as prev_unique
+        FROM page_visits
+        WHERE visit_date BETWEEN DATE_SUB(:today, INTERVAL 14 DAY) AND DATE_SUB(:today2, INTERVAL 8 DAY)
+    ");
+    $stmt->execute([':today' => $today, ':today2' => $today]);
+    $prevPeriod = $stmt->fetch();
+
+    // Current 7-day period for comparison
+    $stmt = $db->prepare("
+        SELECT
+            COUNT(*) as curr_visits,
+            COUNT(DISTINCT $uniqueExpr) as curr_unique
+        FROM page_visits
+        WHERE visit_date >= DATE_SUB(:today, INTERVAL 7 DAY)
+    ");
+    $stmt->execute([':today' => $today]);
+    $currPeriod = $stmt->fetch();
+
+    // Bounce rate
+    $bounceStmt = $db->prepare("
+        SELECT
+            COUNT(*) as total_sessions,
+            SUM(CASE WHEN page_count = 1 THEN 1 ELSE 0 END) as bounced
+        FROM (
+            SELECT $uniqueExpr as vid, visit_date, COUNT(DISTINCT page) as page_count
+            FROM page_visits
+            WHERE 1=1 $dateFilter
+            GROUP BY vid, visit_date
+        ) sub
+    ");
+    $bounceStmt->execute($dateParams);
+    $bounceData = $bounceStmt->fetch();
+    $bounceRate = ($bounceData['total_sessions'] > 0)
+        ? round(($bounceData['bounced'] / $bounceData['total_sessions']) * 100, 1)
+        : 0;
+
+    // New vs returning visitors (today)
+    $stmt = $db->prepare("
+        SELECT
+            SUM(CASE WHEN first_seen = :today THEN 1 ELSE 0 END) as new_visitors,
+            SUM(CASE WHEN first_seen < :today2 THEN 1 ELSE 0 END) as returning_visitors
+        FROM (
+            SELECT $uniqueExpr as vid, MIN(visit_date) as first_seen
+            FROM page_visits
+            GROUP BY vid
+        ) sub
+        WHERE vid IN (SELECT DISTINCT $uniqueExpr FROM page_visits WHERE visit_date = :today3)
+    ");
+    $stmt->execute([':today' => $today, ':today2' => $today, ':today3' => $today]);
+    $newVsReturning = $stmt->fetch() ?: ['new_visitors' => 0, 'returning_visitors' => 0];
+
+    // Hourly heatmap
+    $heatmapStmt = $db->prepare("
+        SELECT DAYOFWEEK(visited_at) as dow, HOUR(visited_at) as hour, COUNT(*) as count
+        FROM page_visits
+        WHERE 1=1 $dateFilter
+        GROUP BY dow, hour
+    ");
+    $heatmapStmt->execute($dateParams);
+    $heatmap = $heatmapStmt->fetchAll();
+
+    // Top landing pages (first page per visitor per day)
+    $landingStmt = $db->prepare("
+        SELECT page, COUNT(*) as count FROM (
+            SELECT $uniqueExpr as vid, visit_date,
+                (SELECT p2.page FROM page_visits p2
+                 WHERE COALESCE(p2.visitor_id, p2.ip_hash) = COALESCE(page_visits.visitor_id, page_visits.ip_hash)
+                 AND p2.visit_date = page_visits.visit_date
+                 ORDER BY p2.visited_at ASC LIMIT 1) as page
+            FROM page_visits
+            WHERE 1=1 $dateFilter
+            GROUP BY vid, visit_date
+        ) sub
+        GROUP BY page ORDER BY count DESC LIMIT 10
+    ");
+    $landingStmt->execute($dateParams);
+    $landingPages = $landingStmt->fetchAll();
+
+    // Page flow (consecutive transitions)
+    try {
+        $flowStmt = $db->prepare("
+            SELECT from_page, to_page, COUNT(*) as count FROM (
+                SELECT page as from_page,
+                    LEAD(page) OVER (PARTITION BY $uniqueExpr, visit_date ORDER BY visited_at) as to_page
+                FROM page_visits
+                WHERE 1=1 $dateFilter
+            ) sub
+            WHERE to_page IS NOT NULL AND from_page != to_page
+            GROUP BY from_page, to_page ORDER BY count DESC LIMIT 15
+        ");
+        $flowStmt->execute($dateParams);
+        $pageFlows = $flowStmt->fetchAll();
+    } catch (Exception $e) {
+        // Fallback for MySQL < 8.0 (no window functions)
+        $pageFlows = [];
+    }
+
+    // Device type breakdown
+    $devicesStmt = $db->prepare("
+        SELECT device_type, COUNT(DISTINCT $uniqueExpr) as count
+        FROM page_visits
+        WHERE device_type IS NOT NULL $dateFilter
+        GROUP BY device_type ORDER BY count DESC
+    ");
+    $devicesStmt->execute($dateParams);
+    $devices = $devicesStmt->fetchAll();
+
     // Browser stats
-    $browsers = $db->query("SELECT browser, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE browser IS NOT NULL GROUP BY browser ORDER BY count DESC LIMIT 10")->fetchAll();
+    $browsersStmt = $db->prepare("SELECT browser, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE browser IS NOT NULL $dateFilter GROUP BY browser ORDER BY count DESC LIMIT 10");
+    $browsersStmt->execute($dateParams);
+    $browsers = $browsersStmt->fetchAll();
 
     // OS stats
-    $oss = $db->query("SELECT os, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE os IS NOT NULL GROUP BY os ORDER BY count DESC LIMIT 10")->fetchAll();
+    $ossStmt = $db->prepare("SELECT os, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE os IS NOT NULL $dateFilter GROUP BY os ORDER BY count DESC LIMIT 10");
+    $ossStmt->execute($dateParams);
+    $oss = $ossStmt->fetchAll();
 
     // Referrer stats
-    $referrers = $db->query("SELECT referrer, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10")->fetchAll();
+    $refStmt = $db->prepare("SELECT referrer, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE referrer IS NOT NULL $dateFilter GROUP BY referrer ORDER BY count DESC LIMIT 10");
+    $refStmt->execute($dateParams);
+    $referrers = $refStmt->fetchAll();
 
     // ISP stats
-    $isps = $db->query("SELECT isp, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE isp IS NOT NULL GROUP BY isp ORDER BY count DESC LIMIT 10")->fetchAll();
+    $ispStmt = $db->prepare("SELECT isp, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE isp IS NOT NULL $dateFilter GROUP BY isp ORDER BY count DESC LIMIT 10");
+    $ispStmt->execute($dateParams);
+    $isps = $ispStmt->fetchAll();
 
     // Organization stats
-    $orgs = $db->query("SELECT organization, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE organization IS NOT NULL GROUP BY organization ORDER BY count DESC LIMIT 10")->fetchAll();
+    $orgStmt = $db->prepare("SELECT organization, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE organization IS NOT NULL $dateFilter GROUP BY organization ORDER BY count DESC LIMIT 10");
+    $orgStmt->execute($dateParams);
+    $orgs = $orgStmt->fetchAll();
 
     return [
         'totals' => $totals,
         'pages' => $pages,
         'trend' => $trend,
+        'prev_period' => [
+            'prev_visits' => (int) ($prevPeriod['prev_visits'] ?? 0),
+            'prev_unique' => (int) ($prevPeriod['prev_unique'] ?? 0),
+            'curr_visits' => (int) ($currPeriod['curr_visits'] ?? 0),
+            'curr_unique' => (int) ($currPeriod['curr_unique'] ?? 0),
+        ],
+        'bounce_rate' => $bounceRate,
+        'new_vs_returning' => [
+            'new' => (int) ($newVsReturning['new_visitors'] ?? 0),
+            'returning' => (int) ($newVsReturning['returning_visitors'] ?? 0),
+        ],
+        'heatmap' => $heatmap,
+        'landing_pages' => $landingPages,
+        'page_flows' => $pageFlows,
+        'devices' => $devices,
         'browsers' => $browsers,
         'oss' => $oss,
         'referrers' => $referrers,
@@ -380,6 +531,7 @@ function getVisitStats()
 /**
  * GET /analytics/locations
  * Returns aggregated visitor locations for map visualization.
+ * Optional query params: from, to (YYYY-MM-DD)
  */
 function getVisitorLocations()
 {
@@ -387,10 +539,19 @@ function getVisitorLocations()
 
     $db = getDB();
 
+    $from = $_GET['from'] ?? null;
+    $to = $_GET['to'] ?? null;
+    $dateFilter = '';
+    $dateParams = [];
+    if ($from && $to) {
+        $dateFilter = ' AND visit_date BETWEEN :from AND :to';
+        $dateParams = [':from' => $from, ':to' => $to];
+    }
+
     $uniqueExpr = "COALESCE(visitor_id, ip_hash)";
 
     // Aggregated locations (cluster by city+country)
-    $stmt = $db->query("
+    $stmt = $db->prepare("
         SELECT
             city,
             region,
@@ -400,27 +561,50 @@ function getVisitorLocations()
             COUNT(*) as visit_count,
             COUNT(DISTINCT $uniqueExpr) as unique_visitors
         FROM page_visits
-        WHERE lat IS NOT NULL AND lon IS NOT NULL
+        WHERE lat IS NOT NULL AND lon IS NOT NULL $dateFilter
         GROUP BY city, country, ROUND(lat, 2), ROUND(lon, 2)
         ORDER BY visit_count DESC
     ");
+    $stmt->execute($dateParams);
     $locations = $stmt->fetchAll();
 
     // Country breakdown
-    $stmt = $db->query("
+    $stmt = $db->prepare("
         SELECT
             country,
             COUNT(*) as visit_count,
             COUNT(DISTINCT $uniqueExpr) as unique_visitors
         FROM page_visits
-        WHERE country IS NOT NULL
+        WHERE country IS NOT NULL $dateFilter
         GROUP BY country
         ORDER BY visit_count DESC
     ");
+    $stmt->execute($dateParams);
     $countries = $stmt->fetchAll();
 
     return [
         'locations' => $locations,
         'countries' => $countries
     ];
+}
+
+/**
+ * GET /analytics/live
+ * Returns count of unique visitors in the last 5 minutes.
+ */
+function getLiveVisitors()
+{
+    ensureAnalyticsTable();
+
+    $db = getDB();
+    $uniqueExpr = "COALESCE(visitor_id, ip_hash)";
+
+    $stmt = $db->query("
+        SELECT COUNT(DISTINCT $uniqueExpr) as live_count
+        FROM page_visits
+        WHERE visited_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+    ");
+    $row = $stmt->fetch();
+
+    return ['live_count' => (int) ($row['live_count'] ?? 0)];
 }

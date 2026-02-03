@@ -114,6 +114,7 @@ $routes = [
     // Analytics
     'POST /analytics/track' => 'routes/analytics.php@trackVisit',
     'POST /analytics/duration' => 'routes/analytics.php@trackDuration',
+    'GET /analytics/live' => 'routes/analytics.php@getLiveVisitors',
     'GET /analytics/stats' => 'routes/analytics.php@getVisitStats',
     'GET /analytics/locations' => 'routes/analytics.php@getVisitorLocations',
 ];
