@@ -85,6 +85,16 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
     const [downloading, setDownloading] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
     const [localHue, setLocalHue] = useState(state.hue)
+    const previewContainerRef = useRef<HTMLDivElement>(null)
+
+    // Fast Hue Update logic
+    const handleHueChange = (newHue: number) => {
+        setLocalHue(newHue)
+        // Directly update CSS variable for lag-free preview
+        if (previewContainerRef.current) {
+            previewContainerRef.current.style.setProperty('--ep-hue', `${newHue}deg`)
+        }
+    }
 
     // Sync localHue when state.hue changes (e.g. from history undo/redo)
     React.useEffect(() => {
@@ -368,13 +378,20 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
                             min={0}
                             max={360}
                             value={localHue}
-                            onChange={(e) => setLocalHue(Number(e.target.value))}
+                            onChange={(e) => handleHueChange(Number(e.target.value))}
                             onPointerUp={() => updateField('hue', localHue)}
                             className="pt-slider"
                             style={{ flex: 1 }}
                         />
-                        <span style={{ fontSize: '0.8rem', color: '#a1a1aa', minWidth: '36px' }}>
-                            {localHue}°
+                        <span style={{
+                            fontSize: '0.85rem',
+                            color: 'var(--pt-accent)',
+                            fontWeight: 'bold',
+                            fontFamily: 'monospace',
+                            minWidth: '45px',
+                            textAlign: 'right'
+                        }}>
+                            {localHue.toString().padStart(3, '0')}°
                         </span>
                     </div>
                 </div>
@@ -396,9 +413,9 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
     // Preview SVG - Performance Optimized
     const previewSvg = (
         <div
+            ref={previewContainerRef}
             className="ep-preview-container"
             style={{
-                filter: localHue !== 0 ? `hue-rotate(${localHue}deg)` : undefined,
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -406,7 +423,7 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
                 height: '100%'
             }}
         >
-            <EventPosterSvg {...state} hue={0} />
+            <EventPosterSvg {...state} hue={localHue} />
         </div>
     )
 
