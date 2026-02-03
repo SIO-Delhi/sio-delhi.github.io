@@ -69,6 +69,29 @@ function ensureAnalyticsTable()
         }
     } catch (Exception $e) {
     }
+
+    // Migrate: add visitor_id column for localStorage-based unique tracking
+    try {
+        $cols = $db->query("SHOW COLUMNS FROM page_visits LIKE 'visitor_id'")->fetchAll();
+        if (empty($cols)) {
+            $db->exec("ALTER TABLE page_visits
+                ADD COLUMN visitor_id VARCHAR(36) DEFAULT NULL,
+                ADD INDEX idx_visitor_id (visitor_id)
+            ");
+        }
+    } catch (Exception $e) {
+    }
+
+    // Migrate: add duration_seconds column for time-on-page tracking
+    try {
+        $cols = $db->query("SHOW COLUMNS FROM page_visits LIKE 'duration_seconds'")->fetchAll();
+        if (empty($cols)) {
+            $db->exec("ALTER TABLE page_visits
+                ADD COLUMN duration_seconds INT DEFAULT NULL
+            ");
+        }
+    } catch (Exception $e) {
+    }
 }
 
 /**
@@ -163,6 +186,7 @@ function trackVisit()
 
     $input = json_decode(file_get_contents('php://input'), true);
     $page = $input['page'] ?? null;
+    $visitorId = $input['visitor_id'] ?? null;
 
     if (!$page || !is_string($page)) {
         http_response_code(400);
@@ -171,6 +195,13 @@ function trackVisit()
 
     // Sanitize page path
     $page = substr(trim($page), 0, 255);
+
+    // Sanitize visitor_id (UUID format)
+    if ($visitorId && is_string($visitorId)) {
+        $visitorId = substr(trim($visitorId), 0, 36);
+    } else {
+        $visitorId = null;
+    }
 
     // Get visitor IP
     $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
@@ -196,9 +227,9 @@ function trackVisit()
     $db = getDB();
     $stmt = $db->prepare("
         INSERT IGNORE INTO page_visits
-        (page, ip_hash, visit_date, visited_at, city, region, country, lat, lon, browser, os, device_type, referrer, isp, organization)
+        (page, ip_hash, visit_date, visited_at, city, region, country, lat, lon, browser, os, device_type, referrer, isp, organization, visitor_id)
         VALUES
-        (:page, :ip_hash, :visit_date, NOW(), :city, :region, :country, :lat, :lon, :browser, :os, :device_type, :referrer, :isp, :organization)
+        (:page, :ip_hash, :visit_date, NOW(), :city, :region, :country, :lat, :lon, :browser, :os, :device_type, :referrer, :isp, :organization, :visitor_id)
     ");
     $stmt->execute([
         ':page' => $page,
@@ -215,6 +246,50 @@ function trackVisit()
         ':referrer' => $referrer,
         ':isp' => $geo['isp'] ?? null,
         ':organization' => $geo['organization'] ?? null,
+        ':visitor_id' => $visitorId,
+    ]);
+
+    return ['success' => true];
+}
+
+/**
+ * POST /analytics/duration
+ * Update the duration_seconds for the most recent visit matching page + visitor_id + today.
+ */
+function trackDuration()
+{
+    ensureAnalyticsTable();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $page = $input['page'] ?? null;
+    $visitorId = $input['visitor_id'] ?? null;
+    $duration = $input['duration'] ?? null;
+
+    if (!$page || !$visitorId || !$duration) {
+        http_response_code(400);
+        return ['error' => 'Missing required parameters'];
+    }
+
+    $page = substr(trim($page), 0, 255);
+    $visitorId = substr(trim($visitorId), 0, 36);
+    $duration = min(max((int)$duration, 0), 3600); // cap at 1 hour
+
+    $today = date('Y-m-d');
+    $db = getDB();
+
+    // Update the most recent matching row, keeping the higher duration
+    $stmt = $db->prepare("
+        UPDATE page_visits
+        SET duration_seconds = GREATEST(COALESCE(duration_seconds, 0), :duration)
+        WHERE page = :page AND visitor_id = :visitor_id AND visit_date = :visit_date
+        ORDER BY visited_at DESC
+        LIMIT 1
+    ");
+    $stmt->execute([
+        ':page' => $page,
+        ':visitor_id' => $visitorId,
+        ':visit_date' => $today,
+        ':duration' => $duration,
     ]);
 
     return ['success' => true];
@@ -231,16 +306,20 @@ function getVisitStats()
     $db = getDB();
     $today = date('Y-m-d');
 
+    // Use visitor_id for unique counts (falls back to ip_hash for older records without visitor_id)
+    $uniqueExpr = "COALESCE(visitor_id, ip_hash)";
+
     // Per-page stats
     $stmt = $db->prepare("
         SELECT
             page,
             COUNT(*) as total_visits,
-            COUNT(DISTINCT ip_hash) as unique_visitors,
+            COUNT(DISTINCT $uniqueExpr) as unique_visitors,
             SUM(CASE WHEN visit_date = :today THEN 1 ELSE 0 END) as today_visits,
             SUM(CASE WHEN visit_date = :today2 THEN 1 ELSE 0 END) as today_unique,
             MIN(visit_date) as first_visit,
-            MAX(visit_date) as last_visit
+            MAX(visit_date) as last_visit,
+            ROUND(AVG(CASE WHEN duration_seconds > 0 THEN duration_seconds ELSE NULL END)) as avg_duration
         FROM page_visits
         GROUP BY page
         ORDER BY total_visits DESC
@@ -252,8 +331,9 @@ function getVisitStats()
     $stmt = $db->prepare("
         SELECT
             COUNT(*) as total_visits,
-            COUNT(DISTINCT ip_hash) as unique_visitors,
-            SUM(CASE WHEN visit_date = :today THEN 1 ELSE 0 END) as today_visits
+            COUNT(DISTINCT $uniqueExpr) as unique_visitors,
+            SUM(CASE WHEN visit_date = :today THEN 1 ELSE 0 END) as today_visits,
+            ROUND(AVG(CASE WHEN duration_seconds > 0 THEN duration_seconds ELSE NULL END)) as avg_duration
         FROM page_visits
     ");
     $stmt->execute([':today' => $today]);
@@ -261,7 +341,7 @@ function getVisitStats()
 
     // Last 7 days trend
     $stmt = $db->prepare("
-        SELECT visit_date, COUNT(*) as visits, COUNT(DISTINCT ip_hash) as unique_visitors
+        SELECT visit_date, COUNT(*) as visits, COUNT(DISTINCT $uniqueExpr) as unique_visitors
         FROM page_visits
         WHERE visit_date >= DATE_SUB(:today, INTERVAL 7 DAY)
         GROUP BY visit_date
@@ -271,19 +351,19 @@ function getVisitStats()
     $trend = $stmt->fetchAll();
 
     // Browser stats
-    $browsers = $db->query("SELECT browser, COUNT(DISTINCT ip_hash) as count FROM page_visits WHERE browser IS NOT NULL GROUP BY browser ORDER BY count DESC LIMIT 10")->fetchAll();
+    $browsers = $db->query("SELECT browser, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE browser IS NOT NULL GROUP BY browser ORDER BY count DESC LIMIT 10")->fetchAll();
 
     // OS stats
-    $oss = $db->query("SELECT os, COUNT(DISTINCT ip_hash) as count FROM page_visits WHERE os IS NOT NULL GROUP BY os ORDER BY count DESC LIMIT 10")->fetchAll();
+    $oss = $db->query("SELECT os, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE os IS NOT NULL GROUP BY os ORDER BY count DESC LIMIT 10")->fetchAll();
 
     // Referrer stats
-    $referrers = $db->query("SELECT referrer, COUNT(DISTINCT ip_hash) as count FROM page_visits WHERE referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10")->fetchAll();
+    $referrers = $db->query("SELECT referrer, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE referrer IS NOT NULL GROUP BY referrer ORDER BY count DESC LIMIT 10")->fetchAll();
 
     // ISP stats
-    $isps = $db->query("SELECT isp, COUNT(DISTINCT ip_hash) as count FROM page_visits WHERE isp IS NOT NULL GROUP BY isp ORDER BY count DESC LIMIT 10")->fetchAll();
+    $isps = $db->query("SELECT isp, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE isp IS NOT NULL GROUP BY isp ORDER BY count DESC LIMIT 10")->fetchAll();
 
     // Organization stats
-    $orgs = $db->query("SELECT organization, COUNT(DISTINCT ip_hash) as count FROM page_visits WHERE organization IS NOT NULL GROUP BY organization ORDER BY count DESC LIMIT 10")->fetchAll();
+    $orgs = $db->query("SELECT organization, COUNT(DISTINCT $uniqueExpr) as count FROM page_visits WHERE organization IS NOT NULL GROUP BY organization ORDER BY count DESC LIMIT 10")->fetchAll();
 
     return [
         'totals' => $totals,
@@ -307,6 +387,8 @@ function getVisitorLocations()
 
     $db = getDB();
 
+    $uniqueExpr = "COALESCE(visitor_id, ip_hash)";
+
     // Aggregated locations (cluster by city+country)
     $stmt = $db->query("
         SELECT
@@ -316,7 +398,7 @@ function getVisitorLocations()
             ROUND(lat, 2) as lat,
             ROUND(lon, 2) as lon,
             COUNT(*) as visit_count,
-            COUNT(DISTINCT ip_hash) as unique_visitors
+            COUNT(DISTINCT $uniqueExpr) as unique_visitors
         FROM page_visits
         WHERE lat IS NOT NULL AND lon IS NOT NULL
         GROUP BY city, country, ROUND(lat, 2), ROUND(lon, 2)
@@ -329,7 +411,7 @@ function getVisitorLocations()
         SELECT
             country,
             COUNT(*) as visit_count,
-            COUNT(DISTINCT ip_hash) as unique_visitors
+            COUNT(DISTINCT $uniqueExpr) as unique_visitors
         FROM page_visits
         WHERE country IS NOT NULL
         GROUP BY country

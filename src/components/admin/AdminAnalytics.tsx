@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react'
-import { BarChart3, Eye, Users, TrendingUp, MapPin, Loader2 } from 'lucide-react'
+import { BarChart3, Eye, Users, TrendingUp, MapPin, Loader2, Clock } from 'lucide-react'
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -9,8 +9,8 @@ const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 export function AdminAnalytics() {
     const [isMobile, setIsMobile] = useState(false)
     const [analytics, setAnalytics] = useState<{
-        totals: { total_visits: number; unique_visitors: number; today_visits: number } | null;
-        pages: { page: string; total_visits: number; unique_visitors: number; today_visits: number; first_visit: string; last_visit: string }[];
+        totals: { total_visits: number; unique_visitors: number; today_visits: number; avg_duration: number | null } | null;
+        pages: { page: string; total_visits: number; unique_visitors: number; today_visits: number; first_visit: string; last_visit: string; avg_duration: number | null }[];
         trend: { visit_date: string; visits: number; unique_visitors: number }[];
         browsers?: { browser: string; count: number }[];
         oss?: { os: string; count: number }[];
@@ -65,11 +65,39 @@ export function AdminAnalytics() {
         const labels: Record<string, string> = {
             '/': 'Home',
             '/utilities': 'Utilities',
+            '/utilities/': 'Utilities',
             '/utilities/poster-tool': 'Poster Maker',
             '/utilities/frame-tool': 'Frame Tool',
             '/utilities/filter-tool': 'Filter Tool',
         }
-        return labels[pagePath] || pagePath
+        if (labels[pagePath]) return labels[pagePath]
+
+        // Dynamic route patterns
+        const slugToTitle = (slug: string) =>
+            slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+
+        const patterns: [RegExp, (m: RegExpMatchArray) => string][] = [
+            [/^\/about-us\/(.+?)\/gallery$/, m => `${slugToTitle(m[1])} — Gallery`],
+            [/^\/about-us\/(.+)$/, m => slugToTitle(m[1])],
+            [/^\/initiative\/(.+?)\/gallery$/, m => `${slugToTitle(m[1])} — Gallery`],
+            [/^\/initiative\/(.+)$/, m => slugToTitle(m[1])],
+            [/^\/media\/(.+?)\/gallery$/, m => `${slugToTitle(m[1])} — Gallery`],
+            [/^\/media\/(.+)$/, m => slugToTitle(m[1])],
+            [/^\/leader\/(.+?)\/gallery$/, m => `${slugToTitle(m[1])} — Gallery`],
+            [/^\/leader\/(.+)$/, m => slugToTitle(m[1])],
+            [/^\/resource\/(.+?)\/gallery$/, m => `${slugToTitle(m[1])} — Gallery`],
+            [/^\/resource\/(.+)$/, m => slugToTitle(m[1])],
+            [/^\/section\/[^/]+\/(.+?)\/gallery$/, m => `${slugToTitle(m[1])} — Gallery`],
+            [/^\/section\/[^/]+\/(.+)$/, m => slugToTitle(m[1])],
+            [/^\/f\/(.+)$/, m => `Form: ${m[1].slice(0, 8)}…`],
+        ]
+
+        for (const [regex, formatter] of patterns) {
+            const match = pagePath.match(regex)
+            if (match) return formatter(match)
+        }
+
+        return pagePath
     }
 
     const filteredPages = analytics.pages.filter(p =>
@@ -92,6 +120,14 @@ export function AdminAnalytics() {
     }, [sortBy, searchQuery])
 
 
+
+    const formatDuration = (seconds: number | null) => {
+        if (!seconds || seconds <= 0) return '—'
+        if (seconds < 60) return `${seconds}s`
+        const m = Math.floor(seconds / 60)
+        const s = seconds % 60
+        return s > 0 ? `${m}m ${s}s` : `${m}m`
+    }
 
     // Helper for simple listing tables
     const SimpleTable = ({ title, icon: Icon, color, data }: { title: string, icon: any, color: string, data: { name: string, count: number }[] }) => (
@@ -165,7 +201,7 @@ export function AdminAnalytics() {
                     </div>
                     <div>
                         <h2 style={{ fontSize: isMobile ? '1.1rem' : '1.3rem', fontWeight: 700, margin: 0 }}>Visit Statistics</h2>
-                        <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Unique visitors per page per day</p>
+                        <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Unique visitors tracked per browser</p>
                     </div>
                 </div>
 
@@ -178,7 +214,7 @@ export function AdminAnalytics() {
                         {/* Summary Cards */}
                         <div style={{
                             display: 'grid',
-                            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                            gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
                             gap: '16px',
                             marginBottom: '24px'
                         }}>
@@ -216,6 +252,18 @@ export function AdminAnalytics() {
                                 </div>
                                 <span style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 800, lineHeight: 1 }}>
                                     {analytics.totals?.today_visits || 0}
+                                </span>
+                            </div>
+                            <div style={{
+                                padding: '16px 20px', borderRadius: '14px',
+                                background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.2)'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                    <Clock size={16} color="#a855f7" />
+                                    <span style={{ fontSize: '0.75rem', color: '#a855f7', fontWeight: 600, textTransform: 'uppercase' }}>Avg. Time</span>
+                                </div>
+                                <span style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 800, lineHeight: 1 }}>
+                                    {formatDuration(analytics.totals?.avg_duration ?? null)}
                                 </span>
                             </div>
                         </div>
@@ -309,7 +357,7 @@ export function AdminAnalytics() {
                                 <div>
                                     <div style={{
                                         display: 'grid',
-                                        gridTemplateColumns: isMobile ? '1fr auto auto' : '2fr 1fr 1fr 1fr',
+                                        gridTemplateColumns: isMobile ? '1fr auto auto' : '2fr 1fr 1fr 1fr 1fr',
                                         padding: '12px 16px',
                                         background: 'rgba(0,0,0,0.2)',
                                         fontSize: '0.75rem',
@@ -323,20 +371,33 @@ export function AdminAnalytics() {
                                         <span style={{ textAlign: 'center' }}>Total</span>
                                         <span style={{ textAlign: 'center' }}>Unique</span>
                                         {!isMobile && <span style={{ textAlign: 'center' }}>Today</span>}
+                                        {!isMobile && <span style={{ textAlign: 'center' }}>Avg Time</span>}
                                     </div>
 
                                     {paginatedPages.map((page, i) => (
                                         <div key={page.page} style={{
                                             display: 'grid',
-                                            gridTemplateColumns: isMobile ? '1fr auto auto' : '2fr 1fr 1fr 1fr',
+                                            gridTemplateColumns: isMobile ? '1fr auto auto' : '2fr 1fr 1fr 1fr 1fr',
                                             padding: '14px 16px',
                                             borderTop: '1px solid rgba(255,255,255,0.04)',
                                             background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
                                             alignItems: 'center'
                                         }}>
-                                            <span style={{ fontWeight: 600, fontSize: isMobile ? '0.85rem' : '0.95rem' }}>
+                                            <a
+                                                href={`https://siodelhi.org${page.page}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{
+                                                    fontWeight: 600,
+                                                    fontSize: isMobile ? '0.85rem' : '0.95rem',
+                                                    color: '#eee',
+                                                    textDecoration: 'none',
+                                                }}
+                                                onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                                                onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                                            >
                                                 {getPageLabel(page.page)}
-                                            </span>
+                                            </a>
                                             <span style={{ textAlign: 'center', fontWeight: 700, fontSize: '1.1rem' }}>
                                                 {page.total_visits}
                                             </span>
@@ -346,6 +407,11 @@ export function AdminAnalytics() {
                                             {!isMobile && (
                                                 <span style={{ textAlign: 'center', color: '#10b981', fontWeight: 600 }}>
                                                     {page.today_visits}
+                                                </span>
+                                            )}
+                                            {!isMobile && (
+                                                <span style={{ textAlign: 'center', color: '#a855f7', fontWeight: 600 }}>
+                                                    {formatDuration(page.avg_duration)}
                                                 </span>
                                             )}
                                         </div>
@@ -594,7 +660,7 @@ export function AdminAnalytics() {
                                 letterSpacing: '0.05em'
                             }}>
                                 <span>Location</span>
-                                <span>Visits</span>
+                                <span style={{ textAlign: 'center' }}>Visits</span>
                                 {!isMobile && <span style={{ textAlign: 'center' }}>Unique</span>}
                             </div>
                             {locations.locations.slice(0, 10).map((loc, i) => (
