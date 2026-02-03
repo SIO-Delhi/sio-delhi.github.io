@@ -108,6 +108,57 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
         return () => window.removeEventListener('resize', check)
     }, [])
 
+    // Helpers for Date/Time formatting
+    const formatDateStr = (isoDate: string) => {
+        if (!isoDate) return { date: '', day: '' }
+        const d = new Date(isoDate)
+        // Check for invalid date
+        if (isNaN(d.getTime())) return { date: '', day: '' }
+
+        const dayName = d.toLocaleDateString('en-US', { weekday: 'long' })
+
+        // dateStr might be "February 03, 2026". We want "03 February 2026"
+        // Let's manually construct to be safe and match the requested format exactly
+        const day = d.getDate().toString().padStart(2, '0')
+        const month = d.toLocaleDateString('en-US', { month: 'long' })
+        const year = d.getFullYear()
+        return { date: `${day} ${month} ${year}`, day: dayName }
+    }
+
+    const formatTimeStr = (isoTime: string) => {
+        if (!isoTime) return ''
+        const [h, m] = isoTime.split(':')
+        const date = new Date()
+        date.setHours(parseInt(h), parseInt(m))
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    }
+
+    // Attempt to reverse-parse current state for picker initial values
+    const getRawDate = () => {
+        try {
+            const d = new Date(state.date)
+            if (!isNaN(d.getTime())) {
+                return d.toISOString().split('T')[0]
+            }
+        } catch { }
+        return ''
+    }
+
+    const getRawTime = (timeStr: string) => {
+        // "06:30 PM" -> "18:30"
+        try {
+            const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
+            if (match) {
+                let [_, h, m, p] = match
+                let hour = parseInt(h)
+                if (p.toUpperCase() === 'PM' && hour < 12) hour += 12
+                if (p.toUpperCase() === 'AM' && hour === 12) hour = 0
+                return `${hour.toString().padStart(2, '0')}:${m}`
+            }
+        } catch { }
+        return ''
+    }
+
     const updateField = <K extends keyof EventPosterState>(key: K, value: EventPosterState[K]) => {
         setState(prev => ({ ...prev, [key]: value }))
     }
@@ -230,10 +281,14 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
                     <div>
                         <label className="pt-label">Date</label>
                         <input
+                            type="date"
                             className="pt-input"
-                            value={state.date}
-                            onChange={(e) => updateField('date', e.target.value)}
-                            placeholder="26 August 2025"
+                            // Use raw value for the picker, derived from state if possible
+                            defaultValue={getRawDate()}
+                            onChange={(e) => {
+                                const { date, day } = formatDateStr(e.target.value)
+                                setState(prev => ({ ...prev, date, day }))
+                            }}
                         />
                     </div>
                     <div>
@@ -241,8 +296,9 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
                         <input
                             className="pt-input"
                             value={state.day}
-                            onChange={(e) => updateField('day', e.target.value)}
-                            placeholder="Tuesday"
+                            readOnly
+                            style={{ opacity: 0.7, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}
+                            title="Auto-generated from Date"
                         />
                     </div>
                 </div>
@@ -251,19 +307,19 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
                     <div>
                         <label className="pt-label">Start Time</label>
                         <input
+                            type="time"
                             className="pt-input"
-                            value={state.timeStart}
-                            onChange={(e) => updateField('timeStart', e.target.value)}
-                            placeholder="09:30 PM"
+                            defaultValue={getRawTime(state.timeStart)}
+                            onChange={(e) => updateField('timeStart', formatTimeStr(e.target.value))}
                         />
                     </div>
                     <div>
                         <label className="pt-label">End Time</label>
                         <input
+                            type="time"
                             className="pt-input"
-                            value={state.timeEnd}
-                            onChange={(e) => updateField('timeEnd', e.target.value)}
-                            placeholder="12:30 AM"
+                            defaultValue={getRawTime(state.timeEnd)}
+                            onChange={(e) => updateField('timeEnd', formatTimeStr(e.target.value))}
                         />
                     </div>
                 </div>
@@ -290,21 +346,24 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
                 </div>
             </div>
 
-            {/* Speaker Tabs */}
+            {/* Speaker Section */}
             <div className="ep-section">
                 <div className="ep-section-header">
                     <User size={16} />
-                    <span>Speakers ({state.speakerCount})</span>
+                    <span>Guest Profile ({activeSpeaker + 1} of {state.speakerCount})</span>
                 </div>
 
                 <div className="ep-speaker-tabs">
-                    {state.speakers.map((_, i) => (
+                    {state.speakers.map((s, i) => (
                         <button
                             key={i}
                             className={`ep-speaker-tab ${activeSpeaker === i ? 'active' : ''}`}
                             onClick={() => setActiveSpeaker(i)}
                         >
-                            Speaker {i + 1}
+                            <span style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '2px' }}>GUEST {i + 1}</span>
+                            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {s.name || 'Untitled'}
+                            </span>
                         </button>
                     ))}
                 </div>

@@ -604,63 +604,98 @@
 }
 
 .ep-template-card {
-    background: var(--pt-bg-panel);
-    border: 1px solid var(--pt-border);
-    border-radius: 16px;
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 20px;
     padding: 0;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     text-align: left;
     font-family: inherit;
     overflow: hidden;
-    color: var(--pt-text-main);
+    color: white;
+    display: flex;
+    flex-direction: column;
 }
 
 .ep-template-card:hover {
     border-color: var(--pt-accent);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 158, 11, 0.1);
 }
 
 .ep-template-thumb {
-    height: 160px;
+    height: 180px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--pt-text-muted);
+    position: relative;
+    background: #09090b;
+}
+
+.ep-thumb-overlay {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+}
+
+.ep-card-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--pt-accent);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    backdrop-filter: blur(4px);
 }
 
 .ep-thumb-classic {
-    background: linear-gradient(135deg, #2a1a0e 0%, #1a1208 100%);
+    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+    /* Deep Navy */
 }
 
 .ep-thumb-event {
-    background: linear-gradient(135deg, #1a0e2a 0%, #120820 100%);
+    background: linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%);
+    /* Deep Purple */
 }
 
 .ep-thumb-2sp {
-    background: linear-gradient(135deg, #0e1a2a 0%, #081220 100%);
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e1b4b 100%);
+    /* Deep Blue */
 }
 
 .ep-thumb-3sp {
-    background: linear-gradient(135deg, #0e2a1a 0%, #082012 100%);
+    background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+    /* Deep Emerald */
 }
 
 .ep-template-info {
-    padding: 16px 20px;
+    padding: 20px;
+    flex: 1;
+    background: #121215;
 }
 
 .ep-template-info h3 {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 700;
-    margin: 0 0 4px;
+    margin: 0 0 6px;
+    color: white;
 }
 
 .ep-template-info p {
-    font-size: 0.8rem;
-    color: var(--pt-text-muted);
+    font-size: 0.85rem;
+    color: #94a3b8;
     margin: 0;
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
 /* ========== Event Poster Editor ========== */
@@ -726,22 +761,28 @@
 
 .ep-speaker-tab {
     flex: 1;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
     border: 1px solid var(--pt-border);
-    background: transparent;
+    background: rgba(255, 255, 255, 0.02);
     color: var(--pt-text-muted);
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
 }
 
 .ep-speaker-tab.active {
     background: var(--pt-accent);
     color: #000;
     border-color: var(--pt-accent);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
 }
 
 .ep-speaker-tab:not(.active):hover {
@@ -785,12 +826,12 @@
 
 .ep-photo-remove {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 24px;
-    height: 24px;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(239, 68, 68, 0.9);
     border: none;
     color: white;
     cursor: pointer;
@@ -798,6 +839,13 @@
     align-items: center;
     justify-content: center;
     padding: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+}
+
+.ep-photo-remove:hover {
+    background: #ef4444;
+    transform: scale(1.1);
 }
 
 /* Preview */

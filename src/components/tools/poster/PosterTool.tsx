@@ -156,15 +156,52 @@ export function PosterTool() {
         img.src = svgDataUrl
     }
 
-    const formatTime = (value: string) => {
-        // Auto-format time to include colon between hours and minutes
-        // Handles: "0630 PM", "06 30 PM", "06:30 PM", "0630PM", etc.
-        const match = value.trim().match(/^(\d{1,2})[\s:.]?(\d{2})\s*(AM|PM|am|pm|Am|Pm)?$/i)
-        if (match) {
-            const [, hrs, mins, period] = match
-            return `${hrs}:${mins}${period ? ' ' + period.toUpperCase() : ''}`
-        }
-        return value
+
+
+    // Helpers for Date/Time formatting
+    const formatDateStr = (isoDate: string) => {
+        if (!isoDate) return ''
+        const d = new Date(isoDate)
+        if (isNaN(d.getTime())) return ''
+
+        // Format: "26 August 2025"
+        const day = d.getDate().toString().padStart(2, '0')
+        const month = d.toLocaleDateString('en-US', { month: 'long' })
+        const year = d.getFullYear()
+        return `${day} ${month} ${year}`
+    }
+
+    const formatTimeStr = (isoTime: string) => {
+        if (!isoTime) return ''
+        const [h, m] = isoTime.split(':')
+        const date = new Date()
+        date.setHours(parseInt(h), parseInt(m))
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    }
+
+    // Attempt to reverse-parse current state for picker initial values
+    const getRawDate = () => {
+        try {
+            const d = new Date(state.date)
+            if (!isNaN(d.getTime())) {
+                return d.toISOString().split('T')[0]
+            }
+        } catch { }
+        return ''
+    }
+
+    const getRawTime = (timeStr: string) => {
+        try {
+            const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
+            if (match) {
+                let [_, h, m, p] = match
+                let hour = parseInt(h)
+                if (p.toUpperCase() === 'PM' && hour < 12) hour += 12
+                if (p.toUpperCase() === 'AM' && hour === 12) hour = 0
+                return `${hour.toString().padStart(2, '0')}:${m}`
+            }
+        } catch { }
+        return ''
     }
 
     const escapeXml = (unsafe: string) => {
@@ -348,7 +385,7 @@ export function PosterTool() {
                 <div style="width: 220px; height: 2px; background: #a05415; opacity: 0.4;"></div>
                 <div style="display: flex; align-items: center; gap: 24px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#c8884d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span>${escapeXml(formatTime(state.time))}</span>
+                    <span>${escapeXml(state.time)}</span>
                 </div>
                 <div style="width: 220px; height: 2px; background: #a05415; opacity: 0.4;"></div>
                 <div style="display: flex; align-items: center; gap: 24px;">
@@ -560,19 +597,19 @@ export function PosterTool() {
                             <div className="pt-input-group">
                                 <label className="pt-label">Date</label>
                                 <input
-                                    type="text"
-                                    value={state.date}
-                                    onChange={e => setState({ ...state, date: e.target.value })}
+                                    type="date"
                                     className="pt-input"
+                                    defaultValue={getRawDate()}
+                                    onChange={e => setState({ ...state, date: formatDateStr(e.target.value) })}
                                 />
                             </div>
                             <div className="pt-input-group">
                                 <label className="pt-label">Time</label>
                                 <input
-                                    type="text"
-                                    value={state.time}
-                                    onChange={e => setState({ ...state, time: formatTime(e.target.value) })}
+                                    type="time"
                                     className="pt-input"
+                                    defaultValue={getRawTime(state.time)}
+                                    onChange={e => setState({ ...state, time: formatTimeStr(e.target.value) })}
                                 />
                             </div>
                         </div>
@@ -590,12 +627,12 @@ export function PosterTool() {
 
                     {/* Appearance Section - desktop only (on mobile it's in preview) */}
                     {window.innerWidth >= 1024 && (
-                    <div className="pt-section">
-                        <div className="pt-section-title">
-                            <Palette size={12} /> Styles
+                        <div className="pt-section">
+                            <div className="pt-section-title">
+                                <Palette size={12} /> Styles
+                            </div>
+                            {hueSlider}
                         </div>
-                        {hueSlider}
-                    </div>
                     )}
 
                     <div className="pt-section mt-auto pt-8">
