@@ -60,8 +60,6 @@ export function AdminAnalytics() {
         browsers?: { browser: string; count: number }[];
         oss?: { os: string; count: number }[];
         referrers?: { referrer: string; count: number }[];
-        isps?: { isp: string; count: number }[];
-        organizations?: { organization: string; count: number }[];
         devices?: { device_type: string; count: number }[];
         prev_period?: { prev_visits: number; prev_unique: number; curr_visits: number; curr_unique: number };
         bounce_rate?: number;
@@ -119,8 +117,6 @@ export function AdminAnalytics() {
                 browsers: data.browsers || [],
                 oss: data.oss || [],
                 referrers: data.referrers || [],
-                isps: data.isps || [],
-                organizations: data.organizations || [],
                 devices: data.devices || [],
                 prev_period: data.prev_period || null,
                 bounce_rate: data.bounce_rate ?? null,
@@ -1151,7 +1147,7 @@ export function AdminAnalytics() {
                                                 <div key={h} style={{
                                                     flex: 1, textAlign: 'center', fontSize: '0.6rem', color: '#666'
                                                 }}>
-                                                    {h % 3 === 0 ? `${h}` : ''}
+                                                    {h % 3 === 0 ? (h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`) : ''}
                                                 </div>
                                             ))}
                                         </div>
@@ -1163,14 +1159,14 @@ export function AdminAnalytics() {
                                                     <span style={{ width: '36px', fontSize: '0.7rem', color: '#888', flexShrink: 0 }}>{dayLabel}</span>
                                                     <div style={{ display: 'flex', flex: 1, gap: '2px' }}>
                                                         {Array.from({ length: 24 }, (_, h) => {
-                                                            const entry = analytics.heatmap!.find(e => e.dow === dow && e.hour === h)
-                                                            const count = entry?.count || 0
-                                                            const maxCount = Math.max(...analytics.heatmap!.map(e => e.count), 1)
-                                                            const intensity = count / maxCount
+                                                            const entry = analytics.heatmap!.find(e => Number(e.dow) === dow && Number(e.hour) === h)
+                                                            const count = Number(entry?.count) || 0
+                                                            const maxCount = Math.max(...analytics.heatmap!.map(e => Number(e.count)), 1)
+                                                            const intensity = count === 0 ? 0 : Math.max(count / maxCount, 0.25)
                                                             return (
                                                                 <div
                                                                     key={h}
-                                                                    title={`${dayLabel} ${h}:00 — ${count} visits`}
+                                                                    title={`${dayLabel} ${h === 0 ? '12' : h > 12 ? h - 12 : h}${h < 12 ? 'am' : 'pm'} – ${(h + 1) === 24 ? '12' : (h + 1) > 12 ? (h + 1) - 12 : h + 1}${(h + 1) < 12 ? 'am' : 'pm'} — ${count} visits`}
                                                                     style={{
                                                                         flex: 1,
                                                                         aspectRatio: '1',
@@ -1507,7 +1503,7 @@ export function AdminAnalytics() {
                                     <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <Users size={16} color="#bbb" />
                                     </div>
-                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ddd', display: 'flex', alignItems: 'center' }}>Audience & Network<InfoTip text="Technical profile of your visitors: browsers, operating systems, device types, traffic sources, ISPs, and organizations." /></h3>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ddd', display: 'flex', alignItems: 'center' }}>Audience & Network<InfoTip text="Technical profile of your visitors: browsers, operating systems, device types, and traffic sources." /></h3>
                                 </div>
                                 {chevron(isAudienceExpanded)}
                             </div>
@@ -1542,18 +1538,6 @@ export function AdminAnalytics() {
                                         icon={TrendingUp}
                                         color="#f59e0b"
                                         data={analytics.referrers?.map(r => ({ name: r.referrer, count: r.count })) || []}
-                                    />
-                                    <SimpleTable
-                                        title="Top ISPs"
-                                        icon={TrendingUp}
-                                        color="#8b5cf6"
-                                        data={analytics.isps?.map(isp => ({ name: isp.isp, count: isp.count })) || []}
-                                    />
-                                    <SimpleTable
-                                        title="Organizations"
-                                        icon={Users}
-                                        color="#ec4899"
-                                        data={analytics.organizations?.map(o => ({ name: o.organization, count: o.count })) || []}
                                     />
                                 </div>
                             )}
