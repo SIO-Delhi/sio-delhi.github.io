@@ -4,6 +4,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage, uploadPdf } from '../../lib/storage'
 import { useEditor, EditorContent } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
@@ -171,155 +172,138 @@ export const FontSize = Extension.create({
     },
 })
 
+// --- Floating Bubble Toolbar ---
+const BubbleToolbarButton = ({ icon: Icon, isActive, action, title }: {
+    icon: any, isActive: boolean, action: () => void, title: string
+}) => (
+    <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); action() }}
+        title={title}
+        style={{
+            padding: '5px 6px', borderRadius: '4px',
+            background: isActive ? '#333' : 'transparent',
+            color: isActive ? '#fff' : '#999',
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.15s, color 0.15s',
+        }}
+    >
+        <Icon size={15} />
+    </button>
+)
+
+const BubbleDivider = () => (
+    <div style={{ width: '1px', height: '18px', background: '#333', margin: '0 4px' }} />
+)
+
 const EditorToolbar = ({ editor }: { editor: any }) => {
     if (!editor) return null
 
-    const buttonStyle = (isActive: boolean) => ({
-        padding: '6px 8px',
-        borderRadius: '4px',
-        background: isActive ? '#444' : 'transparent',
-        color: isActive ? 'white' : '#aaa',
-        border: 'none',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        fontSize: '0.75rem',
-        fontWeight: 600
-    })
-
-    const setFontSize = (size: string) => {
-        if (size === 'default') {
-            editor.chain().focus().unsetFontSize().run()
-        } else {
-            editor.chain().focus().setFontSize(size).run()
-        }
-    }
-
-    const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        e.preventDefault()
-        e.stopPropagation()
-        editor.chain().focus().setColor(e.target.value).run()
-    }
-
     return (
-        <div style={{
-            display: 'flex', gap: '4px', padding: '8px', borderBottom: '1px solid #333',
-            background: '#1a1a1a', borderRadius: '8px 8px 0 0',
-            flexWrap: 'wrap', alignItems: 'center'
-        }}>
-            {/* Text Formatting */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))} title="Bold"><Bold size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))} title="Italic"><Italic size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))} title="Underline"><UnderlineIcon size={16} /></button>
+        <BubbleMenu
+            editor={editor}
+            tippyOptions={{
+                duration: 150,
+                placement: 'top',
+                interactive: true,
+                appendTo: () => document.body,
+            }}
+            shouldShow={({ state }) => {
+                const { from, to } = state.selection
+                return from !== to && !(state.selection as any).node
+            }}
+        >
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: '2px',
+                padding: '6px 8px', background: '#1a1a1a',
+                border: '1px solid #333', borderRadius: '8px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+            }}>
+                <BubbleToolbarButton icon={Bold} isActive={editor.isActive('bold')}
+                    action={() => editor.chain().focus().toggleBold().run()} title="Bold" />
+                <BubbleToolbarButton icon={Italic} isActive={editor.isActive('italic')}
+                    action={() => editor.chain().focus().toggleItalic().run()} title="Italic" />
+                <BubbleToolbarButton icon={UnderlineIcon} isActive={editor.isActive('underline')}
+                    action={() => editor.chain().focus().toggleUnderline().run()} title="Underline" />
 
-            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+                <BubbleDivider />
 
-            {/* Font Size */}
-            <select
-                onMouseDown={(e) => e.stopPropagation()}
-                onChange={(e) => { e.preventDefault(); setFontSize(e.target.value) }}
-                value={editor.getAttributes('textStyle').fontSize || 'default'}
-                style={{
-                    background: '#333', color: '#fff', border: '1px solid #444',
-                    borderRadius: '4px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer'
-                }}
-            >
-                <option value="default">Size</option>
-                <option value="0.875rem">Small</option>
-                <option value="1rem">Normal</option>
-                <option value="1.25rem">Large</option>
-                <option value="1.5rem">X-Large</option>
-                <option value="1.875rem">XX-Large</option>
-            </select>
+                <BubbleToolbarButton icon={Heading1} isActive={editor.isActive('heading', { level: 1 })}
+                    action={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1" />
+                <BubbleToolbarButton icon={Heading2} isActive={editor.isActive('heading', { level: 2 })}
+                    action={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2" />
+                <BubbleToolbarButton icon={List} isActive={editor.isActive('bulletList')}
+                    action={() => editor.chain().focus().toggleBulletList().run()} title="Bullet List" />
 
-            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
+                <BubbleDivider />
 
-            {/* Colors */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <BubbleToolbarButton icon={AlignLeft} isActive={editor.isActive({ textAlign: 'left' })}
+                    action={() => editor.chain().focus().setTextAlign('left').run()} title="Left" />
+                <BubbleToolbarButton icon={AlignCenter} isActive={editor.isActive({ textAlign: 'center' })}
+                    action={() => editor.chain().focus().setTextAlign('center').run()} title="Center" />
+                <BubbleToolbarButton icon={AlignRight} isActive={editor.isActive({ textAlign: 'right' })}
+                    action={() => editor.chain().focus().setTextAlign('right').run()} title="Right" />
+
+                <BubbleDivider />
+
+                <BubbleToolbarButton icon={PilcrowLeft} isActive={editor.isActive({ dir: 'ltr' })}
+                    action={() => editor.chain().focus().setTextDirection('ltr').run()} title="LTR" />
+                <BubbleToolbarButton icon={PilcrowRight} isActive={editor.isActive({ dir: 'rtl' })}
+                    action={() => editor.chain().focus().setTextDirection('rtl').run()} title="RTL" />
+
+                <BubbleDivider />
+
+                <select
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                        e.preventDefault()
+                        const val = e.target.value
+                        if (val === 'default') editor.chain().focus().unsetFontSize().run()
+                        else editor.chain().focus().setFontSize(val).run()
+                    }}
+                    value={editor.getAttributes('textStyle').fontSize || 'default'}
+                    style={{
+                        background: '#222', color: '#ccc', border: '1px solid #333',
+                        borderRadius: '4px', padding: '3px 6px', fontSize: '0.7rem', cursor: 'pointer', outline: 'none'
+                    }}
+                >
+                    <option value="default">Size</option>
+                    <option value="0.875rem">S</option>
+                    <option value="1rem">M</option>
+                    <option value="1.25rem">L</option>
+                    <option value="1.5rem">XL</option>
+                    <option value="1.875rem">XXL</option>
+                </select>
+
                 <input
                     type="color"
-                    onChange={handleColorChange}
+                    onChange={(e) => { e.preventDefault(); e.stopPropagation(); editor.chain().focus().setColor(e.target.value).run() }}
                     value={editor.getAttributes('textStyle').color || '#fdedcb'}
                     style={{
-                        width: '28px', height: '28px', padding: 0, border: '2px solid #444',
+                        width: '24px', height: '24px', padding: 0, border: '2px solid #333',
                         borderRadius: '4px', cursor: 'pointer', background: 'transparent'
                     }}
                     title="Text Color"
                 />
+
+                <BubbleToolbarButton icon={LinkIcon} isActive={editor.isActive('link')}
+                    action={() => {
+                        const previousUrl = editor.getAttributes('link').href
+                        const url = window.prompt('URL', previousUrl)
+                        if (url === null) return
+                        if (url === '') {
+                            editor.chain().focus().extendMarkRange('link').unsetLink().run()
+                            return
+                        }
+                        let finalUrl = url
+                        if (!/^https?:\/\//i.test(url) && !/^\//.test(url) && !/^#/.test(url) && !/^mailto:/i.test(url)) {
+                            finalUrl = 'https://' + url
+                        }
+                        editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
+                    }} title="Link" />
             </div>
-
-            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
-
-            {/* Link */}
-            <button onMouseDown={(e) => {
-                e.preventDefault()
-                const previousUrl = editor.getAttributes('link').href
-                const url = window.prompt('URL', previousUrl)
-
-                // cancelled
-                if (url === null) {
-                    return
-                }
-
-                // empty
-                if (url === '') {
-                    editor.chain().focus().extendMarkRange('link').unsetLink().run()
-                    return
-                }
-
-                let finalUrl = url
-                if (!/^https?:\/\//i.test(url) && !/^\//.test(url) && !/^#/.test(url) && !/^mailto:/i.test(url)) {
-                    finalUrl = 'https://' + url
-                }
-
-                // update
-                editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
-            }} style={buttonStyle(editor.isActive('link'))} title="Link">
-                <LinkIcon size={16} />
-            </button>
-
-            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
-
-            {/* Alignment */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))} title="Align Left"><AlignLeft size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))} title="Align Center"><AlignCenter size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))} title="Align Right"><AlignRight size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('justify').run() }} style={buttonStyle(editor.isActive({ textAlign: 'justify' }))} title="Justify"><AlignJustify size={16} /></button>
-
-            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
-
-            {/* Text Direction */}
-            <button
-                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('ltr').run() }}
-                style={buttonStyle(editor.isActive({ dir: 'ltr' }))}
-                title="Left-to-Right"
-            >
-                <PilcrowLeft size={16} />
-            </button>
-            <button
-                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('rtl').run() }}
-                style={buttonStyle(editor.isActive({ dir: 'rtl' }))}
-                title="Right-to-Left"
-            >
-                <PilcrowRight size={16} />
-            </button>
-
-            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
-
-            {/* Headings - Kept for structure */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))} title="H1">
-                <Heading1 size={16} />
-            </button>
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))} title="H2">
-                <Heading2 size={16} />
-            </button>
-
-            <div style={{ width: '1px', background: '#333', margin: '0 6px', height: '20px' }} />
-
-            {/* Lists */}
-            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))} title="Bullet List"><List size={16} /></button>
-        </div>
+        </BubbleMenu>
     )
 }
 

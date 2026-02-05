@@ -89,16 +89,16 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
-                  <Route path="/about-us/:slug" element={<PostDetail sectionType="about" />} />
-                  <Route path="/about-us/:slug/gallery" element={<GalleryPage />} />
-                  <Route path="/initiative/:slug" element={<PostDetail sectionType="initiatives" />} />
-                  <Route path="/initiative/:slug/gallery" element={<GalleryPage />} />
-                  <Route path="/media/:slug" element={<PostDetail sectionType="media" />} />
-                  <Route path="/media/:slug/gallery" element={<GalleryPage />} />
-                  <Route path="/leader/:slug" element={<PostDetail sectionType="leadership" />} />
-                  <Route path="/leader/:slug/gallery" element={<GalleryPage />} />
-                  <Route path="/resource/:slug" element={<PostDetail sectionType="resources" />} />
-                  <Route path="/resource/:slug/gallery" element={<GalleryPage />} />
+                  <Route path="/about-us/*/gallery" element={<GalleryPage />} />
+                  <Route path="/about-us/*" element={<PostDetail sectionType="about" />} />
+                  <Route path="/initiative/*/gallery" element={<GalleryPage />} />
+                  <Route path="/initiative/*" element={<PostDetail sectionType="initiatives" />} />
+                  <Route path="/media/*/gallery" element={<GalleryPage />} />
+                  <Route path="/media/*" element={<PostDetail sectionType="media" />} />
+                  <Route path="/leader/*/gallery" element={<GalleryPage />} />
+                  <Route path="/leader/*" element={<PostDetail sectionType="leadership" />} />
+                  <Route path="/resource/*/gallery" element={<GalleryPage />} />
+                  <Route path="/resource/*" element={<PostDetail sectionType="resources" />} />
                   {/* Dynamic Sections Route */}
                   <Route path="/section/:sectionId/:slug" element={<PostDetail sectionType="dynamic" />} />
                   <Route path="/section/:sectionId/:slug/gallery" element={<GalleryPage />} />

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
@@ -114,156 +115,138 @@ export const FontSize = Extension.create({
     },
 })
 
-// --- Toolbar Component ---
-const EditorToolbar = ({ editor }: { editor: any }) => {
+// --- Floating Bubble Toolbar ---
+const BubbleToolbarButton = ({ icon: Icon, isActive, action, title }: {
+    icon: any, isActive: boolean, action: () => void, title: string
+}) => (
+    <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); action() }}
+        title={title}
+        style={{
+            padding: '5px 6px', borderRadius: '4px',
+            background: isActive ? '#333' : 'transparent',
+            color: isActive ? '#fff' : '#999',
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.15s, color 0.15s',
+        }}
+    >
+        <Icon size={15} />
+    </button>
+)
+
+const BubbleDivider = () => (
+    <div style={{ width: '1px', height: '18px', background: '#333', margin: '0 4px' }} />
+)
+
+const BubbleToolbar = ({ editor }: { editor: any }) => {
     if (!editor) return null
 
-    const buttonStyle = (isActive: boolean) => ({
-        padding: '6px 8px',
-        borderRadius: '4px',
-        background: isActive ? '#444' : 'transparent',
-        color: isActive ? 'white' : '#aaa',
-        border: 'none',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        fontSize: '0.75rem',
-        fontWeight: 600
-    } as React.CSSProperties)
-
-    const setFontSize = (size: string) => {
-        if (size === 'default') {
-            editor.chain().focus().unsetFontSize().run()
-        } else {
-            editor.chain().focus().setFontSize(size).run()
-        }
-    }
-
-    const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        e.preventDefault()
-        e.stopPropagation()
-        editor.chain().focus().setColor(e.target.value).run()
-    }
-
     return (
-        <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '8px 12px',
-            background: '#1a1a1a', borderRadius: '8px 8px 0 0', borderBottom: '1px solid #333',
-            alignItems: 'center'
-        }}>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run() }} style={buttonStyle(editor.isActive('bold'))} title="Bold">
-                <Bold size={14} />
-            </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run() }} style={buttonStyle(editor.isActive('italic'))} title="Italic">
-                <Italic size={14} />
-            </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run() }} style={buttonStyle(editor.isActive('underline'))} title="Underline">
-                <UnderlineIcon size={14} />
-            </button>
-            <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
+        <BubbleMenu
+            editor={editor}
+            tippyOptions={{
+                duration: 150,
+                placement: 'top',
+                interactive: true,
+                appendTo: () => document.body,
+            }}
+            shouldShow={({ state }) => {
+                const { from, to } = state.selection
+                return from !== to && !(state.selection as any).node
+            }}
+        >
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: '2px',
+                padding: '6px 8px', background: '#1a1a1a',
+                border: '1px solid #333', borderRadius: '8px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+            }}>
+                <BubbleToolbarButton icon={Bold} isActive={editor.isActive('bold')}
+                    action={() => editor.chain().focus().toggleBold().run()} title="Bold" />
+                <BubbleToolbarButton icon={Italic} isActive={editor.isActive('italic')}
+                    action={() => editor.chain().focus().toggleItalic().run()} title="Italic" />
+                <BubbleToolbarButton icon={UnderlineIcon} isActive={editor.isActive('underline')}
+                    action={() => editor.chain().focus().toggleUnderline().run()} title="Underline" />
 
-            {/* Font Size */}
-            <select
-                onMouseDown={(e) => e.stopPropagation()}
-                onChange={(e) => { e.preventDefault(); setFontSize(e.target.value) }}
-                value={editor.getAttributes('textStyle').fontSize || 'default'}
-                style={{
-                    background: '#333', color: '#fff', border: '1px solid #444',
-                    borderRadius: '4px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer'
-                }}
-            >
-                <option value="default">Size</option>
-                <option value="0.875rem">Small</option>
-                <option value="1rem">Normal</option>
-                <option value="1.25rem">Large</option>
-                <option value="1.5rem">X-Large</option>
-                <option value="1.875rem">XX-Large</option>
-            </select>
+                <BubbleDivider />
 
-            <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
+                <BubbleToolbarButton icon={Heading1} isActive={editor.isActive('heading', { level: 1 })}
+                    action={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1" />
+                <BubbleToolbarButton icon={Heading2} isActive={editor.isActive('heading', { level: 2 })}
+                    action={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2" />
+                <BubbleToolbarButton icon={List} isActive={editor.isActive('bulletList')}
+                    action={() => editor.chain().focus().toggleBulletList().run()} title="Bullet List" />
 
-            {/* Text Color */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <BubbleDivider />
+
+                <BubbleToolbarButton icon={AlignLeft} isActive={editor.isActive({ textAlign: 'left' })}
+                    action={() => editor.chain().focus().setTextAlign('left').run()} title="Left" />
+                <BubbleToolbarButton icon={AlignCenter} isActive={editor.isActive({ textAlign: 'center' })}
+                    action={() => editor.chain().focus().setTextAlign('center').run()} title="Center" />
+                <BubbleToolbarButton icon={AlignRight} isActive={editor.isActive({ textAlign: 'right' })}
+                    action={() => editor.chain().focus().setTextAlign('right').run()} title="Right" />
+
+                <BubbleDivider />
+
+                <BubbleToolbarButton icon={PilcrowLeft} isActive={editor.isActive({ dir: 'ltr' })}
+                    action={() => editor.chain().focus().setTextDirection('ltr').run()} title="LTR" />
+                <BubbleToolbarButton icon={PilcrowRight} isActive={editor.isActive({ dir: 'rtl' })}
+                    action={() => editor.chain().focus().setTextDirection('rtl').run()} title="RTL" />
+
+                <BubbleDivider />
+
+                <select
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                        e.preventDefault()
+                        const val = e.target.value
+                        if (val === 'default') editor.chain().focus().unsetFontSize().run()
+                        else editor.chain().focus().setFontSize(val).run()
+                    }}
+                    value={editor.getAttributes('textStyle').fontSize || 'default'}
+                    style={{
+                        background: '#222', color: '#ccc', border: '1px solid #333',
+                        borderRadius: '4px', padding: '3px 6px', fontSize: '0.7rem', cursor: 'pointer', outline: 'none'
+                    }}
+                >
+                    <option value="default">Size</option>
+                    <option value="0.875rem">S</option>
+                    <option value="1rem">M</option>
+                    <option value="1.25rem">L</option>
+                    <option value="1.5rem">XL</option>
+                    <option value="1.875rem">XXL</option>
+                </select>
+
                 <input
                     type="color"
-                    onChange={handleColorChange}
+                    onChange={(e) => { e.preventDefault(); e.stopPropagation(); editor.chain().focus().setColor(e.target.value).run() }}
                     value={editor.getAttributes('textStyle').color || '#fdedcb'}
                     style={{
-                        width: '28px', height: '28px', padding: 0, border: '2px solid #444',
+                        width: '24px', height: '24px', padding: 0, border: '2px solid #333',
                         borderRadius: '4px', cursor: 'pointer', background: 'transparent'
                     }}
                     title="Text Color"
                 />
+
+                <BubbleToolbarButton icon={LinkIcon} isActive={editor.isActive('link')}
+                    action={() => {
+                        const previousUrl = editor.getAttributes('link').href
+                        const url = window.prompt('URL', previousUrl)
+                        if (url === null) return
+                        if (url === '') {
+                            editor.chain().focus().extendMarkRange('link').unsetLink().run()
+                            return
+                        }
+                        let finalUrl = url
+                        if (!/^https?:\/\//i.test(url) && !/^\//.test(url) && !/^#/.test(url) && !/^mailto:/i.test(url)) {
+                            finalUrl = 'https://' + url
+                        }
+                        editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
+                    }} title="Link" />
             </div>
-
-            <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-
-            {/* Link */}
-            <button type="button" onMouseDown={(e) => {
-                e.preventDefault()
-                const previousUrl = editor.getAttributes('link').href
-                const url = window.prompt('URL', previousUrl)
-
-                if (url === null) return
-                if (url === '') {
-                    editor.chain().focus().extendMarkRange('link').unsetLink().run()
-                    return
-                }
-
-                let finalUrl = url
-                // If it doesn't start with http/https/mailto and is not a relative path (/ or #), prepend https://
-                if (!/^https?:\/\//i.test(url) && !/^\//.test(url) && !/^#/.test(url) && !/^mailto:/i.test(url)) {
-                    finalUrl = 'https://' + url
-                }
-
-                editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run()
-            }} style={buttonStyle(editor.isActive('link'))} title="Link">
-                <LinkIcon size={14} />
-            </button>
-
-            <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 1 }))} title="H1">
-                <Heading1 size={14} />
-            </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run() }} style={buttonStyle(editor.isActive('heading', { level: 2 }))} title="H2">
-                <Heading2 size={14} />
-            </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run() }} style={buttonStyle(editor.isActive('bulletList'))} title="Bullet List">
-                <List size={14} />
-            </button>
-            <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('left').run() }} style={buttonStyle(editor.isActive({ textAlign: 'left' }))} title="Align Left">
-                <AlignLeft size={14} />
-            </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('center').run() }} style={buttonStyle(editor.isActive({ textAlign: 'center' }))} title="Align Center">
-                <AlignCenter size={14} />
-            </button>
-            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign('right').run() }} style={buttonStyle(editor.isActive({ textAlign: 'right' }))} title="Align Right">
-                <AlignRight size={14} />
-            </button>
-
-            <div style={{ width: '1px', background: '#333', margin: '0 4px', height: '20px' }} />
-
-            {/* Text Direction */}
-            <button
-                type="button"
-                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('ltr').run() }}
-                style={buttonStyle(editor.isActive({ dir: 'ltr' }))}
-                title="Left-to-Right"
-            >
-                <PilcrowLeft size={14} />
-            </button>
-            <button
-                type="button"
-                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextDirection('rtl').run() }}
-                style={buttonStyle(editor.isActive({ dir: 'rtl' }))}
-                title="Right-to-Left"
-            >
-                <PilcrowRight size={14} />
-            </button>
-        </div>
+        </BubbleMenu>
     )
 }
 
@@ -282,7 +265,7 @@ const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange 
     })
 
     return (
-        <div style={{ background: '#111', borderRadius: '12px', overflow: 'hidden', border: '1px solid #333' }}>
+        <div style={{ background: '#111', borderRadius: '10px', overflow: 'visible', border: '1px solid #222', transition: 'border-color 0.2s' }}>
             {onSubtitleChange && (
                 <input
                     type="text"
@@ -291,13 +274,13 @@ const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange 
                     placeholder="Section heading (optional)"
                     style={{
                         width: '100%', padding: '12px 16px', background: '#0a0a0a', border: 'none',
-                        borderBottom: '1px solid #222', color: '#ff3b3b', fontSize: '1rem',
-                        fontWeight: 600, outline: 'none'
+                        borderBottom: '1px solid #1a1a1a', color: '#ff3b3b', fontSize: '1rem',
+                        fontWeight: 600, outline: 'none', borderRadius: '10px 10px 0 0'
                     }}
                 />
             )}
-            <EditorToolbar editor={editor} />
-            <div style={{ padding: '16px', minHeight: '120px', color: 'white' }}>
+            {editor && <BubbleToolbar editor={editor} />}
+            <div style={{ padding: '16px', minHeight: '120px', color: '#ddd' }}>
                 <EditorContent editor={editor} />
             </div>
         </div>
@@ -859,7 +842,7 @@ const CompositeBlockEditor = ({
                         </div>
                     </div>
 
-                    {editor && <EditorToolbar editor={editor} />}
+                    {editor && <BubbleToolbar editor={editor} />}
                     <div style={{ textAlign: (alignment as any) || 'left' }}>
                         <EditorContent
                             editor={editor}
@@ -882,55 +865,59 @@ const CompositeBlockEditor = ({
 const AddBlockMenu = ({ onAdd }: { onAdd: (type: EditorBlock['type']) => void }) => {
     const [isOpen, setIsOpen] = useState(false)
 
-    const buttonStyle = {
-        background: '#333', border: '1px solid #444', color: 'white',
-        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-        padding: '8px 16px', borderRadius: '8px', transition: 'all 0.2s',
-        fontSize: '0.9rem', fontWeight: 500
-    } as React.CSSProperties
+    const blockTypes = [
+        { type: 'text' as const, icon: FileText, label: 'Text', desc: 'Rich text content', color: '#999' },
+        { type: 'image' as const, icon: ImageIcon, label: 'Image', desc: 'Single or carousel', color: '#22c55e' },
+        { type: 'composite' as const, icon: Layout, label: 'Layout', desc: 'Image + text combo', color: '#4ade80' },
+        { type: 'pdf' as const, icon: FileText, label: 'PDF', desc: 'Embed a document', color: '#ff8080' },
+        { type: 'video' as const, icon: Volume2, label: 'Video', desc: 'YouTube embed', color: '#60a5fa' },
+    ]
 
     return (
-        <div style={{ position: 'relative', margin: '24px 0', textAlign: 'center' }}>
-            {isOpen ? (
+        <div style={{ position: 'relative', margin: '20px 0', display: 'flex', justifyContent: 'center' }}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    background: 'transparent', border: '1px dashed #252525', color: '#444',
+                    padding: '10px 20px', borderRadius: '8px',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    cursor: 'pointer', transition: 'border-color 0.2s', fontSize: '0.8rem', fontWeight: 500
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#444'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = '#252525'}
+            >
+                <Plus size={16} /> Add block
+            </button>
+
+            {isOpen && (
                 <div style={{
-                    display: 'inline-flex', gap: '12px', padding: '12px 24px',
-                    background: '#1a1a1a', borderRadius: '12px', border: '1px solid #333',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)', alignItems: 'center', flexWrap: 'wrap',
-                    justifyContent: 'center'
+                    position: 'absolute', bottom: '100%', marginBottom: '8px',
+                    background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '10px',
+                    padding: '4px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                    minWidth: '180px', zIndex: 50,
                 }}>
-                    <span style={{ color: '#666', fontSize: '0.85rem', marginRight: '8px', fontWeight: 500 }}>ADD:</span>
-                    <button onClick={() => { onAdd('text'); setIsOpen(false) }} style={buttonStyle}>
-                        <FileText size={16} /> Text
-                    </button>
-                    <button onClick={() => { onAdd('image'); setIsOpen(false) }} style={buttonStyle}>
-                        <ImageIcon size={16} /> Image
-                    </button>
-                    <button onClick={() => { onAdd('composite'); setIsOpen(false) }} style={{ ...buttonStyle, border: '1px solid #4ade8040', color: '#4ade80' }}>
-                        <Layout size={16} /> Layout
-                    </button>
-                    <button onClick={() => { onAdd('pdf'); setIsOpen(false) }} style={{ ...buttonStyle, border: '1px solid #ff3b3b40', color: '#ff8080' }}>
-                        <FileText size={16} /> PDF
-                    </button>
-                    <button onClick={() => { onAdd('video'); setIsOpen(false) }} style={{ ...buttonStyle, border: '1px solid #3b82f640', color: '#60a5fa' }}>
-                        <Volume2 size={16} /> Video
-                    </button>
-                    <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: '#666', padding: '8px', cursor: 'pointer' }}>
-                        <X size={20} />
-                    </button>
+                    {blockTypes.map(({ type, icon: Icon, label, desc, color }) => (
+                        <button
+                            key={type}
+                            onClick={() => { onAdd(type); setIsOpen(false) }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '10px',
+                                width: '100%', padding: '10px 12px',
+                                background: 'transparent', border: 'none', color: '#ccc',
+                                borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem',
+                                transition: 'background 0.15s', textAlign: 'left'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#252525'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                            <Icon size={16} color={color} />
+                            <div>
+                                <div style={{ fontWeight: 600 }}>{label}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#666' }}>{desc}</div>
+                            </div>
+                        </button>
+                    ))}
                 </div>
-            ) : (
-                <button
-                    onClick={() => setIsOpen(true)}
-                    style={{
-                        background: 'transparent', border: '1px dashed #444', color: '#666',
-                        padding: '12px 24px', borderRadius: '8px',
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                        cursor: 'pointer', transition: 'all 0.2s', width: '100%', maxWidth: '300px',
-                        fontSize: '0.9rem', fontWeight: 500
-                    }}
-                >
-                    <Plus size={18} /> Add Content Block
-                </button>
             )}
         </div>
     )
@@ -977,38 +964,47 @@ export function BlockEditor({ blocks, onChange, onBlockAssetsChange }: BlockEdit
     return (
         <div>
             {blocks.map((block, index) => (
-                <div key={block.id} style={{ position: 'relative', marginBottom: '16px' }}>
-                    {/* Block Controls */}
+                <div
+                    key={block.id}
+                    style={{
+                        marginBottom: '12px', borderRadius: '10px',
+                        border: '1px solid #1e1e1e', background: '#0d0d0d',
+                        transition: 'border-color 0.2s', overflow: 'visible'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#333'}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#1e1e1e'}
+                >
+                    {/* Block Header Bar */}
                     <div style={{
-                        position: 'absolute', top: '8px', right: '8px', zIndex: 10,
-                        display: 'flex', gap: '4px', background: '#000', borderRadius: '6px', padding: '4px'
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '6px 10px', borderBottom: '1px solid #1a1a1a',
                     }}>
-                        <button onClick={() => moveBlock(index, 'up')} disabled={index === 0}
-                            style={{ background: '#222', border: 'none', color: index === 0 ? '#444' : '#888', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>
-                            <MoveUp size={14} />
-                        </button>
-                        <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1}
-                            style={{ background: '#222', border: 'none', color: index === blocks.length - 1 ? '#444' : '#888', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>
-                            <MoveDown size={14} />
-                        </button>
-                        <button onClick={() => removeBlock(block.id)}
-                            style={{ background: '#222', border: 'none', color: '#ff4444', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>
-                            <Trash2 size={14} />
-                        </button>
-                    </div>
-
-                    {/* Block Type Badge */}
-                    <div style={{
-                        position: 'absolute', top: '8px', left: '8px', zIndex: 10,
-                        background: block.type === 'text' ? '#333' : block.type === 'image' ? '#22c55e20' : block.type === 'pdf' ? '#ff3b3b20' : block.type === 'composite' ? '#4ade8020' : '#3b82f620',
-                        color: block.type === 'text' ? '#888' : block.type === 'image' ? '#22c55e' : block.type === 'pdf' ? '#ff8080' : block.type === 'composite' ? '#4ade80' : '#60a5fa',
-                        padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase'
-                    }}>
-                        {block.type === 'composite' ? 'layout' : block.type}
+                        <span style={{
+                            fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em',
+                            color: ({ text: '#666', image: '#22c55e', pdf: '#ff8080', composite: '#4ade80', video: '#60a5fa' } as any)[block.type],
+                            background: ({ text: '#1a1a1a', image: '#22c55e12', pdf: '#ff3b3b12', composite: '#4ade8012', video: '#3b82f612' } as any)[block.type],
+                            padding: '3px 8px', borderRadius: '4px',
+                        }}>
+                            {block.type === 'composite' ? 'layout' : block.type}
+                        </span>
+                        <div style={{ display: 'flex', gap: '2px' }}>
+                            <button onClick={() => moveBlock(index, 'up')} disabled={index === 0}
+                                style={{ background: 'transparent', border: 'none', color: index === 0 ? '#2a2a2a' : '#555', padding: '4px', borderRadius: '4px', cursor: 'pointer' }}>
+                                <MoveUp size={14} />
+                            </button>
+                            <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1}
+                                style={{ background: 'transparent', border: 'none', color: index === blocks.length - 1 ? '#2a2a2a' : '#555', padding: '4px', borderRadius: '4px', cursor: 'pointer' }}>
+                                <MoveDown size={14} />
+                            </button>
+                            <button onClick={() => removeBlock(block.id)}
+                                style={{ background: 'transparent', border: 'none', color: '#ff444488', padding: '4px', borderRadius: '4px', cursor: 'pointer' }}>
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Block Content */}
-                    <div style={{ paddingTop: '40px' }}>
+                    <div>
                         {block.type === 'text' && (
                             <TextBlockEditor
                                 initialContent={block.content}

@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { API_BASE } from '../lib/api'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
@@ -646,12 +646,24 @@ interface PostDetailProps {
 
 
 export function PostDetail({ sectionType }: PostDetailProps) {
-    const { slug, sectionId } = useParams()
+    const { slug, sectionId, '*': wildcardPath } = useParams()
     const { isDark } = useTheme()
     const { getPostBySlug, posts, loading, sections } = useContent()
     const navigate = useNavigate()
+    const location = useLocation()
 
-    const post = slug ? getPostBySlug(slug) : undefined
+    // Support both :slug param (legacy/dynamic) and wildcard paths for nested content
+    const resolvedSlug = (() => {
+        if (slug) return slug
+        if (wildcardPath) {
+            // Extract the last segment from the path (e.g., "parent/child/post" -> "post")
+            const segments = wildcardPath.replace(/\/gallery$/, '').split('/').filter(Boolean)
+            return segments[segments.length - 1] || ''
+        }
+        return ''
+    })()
+
+    const post = resolvedSlug ? getPostBySlug(resolvedSlug) : undefined
     const id = post?.id
 
     // Scroll to top on mount
@@ -1105,10 +1117,10 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
 // Default layout for About and Initiatives
 function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { post: any; isDark: boolean; sectionLabel?: string; posts?: any[], galleryUrl?: string, hasGallery?: boolean }) {
 
-    // Simplified layout for subsection child posts (has parentId)
-    const isSubsectionChild = !!post.parentId
-    // Check if this post IS a subsection (parent with children)
+    // Check if this post IS a subsection (parent with children) — takes priority over being a child
     const isSubsection = !!post.isSubsection
+    // Simplified layout for subsection child posts (has parentId but is NOT itself a subsection)
+    const isSubsectionChild = !!post.parentId && !post.isSubsection
 
     // Filter children for this subsection
     // Filter children for this subsection and sort by order
@@ -1144,7 +1156,15 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                 {hasGallery && (
                     <>
                         {post.layout === 'gallery' ? (
-                            <EmbeddableGallery imagesRaw={post.galleryImages} isDark={isDark} />
+                            <div style={{
+                                width: '100vw',
+                                position: 'relative',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                padding: '0 16px'
+                            }}>
+                                <EmbeddableGallery imagesRaw={post.galleryImages} isDark={isDark} />
+                            </div>
                         ) : galleryUrl && (
                             <div style={{ marginBottom: '24px' }}>
                                 <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="outline" />
@@ -1310,15 +1330,9 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
 
 
                                     onClick={() => {
-                                        // Map sectionId to correct route path
-                                        const routeMap: Record<string, string> = {
-                                            'about': 'about-us',
-                                            'initiatives': 'initiative',
-                                            'media': 'media',
-                                            'leadership': 'leader'
-                                        }
-                                        const routePath = routeMap[post.sectionId] || 'about-us'
-                                        window.location.href = `/${routePath}/${slugify(child.title)}`
+                                        // Build nested URL: append child slug to current path
+                                        const currentPath = location.pathname.replace(/\/$/, '')
+                                        window.location.href = `${currentPath}/${slugify(child.title)}`
                                     }}
                                 />
                             ))}

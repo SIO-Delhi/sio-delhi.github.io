@@ -435,9 +435,9 @@ function getVisitStats()
     $stmt->execute([':today' => $today, ':today2' => $today, ':today3' => $today]);
     $newVsReturning = $stmt->fetch() ?: ['new_visitors' => 0, 'returning_visitors' => 0];
 
-    // Hourly heatmap
+    // Hourly heatmap (convert to IST: UTC+5:30)
     $heatmapStmt = $db->prepare("
-        SELECT DAYOFWEEK(visited_at) as dow, HOUR(visited_at) as hour, COUNT(*) as count
+        SELECT DAYOFWEEK(CONVERT_TZ(visited_at, '+00:00', '+05:30')) as dow, HOUR(CONVERT_TZ(visited_at, '+00:00', '+05:30')) as hour, COUNT(*) as count
         FROM page_visits
         WHERE 1=1 $dateFilter
         GROUP BY dow, hour

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage } from '../../lib/storage'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
@@ -17,6 +17,8 @@ interface GallerySection {
 
 export function GalleryEditor() {
     const { sectionId, id } = useParams()
+    const [searchParams] = useSearchParams()
+    const urlParentId = searchParams.get('parentId') || ''
     const navigate = useNavigate()
     const { addPost, updatePost, getPostById } = useContent()
 
@@ -141,6 +143,7 @@ export function GalleryEditor() {
                 await addPost({
                     ...postData,
                     sectionId,
+                    parentId: urlParentId || undefined,
                 })
             }
             navigate(-1)

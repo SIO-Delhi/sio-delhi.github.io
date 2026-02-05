@@ -282,13 +282,23 @@ function LightboxImage({
 }
 
 export function GalleryPage() {
-    const { slug } = useParams()
+    const { slug, '*': wildcardPath } = useParams()
     const { isDark } = useTheme()
     const { getPostBySlug, loading } = useContent()
     const navigate = useNavigate()
     const location = useLocation()
 
-    const post = slug ? getPostBySlug(slug) : undefined
+    // Support both :slug param and wildcard paths for nested content
+    const resolvedSlug = (() => {
+        if (slug) return slug
+        if (wildcardPath) {
+            const segments = wildcardPath.replace(/\/gallery$/, '').split('/').filter(Boolean)
+            return segments[segments.length - 1] || ''
+        }
+        return ''
+    })()
+
+    const post = resolvedSlug ? getPostBySlug(resolvedSlug) : undefined
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
     const imagesRaw = post?.galleryImages || []

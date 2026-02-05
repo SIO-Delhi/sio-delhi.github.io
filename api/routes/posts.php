@@ -178,7 +178,26 @@ function delete($id) {
         return ['error' => 'Post not found'];
     }
 
-    // Delete associated files
+    // Recursively delete all children first
+    $childStmt = $db->prepare("SELECT id FROM posts WHERE parent_id = ?");
+    $childStmt->execute([$id]);
+    $children = $childStmt->fetchAll();
+    foreach ($children as $child) {
+        delete($child['id']);
+    }
+
+    // Delete associated files for this post
+    deletePostFiles($post);
+
+    // Delete from database
+    $stmt = $db->prepare("DELETE FROM posts WHERE id = ?");
+    $stmt->execute([$id]);
+
+    return ['message' => 'Post deleted successfully'];
+}
+
+// Helper to clean up all files associated with a post row
+function deletePostFiles($post) {
     if (!empty($post['image'])) {
         deleteFileByUrl($post['image']);
     }
@@ -186,19 +205,21 @@ function delete($id) {
         deleteFileByUrl($post['pdf_url']);
     }
     if (!empty($post['gallery_images'])) {
-        $galleryImages = json_decode($post['gallery_images'], true);
-        if (is_array($galleryImages)) {
-            foreach ($galleryImages as $imageUrl) {
-                deleteFileByUrl($imageUrl);
+        $galleryData = json_decode($post['gallery_images'], true);
+        if (is_array($galleryData)) {
+            foreach ($galleryData as $item) {
+                if (is_string($item)) {
+                    // Old format: flat array of URLs
+                    deleteFileByUrl($item);
+                } elseif (is_array($item) && !empty($item['images'])) {
+                    // New format: gallery sections with images array
+                    foreach ($item['images'] as $imageUrl) {
+                        deleteFileByUrl($imageUrl);
+                    }
+                }
             }
         }
     }
-
-    // Delete from database
-    $stmt = $db->prepare("DELETE FROM posts WHERE id = ?");
-    $stmt->execute([$id]);
-
-    return ['message' => 'Post deleted successfully'];
 }
 
 // Helper function to map database row to API response

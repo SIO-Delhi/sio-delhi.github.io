@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage, uploadPdf } from '../../lib/storage'
-import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff, GripVertical, Images } from 'lucide-react'
+import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff, GripVertical, Images, ChevronDown, FolderOpen } from 'lucide-react'
 import { ImageCropper } from './ImageCropper'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { BlockEditor, blocksToHtml, htmlToBlocks } from './BlockEditor'
@@ -14,6 +14,8 @@ import { useUndoableDelete } from '../../hooks/useUndoableDelete'
 
 export function SubsectionEditor() {
     const { sectionId, id } = useParams()
+    const [searchParams] = useSearchParams()
+    const urlParentId = searchParams.get('parentId') || ''
     const { sections, getPostById, addPost, updatePost, getChildPosts, deletePost } = useContent()
     const navigate = useNavigate()
     const isEditMode = !!id
@@ -24,6 +26,7 @@ export function SubsectionEditor() {
     // Local state for sorting to allow immediate UI feedback
     const [localChildPosts, setLocalChildPosts] = useState(childPostsFromContext)
     const [draggedPostId, setDraggedPostId] = useState<string | null>(null)
+    const [showCreateMenu, setShowCreateMenu] = useState(false)
 
     // Delete Hook
     const {
@@ -206,7 +209,7 @@ export function SubsectionEditor() {
             if (isEditMode && id) {
                 await updatePost(id, postData)
             } else if (sectionId) {
-                await addPost({ sectionId, isPublished: true, ...postData })
+                await addPost({ sectionId, isPublished: true, parentId: urlParentId || undefined, ...postData })
             }
             navigate(-1)
         } catch (error) {
@@ -366,7 +369,7 @@ export function SubsectionEditor() {
                         <ArrowLeft size={isMobile ? 18 : 20} />
                     </button>
                     <div>
-                        <div style={{ fontSize: isMobile ? '0.75rem' : '0.9rem', color: '#888' }}>{isEditMode ? 'MANAGE SUBSECTION' : `NEW SUBSECTION IN ${section?.label}`}</div>
+                        <div style={{ fontSize: isMobile ? '0.75rem' : '0.8rem', color: '#555', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{isEditMode ? 'MANAGE SUBSECTION' : urlParentId ? 'NEW NESTED SUBSECTION' : `NEW SUBSECTION IN ${section?.label}`}</div>
                         <h1 style={{ fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 700, margin: 0 }}>{isEditMode ? subsection?.title || 'Subsection' : 'Create Subsection'}</h1>
                     </div>
                 </div>
@@ -397,131 +400,160 @@ export function SubsectionEditor() {
             {/* Two Column Layout in Edit Mode - Stack on Mobile */}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : (isEditMode ? '1fr 1fr' : '1fr'),
+                gridTemplateColumns: isMobile ? '1fr' : (isEditMode ? 'minmax(360px, 1fr) 1fr' : '1fr'),
                 gap: isMobile ? '24px' : '48px'
             }}>
 
                 {/* Left Column: Subsection Details */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '24px' }}>
-                    <h2 style={{ fontSize: isMobile ? '1rem' : '1.1rem', fontWeight: 600, color: '#888', marginBottom: '8px' }}>Subsection Details</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+
+                    {/* Nesting context */}
+                    {urlParentId && (() => {
+                        const parentPost = getPostById(urlParentId)
+                        return parentPost ? (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '10px 14px', borderRadius: '10px',
+                                background: 'rgba(255,59,59,0.06)', border: '1px solid rgba(255,59,59,0.15)',
+                                fontSize: '0.8rem', color: '#999'
+                            }}>
+                                <FolderOpen size={14} color="#ff3b3b" />
+                                Creating inside: <span style={{ color: '#ddd', fontWeight: 600 }}>{parentPost.title}</span>
+                            </div>
+                        ) : null
+                    })()}
 
                     {/* Cover Image */}
                     <div>
-                        <label style={{ display: 'block', color: '#666', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 500 }}>Cover Image</label>
+                        <label style={{ display: 'block', color: '#555', fontSize: '0.7rem', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cover Image</label>
                         {coverImage ? (
-                            <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #333' }}>
+                            <div style={{ position: 'relative', width: '100%', height: '200px', borderRadius: '14px', overflow: 'hidden', border: '1px solid #222' }}>
                                 <img src={coverImage} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                <button onClick={() => setCoverImage('')} style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.7)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' }}>
+                                <button onClick={() => setCoverImage('')} style={{
+                                    position: 'absolute', top: '10px', right: '10px',
+                                    background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+                                    color: '#ccc', border: 'none', padding: '6px 14px', borderRadius: '8px',
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 500
+                                }}>
                                     <X size={12} /> Remove
                                 </button>
                             </div>
                         ) : (
                             <label style={{
                                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                padding: '32px', borderRadius: '12px', background: '#1a1a1a', border: '2px dashed #333',
+                                padding: '40px', borderRadius: '14px', background: '#0d0d0d', border: '1px dashed #252525',
                                 cursor: isUploading ? 'wait' : 'pointer', transition: 'border-color 0.2s'
-                            }}>
+                            }}
+                                onMouseEnter={e => e.currentTarget.style.borderColor = '#444'}
+                                onMouseLeave={e => e.currentTarget.style.borderColor = '#252525'}
+                            >
                                 <input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} style={{ display: 'none' }} />
                                 {isUploading ? (
-                                    <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', color: '#666' }} />
+                                    <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', color: '#555' }} />
                                 ) : (
                                     <>
-                                        <ImageIcon size={32} color="#444" style={{ marginBottom: '8px' }} />
-                                        <div style={{ color: '#666', fontSize: '0.85rem' }}>Upload cover</div>
+                                        <ImageIcon size={28} color="#333" style={{ marginBottom: '10px' }} />
+                                        <div style={{ color: '#555', fontSize: '0.8rem' }}>Click to upload cover image</div>
                                     </>
                                 )}
                             </label>
                         )}
                     </div>
 
-                    {/* Title */}
-                    <div>
-                        <label style={{ display: 'block', color: '#666', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 500 }}>Title *</label>
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="e.g., Karavan Magazine"
-                            style={{
-                                width: '100%', padding: '14px 16px', borderRadius: '10px',
-                                background: '#1a1a1a', border: '1px solid #333', color: 'white',
-                                fontSize: '1.2rem', fontWeight: 600, outline: 'none'
-                            }}
-                        />
+                    {/* Title & Summary grouped */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div>
+                            <label style={{ display: 'block', color: '#555', fontSize: '0.7rem', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Title *</label>
+                            <input
+                                type="text"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="e.g., Karavan Magazine"
+                                style={{
+                                    width: '100%', padding: '14px 16px', borderRadius: '12px',
+                                    background: '#111', border: '1px solid #222', color: 'white',
+                                    fontSize: '1.1rem', fontWeight: 600, outline: 'none', transition: 'border-color 0.2s'
+                                }}
+                                onFocus={e => e.currentTarget.style.borderColor = '#444'}
+                                onBlur={e => e.currentTarget.style.borderColor = '#222'}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', color: '#555', fontSize: '0.7rem', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Summary</label>
+                            <textarea
+                                value={subtitle}
+                                onChange={(e) => setSubtitle(e.target.value)}
+                                placeholder="Brief description of this subsection..."
+                                rows={2}
+                                style={{
+                                    width: '100%', padding: '12px 16px', borderRadius: '12px',
+                                    background: '#111', border: '1px solid #222', color: '#bbb',
+                                    fontSize: '0.9rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit',
+                                    transition: 'border-color 0.2s'
+                                }}
+                                onFocus={e => e.currentTarget.style.borderColor = '#444'}
+                                onBlur={e => e.currentTarget.style.borderColor = '#222'}
+                            />
+                        </div>
                     </div>
 
-                    {/* Subtitle */}
+                    {/* Date */}
                     <div>
-                        <label style={{ display: 'block', color: '#666', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 500 }}>Summary</label>
-                        <input
-                            type="text"
-                            value={subtitle}
-                            onChange={(e) => setSubtitle(e.target.value)}
-                            placeholder="Brief summary"
-                            style={{
-                                width: '100%', padding: '12px 16px', borderRadius: '10px',
-                                background: '#1a1a1a', border: '1px solid #333', color: '#aaa',
-                                fontSize: '0.95rem', outline: 'none'
-                            }}
-                        />
-                    </div>
-
-                    {/* Date Field - New */}
-                    <div>
-                        <label style={{ display: 'block', color: '#666', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 500 }}>Date</label>
+                        <label style={{ display: 'block', color: '#555', fontSize: '0.7rem', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</label>
                         <input
                             type="date"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
                             style={{
-                                width: '100%', padding: '12px 16px', borderRadius: '10px',
-                                background: '#1a1a1a', border: '1px solid #333', color: 'white',
-                                fontSize: '0.95rem', outline: 'none'
+                                width: '100%', padding: '12px 16px', borderRadius: '12px',
+                                background: '#111', border: '1px solid #222', color: 'white',
+                                fontSize: '0.9rem', outline: 'none', transition: 'border-color 0.2s'
                             }}
+                            onFocus={e => e.currentTarget.style.borderColor = '#444'}
+                            onBlur={e => e.currentTarget.style.borderColor = '#222'}
                         />
                     </div>
 
                     {/* Gallery Images */}
                     <div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 500 }}>
-                            <Images size={14} /> Gallery Images
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#555', fontSize: '0.7rem', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <Images size={12} /> Gallery
                             {galleryImages.length > 0 && (
-                                <span style={{ background: '#ff3b3b', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem' }}>
+                                <span style={{ background: 'rgba(255,59,59,0.15)', color: '#ff6b6b', padding: '1px 7px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 700 }}>
                                     {galleryImages.length}
                                 </span>
                             )}
                         </label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {galleryImages.map((img, idx) => (
-                                <div key={idx} style={{ position: 'relative', width: '80px', height: '80px' }}>
-                                    <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} alt={`Gallery ${idx + 1}`} />
+                                <div key={idx} style={{ position: 'relative', width: '72px', height: '72px' }}>
+                                    <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px', border: '1px solid #222' }} alt={`Gallery ${idx + 1}`} />
                                     <button
                                         onClick={() => setGalleryImages(prev => prev.filter((_, i) => i !== idx))}
                                         style={{
-                                            position: 'absolute', top: '4px', right: '4px',
-                                            background: 'rgba(0,0,0,0.7)', color: 'white', border: 'none',
+                                            position: 'absolute', top: '-4px', right: '-4px',
+                                            background: '#222', color: '#888', border: '2px solid #111',
                                             width: '20px', height: '20px', borderRadius: '50%',
-                                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '12px'
+                                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
                                         }}
                                     >
-                                        <X size={12} />
+                                        <X size={10} />
                                     </button>
                                 </div>
                             ))}
                             <label style={{
-                                width: '80px', height: '80px',
-                                background: '#1a1a1a', border: '2px dashed #333', borderRadius: '8px',
+                                width: '72px', height: '72px',
+                                background: '#0d0d0d', border: '1px dashed #252525', borderRadius: '10px',
                                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                cursor: isGalleryUploading ? 'wait' : 'pointer', color: '#555'
-                            }}>
+                                cursor: isGalleryUploading ? 'wait' : 'pointer', color: '#444', transition: 'border-color 0.2s'
+                            }}
+                                onMouseEnter={e => e.currentTarget.style.borderColor = '#444'}
+                                onMouseLeave={e => e.currentTarget.style.borderColor = '#252525'}
+                            >
                                 {isGalleryUploading ? (
-                                    <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                                    <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
                                 ) : (
-                                    <>
-                                        <Plus size={20} />
-                                        <span style={{ fontSize: '0.6rem', marginTop: '2px' }}>Add</span>
-                                    </>
+                                    <Plus size={18} />
                                 )}
                                 <input
                                     type="file"
@@ -537,8 +569,8 @@ export function SubsectionEditor() {
 
                     {/* Content Blocks */}
                     <div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '0.8rem', marginBottom: '12px', fontWeight: 500 }}>
-                            <FileText size={14} /> Content Blocks
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#555', fontSize: '0.7rem', marginBottom: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <FileText size={12} /> Content
                         </label>
                         <BlockEditor
                             blocks={blocks}
@@ -555,17 +587,65 @@ export function SubsectionEditor() {
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                             <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#888' }}>Posts in this Subsection</h2>
-                            <button
-                                onClick={() => navigate(`/admin/create-post/${section?.id}?parentId=${id}`)}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                    padding: '10px 16px', borderRadius: '8px',
-                                    background: '#22c55e', color: 'white', border: 'none',
-                                    fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer'
-                                }}
-                            >
-                                <Plus size={16} /> Add Post
-                            </button>
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => setShowCreateMenu(!showCreateMenu)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                        padding: '10px 16px', borderRadius: '8px',
+                                        background: '#22c55e', color: 'white', border: 'none',
+                                        fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer'
+                                    }}
+                                >
+                                    <Plus size={16} /> Add New
+                                    <ChevronDown size={14} style={{ marginLeft: '2px', transition: 'transform 0.2s', transform: showCreateMenu ? 'rotate(180deg)' : 'rotate(0)' }} />
+                                </button>
+                                {showCreateMenu && (
+                                    <div style={{
+                                        position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+                                        background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px',
+                                        overflow: 'hidden', minWidth: '200px', zIndex: 100,
+                                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                                    }}>
+                                        <div
+                                            onClick={() => { setShowCreateMenu(false); navigate(`/admin/create-post/${section?.id}?parentId=${id}`); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px', cursor: 'pointer', borderBottom: '1px solid #333', transition: 'background 0.2s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#222'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <FileText size={18} color="#888" />
+                                            <div>
+                                                <div style={{ fontWeight: 600, color: 'white' }}>Post</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#666' }}>Regular content page</div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            onClick={() => { setShowCreateMenu(false); navigate(`/admin/create-subsection/${section?.id}?parentId=${id}`); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px', cursor: 'pointer', borderBottom: '1px solid #333', transition: 'background 0.2s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#222'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <FolderOpen size={18} color="#ff3b3b" />
+                                            <div>
+                                                <div style={{ fontWeight: 600, color: 'white' }}>Subsection</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#666' }}>Container for posts</div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            onClick={() => { setShowCreateMenu(false); navigate(`/admin/create-gallery/${section?.id}?parentId=${id}`); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px', cursor: 'pointer', transition: 'background 0.2s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#222'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <Images size={18} color="#3b82f6" />
+                                            <div>
+                                                <div style={{ fontWeight: 600, color: 'white' }}>Gallery</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#666' }}>Photo gallery</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {visibleChildPosts.length === 0 ? (
@@ -582,7 +662,7 @@ export function SubsectionEditor() {
                                 {visibleChildPosts.map(post => (
                                     <div
                                         key={post.id}
-                                        onClick={() => navigate(`/admin/post/${post.id}`)}
+                                        onClick={() => navigate(post.isSubsection ? `/admin/subsection/${post.id}` : post.layout === 'gallery' ? `/admin/gallery-editor/${post.id}` : `/admin/post/${post.id}`)}
                                         draggable
                                         onDragStart={(e) => handleDragStart(e, post.id)}
                                         onDragEnd={handleDragEnd}
@@ -629,8 +709,32 @@ export function SubsectionEditor() {
 
                                         {/* Info */}
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ color: 'white', fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {post.title}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                                <div style={{ color: 'white', fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flexShrink: 1 }}>
+                                                    {post.title}
+                                                </div>
+                                                {post.isSubsection && (
+                                                    <span style={{
+                                                        padding: '1px 8px', borderRadius: '100px', fontSize: '0.6rem', fontWeight: 600,
+                                                        textTransform: 'uppercase', whiteSpace: 'nowrap',
+                                                        background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa',
+                                                        border: '1px solid rgba(139, 92, 246, 0.3)',
+                                                        display: 'flex', alignItems: 'center', gap: '3px'
+                                                    }}>
+                                                        <FolderOpen size={8} /> Subsection
+                                                    </span>
+                                                )}
+                                                {post.layout === 'gallery' && !post.isSubsection && (
+                                                    <span style={{
+                                                        padding: '1px 8px', borderRadius: '100px', fontSize: '0.6rem', fontWeight: 600,
+                                                        textTransform: 'uppercase', whiteSpace: 'nowrap',
+                                                        background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa',
+                                                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                                                        display: 'flex', alignItems: 'center', gap: '3px'
+                                                    }}>
+                                                        <Images size={8} /> Gallery
+                                                    </span>
+                                                )}
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
                                                 <Calendar size={10} />
@@ -666,7 +770,7 @@ export function SubsectionEditor() {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    navigate(`/admin/post/${post.id}`);
+                                                    navigate(post.isSubsection ? `/admin/subsection/${post.id}` : post.layout === 'gallery' ? `/admin/gallery-editor/${post.id}` : `/admin/post/${post.id}`);
                                                 }}
                                                 style={{ padding: '8px', borderRadius: '6px', background: '#222', border: 'none', color: '#888', cursor: 'pointer' }}
                                                 title="Edit"
