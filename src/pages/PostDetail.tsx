@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { API_BASE } from '../lib/api'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
@@ -650,7 +650,6 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     const { isDark } = useTheme()
     const { getPostBySlug, posts, loading, sections } = useContent()
     const navigate = useNavigate()
-    const location = useLocation()
 
     // Support both :slug param (legacy/dynamic) and wildcard paths for nested content
     const resolvedSlug = (() => {

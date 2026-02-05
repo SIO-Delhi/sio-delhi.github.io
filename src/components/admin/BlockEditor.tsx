@@ -146,13 +146,14 @@ const BubbleToolbar = ({ editor }: { editor: any }) => {
     return (
         <BubbleMenu
             editor={editor}
+            // @ts-ignore
             tippyOptions={{
                 duration: 150,
                 placement: 'top',
                 interactive: true,
                 appendTo: () => document.body,
             }}
-            shouldShow={({ state }) => {
+            shouldShow={({ state }: { state: any }) => {
                 const { from, to } = state.selection
                 return from !== to && !(state.selection as any).node
             }}
