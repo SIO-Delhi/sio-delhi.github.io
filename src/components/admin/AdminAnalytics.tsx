@@ -1106,7 +1106,7 @@ export function AdminAnalytics() {
                                                     return (
                                                         <div key={i} style={{
                                                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                                                            minWidth: `${barWidth}px`, flex: analytics.trend.length >= trendDays * 0.5 ? 1 : 'none'
+                                                            minWidth: `${barWidth}px`
                                                         }}>
                                                             <span style={{ fontSize: '0.65rem', color: '#f59e0b', fontWeight: 700 }}>{day.visits}</span>
                                                             <div style={{
