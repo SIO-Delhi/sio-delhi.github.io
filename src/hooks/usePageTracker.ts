@@ -14,6 +14,9 @@ function getVisitorId(): string {
 }
 
 export function usePageTracker() {
+    // Skip analytics in development
+    if (import.meta.env.DEV) return
+
     const location = useLocation()
     const lastTracked = useRef('')
     const pageEnteredAt = useRef<number>(0)
@@ -39,7 +42,7 @@ export function usePageTracker() {
                 headers: { 'Content-Type': 'application/json' },
                 body: payload,
                 keepalive: true
-            }).catch(() => {})
+            }).catch(() => { })
         }
     }, [])
 
@@ -60,7 +63,7 @@ export function usePageTracker() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ page: path, visitor_id: getVisitorId() })
-        }).catch(() => {})
+        }).catch(() => { })
     }, [location.pathname, sendDuration])
 
     // Send duration when user leaves the site entirely
@@ -85,7 +88,7 @@ export function usePageTracker() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ visitor_id: getVisitorId() })
-            }).catch(() => {})
+            }).catch(() => { })
         }
         const interval = setInterval(sendHeartbeat, 30000)
         return () => clearInterval(interval)

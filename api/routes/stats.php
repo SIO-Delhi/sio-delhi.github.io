@@ -247,7 +247,7 @@ function getDirectoryStats($path)
 
 function getDatabaseStats()
 {
-    global $pdo;
+    $pdo = getDB();
 
     try {
         // Count posts
