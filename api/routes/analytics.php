@@ -273,7 +273,7 @@ function trackVisit()
  */
 function trackDuration()
 {
-    ensureAnalyticsTable();
+    // ensureAnalyticsTable(); // Optimization: assume table exists if tracking started
 
     $input = json_decode(file_get_contents('php://input'), true);
     $page = $input['page'] ?? null;
@@ -630,7 +630,7 @@ function getLiveVisitors()
  */
 function heartbeat()
 {
-    ensureAnalyticsTable();
+    // ensureAnalyticsTable(); // Optimization: minimize overhead for heartbeat
 
     $input = json_decode(file_get_contents('php://input'), true);
     $visitorId = $input['visitor_id'] ?? null;
