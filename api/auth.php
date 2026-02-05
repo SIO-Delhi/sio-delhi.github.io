@@ -221,7 +221,10 @@ function verifyClerkJWT($token) {
  * Returns the decoded JWT payload on success.
  */
 function requireAuth() {
-    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    // Check multiple sources - Apache CGI/FastCGI may place it in different variables
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION']
+        ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+        ?? '';
 
     if (empty($authHeader) || !preg_match('/^Bearer\s+(.+)$/i', $authHeader, $matches)) {
         http_response_code(401);

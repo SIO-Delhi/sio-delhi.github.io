@@ -1,6 +1,10 @@
 # Enable URL rewriting
 RewriteEngine On
 
+# Pass Authorization header to PHP (Apache/CGI strips it by default)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 # If the request is for a real file or directory, serve it directly
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
