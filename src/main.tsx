@@ -1,14 +1,27 @@
-import { StrictMode } from 'react'
+import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
-import { ClerkProvider } from '@clerk/clerk-react'
+import { ClerkProvider, useAuth } from '@clerk/clerk-react'
+import { setAuthTokenProvider } from './lib/api'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 if (!PUBLISHABLE_KEY) {
   throw new Error("Missing Publishable Key")
+}
+
+// Bridges Clerk's auth token to the api.ts module so all API calls
+// automatically include the Authorization header when signed in.
+function AuthTokenSync() {
+  const { getToken } = useAuth()
+
+  useEffect(() => {
+    setAuthTokenProvider(() => getToken())
+  }, [getToken])
+
+  return null
 }
 
 createRoot(document.getElementById('root')!).render(
@@ -24,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
         }
       }}
     >
+      <AuthTokenSync />
       <BrowserRouter>
         <App />
       </BrowserRouter>

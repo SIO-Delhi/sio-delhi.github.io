@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useContent } from '../../context/ContentContext'
 import { Trash2, RefreshCw, AlertTriangle, CheckCircle, Loader2, Database } from 'lucide-react'
+import { authFetch } from '../../lib/api'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 
@@ -28,7 +29,7 @@ export function AdminGarbageCollector() {
 
         try {
             // 1. Fetch all files from storage
-            const response = await fetch(`${API_BASE}/stats/storage`)
+            const response = await authFetch(`${API_BASE}/stats/storage`)
             if (!response.ok) throw new Error('Failed to fetch storage stats')
             const data = await response.json()
 
@@ -125,7 +126,7 @@ export function AdminGarbageCollector() {
 
         setDeleting(file.name)
         try {
-            const res = await fetch(`${API_BASE}/upload/${file.bucket}/${encodeURIComponent(file.name)}`, {
+            const res = await authFetch(`${API_BASE}/upload/${file.bucket}/${encodeURIComponent(file.name)}`, {
                 method: 'DELETE'
             })
             if (!res.ok) throw new Error('Delete failed')

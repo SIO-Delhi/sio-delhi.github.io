@@ -5,6 +5,7 @@ import jsPDF from 'jspdf'
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import logo from '../../assets/logo.png'
+import { authFetch } from '../../lib/api'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 
@@ -108,7 +109,7 @@ export function AdminAnalytics() {
         setAnalytics(prev => ({ ...prev, loading: true }))
         setLocations(prev => ({ ...prev, loading: true }))
 
-        fetch(`${API_BASE}/analytics/stats${qs}`)
+        authFetch(`${API_BASE}/analytics/stats${qs}`)
             .then(res => res.json())
             .then(data => setAnalytics({
                 totals: data.totals,
@@ -132,7 +133,7 @@ export function AdminAnalytics() {
         if (dateRange.from) locQs.set('from', dateRange.from)
         if (dateRange.to) locQs.set('to', dateRange.to)
         const locQsStr = locQs.toString()
-        fetch(`${API_BASE}/analytics/locations${locQsStr ? `?${locQsStr}` : ''}`)
+        authFetch(`${API_BASE}/analytics/locations${locQsStr ? `?${locQsStr}` : ''}`)
             .then(res => res.json())
             .then(data => setLocations({ locations: data.locations || [], countries: data.countries || [], loading: false }))
             .catch(() => setLocations(prev => ({ ...prev, loading: false })))
@@ -145,7 +146,7 @@ export function AdminAnalytics() {
     // Live visitors polling
     useEffect(() => {
         const fetchLive = () => {
-            fetch(`${API_BASE}/analytics/live`)
+            authFetch(`${API_BASE}/analytics/live`)
                 .then(res => res.json())
                 .then(data => setLiveCount(data.live_count ?? 0))
                 .catch(() => { })

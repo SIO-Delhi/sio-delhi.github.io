@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useContent } from '../../context/ContentContext'
 import { Link } from 'react-router-dom'
 import { Layers, Plus, HardDrive, Image, FileText, Loader2, ChevronDown, ChevronUp, Trash2, ExternalLink, Search, X, FileInput } from 'lucide-react'
+import { authFetch } from '../../lib/api'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 
@@ -52,7 +53,7 @@ export function Dashboard() {
     useEffect(() => {
         const loadStats = async () => {
             try {
-                const response = await fetch(`${API_BASE}/stats/storage`)
+                const response = await authFetch(`${API_BASE}/stats/storage`)
                 if (!response.ok) throw new Error('Failed to fetch stats')
 
                 const data = await response.json()
@@ -116,7 +117,7 @@ export function Dashboard() {
 
         setDeletingFile(fileName)
         try {
-            const response = await fetch(`${API_BASE}/upload/${bucketName}/${encodeURIComponent(fileName)}`, {
+            const response = await authFetch(`${API_BASE}/upload/${bucketName}/${encodeURIComponent(fileName)}`, {
                 method: 'DELETE'
             })
 

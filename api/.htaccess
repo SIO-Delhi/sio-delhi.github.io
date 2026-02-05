@@ -41,3 +41,9 @@ RewriteRule ^(.*)$ index.php [QSA,L]
     Order Allow,Deny
     Deny from all
 </Files>
+
+# Block access to JWKS cache file
+<Files ".clerk_jwks_cache.json">
+    Order Allow,Deny
+    Deny from all
+</Files>

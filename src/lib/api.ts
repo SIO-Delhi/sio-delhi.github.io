@@ -1,5 +1,31 @@
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
+// Auth token provider - set by AuthTokenSync component in main.tsx
+let getAuthToken: (() => Promise<string | null>) | null = null
+
+export function setAuthTokenProvider(provider: () => Promise<string | null>) {
+    getAuthToken = provider
+}
+
+async function authHeaders(): Promise<Record<string, string>> {
+    if (!getAuthToken) return {}
+    const token = await getAuthToken()
+    if (!token) return {}
+    return { Authorization: `Bearer ${token}` }
+}
+
+/**
+ * Authenticated fetch wrapper. Use in admin components that make
+ * direct fetch() calls instead of going through api.get/post/etc.
+ */
+export async function authFetch(url: string, init?: RequestInit): Promise<Response> {
+    const auth = await authHeaders()
+    return fetch(url, {
+        ...init,
+        headers: { ...init?.headers, ...auth }
+    })
+}
+
 // DTO types matching API response format
 export interface SectionDTO {
     id: string
@@ -162,37 +188,45 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
 export const api = {
     // Generic methods
     async get<T>(path: string): Promise<ApiResponse<T>> {
-        const response = await fetch(`${API_BASE}${path}`)
+        const auth = await authHeaders()
+        const response = await fetch(`${API_BASE}${path}`, {
+            headers: { ...auth }
+        })
         return handleResponse<T>(response)
     },
 
     async post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
+        const auth = await authHeaders()
         const response = await fetch(`${API_BASE}${path}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...auth },
             body: JSON.stringify(body)
         })
         return handleResponse<T>(response)
     },
 
     async put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
+        const auth = await authHeaders()
         const response = await fetch(`${API_BASE}${path}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...auth },
             body: JSON.stringify(body)
         })
         return handleResponse<T>(response)
     },
 
     async delete<T>(path: string): Promise<ApiResponse<T>> {
+        const auth = await authHeaders()
         const response = await fetch(`${API_BASE}${path}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { ...auth }
         })
         return handleResponse<T>(response)
     },
 
     // File upload (multipart/form-data)
     async uploadFile(path: string, file: File | Blob, fieldName = 'file', formId?: string, userName?: string): Promise<ApiResponse<{ url: string; filename: string }>> {
+        const auth = await authHeaders()
         const formData = new FormData()
 
         // Pass formId if provided
@@ -211,6 +245,7 @@ export const api = {
 
         const response = await fetch(`${API_BASE}${path}`, {
             method: 'POST',
+            headers: { ...auth },
             body: formData
         })
         return handleResponse<{ url: string; filename: string }>(response)

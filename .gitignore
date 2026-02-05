@@ -26,3 +26,4 @@ dist-ssr
 
 # API secrets
 api/.env
+api/.clerk_jwks_cache.json

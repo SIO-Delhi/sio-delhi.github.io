@@ -6,6 +6,23 @@
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/auth.php';
+
+// Routes that do NOT require authentication
+$publicRoutes = [
+    'GET /health',
+    'GET /sections',
+    'GET /sections/([^/]+)',
+    'GET /posts',
+    'GET /posts/([^/]+)',
+    'GET /popups/active',
+    'GET /forms/public/([^/]+)',
+    'GET /download/([^/]+)/([^/]+)',
+    'POST /analytics/track',
+    'POST /analytics/duration',
+    'POST /analytics/heartbeat',
+    'POST /forms/([^/]+)/submit',
+];
 
 // Handle CORS - allow multiple origins (localhost for dev, production domains)
 $allowedOrigins = [
@@ -131,6 +148,18 @@ foreach ($routes as $pattern => $handler) {
     if (preg_match($regex, $uri, $matches)) {
         $matched = true;
         array_shift($matches); // Remove full match
+
+        // Auth check: require authentication for non-public routes
+        $isPublic = in_array($pattern, $publicRoutes);
+
+        // Allow unauthenticated uploads when formId is present (public form submissions)
+        if (!$isPublic && strpos($pattern, 'POST /upload/') === 0 && !empty($_POST['formId'])) {
+            $isPublic = true;
+        }
+
+        if (!$isPublic) {
+            requireAuth(); // Halts with 401 if invalid
+        }
 
         if (is_callable($handler)) {
             // Direct function

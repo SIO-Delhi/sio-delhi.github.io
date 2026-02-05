@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { api } from '../../lib/api'
+import { api, authFetch } from '../../lib/api'
 import type { FormDTO, FormResponseDTO, FormFieldDTO } from '../../lib/api'
 import { ArrowLeft, Download, RefreshCw, ChevronLeft, ChevronRight, Trash2, Loader2, Eye } from 'lucide-react'
 
@@ -53,8 +53,23 @@ export function FormResponseViewer() {
         setRefreshing(false)
     }
 
-    const handleExport = (format: 'csv' | 'json') => {
-        window.open(api.forms.getExportUrl(formId!, format), '_blank')
+    const handleExport = async (format: 'csv' | 'json') => {
+        try {
+            const url = api.forms.getExportUrl(formId!, format)
+            const response = await authFetch(url)
+            if (!response.ok) throw new Error('Export failed')
+            const blob = await response.blob()
+            const blobUrl = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = blobUrl
+            a.download = `${form?.title || 'export'}.${format}`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(blobUrl)
+        } catch {
+            alert('Failed to export responses')
+        }
     }
 
     const handleDeleteResponse = async (responseId: string) => {

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Trash2, Search, X, AlertTriangle, RefreshCw, CheckCircle2, Loader2, ChevronDown, ChevronUp, Eye, FileText, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { authFetch } from '../../lib/api'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 
@@ -148,7 +149,7 @@ export function GarbageCollector() {
     const loadOrphanedFiles = async () => {
         setGarbageLoading(true)
         try {
-            const response = await fetch(`${API_BASE}/garbage`)
+            const response = await authFetch(`${API_BASE}/garbage`)
             if (!response.ok) throw new Error('Failed to fetch orphaned files')
             const data = await response.json()
             console.log('Garbage API response:', data)
@@ -194,7 +195,7 @@ export function GarbageCollector() {
 
         setDeletingOrphans(true)
         try {
-            const response = await fetch(`${API_BASE}/garbage/cleanup`, {
+            const response = await authFetch(`${API_BASE}/garbage/cleanup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ files: Array.from(selectedOrphans) })
@@ -228,7 +229,7 @@ export function GarbageCollector() {
 
         setDeletingFile(file.path)
         try {
-            const response = await fetch(`${API_BASE}/garbage/cleanup`, {
+            const response = await authFetch(`${API_BASE}/garbage/cleanup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ files: [file.path] })
@@ -264,7 +265,7 @@ export function GarbageCollector() {
 
     //     setDeletingOrphans(true)
     //     try {
-    //         const response = await fetch(`${API_BASE}/garbage/cleanup`, {
+    //         const response = await authFetch(`${API_BASE}/garbage/cleanup`, {
     //             method: 'POST',
     //             headers: { 'Content-Type': 'application/json' },
     //             body: JSON.stringify({ deleteAll: true })
