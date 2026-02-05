@@ -28,7 +28,10 @@ interface BucketStats {
 export function Dashboard() {
     const { sections, posts } = useContent()
     const [isMobile, setIsMobile] = useState(false)
-    const [maxStorage, setMaxStorage] = useState(5024 * 1024 * 1024) // 5GB cPanel quota
+    const [maxStorage, setMaxStorage] = useState(0)
+    const [diskUsed, setDiskUsed] = useState(0)
+    const [diskFree, setDiskFree] = useState(0)
+    const [quotaSource, setQuotaSource] = useState('')
     const [bucketStats, setBucketStats] = useState<BucketStats[]>([
         { name: 'images', displayName: 'Images', icon: <Image size={20} />, color: '#3b82f6', fileCount: 0, totalSize: 0, loading: true, files: [], expanded: false },
         { name: 'pdfs', displayName: 'PDFs', icon: <FileText size={20} />, color: '#10b981', fileCount: 0, totalSize: 0, loading: true, files: [], expanded: false },
@@ -56,6 +59,15 @@ export function Dashboard() {
 
                 if (data.maxStorage) {
                     setMaxStorage(data.maxStorage)
+                }
+                if (data.diskUsed !== undefined) {
+                    setDiskUsed(data.diskUsed)
+                }
+                if (data.diskFree !== undefined) {
+                    setDiskFree(data.diskFree)
+                }
+                if (data.quotaSource) {
+                    setQuotaSource(data.quotaSource)
                 }
 
                 setBucketStats(prev => prev.map(bucket => {
@@ -138,10 +150,13 @@ export function Dashboard() {
         }
     }
 
-    const totalStorageUsed = bucketStats.reduce((acc, b) => acc + b.totalSize, 0)
+    const totalCmsUsed = bucketStats.reduce((acc, b) => acc + b.totalSize, 0)
     const totalFiles = bucketStats.reduce((acc, b) => acc + b.fileCount, 0)
-    // cPanel storage limit (fetched from API or default 10GB)
-    const usagePercentage = Math.min((totalStorageUsed / maxStorage) * 100, 100)
+    // Use real disk usage from server quota; if source is fallback, use CMS-only stats
+    const hasRealQuota = quotaSource && quotaSource !== 'fallback'
+    const totalStorageUsed = hasRealQuota && diskUsed > 0 ? diskUsed : totalCmsUsed
+    const totalAvailable = hasRealQuota && diskFree > 0 ? diskFree : (maxStorage - totalCmsUsed)
+    const usagePercentage = maxStorage > 0 ? Math.min((totalStorageUsed / maxStorage) * 100, 100) : 0
 
     return (
         <div>
@@ -199,7 +214,7 @@ export function Dashboard() {
                     </div>
                     <div>
                         <h2 style={{ fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>Storage Usage</h2>
-                        <p style={{ fontSize: '0.75rem', color: '#666', margin: '2px 0 0 0' }}>Server Storage • {formatSize(maxStorage)} Limit</p>
+                        <p style={{ fontSize: '0.75rem', color: '#666', margin: '2px 0 0 0' }}>{hasRealQuota ? 'Account Quota' : 'CMS Storage'} • {formatSize(maxStorage)} Limit</p>
                     </div>
                 </div>
 
@@ -298,7 +313,7 @@ export function Dashboard() {
                                 <div style={{ fontSize: '0.7rem', color: '#666', marginTop: '2px' }}>Total Files</div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{formatSize(maxStorage - totalStorageUsed)}</div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{formatSize(totalAvailable)}</div>
                                 <div style={{ fontSize: '0.7rem', color: '#666', marginTop: '2px' }}>Available</div>
                             </div>
                         </div>

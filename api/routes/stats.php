@@ -25,11 +25,17 @@ function getStorageStats()
         $totalSize = $stats['images']['totalSize'] + $stats['pdfs']['totalSize'] + $stats['audio']['totalSize'] + $stats['forms']['totalSize'];
         $totalFiles = $stats['images']['fileCount'] + $stats['pdfs']['fileCount'] + $stats['audio']['fileCount'] + $stats['forms']['fileCount'];
 
+        // Get real disk quota from server
+        $diskQuota = getDiskQuota();
+
         return [
             'buckets' => $stats,
             'totalSize' => $totalSize,
             'totalFiles' => $totalFiles,
-            'maxStorage' => 5024 * 1024 * 1024, // 5024 MB (~5GB) cPanel quota
+            'maxStorage' => $diskQuota['totalSpace'],
+            'diskUsed' => $diskQuota['usedSpace'],
+            'diskFree' => $diskQuota['freeSpace'],
+            'quotaSource' => $diskQuota['source'],
             'uploadDir' => $uploadDir
         ];
     } catch (Exception $e) {
@@ -38,6 +44,125 @@ function getStorageStats()
             'trace' => $e->getTraceAsString()
         ];
     }
+}
+
+/**
+ * Get real disk quota from the server (cPanel-compatible)
+ *
+ * disk_total_space() is NOT used because on shared hosting it returns
+ * the full server partition size, not the account quota.
+ */
+function getDiskQuota() {
+    $homeDir = getenv('HOME') ?: '/home/siodelhi';
+
+    $result = [
+        'totalSpace' => null,
+        'usedSpace' => null,
+        'freeSpace' => null,
+        'source' => 'fallback',
+        'debug' => []
+    ];
+
+    // Method 1: cPanel UAPI - most reliable on cPanel hosting
+    $uapiOutput = @shell_exec('uapi Quota get_quota_info 2>/dev/null');
+    if ($uapiOutput && !empty(trim($uapiOutput))) {
+        $result['debug']['uapi_raw'] = substr($uapiOutput, 0, 500);
+        // UAPI returns YAML-like output; parse key fields
+        $megabytesUsed = null;
+        $megabytesLimit = null;
+        if (preg_match('/megabytes_used:\s*([\d.]+)/', $uapiOutput, $m)) {
+            $megabytesUsed = (float)$m[1];
+        }
+        if (preg_match('/megabyte_limit:\s*([\d.]+)/', $uapiOutput, $m)) {
+            $megabytesLimit = (float)$m[1];
+        }
+        // Also try bytes-based fields
+        if ($megabytesUsed === null && preg_match('/bytes_used:\s*(\d+)/', $uapiOutput, $m)) {
+            $megabytesUsed = (int)$m[1] / (1024 * 1024);
+        }
+        if ($megabytesLimit === null && preg_match('/byte_limit:\s*(\d+)/', $uapiOutput, $m)) {
+            $megabytesLimit = (int)$m[1] / (1024 * 1024);
+        }
+
+        if ($megabytesLimit !== null && $megabytesLimit > 0) {
+            $totalBytes = $megabytesLimit * 1024 * 1024;
+            $usedBytes = ($megabytesUsed ?? 0) * 1024 * 1024;
+            $result['totalSpace'] = (int)$totalBytes;
+            $result['usedSpace'] = (int)$usedBytes;
+            $result['freeSpace'] = (int)($totalBytes - $usedBytes);
+            $result['source'] = 'uapi';
+            return $result;
+        }
+    }
+
+    // Method 2: quota command with multiple output format support
+    $quotaOutput = @shell_exec('quota 2>/dev/null');
+    if ($quotaOutput && !empty(trim($quotaOutput))) {
+        $result['debug']['quota_raw'] = substr($quotaOutput, 0, 500);
+        $lines = explode("\n", trim($quotaOutput));
+        foreach ($lines as $line) {
+            // Standard format: filesystem  blocks_used  quota  limit  ...
+            // Blocks are in KB (1024 bytes)
+            if (preg_match('/\s+(\d+)\s+(\d+)\s+(\d+)/', $line, $matches)) {
+                $usedKB = (int)$matches[1];
+                $softLimitKB = (int)$matches[2];
+                $hardLimitKB = (int)$matches[3];
+                $limitKB = $hardLimitKB > 0 ? $hardLimitKB : $softLimitKB;
+                if ($limitKB > 0) {
+                    $result['totalSpace'] = $limitKB * 1024;
+                    $result['usedSpace'] = $usedKB * 1024;
+                    $result['freeSpace'] = ($limitKB - $usedKB) * 1024;
+                    $result['source'] = 'quota';
+                    return $result;
+                }
+            }
+            // cPanel sometimes shows: /dev/vdX  used/limit format
+            if (preg_match('/(\d+)M?\s*\/\s*(\d+)M/', $line, $matches)) {
+                $usedMB = (int)$matches[1];
+                $limitMB = (int)$matches[2];
+                if ($limitMB > 0) {
+                    $result['totalSpace'] = $limitMB * 1024 * 1024;
+                    $result['usedSpace'] = $usedMB * 1024 * 1024;
+                    $result['freeSpace'] = ($limitMB - $usedMB) * 1024 * 1024;
+                    $result['source'] = 'quota';
+                    return $result;
+                }
+            }
+        }
+    }
+
+    // Method 3: cPanel repquota cache file
+    $username = basename($homeDir);
+    $cacheFile = '/var/cpanel/repquota/' . $username;
+    if (@is_readable($cacheFile)) {
+        $cacheContent = @file_get_contents($cacheFile);
+        if ($cacheContent) {
+            $result['debug']['repquota_raw'] = substr($cacheContent, 0, 300);
+            // Format: used_bytes soft_limit hard_limit ...
+            if (preg_match('/(\d+)\s+(\d+)\s+(\d+)/', $cacheContent, $matches)) {
+                $usedKB = (int)$matches[1];
+                $softKB = (int)$matches[2];
+                $hardKB = (int)$matches[3];
+                $limitKB = $hardKB > 0 ? $hardKB : $softKB;
+                if ($limitKB > 0) {
+                    $result['totalSpace'] = $limitKB * 1024;
+                    $result['usedSpace'] = $usedKB * 1024;
+                    $result['freeSpace'] = ($limitKB - $usedKB) * 1024;
+                    $result['source'] = 'repquota';
+                    return $result;
+                }
+            }
+        }
+    }
+
+    // Method 4: Hardcoded fallback using known cPanel quota
+    // Use 100 GB (matching the cPanel plan) and CMS-only usage
+    $result['totalSpace'] = 100 * 1024 * 1024 * 1024; // 100 GB
+    $result['usedSpace'] = 0; // Will use CMS-only stats on frontend
+    $result['freeSpace'] = $result['totalSpace'];
+    $result['source'] = 'fallback';
+
+    return $result;
 }
 
 function getDirectoryStats($path)
