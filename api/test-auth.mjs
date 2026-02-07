@@ -46,6 +46,7 @@ async function run() {
   console.log('\n--- Protected Routes WITHOUT token (should return 401) ---\n')
 
   const protectedRoutes = [
+    // Existing admin routes
     ['POST', '/sections'],
     ['PUT', '/sections/test-slug'],
     ['DELETE', '/sections/test-slug'],
@@ -65,6 +66,55 @@ async function run() {
     ['GET', '/analytics/stats'],
     ['GET', '/analytics/locations'],
     ['GET', '/garbage'],
+
+    // Portal — setup & auth
+    ['POST', '/portal/setup'],
+    ['POST', '/portal/seed'],
+    ['POST', '/portal/auth/me'],
+
+    // Portal — units
+    ['GET', '/portal/units'],
+    ['POST', '/portal/units'],
+    ['PUT', '/portal/units/test-id'],
+    ['DELETE', '/portal/units/test-id'],
+
+    // Portal — users
+    ['GET', '/portal/users'],
+    ['GET', '/portal/users/test-id'],
+    ['POST', '/portal/users'],
+    ['PUT', '/portal/users/test-id'],
+    ['DELETE', '/portal/users/test-id'],
+
+    // Portal — titles
+    ['PUT', '/portal/users/test-id/title'],
+    ['DELETE', '/portal/users/test-id/title'],
+
+    // Portal — avatars
+    ['POST', '/portal/users/test-id/avatar'],
+    ['DELETE', '/portal/users/test-id/avatar'],
+
+    // Portal — dashboard & migrations
+    ['GET', '/portal/dashboard/stats'],
+    ['GET', '/portal/migrations'],
+    ['POST', '/portal/migrations'],
+    ['PUT', '/portal/migrations/test-id'],
+
+    // Portal — messages
+    ['GET', '/portal/messages'],
+    ['POST', '/portal/messages'],
+    ['PUT', '/portal/messages/test-id/read'],
+
+    // Portal — performance forms
+    ['GET', '/portal/performance/forms'],
+    ['GET', '/portal/performance/forms/test-id'],
+    ['POST', '/portal/performance/forms'],
+    ['PUT', '/portal/performance/forms/test-id'],
+    ['DELETE', '/portal/performance/forms/test-id'],
+    ['GET', '/portal/performance/forms/test-id/responses'],
+    ['POST', '/portal/performance/forms/test-id/respond'],
+
+    // Portal — regions
+    ['GET', '/portal/regions/test-id/units'],
   ]
 
   for (const [method, path] of protectedRoutes) {
@@ -83,6 +133,13 @@ async function run() {
     ['GET', '/stats'],
     ['GET', '/forms'],
     ['GET', '/analytics/live'],
+    // Portal samples
+    ['GET', '/portal/units'],
+    ['GET', '/portal/users'],
+    ['POST', '/portal/auth/me'],
+    ['GET', '/portal/dashboard/stats'],
+    ['GET', '/portal/performance/forms'],
+    ['GET', '/portal/messages'],
   ]
 
   for (const [method, path] of sampleProtected) {

@@ -1,0 +1,561 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Portal Page-Specific Styles
+   Login, dashboard, profile, messages, forms, performance, etc.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Shared page layout ── */
+
+.portal-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.portal-page-narrow {
+  max-width: 640px;
+}
+
+.portal-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ── Responsive grids ── */
+
+.portal-grid-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.portal-grid-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.portal-grid-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.portal-grid-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* ── Login Page ── */
+
+.portal-login-bg {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 100%, rgba(220, 38, 38, 0.45) 0%, #000000 75%);
+  background-color: #000;
+}
+
+.portal-login-wrapper {
+  width: 100%;
+  max-width: 430px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.portal-login-logo {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.portal-login-logo img {
+  width: 80px;
+  height: auto;
+  margin: 0 auto 24px;
+}
+
+/* ── Dashboard ── */
+
+.portal-overview-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--p-cream);
+  margin-bottom: 16px;
+}
+
+.portal-overview-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.portal-overview-item-label {
+  font-size: 0.875rem;
+  color: var(--p-text-secondary);
+}
+
+.portal-overview-item-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--p-cream);
+}
+
+/* ── Profile Page ── */
+
+.portal-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--p-border);
+}
+
+/* Profile avatar wrapper (holds the avatar + optional upload overlay) */
+.portal-profile-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.portal-profile-avatar-upload {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 20px;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 200ms;
+  color: white;
+}
+
+.portal-profile-avatar-wrap:hover .portal-profile-avatar-upload {
+  opacity: 1;
+}
+
+.portal-profile-avatar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.portal-profile-avatar-hint {
+  font-size: 0.75rem;
+  color: var(--p-text-muted);
+}
+
+.portal-profile-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--p-cream);
+}
+
+.portal-profile-contact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.portal-profile-contact-phone {
+  font-size: 0.875rem;
+  color: var(--p-text-secondary);
+}
+
+.portal-profile-info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+
+.portal-profile-info-icon {
+  color: var(--p-text-muted);
+}
+
+.portal-profile-info-label {
+  font-size: 0.75rem;
+  color: var(--p-text-muted);
+}
+
+.portal-profile-info-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--p-cream);
+}
+
+.portal-profile-info-value-cap {
+  text-transform: capitalize;
+}
+
+.portal-profile-title-item {
+  grid-column: 1 / -1;
+  border-color: rgba(255, 59, 59, 0.2);
+  background: var(--p-red-subtle);
+}
+
+.portal-profile-title-icon {
+  color: var(--p-red);
+}
+
+.portal-profile-title-label {
+  font-size: 0.75rem;
+  color: var(--p-red-light);
+}
+
+.portal-profile-title-value {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--p-red-light);
+}
+
+/* ── Messages ── */
+
+.portal-msg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.portal-loading-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Forms ── */
+
+.portal-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.portal-form-stack-lg {
+  gap: 20px;
+}
+
+/* ── Performance colors ── */
+
+.portal-perf-high   { font-weight: 700; color: #34d399; }
+.portal-perf-mid    { font-weight: 700; color: var(--p-gold); }
+.portal-perf-low    { font-weight: 700; color: #f87171; }
+
+/* ── Clerk login overrides ── */
+
+.portal-clerk-overrides .cl-card {
+  background: rgba(10, 10, 10, 0.5) !important;
+  backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+.portal-clerk-overrides .cl-headerTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.portal-clerk-overrides .cl-headerSubtitle {
+  color: #888;
+}
+
+.portal-clerk-overrides .cl-footerActionLink {
+  color: #ff3b3b !important;
+}
+
+.portal-clerk-overrides .cl-footer {
+  display: none !important;
+}
+
+/* ── Label with inline icon ── */
+
+.portal-label-icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ═══════════════════════════════════════════
+   Performance Form Builder & Fill
+   ═══════════════════════════════════════════ */
+
+/* Card layout within perf listing */
+.portal-perf-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.portal-perf-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--p-cream);
+  margin: 0;
+}
+
+.portal-perf-card-desc {
+  font-size: 0.8rem;
+  color: var(--p-text-secondary);
+  margin: 4px 0 0;
+}
+
+.portal-perf-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--p-text-muted);
+  margin-bottom: 16px;
+}
+
+.portal-perf-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.portal-perf-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Builder: field card header */
+.portal-perf-field-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.portal-perf-field-grip {
+  color: var(--p-text-muted);
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.portal-perf-field-num {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--p-text-muted);
+  flex-shrink: 0;
+  min-width: 28px;
+}
+
+.portal-perf-field-type {
+  max-width: 300px;
+}
+
+/* Builder: option row */
+.portal-perf-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Builder: required toggle */
+.portal-perf-required-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--p-text-secondary);
+  cursor: pointer;
+}
+
+.portal-perf-required-toggle input[type="checkbox"] {
+  accent-color: var(--p-red);
+}
+
+/* Fill page: MCQ / MSQ option lists */
+.portal-perf-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.portal-perf-radio-label,
+.portal-perf-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--p-cream);
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--p-border);
+  transition: border-color 200ms, background 200ms;
+}
+
+.portal-perf-radio-label:hover,
+.portal-perf-checkbox-label:hover {
+  border-color: var(--p-red);
+  background: var(--p-red-subtle);
+}
+
+.portal-perf-radio-label input[type="radio"],
+.portal-perf-checkbox-label input[type="checkbox"] {
+  accent-color: var(--p-red);
+}
+
+/* Fill page: rating buttons */
+.portal-perf-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.portal-perf-rating-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--p-border);
+  background: transparent;
+  color: var(--p-text-secondary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 200ms;
+}
+
+.portal-perf-rating-btn:hover {
+  border-color: var(--p-red);
+  color: var(--p-red);
+}
+
+.portal-perf-rating-btn.active {
+  background: var(--p-red);
+  border-color: var(--p-red);
+  color: white;
+}
+
+/* Form layout row */
+.portal-form-row {
+  display: flex;
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .portal-form-row {
+    flex-direction: column;
+  }
+}
+
+/* Badge variants */
+.portal-badge-active {
+  background: rgba(5, 150, 105, 0.15);
+  color: #34d399;
+}
+
+.portal-badge-inactive {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+}
+
+/* Small card body (less padding) */
+.portal-card-body-sm {
+  padding: 16px;
+}
+
+/* Performance response detail panel */
+.portal-perf-detail-panel {
+  margin-top: 24px;
+  border: 1px solid var(--p-border);
+}
+
+.portal-perf-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--p-border);
+}
+
+.portal-perf-detail-fields {
+  margin-bottom: 24px;
+}
+
+.portal-perf-detail-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--p-border-subtle, rgba(255,255,255,0.06));
+}
+
+.portal-perf-detail-field-label {
+  font-size: 0.8rem;
+  color: var(--p-text-muted);
+  min-width: 140px;
+}
+
+.portal-perf-detail-field-value {
+  font-size: 0.9rem;
+  color: var(--p-cream);
+}
+
+.portal-perf-detail-reviews {
+  margin-top: 20px;
+}
+
+.portal-perf-review-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+}
+
+.portal-perf-review-item {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--p-border);
+  margin-bottom: 8px;
+}
+
+.portal-perf-review-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.portal-perf-review-author {
+  font-weight: 600;
+  color: var(--p-cream);
+}
+
+.portal-perf-review-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--p-gold);
+}
+
+.portal-perf-review-comment {
+  font-size: 0.9rem;
+  color: var(--p-text-secondary);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.portal-perf-review-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--p-border);
+}

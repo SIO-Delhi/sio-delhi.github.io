@@ -1,0 +1,10 @@
+/* ═══════════════════════════════════════════════════════════════════
+   SIO Delhi — Portal Design System (entry point)
+   Import order matters: tokens → base → layout → components → pages
+   ═══════════════════════════════════════════════════════════════════ */
+
+@import './portal-tokens.css';
+@import './portal-base.css';
+@import './portal-layout.css';
+@import './portal-components.css';
+@import './portal-pages.css';

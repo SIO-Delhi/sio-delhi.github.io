@@ -35,7 +35,7 @@ $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
 // Check if origin matches allowed list OR is localhost/127.0.0.1
 $isAllowed = in_array($origin, $allowedOrigins) || 
-             preg_match('/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin);
+             preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin);
 
 if ($isAllowed) {
     header('Access-Control-Allow-Origin: ' . $origin);
@@ -127,6 +127,47 @@ $routes = [
     'PUT /forms/([^/]+)' => 'routes/forms.php@updateForm',
     'DELETE /forms/([^/]+)/responses/([^/]+)' => 'routes/forms.php@deleteFormResponse',
     'DELETE /forms/([^/]+)' => 'routes/forms.php@deleteForm',
+
+    // Portal
+    'POST /portal/setup' => 'routes/portal.php@portalSetup',
+    'POST /portal/seed' => 'routes/portal.php@portalSeed',
+    'POST /portal/auth/me' => 'routes/portal.php@portalAuthMe',
+    'GET /portal/units' => 'routes/portal.php@portalGetUnits',
+    'POST /portal/units' => 'routes/portal.php@portalCreateUnits',
+    'PUT /portal/units/([^/]+)' => 'routes/portal.php@portalUpdateUnit',
+    'DELETE /portal/units/([^/]+)' => 'routes/portal.php@portalDeleteUnit',
+    'GET /portal/circles' => 'routes/portal.php@portalGetCircles',
+    'POST /portal/circles' => 'routes/portal.php@portalCreateCircles',
+    'PUT /portal/circles/([^/]+)' => 'routes/portal.php@portalUpdateCircle',
+    'DELETE /portal/circles/([^/]+)' => 'routes/portal.php@portalDeleteCircle',
+    'GET /portal/users' => 'routes/portal.php@portalGetUsers',
+    'GET /portal/users/([^/]+)' => 'routes/portal.php@portalGetUser',
+    'POST /portal/users' => 'routes/portal.php@portalCreateUsers',
+    'PUT /portal/users/([^/]+)' => 'routes/portal.php@portalUpdateUser',
+    'DELETE /portal/users/([^/]+)' => 'routes/portal.php@portalDeleteUser',
+    'PUT /portal/users/([^/]+)/title' => 'routes/portal.php@portalAssignTitle',
+    'DELETE /portal/users/([^/]+)/title' => 'routes/portal.php@portalRevokeTitle',
+    'POST /portal/users/([^/]+)/avatar' => 'routes/portal.php@portalUploadAvatar',
+    'DELETE /portal/users/([^/]+)/avatar' => 'routes/portal.php@portalDeleteAvatar',
+    'GET /portal/dashboard/stats' => 'routes/portal.php@portalDashboardStats',
+    'GET /portal/migrations' => 'routes/portal.php@portalGetMigrations',
+    'POST /portal/migrations' => 'routes/portal.php@portalCreateMigration',
+    'PUT /portal/migrations/([^/]+)' => 'routes/portal.php@portalResolveMigration',
+    'GET /portal/messages' => 'routes/portal.php@portalGetMessages',
+    'POST /portal/messages' => 'routes/portal.php@portalSendMessage',
+    'PUT /portal/messages/([^/]+)/read' => 'routes/portal.php@portalMarkMessageRead',
+    'GET /portal/performance/forms' => 'routes/portal.php@portalGetPerfForms',
+    'GET /portal/performance/forms/([^/]+)' => 'routes/portal.php@portalGetPerfForm',
+    'POST /portal/performance/forms' => 'routes/portal.php@portalCreatePerfForm',
+    'PUT /portal/performance/forms/([^/]+)' => 'routes/portal.php@portalUpdatePerfForm',
+    'DELETE /portal/performance/forms/([^/]+)' => 'routes/portal.php@portalDeletePerfForm',
+    'GET /portal/performance/forms/([^/]+)/responses/([^/]+)/reviews' => 'routes/portal.php@portalGetPerfResponseReviews',
+    'POST /portal/performance/forms/([^/]+)/responses/([^/]+)/reviews' => 'routes/portal.php@portalUpsertPerfResponseReview',
+    'GET /portal/performance/forms/([^/]+)/responses' => 'routes/portal.php@portalGetPerfResponses',
+    'POST /portal/performance/forms/([^/]+)/respond' => 'routes/portal.php@portalSubmitPerfResponse',
+    'PUT /portal/performance/reviews/([^/]+)' => 'routes/portal.php@portalUpdatePerfReview',
+    'DELETE /portal/performance/reviews/([^/]+)' => 'routes/portal.php@portalDeletePerfReview',
+    'GET /portal/regions/([^/]+)/units' => 'routes/portal.php@portalGetRegionUnits',
 
     // Analytics
     'POST /analytics/track' => 'routes/analytics.php@trackVisit',

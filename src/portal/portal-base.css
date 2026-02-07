@@ -1,0 +1,177 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Portal Base Styles
+   Global resets, scrollbar, focus, selection, typography, animations.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Root ── */
+
+.portal-app {
+  background-color: var(--p-bg-body) !important;
+  color: var(--p-text) !important;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Heading & link reset (override main-site styles) ── */
+
+.portal-app h1,
+.portal-app h2,
+.portal-app h3,
+.portal-app h4 {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: normal;
+  color: inherit;
+  margin: 0;
+}
+
+.portal-app section {
+  overflow: visible;
+  padding: 0;
+}
+
+.portal-app a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ── Selection ── */
+
+.portal-app ::selection {
+  background: var(--p-red);
+  color: #000;
+}
+
+/* ── Focus ring ── */
+
+.portal-app :focus-visible {
+  outline: 2px solid var(--p-red);
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar ── */
+
+.portal-app ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.portal-app ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.portal-app ::-webkit-scrollbar-thumb {
+  background: var(--p-border);
+  border-radius: 3px;
+}
+
+.portal-app ::-webkit-scrollbar-thumb:hover {
+  background: var(--p-text-muted);
+}
+
+/* ── Utility ── */
+
+.portal-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--p-cream);
+}
+
+.portal-subheading {
+  font-size: 0.875rem;
+  color: var(--p-text-secondary);
+  margin-top: 4px;
+}
+
+.portal-divider {
+  height: 1px;
+  background: var(--p-border);
+  margin: 8px 0;
+}
+
+/* ── Full-screen center (spinners, error pages) ── */
+
+.portal-fullscreen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--p-bg-body);
+  color: var(--p-text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.portal-fullscreen-col {
+  flex-direction: column;
+  gap: 16px;
+}
+
+.portal-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--p-border);
+  border-top-color: var(--p-red);
+  border-radius: 50%;
+  animation: portal-spin 0.8s linear infinite;
+}
+
+.portal-spinner-text {
+  font-size: 0.875rem;
+  color: var(--p-text-secondary);
+}
+
+/* ── Error page ── */
+
+.portal-error-page {
+  max-width: 400px;
+  text-align: center;
+  padding: 24px;
+}
+
+.portal-error-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--p-cream);
+  margin-bottom: 8px;
+}
+
+.portal-error-desc {
+  font-size: 0.875rem;
+  color: var(--p-text-secondary);
+  margin-bottom: 24px;
+}
+
+.portal-error-link {
+  color: var(--p-red);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* ── Animations ── */
+
+@keyframes portal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes portal-slide-up {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes portal-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes portal-spin {
+  to { transform: rotate(360deg); }
+}
+
+.portal-animate-in {
+  animation: portal-slide-up 300ms ease-out;
+}

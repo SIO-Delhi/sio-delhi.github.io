@@ -293,6 +293,8 @@
   --color-border-light: #3a3a3a;
 }
 
+/* Portal styles are in src/portal/portal.css — imported via PortalRoutes.tsx */
+
 /* Base styles */
 * {
   margin: 0;

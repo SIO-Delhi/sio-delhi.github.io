@@ -1,0 +1,52 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Portal Design Tokens
+   Colors match the main SIO Delhi site: red, gold, cream on dark.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.portal-app {
+  --p-red: #ff3b3b;
+  --p-red-dark: #b82a2a;
+  --p-red-light: #ff7676;
+  --p-red-glow: rgba(255, 59, 59, 0.15);
+  --p-red-subtle: rgba(255, 59, 59, 0.06);
+
+  --p-gold: #efc676;
+  --p-gold-dim: rgba(239, 198, 118, 0.6);
+
+  --p-cream: #fdedcb;
+  --p-cream-dim: rgba(253, 237, 203, 0.7);
+
+  --p-bg-body: #030304;
+  --p-bg-card: #0e0e10;
+  --p-bg-elevated: #141416;
+  --p-bg-surface: #202020;
+  --p-bg-sidebar: #0a0a0a;
+  --p-bg-input: #111111;
+  --p-bg-hover: rgba(255, 255, 255, 0.04);
+
+  --p-text: #fdedcb;
+  --p-text-secondary: #999999;
+  --p-text-muted: #666666;
+  --p-text-white: #ffffff;
+
+  --p-border: #2c2c2c;
+  --p-border-light: #3a3a3a;
+  --p-border-subtle: rgba(255, 255, 255, 0.08);
+
+  --p-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --p-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --p-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --p-shadow-glow: 0 0 40px rgba(255, 59, 59, 0.08);
+
+  --p-radius-sm: 8px;
+  --p-radius-md: 12px;
+  --p-radius-lg: 16px;
+  --p-radius-xl: 20px;
+  --p-radius-full: 9999px;
+
+  --p-transition: 200ms ease;
+
+  /* Sidebar dimensions */
+  --p-sidebar-w: 256px;
+  --p-sidebar-collapsed-w: 68px;
+}

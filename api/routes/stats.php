@@ -247,9 +247,17 @@ function getDirectoryStats($path)
 
 function getDatabaseStats()
 {
-    $pdo = getDB();
-
     try {
+        $pdo = getDB();
+        if (!$pdo) {
+            return [
+                'posts' => 0,
+                'sections' => 0,
+                'popups' => 0,
+                'error' => 'Database connection unavailable'
+            ];
+        }
+
         // Count posts
         $stmt = $pdo->query("SELECT COUNT(*) as count FROM posts");
         $postsCount = $stmt->fetch()['count'];
@@ -318,6 +326,11 @@ function getOrphanedFiles()
         // Check all references for matches
         foreach ($referencesWithSources as $ref) {
             $refUrl = $ref['url'];
+
+            // Skip non-string URLs (e.g. arrays from malformed JSON data)
+            if (!is_string($refUrl)) {
+                continue;
+            }
 
             // Extract filename from reference URL
             $cleanRefUrl = strtok($refUrl, '?');

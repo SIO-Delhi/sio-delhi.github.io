@@ -21,8 +21,17 @@ function base64url_decode($data) {
 /**
  * Fetch and cache the Clerk JWKS public key as PEM
  * Caches to a local file for performance (refreshed every 1 hour)
+ * If CLERK_PUBLIC_KEY_PEM is set in env, use that (avoids fetching when clerk.siodelhi.org DNS is not set).
  */
 function getClerkPublicKey($kid = null) {
+    $staticPem = env('CLERK_PUBLIC_KEY_PEM', '');
+    if ($staticPem !== '') {
+        $staticPem = trim(str_replace(["\r\n", "\r", "\\n"], "\n", $staticPem));
+        if (strpos($staticPem, '-----BEGIN PUBLIC KEY-----') !== false) {
+            return $staticPem;
+        }
+    }
+
     $cacheFile = __DIR__ . '/.clerk_jwks_cache.json';
     $cacheTTL = 3600; // 1 hour
 

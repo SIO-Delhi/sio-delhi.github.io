@@ -1,0 +1,1258 @@
+<?php
+/**
+ * Portal API Routes
+ * Member management, messaging, migrations, performance tracking.
+ */
+
+require_once __DIR__ . '/../db.php';
+
+function uuid() {
+    return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+        mt_rand(0, 0x0fff) | 0x4000, mt_rand(0, 0x3fff) | 0x8000,
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff));
+}
+
+function jsonBody() {
+    return json_decode(file_get_contents('php://input'), true) ?? [];
+}
+
+/**
+ * Default password: first 4 letters of first+last name (no spaces) + 4-digit year from DOB.
+ */
+function generateDefaultPassword($firstName, $lastName, $dateOfBirth) {
+    $namePart = preg_replace('/\s+/', '', $firstName . $lastName);
+    if (strlen($namePart) > 4) $namePart = substr($namePart, 0, 4);
+    $year = (is_string($dateOfBirth) && strlen($dateOfBirth) >= 8) ? substr($dateOfBirth, 4, 4) : '1990';
+    return $namePart . $year;
+}
+
+/**
+ * Username: first name lowercased (alphanumeric only) + 4-digit birth year, e.g. adnan1998.
+ * Duplicates get _2, _3, etc.
+ */
+function generateUsername($firstName, $dateOfBirth, $db) {
+    $first = strtolower(preg_replace('/[^a-z0-9]/i', '', trim($firstName)));
+    if ($first === '') $first = 'user';
+    $year = (is_string($dateOfBirth) && strlen($dateOfBirth) >= 8) ? substr($dateOfBirth, 4, 4) : '1990';
+    $base = $first . $year;
+    $username = $base;
+    $n = 2;
+    while (true) {
+        $stmt = $db->prepare("SELECT 1 FROM portal_users WHERE username = ?");
+        $stmt->execute([$username]);
+        if ($stmt->fetchColumn() === false) break;
+        $username = $base . '_' . $n;
+        $n++;
+    }
+    return $username;
+}
+
+/** Build full name from first, middle, last (for display). */
+function buildFullName($firstName, $middleName, $lastName) {
+    $parts = array_filter([trim($firstName), trim($middleName ?? ''), trim($lastName)]);
+    return implode(' ', $parts);
+}
+
+/* ═══════════════════════════════════════════
+   Setup (creates portal tables)
+   ═══════════════════════════════════════════ */
+
+function portalSetup() {
+    $db = getDB();
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_units (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_circles (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_users (
+            id VARCHAR(36) PRIMARY KEY,
+            first_name VARCHAR(128) NOT NULL,
+            middle_name VARCHAR(128),
+            last_name VARCHAR(128) NOT NULL,
+            username VARCHAR(64) UNIQUE,
+            phone VARCHAR(20) NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            date_of_birth VARCHAR(8),
+            role ENUM('admin','zonal_secretary','regional_president','unit_president','member') NOT NULL,
+            unit_id VARCHAR(36),
+            circle_id VARCHAR(36),
+            permission_overrides JSON,
+            avatar_url TEXT,
+            title VARCHAR(255),
+            title_assigned_by VARCHAR(36),
+            title_assigned_at TIMESTAMP NULL,
+            status ENUM('active','inactive','migrated') DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (unit_id) REFERENCES portal_units(id) ON DELETE SET NULL,
+            FOREIGN KEY (circle_id) REFERENCES portal_circles(id) ON DELETE SET NULL,
+            INDEX idx_pu_role (role), INDEX idx_pu_unit (unit_id), INDEX idx_pu_circle (circle_id), INDEX idx_pu_phone (phone), INDEX idx_pu_username (username)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    // Migrate from full_name to first/middle/last if old column exists
+    $cols = $db->query("SHOW COLUMNS FROM portal_users LIKE 'full_name'")->fetchAll();
+    if (count($cols) > 0) {
+        try {
+            $db->exec("ALTER TABLE portal_users ADD COLUMN first_name VARCHAR(128) AFTER id");
+            $db->exec("ALTER TABLE portal_users ADD COLUMN middle_name VARCHAR(128) AFTER first_name");
+            $db->exec("ALTER TABLE portal_users ADD COLUMN last_name VARCHAR(128) AFTER middle_name");
+        } catch (Exception $e) { /* already added */ }
+        $rows = $db->query("SELECT id, full_name FROM portal_users WHERE first_name IS NULL OR first_name = ''")->fetchAll();
+        foreach ($rows as $r) {
+            $parts = preg_split('/\s+/', trim($r['full_name']), -1, PREG_SPLIT_NO_EMPTY);
+            $first = $parts[0] ?? 'Unknown';
+            $last = count($parts) > 1 ? end($parts) : $first;
+            $middle = count($parts) > 2 ? implode(' ', array_slice($parts, 1, -1)) : null;
+            $stmt = $db->prepare("UPDATE portal_users SET first_name = ?, middle_name = ?, last_name = ? WHERE id = ?");
+            $stmt->execute([$first, $middle, $last, $r['id']]);
+        }
+        try {
+            $db->exec("ALTER TABLE portal_users DROP COLUMN full_name");
+        } catch (Exception $e) { /* ignore */ }
+    }
+
+    // Add date_of_birth if table already existed without it
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN date_of_birth VARCHAR(8) AFTER password");
+    } catch (Exception $e) {
+        // Column already exists
+    }
+    // Add username if missing
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN username VARCHAR(64) UNIQUE AFTER last_name");
+    } catch (Exception $e) {
+        // Column already exists
+    }
+    // Create portal_circles if missing (for existing DBs)
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_circles (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    // Add circle_id and permission_overrides if missing
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN circle_id VARCHAR(36) AFTER unit_id");
+        $db->exec("ALTER TABLE portal_users ADD COLUMN permission_overrides JSON AFTER circle_id");
+    } catch (Exception $e) {
+        // Columns already exist
+    }
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_region_units (
+            id VARCHAR(36) PRIMARY KEY,
+            regional_president_id VARCHAR(36) NOT NULL,
+            unit_id VARCHAR(36) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (regional_president_id) REFERENCES portal_users(id) ON DELETE CASCADE,
+            FOREIGN KEY (unit_id) REFERENCES portal_units(id) ON DELETE CASCADE,
+            UNIQUE KEY uq_rg (regional_president_id, unit_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_migration_requests (
+            id VARCHAR(36) PRIMARY KEY,
+            member_id VARCHAR(36) NOT NULL,
+            from_unit_id VARCHAR(36) NOT NULL,
+            to_unit_id VARCHAR(36) NOT NULL,
+            status ENUM('pending','approved','rejected') DEFAULT 'pending',
+            requested_by VARCHAR(36) NOT NULL,
+            resolved_by VARCHAR(36),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved_at TIMESTAMP NULL,
+            FOREIGN KEY (member_id) REFERENCES portal_users(id) ON DELETE CASCADE,
+            FOREIGN KEY (from_unit_id) REFERENCES portal_units(id),
+            FOREIGN KEY (to_unit_id) REFERENCES portal_units(id),
+            FOREIGN KEY (requested_by) REFERENCES portal_users(id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_messages (
+            id VARCHAR(36) PRIMARY KEY,
+            sender_id VARCHAR(36) NOT NULL,
+            recipient_id VARCHAR(36),
+            recipient_role ENUM('admin','zonal_secretary','regional_president','unit_president','member'),
+            subject VARCHAR(500) NOT NULL,
+            body TEXT NOT NULL,
+            is_broadcast TINYINT(1) DEFAULT 0,
+            is_read TINYINT(1) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (sender_id) REFERENCES portal_users(id) ON DELETE CASCADE,
+            FOREIGN KEY (recipient_id) REFERENCES portal_users(id) ON DELETE CASCADE,
+            INDEX idx_pm_sender (sender_id), INDEX idx_pm_recipient (recipient_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_perf_forms (
+            id VARCHAR(36) PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            created_by VARCHAR(36) NOT NULL,
+            scope_unit_id VARCHAR(36),
+            period VARCHAR(50),
+            is_active TINYINT(1) DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES portal_users(id) ON DELETE CASCADE,
+            FOREIGN KEY (scope_unit_id) REFERENCES portal_units(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_perf_fields (
+            id VARCHAR(36) PRIMARY KEY,
+            form_id VARCHAR(36) NOT NULL,
+            type ENUM('mcq','msq','subjective','checkbox','number','rating') NOT NULL,
+            label VARCHAR(500) NOT NULL,
+            description TEXT,
+            options JSON,
+            is_required TINYINT(1) DEFAULT 1,
+            display_order INT DEFAULT 0,
+            max_value INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (form_id) REFERENCES portal_perf_forms(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_perf_responses (
+            id VARCHAR(36) PRIMARY KEY,
+            form_id VARCHAR(36) NOT NULL,
+            member_id VARCHAR(36) NOT NULL,
+            response_data JSON NOT NULL,
+            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (form_id) REFERENCES portal_perf_forms(id) ON DELETE CASCADE,
+            FOREIGN KEY (member_id) REFERENCES portal_users(id) ON DELETE CASCADE,
+            UNIQUE KEY uq_pr (form_id, member_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_perf_reviews (
+            id VARCHAR(36) PRIMARY KEY,
+            response_id VARCHAR(36) NOT NULL,
+            reviewer_id VARCHAR(36) NOT NULL,
+            comment TEXT,
+            rating INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (response_id) REFERENCES portal_perf_responses(id) ON DELETE CASCADE,
+            FOREIGN KEY (reviewer_id) REFERENCES portal_users(id) ON DELETE CASCADE,
+            UNIQUE KEY uq_perf_review (response_id, reviewer_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    return ['success' => true, 'messssage' => 'Portal tables created.'];
+}
+
+/* ═══════════════════════════════════════════
+   Seed (inserts sample data)
+   ═══════════════════════════════════════════ */
+
+function portalSeed() {
+    $db = getDB();
+
+    // Units (include HQ so admin/zonal/regional have a unit)
+    $units = ['SIO Delhi HQ','Jamia Unit','Okhla Unit','Laxmi Nagar Unit','Chandni Chowk Unit','Rohini Unit'];
+    $unitIds = [];
+    $stmt = $db->prepare("INSERT IGNORE INTO portal_units (id, name) VALUES (?, ?)");
+    foreach ($units as $name) {
+        $id = uuid();
+        $stmt->execute([$id, $name]);
+        $row = $db->query("SELECT id FROM portal_units WHERE name = " . $db->quote($name))->fetch();
+        $unitIds[$name] = $row['id'];
+    }
+
+    // Circles (same level as units)
+    $circles = ['Study Circle A','Outreach Circle','Media Circle'];
+    $circleIds = [];
+    $stmtC = $db->prepare("INSERT IGNORE INTO portal_circles (id, name) VALUES (?, ?)");
+    foreach ($circles as $name) {
+        $id = uuid();
+        $stmtC->execute([$id, $name]);
+        $row = $db->query("SELECT id FROM portal_circles WHERE name = " . $db->quote($name))->fetch();
+        $circleIds[$name] = $row['id'];
+    }
+
+    // Users: first_name, middle_name, last_name, phone, password, role, unit_name, date_of_birth (DDMMYYYY), circle_name
+    $usersData = [
+        ['SIO',null,'DELHI','8447097627','Siod1990','admin','SIO Delhi HQ','01011990',null],
+        ['Ankit',null,'Singh','9397395704','8tE3mrK#l7Y','admin','SIO Delhi HQ','15051988',null],
+        ['Preeti',null,'Verma','8204572942','OT8j9#i9aZU','admin','SIO Delhi HQ','22081991',null],
+        ['Ramesh',null,'Gautam','9847263851','37LmZ#FdzLE','zonal_secretary','SIO Delhi HQ','10031989',null],
+        ['Sunita',null,'Sharma','9429593922','VeL46Rbt0Q#','zonal_secretary','SIO Delhi HQ','05071992',null],
+        ['Vikram',null,'Tandon','9312456780','rP4#mKz8vXw','regional_president','SIO Delhi HQ','12061990',null],
+        ['Neha',null,'Kapoor','9456123780','nK7#qLs3bYt','regional_president','SIO Delhi HQ','28021993',null],
+        ['Priya',null,'Jain','9652748391','ghMlCiih9#Y','unit_president','Jamia Unit','14041991','Study Circle A'],
+        ['Aadhya',null,'Yadav','9894716385','e5ymEKMOcU#','unit_president','Okhla Unit','09111989','Outreach Circle'],
+        ['Aanya',null,'Choudhary','7014829637','#eUIO2cn7wr','unit_president','Laxmi Nagar Unit','03121992',null],
+        ['Nandini',null,'Bhatt','8546392500','2#Lhg7J24wr','member','Jamia Unit','25031999','Study Circle A'],
+        ['Myra',null,'Choudhary','7113719303','3CKCg3Vde#2','member','Jamia Unit','15062001','Study Circle A'],
+        ['Kabir',null,'Malik','9234567890','kM9#xPq2rTw','member','Okhla Unit','08051998','Outreach Circle'],
+        ['Ishaan',null,'Verma','8765432109','iV7#bNz4mYs','member','Laxmi Nagar Unit','12041997',null],
+        ['Arjun',null,'Mehta','9876543210','Arju1996','member','Jamia Unit','18081996','Media Circle'],
+        ['Sana',null,'Khan','9123456789','Sana2000','member','Okhla Unit','22052000',null],
+    ];
+
+    $stmt = $db->prepare("INSERT IGNORE INTO portal_users (id, first_name, middle_name, last_name, username, phone, password, date_of_birth, role, unit_id, circle_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+    foreach ($usersData as $u) {
+        $uid = uuid();
+        $unitId = $u[6] ? ($unitIds[$u[6]] ?? null) : null;
+        $circleId = $u[8] ? ($circleIds[$u[8]] ?? null) : null;
+        $username = generateUsername($u[0], $u[7], $db);
+        $stmt->execute([$uid, $u[0], $u[1], $u[2], $username, $u[3], $u[4], $u[7], $u[5], $unitId, $circleId]);
+    }
+
+    // Helper to get user id by phone
+    $getUserId = function($phone) use ($db) {
+        return $db->query("SELECT id FROM portal_users WHERE phone = " . $db->quote($phone))->fetchColumn();
+    };
+
+    // Region mappings
+    $vikramId = $getUserId('9312456780');
+    $nehaId = $getUserId('9456123780');
+    if ($vikramId) {
+        $stmtR = $db->prepare("INSERT IGNORE INTO portal_region_units (id, regional_president_id, unit_id) VALUES (?,?,?)");
+        $stmtR->execute([uuid(), $vikramId, $unitIds['Jamia Unit']]);
+        $stmtR->execute([uuid(), $vikramId, $unitIds['Okhla Unit']]);
+    }
+    if ($nehaId) {
+        $stmtR = $db->prepare("INSERT IGNORE INTO portal_region_units (id, regional_president_id, unit_id) VALUES (?,?,?)");
+        $stmtR->execute([uuid(), $nehaId, $unitIds['Laxmi Nagar Unit']]);
+        $stmtR->execute([uuid(), $nehaId, $unitIds['Chandni Chowk Unit']]);
+        $stmtR->execute([uuid(), $nehaId, $unitIds['Rohini Unit']]);
+    }
+
+    // Title assignments
+    $ankitId = $getUserId('9397395704');
+    $priyaId = $getUserId('9652748391');
+    $aadhyaId = $getUserId('9894716385');
+
+    if ($ankitId) $db->exec("UPDATE portal_users SET title='Zonal President', title_assigned_by='$ankitId', title_assigned_at=NOW() WHERE phone='9429593922'");
+    if ($priyaId) $db->exec("UPDATE portal_users SET title='Joint Secretary', title_assigned_by='$priyaId', title_assigned_at=NOW() WHERE phone='8546392500'");
+    if ($aadhyaId) $db->exec("UPDATE portal_users SET title='JAC Secretary', title_assigned_by='$aadhyaId', title_assigned_at=NOW() WHERE phone='9234567890'");
+
+    // Dummy performance form (zone-wide, created by zonal)
+    $formId = uuid();
+    $rameshId = $getUserId('9847263851');
+    if ($rameshId) {
+        $db->prepare("INSERT IGNORE INTO portal_perf_forms (id, title, description, created_by, scope_unit_id, period, is_active) VALUES (?,?,?,?,?,?,?)")
+            ->execute([$formId, 'January 2026 Evaluation', 'Monthly activity and engagement self-assessment.', $rameshId, null, '2026-01', 1]);
+
+        $f1 = uuid();
+        $f2 = uuid();
+        $f3 = uuid();
+        $db->prepare("INSERT IGNORE INTO portal_perf_fields (id, form_id, type, label, description, options, is_required, display_order, max_value) VALUES (?,?,?,?,?,?,?,?,?)")
+            ->execute([$f1, $formId, 'subjective', 'What activities did you participate in this month?', 'List events or programs.', null, 1, 0, null]);
+        $db->prepare("INSERT IGNORE INTO portal_perf_fields (id, form_id, type, label, description, options, is_required, display_order, max_value) VALUES (?,?,?,?,?,?,?,?,?)")
+            ->execute([$f2, $formId, 'rating', 'Rate your overall engagement (1-5)', null, null, 1, 1, 5]);
+        $db->prepare("INSERT IGNORE INTO portal_perf_fields (id, form_id, type, label, description, options, is_required, display_order, max_value) VALUES (?,?,?,?,?,?,?,?,?)")
+            ->execute([$f3, $formId, 'mcq', 'Would you like to take up a role next month?', null, json_encode(['Yes', 'No', 'Maybe']), 1, 2, null]);
+
+        $nandiniId = $getUserId('8546392500');
+        $kabirId = $getUserId('9234567890');
+        $ishaanId = $getUserId('8765432109');
+        $arjunId = $getUserId('9876543210');
+
+        if ($nandiniId) {
+            $r1 = uuid();
+            $db->prepare("INSERT IGNORE INTO portal_perf_responses (id, form_id, member_id, response_data) VALUES (?,?,?,?)")
+                ->execute([$r1, $formId, $nandiniId, json_encode([$f1 => 'Attended unit meeting and study circle.', $f2 => 4, $f3 => 'Yes'])]);
+            if ($priyaId) {
+                $db->prepare("INSERT IGNORE INTO portal_perf_reviews (id, response_id, reviewer_id, comment, rating) VALUES (?,?,?,?,?)")
+                    ->execute([uuid(), $r1, $priyaId, 'Good participation. Keep it up.', 4]);
+            }
+        }
+        if ($kabirId) {
+            $r2 = uuid();
+            $db->prepare("INSERT IGNORE INTO portal_perf_responses (id, form_id, member_id, response_data) VALUES (?,?,?,?)")
+                ->execute([$r2, $formId, $kabirId, json_encode([$f1 => 'JAC meeting and campus drive.', $f2 => 5, $f3 => 'Yes'])]);
+            if ($aadhyaId) {
+                $db->prepare("INSERT IGNORE INTO portal_perf_reviews (id, response_id, reviewer_id, comment, rating) VALUES (?,?,?,?,?)")
+                    ->execute([uuid(), $r2, $aadhyaId, 'Excellent. Consider for JAC Secretary role.', 5]);
+            }
+        }
+        if ($ishaanId) {
+            $r3 = uuid();
+            $db->prepare("INSERT IGNORE INTO portal_perf_responses (id, form_id, member_id, response_data) VALUES (?,?,?,?)")
+                ->execute([$r3, $formId, $ishaanId, json_encode([$f1 => 'Could not attend due to exams.', $f2 => 2, $f3 => 'Maybe'])]);
+        }
+        if ($arjunId) {
+            $r4 = uuid();
+            $db->prepare("INSERT IGNORE INTO portal_perf_responses (id, form_id, member_id, response_data) VALUES (?,?,?,?)")
+                ->execute([$r4, $formId, $arjunId, json_encode([$f1 => 'Study circle and volunteer event.', $f2 => 4, $f3 => 'Yes'])]);
+        }
+    }
+
+    // Dummy migration request (pending)
+    $nandiniId = $getUserId('8546392500');
+    $jamiaUnitId = $unitIds['Jamia Unit'] ?? null;
+    $okhlaUnitId = $unitIds['Okhla Unit'] ?? null;
+    if ($nandiniId && $jamiaUnitId && $okhlaUnitId) {
+        $db->prepare("INSERT IGNORE INTO portal_migration_requests (id, member_id, from_unit_id, to_unit_id, status, requested_by) VALUES (?,?,?,?,?,?)")
+            ->execute([uuid(), $nandiniId, $jamiaUnitId, $okhlaUnitId, 'pending', $nandiniId]);
+    }
+
+    // Dummy messages
+    $rameshId = $getUserId('9847263851');
+    $priyaId = $getUserId('9652748391');
+    $nandiniId = $getUserId('8546392500');
+    if ($rameshId && $priyaId) {
+        $db->prepare("INSERT IGNORE INTO portal_messages (id, sender_id, recipient_id, subject, body, is_read) VALUES (?,?,?,?,?,?)")
+            ->execute([uuid(), $rameshId, $priyaId, 'January unit report', 'Please share the Jamia unit activity summary by weekend.', 0]);
+    }
+    if ($nandiniId && $priyaId) {
+        $db->prepare("INSERT IGNORE INTO portal_messages (id, sender_id, recipient_id, subject, body, is_read) VALUES (?,?,?,?,?,?)")
+            ->execute([uuid(), $nandiniId, $priyaId, 'Query about next meeting', 'When is the next unit meeting scheduled?', 1]);
+    }
+    if ($priyaId && $nandiniId) {
+        $db->prepare("INSERT IGNORE INTO portal_messages (id, sender_id, recipient_id, subject, body, is_read) VALUES (?,?,?,?,?,?)")
+            ->execute([uuid(), $priyaId, $nandiniId, 'Re: Next meeting', 'Next meeting is on Saturday 2 PM at the usual venue.', 0]);
+    }
+
+    return ['success' => true, 'message' => 'Portal seed data inserted.'];
+}
+
+/* ═══════════════════════════════════════════
+   Auth: Look up portal user by Clerk phone
+   ═══════════════════════════════════════════ */
+
+function portalAuthMe() {
+    $body = jsonBody();
+    $phone = $body['phone'] ?? null;
+    $username = $body['username'] ?? null;
+    $email = $body['email'] ?? null;
+
+    if (!$phone && !$username && !$email) {
+        http_response_code(400);
+        return ['error' => 'Phone, username, or email required.'];
+    }
+
+    $db = getDB();
+
+    if ($username !== null && $username !== '') {
+        $username = trim($username);
+        $stmt = $db->prepare("
+            SELECT u.*, pu.name AS unit_name
+            FROM portal_users u
+            LEFT JOIN portal_units pu ON u.unit_id = pu.id
+            WHERE LOWER(u.username) = LOWER(?)
+        ");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch();
+        if ($user) return formatUser($user);
+    }
+
+    if ($phone) {
+        $phone = preg_replace('/^\+91/', '', $phone);
+        $phone = preg_replace('/^\+/', '', $phone);
+
+        $stmt = $db->prepare("
+            SELECT u.*, pu.name AS unit_name
+            FROM portal_users u
+            LEFT JOIN portal_units pu ON u.unit_id = pu.id
+            WHERE u.phone = ?
+        ");
+        $stmt->execute([$phone]);
+        $user = $stmt->fetch();
+        if ($user) return formatUser($user);
+    }
+
+    http_response_code(404);
+    return ['error' => 'Portal user not found.'];
+}
+
+/* ═══════════════════════════════════════════
+   Units
+   ═══════════════════════════════════════════ */
+
+function portalGetUnits() {
+    $db = getDB();
+    $rows = $db->query("SELECT * FROM portal_units ORDER BY name")->fetchAll();
+    return $rows;
+}
+
+function portalCreateUnits() {
+    $body = jsonBody();
+    $units = $body['units'] ?? [];
+    $db = getDB();
+    $stmt = $db->prepare("INSERT INTO portal_units (id, name) VALUES (?, ?)");
+    foreach ($units as $u) {
+        $stmt->execute([uuid(), $u['name']]);
+    }
+    return ['success' => true, 'count' => count($units)];
+}
+
+function portalUpdateUnit($id) {
+    $body = jsonBody();
+    $db = getDB();
+    $stmt = $db->prepare("UPDATE portal_units SET name = ? WHERE id = ?");
+    $stmt->execute([$body['name'], $id]);
+    return ['success' => true];
+}
+
+function portalDeleteUnit($id) {
+    $db = getDB();
+    $db->prepare("DELETE FROM portal_units WHERE id = ?")->execute([$id]);
+    return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
+   Circles (same level as units; have members via circle_id on users)
+   ═══════════════════════════════════════════ */
+
+function portalGetCircles() {
+    $db = getDB();
+    return $db->query("SELECT * FROM portal_circles ORDER BY name")->fetchAll();
+}
+
+function portalCreateCircles() {
+    $body = jsonBody();
+    $circles = $body['circles'] ?? [];
+    $db = getDB();
+    $stmt = $db->prepare("INSERT INTO portal_circles (id, name) VALUES (?, ?)");
+    foreach ($circles as $c) {
+        $stmt->execute([uuid(), $c['name']]);
+    }
+    return ['success' => true, 'count' => count($circles)];
+}
+
+function portalUpdateCircle($id) {
+    $body = jsonBody();
+    $db = getDB();
+    $stmt = $db->prepare("UPDATE portal_circles SET name = ? WHERE id = ?");
+    $stmt->execute([$body['name'], $id]);
+    return ['success' => true];
+}
+
+function portalDeleteCircle($id) {
+    $db = getDB();
+    $db->prepare("UPDATE portal_users SET circle_id = NULL WHERE circle_id = ?")->execute([$id]);
+    $db->prepare("DELETE FROM portal_circles WHERE id = ?")->execute([$id]);
+    return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
+   Users
+   ═══════════════════════════════════════════ */
+
+function portalGetUsers() {
+    $db = getDB();
+    $role = $_GET['role'] ?? null;
+    $unitId = $_GET['unitId'] ?? null;
+    $circleId = $_GET['circleId'] ?? null;
+    $titleOnly = $_GET['titleOnly'] ?? null;
+
+    $sql = "SELECT u.*, pu.name AS unit_name, pc.name AS circle_name FROM portal_users u
+            LEFT JOIN portal_units pu ON u.unit_id = pu.id
+            LEFT JOIN portal_circles pc ON u.circle_id = pc.id
+            WHERE 1=1";
+    $params = [];
+
+    if ($role) { $sql .= " AND u.role = ?"; $params[] = $role; }
+    if ($unitId) { $sql .= " AND u.unit_id = ?"; $params[] = $unitId; }
+    if ($circleId) { $sql .= " AND u.circle_id = ?"; $params[] = $circleId; }
+    if ($titleOnly) { $sql .= " AND u.title IS NOT NULL"; }
+
+    $sql .= " ORDER BY u.first_name, u.last_name";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+
+    return array_map('formatUser', $stmt->fetchAll());
+}
+
+function portalGetUser($id) {
+    $db = getDB();
+    $stmt = $db->prepare("SELECT u.*, pu.name AS unit_name, pc.name AS circle_name FROM portal_users u
+            LEFT JOIN portal_units pu ON u.unit_id = pu.id
+            LEFT JOIN portal_circles pc ON u.circle_id = pc.id
+            WHERE u.id = ?");
+    $stmt->execute([$id]);
+    $user = $stmt->fetch();
+    if (!$user) { http_response_code(404); return ['error' => 'User not found.']; }
+    return formatUser($user);
+}
+
+function portalCreateUsers() {
+    $body = jsonBody();
+    $users = $body['users'] ?? [];
+    $db = getDB();
+    $stmt = $db->prepare("INSERT INTO portal_users (id, first_name, middle_name, last_name, username, phone, password, date_of_birth, role, unit_id) VALUES (?,?,?,?,?,?,?,?,?,?)");
+    foreach ($users as $u) {
+        $first = trim($u['first_name'] ?? '');
+        $middle = isset($u['middle_name']) ? trim($u['middle_name']) : null;
+        $last = trim($u['last_name'] ?? '');
+        if ($first === '' || $last === '') {
+            continue; // skip invalid row
+        }
+        $dob = $u['date_of_birth'] ?? null;
+        $password = $u['password'] ?? null;
+        if ($password === null || $password === '') {
+            $password = generateDefaultPassword($first, $u['phone']);
+        }
+        $username = $u['username'] ?? null;
+        if ($username === null || $username === '') {
+            $username = generateUsername($first, $dob ?: '01011990', $db);
+        }
+        $stmt->execute([uuid(), $first, $middle, $last, $username, $u['phone'], $password, $dob, $u['role'], $u['unit_id'] ?? null]);
+    }
+    return ['success' => true, 'count' => count($users)];
+}
+
+function portalUpdateUser($id) {
+    $body = jsonBody();
+    $db = getDB();
+    $allowed = ['first_name','middle_name','last_name','username','phone','password','date_of_birth','role','unit_id','circle_id','avatar_url','status','permission_overrides'];
+    $sets = []; $params = [];
+    foreach ($allowed as $key) {
+        if (array_key_exists($key, $body)) {
+            $sets[] = "$key = ?";
+            $val = $body[$key];
+            if ($key === 'permission_overrides') {
+                $params[] = is_string($val) ? $val : json_encode($val ?? []);
+            } else {
+                $params[] = $val;
+            }
+        }
+    }
+    if (empty($sets)) return ['error' => 'No valid fields to update.'];
+    $params[] = $id;
+    $db->prepare("UPDATE portal_users SET " . implode(', ', $sets) . " WHERE id = ?")->execute($params);
+    return ['success' => true];
+}
+
+function portalDeleteUser($id) {
+    $db = getDB();
+    $db->prepare("DELETE FROM portal_users WHERE id = ?")->execute([$id]);
+    return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
+   Titles
+   ═══════════════════════════════════════════ */
+
+function portalAssignTitle($id) {
+    $body = jsonBody();
+    $db = getDB();
+    $stmt = $db->prepare("UPDATE portal_users SET title = ?, title_assigned_by = ?, title_assigned_at = NOW() WHERE id = ?");
+    $stmt->execute([$body['title'], $body['assigned_by'], $id]);
+    return ['success' => true];
+}
+
+function portalRevokeTitle($id) {
+    $db = getDB();
+    $stmt = $db->prepare("UPDATE portal_users SET title = NULL, title_assigned_by = NULL, title_assigned_at = NULL WHERE id = ?");
+    $stmt->execute([$id]);
+    return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
+   Dashboard Stats
+   ═══════════════════════════════════════════ */
+
+function portalDashboardStats() {
+    $db = getDB();
+    $role = $_GET['role'] ?? 'admin';
+    $userId = $_GET['userId'] ?? null;
+    $unitId = $_GET['unitId'] ?? null;
+
+    $stats = [];
+
+    // Units count
+    $stats['totalUnits'] = (int)$db->query("SELECT COUNT(*) FROM portal_units")->fetchColumn();
+
+    // Members count (scoped)
+    $memberSql = "SELECT status, COUNT(*) as cnt FROM portal_users WHERE role = 'member'";
+    $params = [];
+    if ($role === 'unit_president' && $unitId) { $memberSql .= " AND unit_id = ?"; $params[] = $unitId; }
+    $memberSql .= " GROUP BY status";
+    $stmt = $db->prepare($memberSql);
+    $stmt->execute($params);
+    $statusCounts = $stmt->fetchAll();
+
+    $total = 0; $active = 0; $inactive = 0; $migrated = 0;
+    foreach ($statusCounts as $row) {
+        $cnt = (int)$row['cnt'];
+        $total += $cnt;
+        if ($row['status'] === 'active') $active = $cnt;
+        elseif ($row['status'] === 'inactive') $inactive = $cnt;
+        elseif ($row['status'] === 'migrated') $migrated = $cnt;
+    }
+    $stats['totalMembers'] = $total;
+    $stats['activeMembers'] = $active;
+    $stats['inactiveMembers'] = $inactive;
+    $stats['migratedMembers'] = $migrated;
+
+    // Aggregates
+    $stats['totalUnitPresidents'] = (int)$db->query("SELECT COUNT(*) FROM portal_users WHERE role='unit_president'")->fetchColumn();
+    $stats['totalZonalSecretaries'] = (int)$db->query("SELECT COUNT(*) FROM portal_users WHERE role='zonal_secretary'")->fetchColumn();
+    $stats['pendingMigrations'] = (int)$db->query("SELECT COUNT(*) FROM portal_migration_requests WHERE status='pending'")->fetchColumn();
+
+    // Unread messages
+    if ($userId) {
+        $stmt = $db->prepare("SELECT COUNT(*) FROM portal_messages WHERE recipient_id = ? AND is_read = 0");
+        $stmt->execute([$userId]);
+        $stats['unreadMessages'] = (int)$stmt->fetchColumn();
+    } else {
+        $stats['unreadMessages'] = 0;
+    }
+
+    return $stats;
+}
+
+/* ═══════════════════════════════════════════
+   Migrations
+   ═══════════════════════════════════════════ */
+
+function portalGetMigrations() {
+    $db = getDB();
+    $status = $_GET['status'] ?? 'all';
+
+    $sql = "
+        SELECT m.*,
+            TRIM(CONCAT_WS(' ', mem.first_name, mem.middle_name, mem.last_name)) AS member_name,
+            fu.name AS from_unit_name,
+            tu.name AS to_unit_name,
+            TRIM(CONCAT_WS(' ', req.first_name, req.middle_name, req.last_name)) AS requested_by_name
+        FROM portal_migration_requests m
+        LEFT JOIN portal_users mem ON m.member_id = mem.id
+        LEFT JOIN portal_units fu ON m.from_unit_id = fu.id
+        LEFT JOIN portal_units tu ON m.to_unit_id = tu.id
+        LEFT JOIN portal_users req ON m.requested_by = req.id
+    ";
+    $params = [];
+    if ($status !== 'all') { $sql .= " WHERE m.status = ?"; $params[] = $status; }
+    $sql .= " ORDER BY m.created_at DESC";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function portalCreateMigration() {
+    $body = jsonBody();
+    $db = getDB();
+    $id = uuid();
+    $stmt = $db->prepare("INSERT INTO portal_migration_requests (id, member_id, from_unit_id, to_unit_id, requested_by) VALUES (?,?,?,?,?)");
+    $stmt->execute([$id, $body['member_id'], $body['from_unit_id'], $body['to_unit_id'], $body['requested_by']]);
+    return ['success' => true, 'id' => $id];
+}
+
+function portalResolveMigration($id) {
+    $body = jsonBody();
+    $db = getDB();
+    $stmt = $db->prepare("UPDATE portal_migration_requests SET status = ?, resolved_by = ?, resolved_at = NOW() WHERE id = ?");
+    $stmt->execute([$body['status'], $body['resolved_by'], $id]);
+
+    // If approved, move member
+    if ($body['status'] === 'approved') {
+        $mig = $db->prepare("SELECT member_id, to_unit_id FROM portal_migration_requests WHERE id = ?");
+        $mig->execute([$id]);
+        $row = $mig->fetch();
+        if ($row) {
+            $db->prepare("UPDATE portal_users SET unit_id = ?, status = 'migrated' WHERE id = ?")
+                ->execute([$row['to_unit_id'], $row['member_id']]);
+        }
+    }
+    return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
+   Messages
+   ═══════════════════════════════════════════ */
+
+function portalGetMessages() {
+    $db = getDB();
+    $userId = $_GET['userId'] ?? null;
+    $type = $_GET['type'] ?? 'inbox';
+
+    if (!$userId) { http_response_code(400); return ['error' => 'userId required.']; }
+
+    $sql = "
+        SELECT m.*,
+            TRIM(CONCAT_WS(' ', s.first_name, s.middle_name, s.last_name)) AS sender_name, s.role AS sender_role,
+            TRIM(CONCAT_WS(' ', r.first_name, r.middle_name, r.last_name)) AS recipient_name
+        FROM portal_messages m
+        LEFT JOIN portal_users s ON m.sender_id = s.id
+        LEFT JOIN portal_users r ON m.recipient_id = r.id
+    ";
+
+    if ($type === 'inbox') {
+        $sql .= " WHERE (m.recipient_id = ? OR (m.is_broadcast = 1 AND m.sender_id != ?))";
+        $params = [$userId, $userId];
+    } else {
+        $sql .= " WHERE m.sender_id = ?";
+        $params = [$userId];
+    }
+    $sql .= " ORDER BY m.created_at DESC";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function portalSendMessage() {
+    $body = jsonBody();
+    $db = getDB();
+    $senderId = $body['sender_id'];
+
+    if (!empty($body['is_broadcast']) || !empty($body['recipient_role'])) {
+        // Multi-recipient
+        $sql = "SELECT id FROM portal_users WHERE id != ?";
+        $params = [$senderId];
+        if (!empty($body['recipient_role'])) {
+            $sql .= " AND role = ?";
+            $params[] = $body['recipient_role'];
+        }
+        $recipients = $db->prepare($sql);
+        $recipients->execute($params);
+
+        $stmt = $db->prepare("INSERT INTO portal_messages (id, sender_id, recipient_id, recipient_role, subject, body, is_broadcast) VALUES (?,?,?,?,?,?,?)");
+        $count = 0;
+        foreach ($recipients->fetchAll() as $r) {
+            $stmt->execute([uuid(), $senderId, $r['id'], $body['recipient_role'] ?? null, $body['subject'], $body['body'], $body['is_broadcast'] ? 1 : 0]);
+            $count++;
+        }
+        return ['success' => true, 'sent' => $count];
+    } else {
+        // Single recipient
+        $id = uuid();
+        $stmt = $db->prepare("INSERT INTO portal_messages (id, sender_id, recipient_id, subject, body) VALUES (?,?,?,?,?)");
+        $stmt->execute([$id, $senderId, $body['recipient_id'], $body['subject'], $body['body']]);
+        return ['success' => true, 'id' => $id];
+    }
+}
+
+function portalMarkMessageRead($id) {
+    $db = getDB();
+    $db->prepare("UPDATE portal_messages SET is_read = 1 WHERE id = ?")->execute([$id]);
+    return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
+   Performance Forms
+   ═══════════════════════════════════════════ */
+
+function portalGetPerfForms() {
+    $db = getDB();
+    $unitId = $_GET['unitId'] ?? null;
+    $role = $_GET['role'] ?? null;
+    $userId = $_GET['userId'] ?? null;
+
+    $baseSql = "
+        SELECT f.*, u.full_name AS creator_name, pu.name AS scope_unit_name,
+            (SELECT COUNT(*) FROM portal_perf_fields WHERE form_id = f.id) AS field_count,
+            (SELECT COUNT(*) FROM portal_perf_responses WHERE form_id = f.id) AS response_count
+        FROM portal_perf_forms f
+        LEFT JOIN portal_users u ON f.created_by = u.id
+        LEFT JOIN portal_units pu ON f.scope_unit_id = pu.id
+    ";
+    $params = [];
+
+    if ($role === 'regional_president' && $userId) {
+        // Regional president sees only:
+        // 1. Forms they created themselves
+        // 2. Forms created by unit presidents within their region's units
+        $baseSql .= "
+            WHERE (
+                f.created_by = ?
+                OR f.created_by IN (
+                    SELECT pu2.id FROM portal_users pu2
+                    WHERE pu2.role = 'unit_president'
+                    AND pu2.unit_id IN (
+                        SELECT ru.unit_id FROM portal_region_units ru WHERE ru.regional_president_id = ?
+                    )
+                )
+                OR f.scope_unit_id IN (
+                    SELECT ru.unit_id FROM portal_region_units ru WHERE ru.regional_president_id = ?
+                )
+            )
+        ";
+        $params = [$userId, $userId, $userId];
+    } elseif ($role === 'unit_president' && $unitId) {
+        // Unit president sees forms scoped to their unit + zone-wide forms
+        $baseSql .= " WHERE (f.scope_unit_id = ? OR f.scope_unit_id IS NULL)";
+        $params[] = $unitId;
+    } elseif ($role === 'member' && $unitId) {
+        // Members see forms scoped to their unit + zone-wide forms
+        $baseSql .= " WHERE (f.scope_unit_id = ? OR f.scope_unit_id IS NULL)";
+        $params[] = $unitId;
+    }
+    // Admin and zonal_secretary see ALL forms (no filter)
+
+    $baseSql .= " ORDER BY f.created_at DESC";
+
+    $stmt = $db->prepare($baseSql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function portalGetPerfForm($id) {
+    $db = getDB();
+
+    // Form
+    $stmt = $db->prepare("
+        SELECT f.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS creator_name, pu.name AS scope_unit_name
+        FROM portal_perf_forms f
+        LEFT JOIN portal_users u ON f.created_by = u.id
+        LEFT JOIN portal_units pu ON f.scope_unit_id = pu.id
+        WHERE f.id = ?
+    ");
+    $stmt->execute([$id]);
+    $form = $stmt->fetch();
+    if (!$form) { http_response_code(404); return ['error' => 'Form not found.']; }
+
+    // Fields
+    $fields = $db->prepare("SELECT * FROM portal_perf_fields WHERE form_id = ? ORDER BY display_order");
+    $fields->execute([$id]);
+    $form['fields'] = $fields->fetchAll();
+
+    // Decode JSON options
+    foreach ($form['fields'] as &$f) {
+        if ($f['options'] && is_string($f['options'])) $f['options'] = json_decode($f['options'], true);
+    }
+
+    return $form;
+}
+
+function portalCreatePerfForm() {
+    $body = jsonBody();
+    $db = getDB();
+    $formId = uuid();
+
+    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_unit_id, period) VALUES (?,?,?,?,?,?)");
+    $stmt->execute([$formId, $body['title'], $body['description'] ?? null, $body['created_by'], $body['scope_unit_id'] ?? null, $body['period'] ?? null]);
+
+    // Insert fields
+    if (!empty($body['fields'])) {
+        $fstmt = $db->prepare("INSERT INTO portal_perf_fields (id, form_id, type, label, description, options, is_required, display_order, max_value) VALUES (?,?,?,?,?,?,?,?,?)");
+        foreach ($body['fields'] as $i => $f) {
+            $fstmt->execute([uuid(), $formId, $f['type'], $f['label'], $f['description'] ?? null, isset($f['options']) ? json_encode($f['options']) : null, $f['is_required'] ?? 1, $i, $f['max_value'] ?? null]);
+        }
+    }
+
+    return ['success' => true, 'id' => $formId];
+}
+
+function portalUpdatePerfForm($id) {
+    $body = jsonBody();
+    $db = getDB();
+
+    // Update form metadata
+    $allowed = ['title','description','scope_unit_id','period','is_active'];
+    $sets = []; $params = [];
+    foreach ($allowed as $key) {
+        if (array_key_exists($key, $body)) { $sets[] = "$key = ?"; $params[] = $body[$key]; }
+    }
+    if (!empty($sets)) {
+        $params[] = $id;
+        $db->prepare("UPDATE portal_perf_forms SET " . implode(', ', $sets) . " WHERE id = ?")->execute($params);
+    }
+
+    // Replace fields if provided
+    if (isset($body['fields'])) {
+        $db->prepare("DELETE FROM portal_perf_fields WHERE form_id = ?")->execute([$id]);
+        $fstmt = $db->prepare("INSERT INTO portal_perf_fields (id, form_id, type, label, description, options, is_required, display_order, max_value) VALUES (?,?,?,?,?,?,?,?,?)");
+        foreach ($body['fields'] as $i => $f) {
+            $fstmt->execute([uuid(), $id, $f['type'], $f['label'], $f['description'] ?? null, isset($f['options']) ? json_encode($f['options']) : null, $f['is_required'] ?? 1, $i, $f['max_value'] ?? null]);
+        }
+    }
+
+    return ['success' => true];
+}
+
+function portalDeletePerfForm($id) {
+    $db = getDB();
+    $db->prepare("DELETE FROM portal_perf_forms WHERE id = ?")->execute([$id]);
+    return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
+   Performance Responses
+   ═══════════════════════════════════════════ */
+
+function portalGetPerfResponses($formId) {
+    $db = getDB();
+    $stmt = $db->prepare("
+        SELECT r.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS member_name, u.phone AS member_phone, pu.name AS unit_name
+        FROM portal_perf_responses r
+        LEFT JOIN portal_users u ON r.member_id = u.id
+        LEFT JOIN portal_units pu ON u.unit_id = pu.id
+        WHERE r.form_id = ?
+        ORDER BY r.submitted_at DESC
+    ");
+    $stmt->execute([$formId]);
+    $rows = $stmt->fetchAll();
+    foreach ($rows as &$r) {
+        if ($r['response_data'] && is_string($r['response_data'])) $r['response_data'] = json_decode($r['response_data'], true);
+    }
+    return $rows;
+}
+
+function portalSubmitPerfResponse($formId) {
+    $body = jsonBody();
+    $db = getDB();
+
+    // Check existing
+    $existing = $db->prepare("SELECT id FROM portal_perf_responses WHERE form_id = ? AND member_id = ?");
+    $existing->execute([$formId, $body['member_id']]);
+
+    if ($existing->fetch()) {
+        // Update
+        $db->prepare("UPDATE portal_perf_responses SET response_data = ? WHERE form_id = ? AND member_id = ?")
+            ->execute([json_encode($body['response_data']), $formId, $body['member_id']]);
+        return ['success' => true, 'updated' => true];
+    } else {
+        // Insert
+        $db->prepare("INSERT INTO portal_perf_responses (id, form_id, member_id, response_data) VALUES (?,?,?,?)")
+            ->execute([uuid(), $formId, $body['member_id'], json_encode($body['response_data'])]);
+        return ['success' => true, 'created' => true];
+    }
+}
+
+/* ═══════════════════════════════════════════
+   Avatar Upload
+   ═══════════════════════════════════════════ */
+
+function portalUploadAvatar($id) {
+    if (!isset($_FILES['file'])) {
+        http_response_code(400);
+        return ['error' => 'No file uploaded.'];
+    }
+
+    $file = $_FILES['file'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ['jpg','jpeg','png','webp','gif'])) {
+        http_response_code(400);
+        return ['error' => 'Invalid file type.'];
+    }
+    if ($file['size'] > 5 * 1024 * 1024) {
+        http_response_code(400);
+        return ['error' => 'File too large (max 5MB).'];
+    }
+
+    $dir = __DIR__ . '/../uploads/avatars/';
+    if (!is_dir($dir)) mkdir($dir, 0755, true);
+
+    // Remove old avatar files for this user
+    foreach (glob($dir . $id . '.*') as $old) unlink($old);
+
+    $filename = $id . '.' . $ext;
+    move_uploaded_file($file['tmp_name'], $dir . $filename);
+
+    $url = BASE_URL . '/uploads/avatars/' . $filename . '?t=' . time();
+
+    // Update user record
+    $db = getDB();
+    $db->prepare("UPDATE portal_users SET avatar_url = ? WHERE id = ?")->execute([$url, $id]);
+
+    return ['success' => true, 'url' => $url];
+}
+
+function portalDeleteAvatar($id) {
+    $dir = __DIR__ . '/../uploads/avatars/';
+    foreach (glob($dir . $id . '.*') as $old) @unlink($old);
+
+    $db = getDB();
+    $db->prepare("UPDATE portal_users SET avatar_url = NULL WHERE id = ?")->execute([$id]);
+
+    return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
+   Region Units
+   ═══════════════════════════════════════════ */
+
+function portalGetRegionUnits($rpId) {
+    $db = getDB();
+    $stmt = $db->prepare("SELECT unit_id FROM portal_region_units WHERE regional_president_id = ?");
+    $stmt->execute([$rpId]);
+    return array_column($stmt->fetchAll(), 'unit_id');
+}
+
+/* ═══════════════════════════════════════════
+   Performance response reviews
+   ═══════════════════════════════════════════ */
+
+function canReviewResponse($db, $reviewerId, $responseId) {
+    $stmt = $db->prepare("
+        SELECT r.member_id, u.unit_id AS member_unit_id, f.scope_unit_id AS form_scope_unit_id
+        FROM portal_perf_responses r
+        JOIN portal_users u ON r.member_id = u.id
+        JOIN portal_perf_forms f ON r.form_id = f.id
+        WHERE r.id = ?
+    ");
+    $stmt->execute([$responseId]);
+    $row = $stmt->fetch();
+    if (!$row) return false;
+
+    $stmt = $db->prepare("SELECT role, unit_id FROM portal_users WHERE id = ?");
+    $stmt->execute([$reviewerId]);
+    $reviewer = $stmt->fetch();
+    if (!$reviewer) return false;
+
+    $role = $reviewer['role'];
+    if ($role === 'admin' || $role === 'zonal_secretary') return true;
+    if ($role === 'unit_president' && $reviewer['unit_id'] === $row['member_unit_id']) return true;
+    if ($role === 'regional_president') {
+        $check = $db->prepare("SELECT 1 FROM portal_region_units WHERE regional_president_id = ? AND unit_id = ?");
+        $check->execute([$reviewerId, $row['member_unit_id']]);
+        return $check->fetch() ? true : false;
+    }
+    return false;
+}
+
+function portalGetPerfResponseReviews($formId, $responseId) {
+    $db = getDB();
+    $stmt = $db->prepare("
+        SELECT rev.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS reviewer_name
+        FROM portal_perf_reviews rev
+        LEFT JOIN portal_users u ON rev.reviewer_id = u.id
+        WHERE rev.response_id = ?
+        ORDER BY rev.created_at DESC
+    ");
+    $stmt->execute([$responseId]);
+    return $stmt->fetchAll();
+}
+
+function portalUpsertPerfResponseReview($formId, $responseId) {
+    $body = jsonBody();
+    $reviewerId = $body['reviewer_id'] ?? null;
+    $comment = $body['comment'] ?? null;
+    $rating = isset($body['rating']) ? (int)$body['rating'] : null;
+
+    if (!$reviewerId) {
+        http_response_code(400);
+        return ['error' => 'reviewer_id required.'];
+    }
+
+    $db = getDB();
+    if (!canReviewResponse($db, $reviewerId, $responseId)) {
+        http_response_code(403);
+        return ['error' => 'Not allowed to review this response.'];
+    }
+
+    $existing = $db->prepare("SELECT id FROM portal_perf_reviews WHERE response_id = ? AND reviewer_id = ?");
+    $existing->execute([$responseId, $reviewerId]);
+    $row = $existing->fetch();
+
+    if ($row) {
+        $db->prepare("UPDATE portal_perf_reviews SET comment = ?, rating = ? WHERE id = ?")
+            ->execute([$comment, $rating, $row['id']]);
+        return ['success' => true, 'id' => $row['id'], 'updated' => true];
+    }
+
+    $id = uuid();
+    $db->prepare("INSERT INTO portal_perf_reviews (id, response_id, reviewer_id, comment, rating) VALUES (?,?,?,?,?)")
+        ->execute([$id, $responseId, $reviewerId, $comment, $rating]);
+    return ['success' => true, 'id' => $id];
+}
+
+function portalUpdatePerfReview($reviewId) {
+    $body = jsonBody();
+    $reviewerId = $body['reviewer_id'] ?? $_GET['reviewer_id'] ?? null;
+    if (!$reviewerId) {
+        http_response_code(400);
+        return ['error' => 'reviewer_id required.'];
+    }
+
+    $db = getDB();
+    $stmt = $db->prepare("SELECT reviewer_id FROM portal_perf_reviews WHERE id = ?");
+    $stmt->execute([$reviewId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        http_response_code(404);
+        return ['error' => 'Review not found.'];
+    }
+    if ($row['reviewer_id'] !== $reviewerId) {
+        http_response_code(403);
+        return ['error' => 'Not allowed to update this review.'];
+    }
+
+    $comment = $body['comment'] ?? null;
+    $rating = isset($body['rating']) ? (int)$body['rating'] : null;
+    $db->prepare("UPDATE portal_perf_reviews SET comment = ?, rating = ? WHERE id = ?")
+        ->execute([$comment, $rating, $reviewId]);
+    return ['success' => true];
+}
+
+function portalDeletePerfReview($reviewId) {
+    $body = jsonBody();
+    $reviewerId = $body['reviewer_id'] ?? $_GET['reviewer_id'] ?? null;
+    if (!$reviewerId) {
+        http_response_code(400);
+        return ['error' => 'reviewer_id required.'];
+    }
+
+    $db = getDB();
+    $stmt = $db->prepare("SELECT reviewer_id FROM portal_perf_reviews WHERE id = ?");
+    $stmt->execute([$reviewId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        http_response_code(404);
+        return ['error' => 'Review not found.'];
+    }
+    if ($row['reviewer_id'] !== $reviewerId) {
+        http_response_code(403);
+        return ['error' => 'Not allowed to delete this review.'];
+    }
+
+    $db->prepare("DELETE FROM portal_perf_reviews WHERE id = ?")->execute([$reviewId]);
+    return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
+   Helpers
+   ═══════════════════════════════════════════ */
+
+function formatUser($row) {
+    $fullName = isset($row['first_name']) ? buildFullName($row['first_name'], $row['middle_name'] ?? null, $row['last_name']) : ($row['full_name'] ?? '');
+    $overrides = $row['permission_overrides'] ?? null;
+    if (is_string($overrides)) {
+        $decoded = json_decode($overrides, true);
+        $overrides = is_array($decoded) ? $decoded : null;
+    }
+    return [
+        'id' => $row['id'],
+        'first_name' => $row['first_name'] ?? null,
+        'middle_name' => $row['middle_name'] ?? null,
+        'last_name' => $row['last_name'] ?? null,
+        'full_name' => $fullName,
+        'username' => $row['username'] ?? null,
+        'phone' => $row['phone'],
+        'role' => $row['role'],
+        'unit_id' => $row['unit_id'],
+        'unit_name' => $row['unit_name'] ?? null,
+        'circle_id' => $row['circle_id'] ?? null,
+        'circle_name' => $row['circle_name'] ?? null,
+        'permission_overrides' => $overrides,
+        'date_of_birth' => $row['date_of_birth'] ?? null,
+        'avatar_url' => $row['avatar_url'] ?? null,
+        'title' => $row['title'] ?? null,
+        'title_assigned_by' => $row['title_assigned_by'] ?? null,
+        'title_assigned_at' => $row['title_assigned_at'] ?? null,
+        'status' => $row['status'] ?? 'active',
+        'created_at' => $row['created_at'],
+        'updated_at' => $row['updated_at'],
+    ];
+}

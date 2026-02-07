@@ -32,6 +32,7 @@ import { FrameToolPage } from './pages/FrameToolPage'
 import { PosterToolPage } from './pages/PosterToolPage'
 import { FilterToolPage } from './pages/FilterToolPage'
 
+import { PortalRoutes } from './portal/PortalRoutes'
 
 import { ToolProvider } from './context/ToolContext'
 import { usePageTracker } from './hooks/usePageTracker'
@@ -48,6 +49,9 @@ function App() {
         <ToolProvider>
           <PageTracker />
           <Routes>
+            {/* ═══ Member Management Portal ═══ */}
+            <Route path="/portal/*" element={<PortalRoutes />} />
+
             {/* Admin Routes - NOT wrapped in Layout */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route element={<ProtectedRoute />}>
