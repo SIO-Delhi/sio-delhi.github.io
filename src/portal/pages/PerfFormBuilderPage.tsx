@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import * as api from '../api'
 import type { PortalUnit, PerfFieldType } from '../types'
-import { ROLE_DASHBOARD_PATHS } from '../constants'
 
 interface FieldDraft {
   key: string
@@ -82,7 +81,7 @@ export function PerfFormBuilderPage() {
       await api.createPerfForm({
         title: title.trim(),
         description: description.trim() || undefined,
-        created_by: user.id,
+        created_by: user!.id,
         scope_unit_id: scopeUnitId || null,
         period: period.trim() || undefined,
         fields: fields.map(f => ({

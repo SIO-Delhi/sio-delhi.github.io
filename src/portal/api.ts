@@ -1,6 +1,7 @@
 import { api, API_BASE, authFetch } from '../lib/api'
 import type {
   PortalUnit,
+  PortalCircle,
   PortalUser,
   PortalRole,
   MigrationRequest,
