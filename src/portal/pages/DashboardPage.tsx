@@ -76,7 +76,7 @@ export function DashboardPage() {
     <div className="portal-page">
       {/* Welcome */}
       <div>
-        <h1 className="portal-heading">Welcome back, {user.first_name}</h1>
+        <h1 className="portal-heading">Welcome back, {user.full_name || user.first_name}</h1>
         <p className="portal-subheading">
           {ROLE_LABELS[user.role]}{user.title ? ` — ${user.title}` : ''} Dashboard — Delhi Zone
           {user.unit_name && <span> &middot; {user.unit_name}</span>}
@@ -106,6 +106,7 @@ export function DashboardPage() {
           <h3 className="portal-overview-card-title">Overview</h3>
           <div className="portal-grid-overview">
             {[
+              { label: 'Name', value: user.full_name },
               { label: 'Zone', value: 'Delhi' },
               { label: 'Role', value: ROLE_LABELS[user.role] },
               ...(user.unit_name ? [{ label: 'Unit', value: user.unit_name }] : []),

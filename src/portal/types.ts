@@ -18,6 +18,12 @@ export interface PortalCircle {
   created_at: string
 }
 
+export interface PortalCampus {
+  id: string
+  name: string
+  created_at: string
+}
+
 export interface PortalUser {
   id: string
   first_name: string
@@ -29,6 +35,10 @@ export interface PortalUser {
   role: PortalRole
   unit_id: string | null
   unit_name?: string
+  circle_id?: string | null
+  circle_name?: string | null
+  campus_id?: string | null
+  campus_name?: string | null
   date_of_birth: string | null
   avatar_url: string | null
   title: string | null
@@ -180,7 +190,7 @@ export interface DashboardStat {
   change?: string
 }
 
-export type EntityType = 'units' | 'circles' | 'zonal-secretaries' | 'regional-presidents' | 'unit-presidents' | 'members'
+export type EntityType = 'units' | 'circles' | 'campuses' | 'zonal-secretaries' | 'regional-presidents' | 'unit-presidents' | 'members'
 
 /* ── RBAC Permissions ── */
 

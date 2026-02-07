@@ -78,6 +78,14 @@ function portalSetup() {
     ");
 
     $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_campuses (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $db->exec("
         CREATE TABLE IF NOT EXISTS portal_users (
             id VARCHAR(36) PRIMARY KEY,
             first_name VARCHAR(128) NOT NULL,
@@ -90,6 +98,7 @@ function portalSetup() {
             role ENUM('admin','zonal_secretary','regional_president','unit_president','member') NOT NULL,
             unit_id VARCHAR(36),
             circle_id VARCHAR(36),
+            campus_id VARCHAR(36),
             permission_overrides JSON,
             avatar_url TEXT,
             title VARCHAR(255),
@@ -100,7 +109,8 @@ function portalSetup() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (unit_id) REFERENCES portal_units(id) ON DELETE SET NULL,
             FOREIGN KEY (circle_id) REFERENCES portal_circles(id) ON DELETE SET NULL,
-            INDEX idx_pu_role (role), INDEX idx_pu_unit (unit_id), INDEX idx_pu_circle (circle_id), INDEX idx_pu_phone (phone), INDEX idx_pu_username (username)
+            FOREIGN KEY (campus_id) REFERENCES portal_campuses(id) ON DELETE SET NULL,
+            INDEX idx_pu_role (role), INDEX idx_pu_unit (unit_id), INDEX idx_pu_circle (circle_id), INDEX idx_pu_campus (campus_id), INDEX idx_pu_phone (phone), INDEX idx_pu_username (username)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
 
@@ -152,6 +162,19 @@ function portalSetup() {
         $db->exec("ALTER TABLE portal_users ADD COLUMN permission_overrides JSON AFTER circle_id");
     } catch (Exception $e) {
         // Columns already exist
+    }
+    // Create portal_campuses if missing
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_campuses (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN campus_id VARCHAR(36) AFTER circle_id");
+    } catch (Exception $e) {
+        // Column already exists
     }
 
     $db->exec("
@@ -553,6 +576,41 @@ function portalDeleteCircle($id) {
 }
 
 /* ═══════════════════════════════════════════
+   Campuses (same level as units and circles)
+   ═══════════════════════════════════════════ */
+
+function portalGetCampuses() {
+    $db = getDB();
+    return $db->query("SELECT * FROM portal_campuses ORDER BY name")->fetchAll();
+}
+
+function portalCreateCampuses() {
+    $body = jsonBody();
+    $campuses = $body['campuses'] ?? [];
+    $db = getDB();
+    $stmt = $db->prepare("INSERT INTO portal_campuses (id, name) VALUES (?, ?)");
+    foreach ($campuses as $c) {
+        $stmt->execute([uuid(), $c['name']]);
+    }
+    return ['success' => true, 'count' => count($campuses)];
+}
+
+function portalUpdateCampus($id) {
+    $body = jsonBody();
+    $db = getDB();
+    $stmt = $db->prepare("UPDATE portal_campuses SET name = ? WHERE id = ?");
+    $stmt->execute([$body['name'], $id]);
+    return ['success' => true];
+}
+
+function portalDeleteCampus($id) {
+    $db = getDB();
+    $db->prepare("UPDATE portal_users SET campus_id = NULL WHERE campus_id = ?")->execute([$id]);
+    $db->prepare("DELETE FROM portal_campuses WHERE id = ?")->execute([$id]);
+    return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
    Users
    ═══════════════════════════════════════════ */
 
@@ -563,15 +621,18 @@ function portalGetUsers() {
     $circleId = $_GET['circleId'] ?? null;
     $titleOnly = $_GET['titleOnly'] ?? null;
 
-    $sql = "SELECT u.*, pu.name AS unit_name, pc.name AS circle_name FROM portal_users u
+    $sql = "SELECT u.*, pu.name AS unit_name, pc.name AS circle_name, pca.name AS campus_name FROM portal_users u
             LEFT JOIN portal_units pu ON u.unit_id = pu.id
             LEFT JOIN portal_circles pc ON u.circle_id = pc.id
+            LEFT JOIN portal_campuses pca ON u.campus_id = pca.id
             WHERE 1=1";
     $params = [];
 
     if ($role) { $sql .= " AND u.role = ?"; $params[] = $role; }
     if ($unitId) { $sql .= " AND u.unit_id = ?"; $params[] = $unitId; }
     if ($circleId) { $sql .= " AND u.circle_id = ?"; $params[] = $circleId; }
+    $campusId = $_GET['campusId'] ?? null;
+    if ($campusId) { $sql .= " AND u.campus_id = ?"; $params[] = $campusId; }
     if ($titleOnly) { $sql .= " AND u.title IS NOT NULL"; }
 
     $sql .= " ORDER BY u.first_name, u.last_name";
@@ -583,9 +644,10 @@ function portalGetUsers() {
 
 function portalGetUser($id) {
     $db = getDB();
-    $stmt = $db->prepare("SELECT u.*, pu.name AS unit_name, pc.name AS circle_name FROM portal_users u
+    $stmt = $db->prepare("SELECT u.*, pu.name AS unit_name, pc.name AS circle_name, pca.name AS campus_name FROM portal_users u
             LEFT JOIN portal_units pu ON u.unit_id = pu.id
             LEFT JOIN portal_circles pc ON u.circle_id = pc.id
+            LEFT JOIN portal_campuses pca ON u.campus_id = pca.id
             WHERE u.id = ?");
     $stmt->execute([$id]);
     $user = $stmt->fetch();
@@ -622,7 +684,7 @@ function portalCreateUsers() {
 function portalUpdateUser($id) {
     $body = jsonBody();
     $db = getDB();
-    $allowed = ['first_name','middle_name','last_name','username','phone','password','date_of_birth','role','unit_id','circle_id','avatar_url','status','permission_overrides'];
+    $allowed = ['first_name','middle_name','last_name','username','phone','password','date_of_birth','role','unit_id','circle_id','campus_id','avatar_url','status','permission_overrides'];
     $sets = []; $params = [];
     foreach ($allowed as $key) {
         if (array_key_exists($key, $body)) {
@@ -816,6 +878,28 @@ function portalSendMessage() {
     $db = getDB();
     $senderId = $body['sender_id'];
 
+    $sender = $db->prepare("SELECT role, unit_id FROM portal_users WHERE id = ?");
+    $sender->execute([$senderId]);
+    $senderRow = $sender->fetch();
+    if ($senderRow && $senderRow['role'] === 'member') {
+        if (!empty($body['is_broadcast']) || !empty($body['recipient_role'])) {
+            http_response_code(403);
+            return ['error' => 'Members can only message their unit president or zonal secretary.'];
+        }
+        $recipientId = $body['recipient_id'] ?? null;
+        if (!$recipientId) {
+            http_response_code(400);
+            return ['error' => 'Please select a recipient.'];
+        }
+        $rec = $db->prepare("SELECT role, unit_id FROM portal_users WHERE id = ?");
+        $rec->execute([$recipientId]);
+        $recRow = $rec->fetch();
+        if (!$recRow || ($recRow['role'] !== 'zonal_secretary' && !($recRow['role'] === 'unit_president' && $recRow['unit_id'] === $senderRow['unit_id']))) {
+            http_response_code(403);
+            return ['error' => 'Members can only message their unit president or zonal secretary.'];
+        }
+    }
+
     if (!empty($body['is_broadcast']) || !empty($body['recipient_role'])) {
         // Multi-recipient
         $sql = "SELECT id FROM portal_users WHERE id != ?";
@@ -860,7 +944,7 @@ function portalGetPerfForms() {
     $userId = $_GET['userId'] ?? null;
 
     $baseSql = "
-        SELECT f.*, u.full_name AS creator_name, pu.name AS scope_unit_name,
+        SELECT f.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS creator_name, pu.name AS scope_unit_name,
             (SELECT COUNT(*) FROM portal_perf_fields WHERE form_id = f.id) AS field_count,
             (SELECT COUNT(*) FROM portal_perf_responses WHERE form_id = f.id) AS response_count
         FROM portal_perf_forms f
@@ -1245,6 +1329,8 @@ function formatUser($row) {
         'unit_name' => $row['unit_name'] ?? null,
         'circle_id' => $row['circle_id'] ?? null,
         'circle_name' => $row['circle_name'] ?? null,
+        'campus_id' => $row['campus_id'] ?? null,
+        'campus_name' => $row['campus_name'] ?? null,
         'permission_overrides' => $overrides,
         'date_of_birth' => $row['date_of_birth'] ?? null,
         'avatar_url' => $row['avatar_url'] ?? null,

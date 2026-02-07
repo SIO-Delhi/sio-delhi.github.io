@@ -48,7 +48,7 @@ function getClerkPublicKey($kid = null) {
     }
 
     // Fetch fresh JWKS from Clerk
-    $jwksUrl = env('CLERK_JWKS_URL', 'https://assuring-cougar-48.clerk.accounts.dev/.well-known/jwks.json');
+    $jwksUrl = env('CLERK_JWKS_URL', 'https://clerk.siodelhi.org/.well-known/jwks.json');
 
     $context = stream_context_create([
         'http' => ['timeout' => 10],

@@ -130,6 +130,8 @@ export function PortalRoutes() {
                 <Route path="admin/units/manage" element={<ManagePage entity="units" />} />
                 <Route path="admin/circles/add" element={<BulkAddPage entity="circles" />} />
                 <Route path="admin/circles/manage" element={<ManagePage entity="circles" />} />
+                <Route path="admin/campuses/add" element={<BulkAddPage entity="campuses" />} />
+                <Route path="admin/campuses/manage" element={<ManagePage entity="campuses" />} />
                 <Route path="admin/zonal-secretaries/add" element={<BulkAddPage entity="zonal-secretaries" />} />
                 <Route path="admin/zonal-secretaries/manage" element={<ManagePage entity="zonal-secretaries" />} />
                 <Route path="admin/regional-presidents/add" element={<BulkAddPage entity="regional-presidents" />} />
@@ -153,6 +155,7 @@ export function PortalRoutes() {
                 <Route path="zonal/dashboard" element={<DashboardPage />} />
                 <Route path="zonal/units" element={<ManagePage entity="units" readOnly />} />
                 <Route path="zonal/circles" element={<ManagePage entity="circles" readOnly />} />
+                <Route path="zonal/campuses" element={<ManagePage entity="campuses" readOnly />} />
                 <Route path="zonal/regional-presidents" element={<ManagePage entity="regional-presidents" readOnly />} />
                 <Route path="zonal/unit-presidents" element={<ManagePage entity="unit-presidents" readOnly />} />
                 <Route path="zonal/members" element={<ManagePage entity="members" readOnly />} />

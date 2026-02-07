@@ -13,7 +13,7 @@ function getAvailableRoleTargets(userRole: PortalRole): PortalRole[] {
     case 'zonal_secretary': return ['regional_president', 'unit_president', 'member']
     case 'regional_president': return ['unit_president', 'member']
     case 'unit_president': return ['member']
-    case 'member': return ['unit_president', 'regional_president', 'zonal_secretary']
+    case 'member': return ['unit_president', 'zonal_secretary']
   }
 }
 
@@ -33,9 +33,19 @@ export function MessagesComposePage() {
   const roleTargets = user ? getAvailableRoleTargets(user.role) : []
   if (!user) return null
 
-  const individualRecipients = users.filter(u => u.id !== user.id)
+  const individualRecipients = user.role === 'member'
+    ? users.filter(u => u.id !== user.id && (
+        (u.role === 'unit_president' && u.unit_id === user.unit_id) ||
+        u.role === 'zonal_secretary'
+      ))
+    : users.filter(u => u.id !== user.id)
   const canBroadcast = user.role !== 'member' || !!user.title
-  const availableModes: RecipientMode[] = canBroadcast ? ['individual', 'role', 'broadcast'] : ['individual', 'role']
+  const memberOnlyIndividual = user.role === 'member'
+  const availableModes: RecipientMode[] = memberOnlyIndividual
+    ? ['individual']
+    : canBroadcast
+      ? ['individual', 'role', 'broadcast']
+      : ['individual', 'role']
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault(); if (!user) return; setError(null); setSuccess(false)
@@ -56,7 +66,11 @@ export function MessagesComposePage() {
     <div className="portal-page portal-page-narrow">
       <div>
         <h1 className="portal-heading">Compose Message</h1>
-        <p className="portal-subheading">Send a message to individuals, groups, or broadcast to everyone.</p>
+        <p className="portal-subheading">
+          {user.role === 'member'
+            ? 'Send a message to your unit president or zonal secretary.'
+            : 'Send a message to individuals, groups, or broadcast to everyone.'}
+        </p>
       </div>
 
       {success && <div className="portal-alert portal-alert-success"><CheckCircle size={18} /> <p>Message sent successfully!</p></div>}

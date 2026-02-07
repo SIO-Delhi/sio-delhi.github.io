@@ -13,6 +13,7 @@ import {
   Award,
   Globe,
   CircleDot,
+  GraduationCap,
 } from 'lucide-react'
 import type { PortalRole, CSVFieldDef, EditField, Permission } from './types'
 
@@ -40,6 +41,13 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
       children: [
         { label: 'Add Circles', path: '/portal/admin/circles/add', icon: CircleDot },
         { label: 'Manage Circles', path: '/portal/admin/circles/manage', icon: CircleDot },
+      ],
+    },
+    {
+      label: 'Campuses', path: '#', icon: GraduationCap,
+      children: [
+        { label: 'Add Campuses', path: '/portal/admin/campuses/add', icon: GraduationCap },
+        { label: 'Manage Campuses', path: '/portal/admin/campuses/manage', icon: GraduationCap },
       ],
     },
     {
@@ -85,6 +93,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
     { label: 'Dashboard', path: '/portal/zonal/dashboard', icon: LayoutDashboard },
     { label: 'Units', path: '/portal/zonal/units', icon: Building2 },
     { label: 'Circles', path: '/portal/zonal/circles', icon: CircleDot },
+    { label: 'Campuses', path: '/portal/zonal/campuses', icon: GraduationCap },
     { label: 'Regional Presidents', path: '/portal/zonal/regional-presidents', icon: Globe },
     { label: 'Unit Presidents', path: '/portal/zonal/unit-presidents', icon: UserCheck },
     { label: 'Members', path: '/portal/zonal/members', icon: Users },
@@ -237,6 +246,9 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
   circles: [
     { key: 'name', label: 'Circle Name', type: 'text', required: true, placeholder: 'e.g. Study Circle A' },
   ],
+  campuses: [
+    { key: 'name', label: 'Campus Name', type: 'text', required: true, placeholder: 'e.g. Jamia Campus' },
+  ],
   'zonal-secretaries': [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
@@ -252,6 +264,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'unit_id', label: 'Unit', type: 'select', required: true },
     { key: 'circle_id', label: 'Circle', type: 'select', required: false },
+    { key: 'campus_id', label: 'Campus', type: 'select', required: false },
   ],
   'unit-presidents': [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
@@ -260,6 +273,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'unit_id', label: 'Unit', type: 'select', required: true },
     { key: 'circle_id', label: 'Circle', type: 'select', required: false },
+    { key: 'campus_id', label: 'Campus', type: 'select', required: false },
   ],
   members: [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
@@ -269,6 +283,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'date_of_birth', label: 'Date of Birth (DDMMYYYY)', type: 'text', required: true, placeholder: 'e.g. 25031999' },
     { key: 'unit_id', label: 'Unit', type: 'select', required: true },
     { key: 'circle_id', label: 'Circle', type: 'select', required: false },
+    { key: 'campus_id', label: 'Campus', type: 'select', required: false },
     { key: 'status', label: 'Status', type: 'select', required: true, options: [
       { value: 'active', label: 'Active' },
       { value: 'inactive', label: 'Inactive' },
@@ -280,6 +295,9 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
 export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
   units: [
     { key: 'name', label: 'Unit Name', required: true, example: 'Jamia Unit' },
+  ],
+  campuses: [
+    { key: 'name', label: 'Campus Name', required: true, example: 'Jamia Campus' },
   ],
   'zonal-secretaries': [
     { key: 'first_name', label: 'First Name', required: true, example: 'Ramesh' },
@@ -319,6 +337,7 @@ export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
 export const ENTITY_LABELS: Record<string, { plural: string; singular: string }> = {
   units: { plural: 'Units', singular: 'Unit' },
   circles: { plural: 'Circles', singular: 'Circle' },
+  campuses: { plural: 'Campuses', singular: 'Campus' },
   'zonal-secretaries': { plural: 'Zonal Secretaries', singular: 'Zonal Secretary' },
   'regional-presidents': { plural: 'Regional Presidents', singular: 'Regional President' },
   'unit-presidents': { plural: 'Unit Presidents', singular: 'Unit President' },
@@ -328,6 +347,7 @@ export const ENTITY_LABELS: Record<string, { plural: string; singular: string }>
 export const ENTITY_ROLE_MAP: Record<string, PortalRole | null> = {
   units: null,
   circles: null,
+  campuses: null,
   'zonal-secretaries': 'zonal_secretary',
   'regional-presidents': 'regional_president',
   'unit-presidents': 'unit_president',

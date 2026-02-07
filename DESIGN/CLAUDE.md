@@ -41,19 +41,23 @@ The system uses Role-Based Access Control. Each role has a fixed set of default 
 | Approve migrations    | ✓     | ✓         | —             | —         | —             | —      |
 | Initiate migrations   | ✓     | ✓         | ✓             | —         | —             | ✓ Own  |
 | View performance      | ✓     | ✓         | Own region     | Own unit  | Own unit      | Own    |
-| Send messages         | ✓     | ✓         | ✓             | Own unit  | Own unit      | Up     |
+| Send messages         | ✓     | ✓         | ✓             | Own unit  | Own unit      | Unit pres, Zonal sec only |
 | Broadcast messages    | ✓     | ✓         | Own region     | Own unit  | Own unit      | —      |
 | View own profile      | ✓     | ✓         | ✓             | ✓         | ✓             | ✓      |
 | Edit own profile      | ✓     | ✓         | ✓             | ✓         | ✓             | ✓      |
 
-> "Up" means the member can message their unit president, regional president, or zonal secretary.
+> "Unit pres, Zonal sec only" means the member can message **only** their unit president or the zonal secretary (not regional president or other members).
 > "Titled Member" means a member with an assigned title — they get the same view as their unit president for read-only access within the unit, plus the ability to message within the unit.
 
 This thing is to keep track of the members, their performance, and if they are migrating to other zones etc.
 
 ### Circles
 
-**Circles** are at the same level as **Units**: they are a separate grouping. Each user can belong to one **unit** (required in practice; admin/zonal/regional are assigned to e.g. "SIO Delhi HQ") and optionally to one **circle**. Circles have their own list and CRUD (Add/Manage) under Admin; Zonal can view circles. Members are assigned to a circle via the user’s `circle_id` (and `circle_name` in the UI).
+**Circles** are at the same level as **Units** and **Campuses**: they are a separate grouping. Each user can belong to one **unit** (required in practice; admin/zonal/regional are assigned to e.g. "SIO Delhi HQ") and optionally to one **circle**. Circles have their own list and CRUD (Add/Manage) under Admin; Zonal can view circles. Members are assigned to a circle via the user’s `circle_id` (and `circle_name` in the UI).
+
+### Campuses
+
+**Campuses** are at the same level as **Units** and **Circles**: a separate grouping. Each user can optionally belong to one **campus**. Campuses have their own list and CRUD (Add/Manage) under Admin; Zonal can view campuses. Members are assigned to a campus via the user's `campus_id` (and `campus_name` in the UI).
 
 ### Everyone in a unit
 
@@ -181,6 +185,8 @@ The portal uses **Clerk** for authentication — the same Clerk instance used fo
 - `/admin/dashboard` - Collapsible menu on the left with logout option and a dashboard on the right showing total units, total members, members by status [active, inactive, migrated], and overall performance summary for the Delhi zone.
 - `/admin/units/add` - Ability to add units in bulk via CSV [check `units.csv` below] with format examples shown on upload page.
 - `/admin/units/manage` - Ability to view, update, and delete units with search and filter functionality, and export to CSV functionality.
+- `/admin/campuses/add` - Ability to add campuses in bulk (or one-by-one) with format examples on upload page.
+- `/admin/campuses/manage` - Ability to view, update, and delete campuses with search and filter functionality, and export to CSV functionality.
 - `/admin/zonal-secretaries/add` - Ability to add zonal secretary accounts in bulk via CSV [check `zonal-secretaries.csv` below] with format examples shown on upload page.
 - `/admin/zonal-secretaries/manage` - Ability to view zonal secretary accounts, update via inline edit dialogs, delete with confirmation dialogs, search and filter, and export to CSV functionality.
 - `/admin/regional-presidents/add` - Ability to add regional president accounts in bulk via CSV [check `regional-presidents.csv` below] with format examples shown on upload page.
@@ -234,10 +240,10 @@ The portal uses **Clerk** for authentication — the same Clerk instance used fo
 ### Member
 
 - `/member/login` - Ability to login with phone number and password.
-- `/member/dashboard` - Collapsible menu on the left with logout option and a dashboard on the right showing personal info summary, current unit, title/designation (if any), activity status, and any pending updates requested by admin or unit president.
-- `/member/profile` - Ability to view and update own profile information [fields editable as permitted by admin]. Includes full name, phone number, unit, title, profile photo (avatar), and any additional fields defined by the organization. Users can upload or change their profile photo from this page.
+- `/member/dashboard` - Collapsible menu on the left with logout option and a dashboard on the right showing personal info summary **including the member's full name**, current unit, title/designation (if any), activity status, and any pending updates requested by admin or unit president.
+- `/member/profile` - Ability to **view** own profile (full name, phone number, unit, title, profile photo, and any additional fields). **Members cannot edit their name, phone, unit, or other profile details** — only profile photo (avatar) and password/account settings (via Clerk) are editable by the member. The profile overview at the top of the page must display the member's **full name** prominently.
 - `/member/performance` - Ability to view and fill out performance evaluation forms assigned to their unit or zone. Can submit one response per form.
-- `/member/messages/compose` - Ability to send messages to their unit president, regional president, or zonal secretary. Titled members can also message within their unit.
+- `/member/messages/compose` - Ability to send messages **only** to their unit president or zonal secretary (not to regional president or other members).
 - `/member/messages/inbox` - Ability to view all sent and received messages with read/unread status and search functionality.
 
 ## Sample Data
@@ -304,7 +310,9 @@ Sample title assignments (pre-seeded):
 - Who can assign titles? -> The Admin can assign titles to anyone. The Zonal Secretary can assign zonal-level titles. The Unit President can assign unit-level titles to members within their unit.
 - What is a Regional President? -> A Regional President oversees a group of units within the zone. They sit between the Zonal Secretary and Unit Presidents in the hierarchy. They can view data and initiate migrations within their region but cannot manage users or approve migrations.
 - How are regions defined? -> Regions are not separate entities; a Regional President is simply assigned to oversee specific units. The mapping is managed by the Admin.
+- What is a campus? -> A campus is a grouping at the same level as a unit and a circle. Each user can optionally be assigned to one campus. Admin can add/manage campuses; Zonal can view them. Use `campus_id` / `campus_name` in the user record and UI.
 - Do users have profile photos? -> Yes, every user has an optional `avatar_url` field. Users can upload their profile photo from the `/member/profile` page. Avatars are stored on the server (`/uploads/avatars/`). When no avatar is uploaded, the UI displays the user's first initial on a colored background as a fallback. Avatars appear in the sidebar, top bar, profile page, and message views.
+- What can members edit on their profile? -> Members can only update their profile photo (avatar) and password/account settings (via Clerk). They cannot change their name, phone, unit, or any other profile details; those are managed by admin or unit president. The profile overview (on dashboard and profile page) must always display the member's full name prominently.
 - What is the backend architecture? -> The backend is a PHP API with MySQL/MariaDB database, hosted at `api.siodelhi.org`. Authentication uses Clerk JWT (RS256). The frontend communicates via REST endpoints (`/api/portal/*`). All portal routes are authenticated via Clerk tokens. API routes are defined in `api/routes/portal.php` and registered in `api/index.php`.
 - How do performance forms work? -> Authorized users (Admin, Zonal Secretary, Regional President, Unit President) can create performance evaluation forms via `/performance/create`. Each form has a title, optional description, optional period (e.g., "2026-01"), and a scope (zone-wide or specific unit). Forms contain custom fields of types: MCQ (single choice), MSQ (multiple choice), Subjective (free text), Checkbox (yes/no), Number, and Rating (score out of N). Members see applicable forms on their `/member/performance` page and can fill them out. Authorized users can view all responses to forms they've created or have access to.
 - Do users have a date of birth? -> Yes. `portal_users` has an optional `date_of_birth` field stored as **DDMMYYYY** (e.g. 25031999 for 25 March 1999). It is used for username generation (first name + year) and can be shown/edited in member profile and manage flows. The members CSV includes a "Date of Birth (DDMMYYYY)" column. Default password is first name + last 4 digits of mobile, not DOB.

@@ -1,8 +1,19 @@
 # Clerk production – custom domain (clerk.siodelhi.org)
 
-The app uses the **production** Clerk key so sign-in uses the same instance where users were pushed (`pk_live_...` / `sk_live_...`). That key is tied to **clerk.siodelhi.org**, which may not resolve yet (e.g. before DNS is set).
+**Production:** The production key (`pk_live_...`) is tied to **clerk.siodelhi.org**. Use it when that domain is set up (see below) or in your production build.
 
-## Option A: Dev-server proxy (no DNS needed for local dev)
+## Why localhost is rejected
+
+Clerk **production** only allows requests when the browser’s **Origin** is your configured domain or a subdomain (e.g. `https://siodelhi.org`, `https://clerk.siodelhi.org`). When you open the app at **localhost** (e.g. `https://localhost:5174`), the Origin is `https://localhost:5174`, which is not `siodelhi.org` or a subdomain, so Clerk returns **400** and:
+
+- *"Production Keys are only allowed for domain 'siodelhi.org'."*
+- *"The Request HTTP Origin header must be equal to or a subdomain of the requesting URL."*
+
+So **localhost is not allowed** by design. To use production keys and production users from your machine, you must use a **subdomain of siodelhi.org** that points to your machine (see Option C below).
+
+**Simple local dev:** Use the **development** key (`pk_test_...`) in `.env.local`. The app will talk to Clerk’s dev instance; push users with `CLERK_SECRET_KEY=sk_test_... node scripts/push-users-to-clerk.mjs` to sign in locally.
+
+## Option A: Dev-server proxy (no DNS needed for local dev) — advanced
 
 The Vite dev server can proxy Clerk requests so the app works **without** clerk.siodelhi.org resolving:
 
@@ -34,3 +45,25 @@ The Vite dev server can proxy Clerk requests so the app works **without** clerk.
 
 4. **Verify**  
    In Clerk Dashboard, verify the domain. Once it resolves, the app can load Clerk from `https://clerk.siodelhi.org` without using the dev proxy.
+
+## Option C: Use production Clerk from “local” (subdomain)
+
+To use **production** keys and **production** users (e.g. `adnan1998`) while developing on your machine, the request Origin must be a subdomain of `siodelhi.org`. Do the following:
+
+1. **Map a subdomain to this machine**  
+   Add a line to your hosts file so `local.siodelhi.org` resolves to `127.0.0.1`:
+   ```bash
+   # Linux/macOS (run with sudo if needed)
+   echo "127.0.0.1 local.siodelhi.org" | sudo tee -a /etc/hosts
+   ```
+
+2. **Run the app on HTTPS port 443**  
+   Clerk’s origin check fails if the port is in the Origin (e.g. `https://local.siodelhi.org:5174`). You must use **port 443** so the Origin is `https://local.siodelhi.org` with no port.
+   - Either run the Vite dev server on 443 (e.g. `sudo npm run dev` and set Vite’s port to 443, or use a local reverse proxy that listens on 443 and forwards to 5174).
+   - Or use a tool like [mkcert](https://github.com/FiloSottile/mkcert) to create a cert for `local.siodelhi.org` and run your dev server with that cert on 443.
+
+3. **Open the app at the subdomain**  
+   In the browser, go to **`https://local.siodelhi.org`** (accept the self-signed cert warning if needed). The Origin will be `https://local.siodelhi.org`, which is a subdomain of `siodelhi.org`, so Clerk will accept the requests and you can sign in with production users.
+
+4. **Use production key**  
+   Keep `VITE_CLERK_PUBLISHABLE_KEY=pk_live_...` in `.env.local` so the app uses clerk.siodelhi.org.

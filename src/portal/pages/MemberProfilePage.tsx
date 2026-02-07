@@ -21,10 +21,12 @@ export function MemberProfilePage() {
 
   if (!user) return null
 
-  const displayName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim() || user.full_name
+  const displayName = user.full_name || [firstName, middleName, lastName].filter(Boolean).join(' ').trim()
+  const isMember = user.role === 'member'
+  const canEditProfileDetails = !isMember
 
   async function handleSave(e: React.FormEvent) {
-    e.preventDefault(); if (!user) return; setError(null); setSuccess(false)
+    e.preventDefault(); if (!user || !canEditProfileDetails) return; setError(null); setSuccess(false)
     if (!firstName.trim()) { setError('First name is required.'); return }
     if (!lastName.trim()) { setError('Last name is required.'); return }
     if (!phone.trim()) { setError('Phone number is required.'); return }
@@ -78,7 +80,9 @@ export function MemberProfilePage() {
     <div className="portal-page portal-page-narrow">
       <div>
         <h1 className="portal-heading">My Profile</h1>
-        <p className="portal-subheading">View and update your personal information.</p>
+        <p className="portal-subheading">
+          {isMember ? 'View your profile. You can only change your photo and password.' : 'View and update your personal information.'}
+        </p>
       </div>
 
       <div className="portal-card portal-card-body">
@@ -99,6 +103,7 @@ export function MemberProfilePage() {
           </div>
           <div>
             <h2 className="portal-profile-name">{displayName}</h2>
+            <p className="portal-profile-name-label">Full name</p>
             <div className="portal-profile-contact">
               <span className="portal-profile-contact-phone">{user.phone}</span>
               <StatusBadge status={user.status} />
@@ -172,28 +177,48 @@ export function MemberProfilePage() {
         {success && <div className="portal-alert portal-alert-success portal-mb-4"><CheckCircle size={16} /> <p>Profile updated successfully!</p></div>}
         {error && <div className="portal-alert portal-alert-error portal-mb-4">{error}</div>}
 
-        {/* Editable form */}
-        <form onSubmit={handleSave} className="portal-form-stack">
-          <div>
-            <label className="portal-label portal-label-icon"><User size={14} /> First Name</label>
-            <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="portal-input" />
+        {/* Overview: name and details (read-only for members) */}
+        <div className="portal-card-inset portal-mb-6">
+          <h3 className="portal-overview-card-title">Profile details</h3>
+          <div className="portal-grid-overview">
+            {[
+              { label: 'Full name', value: displayName },
+              { label: 'Phone', value: user.phone },
+              ...(user.unit_name ? [{ label: 'Unit', value: user.unit_name }] : []),
+              ...(user.campus_name ? [{ label: 'Campus', value: user.campus_name }] : []),
+            ].map(item => (
+              <div key={item.label} className="portal-card-inset portal-overview-item">
+                <span className="portal-overview-item-label">{item.label}</span>
+                <span className="portal-overview-item-value">{item.value}</span>
+              </div>
+            ))}
           </div>
-          <div>
-            <label className="portal-label portal-label-icon"><User size={14} /> Middle Name</label>
-            <input type="text" value={middleName} onChange={e => setMiddleName(e.target.value)} className="portal-input" placeholder="Optional" />
-          </div>
-          <div>
-            <label className="portal-label portal-label-icon"><User size={14} /> Last Name</label>
-            <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="portal-input" />
-          </div>
-          <div>
-            <label className="portal-label portal-label-icon"><Phone size={14} /> Phone Number</label>
-            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="portal-input" />
-          </div>
-          <button type="submit" disabled={saving} className="portal-btn portal-btn-primary portal-self-start">
-            <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </form>
+        </div>
+
+        {/* Editable form (only for non-members; members cannot change name/phone/etc.) */}
+        {canEditProfileDetails && (
+          <form onSubmit={handleSave} className="portal-form-stack">
+            <div>
+              <label className="portal-label portal-label-icon"><User size={14} /> First Name</label>
+              <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="portal-input" />
+            </div>
+            <div>
+              <label className="portal-label portal-label-icon"><User size={14} /> Middle Name</label>
+              <input type="text" value={middleName} onChange={e => setMiddleName(e.target.value)} className="portal-input" placeholder="Optional" />
+            </div>
+            <div>
+              <label className="portal-label portal-label-icon"><User size={14} /> Last Name</label>
+              <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="portal-input" />
+            </div>
+            <div>
+              <label className="portal-label portal-label-icon"><Phone size={14} /> Phone Number</label>
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="portal-input" />
+            </div>
+            <button type="submit" disabled={saving} className="portal-btn portal-btn-primary portal-self-start">
+              <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )

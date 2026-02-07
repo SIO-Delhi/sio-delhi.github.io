@@ -2,6 +2,7 @@ import { api, API_BASE, authFetch } from '../lib/api'
 import type {
   PortalUnit,
   PortalCircle,
+  PortalCampus,
   PortalUser,
   PortalRole,
   MigrationRequest,
@@ -103,6 +104,26 @@ export async function deleteCircle(id: string): Promise<void> {
 }
 
 /* ═══════════════════════════════════════════
+   Campuses
+   ═══════════════════════════════════════════ */
+
+export async function fetchCampuses(): Promise<PortalCampus[]> {
+  return get<PortalCampus[]>('/campuses')
+}
+
+export async function createCampuses(campuses: { name: string }[]): Promise<void> {
+  await post('/campuses', { campuses })
+}
+
+export async function updateCampus(id: string, updates: Partial<PortalCampus>): Promise<void> {
+  await put(`/campuses/${id}`, updates)
+}
+
+export async function deleteCampus(id: string): Promise<void> {
+  await del(`/campuses/${id}`)
+}
+
+/* ═══════════════════════════════════════════
    Users
    ═══════════════════════════════════════════ */
 
@@ -119,7 +140,7 @@ export async function fetchUser(id: string): Promise<PortalUser> {
 }
 
 export async function createUsers(
-  users: { first_name: string; middle_name?: string; last_name: string; phone: string; password?: string; date_of_birth?: string; role: PortalRole; unit_id?: string; circle_id?: string }[],
+  users: { first_name: string; middle_name?: string; last_name: string; phone: string; password?: string; date_of_birth?: string; role: PortalRole; unit_id?: string; circle_id?: string; campus_id?: string }[],
 ): Promise<void> {
   await post('/users', { users })
 }
