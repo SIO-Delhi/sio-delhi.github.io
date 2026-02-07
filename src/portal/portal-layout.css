@@ -191,6 +191,53 @@
   background: var(--p-red-subtle);
 }
 
+/* Icon wrapper (for badge positioning in collapsed mode) */
+.portal-sidebar-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Notification badge */
+.portal-sidebar-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--p-red);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* In collapsed mode, the badge sits as a dot on the icon */
+.portal-sidebar.collapsed .portal-sidebar-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 0.5625rem;
+}
+
+/* Pulse animation for new notifications */
+@keyframes portal-badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.portal-sidebar-badge {
+  animation: portal-badge-pulse 2s ease-in-out 3; /* pulse 3 times then stop */
+}
+
 /* Footer */
 .portal-sidebar-footer {
   padding: 12px;
@@ -356,6 +403,10 @@
   flex-shrink: 0;
 }
 
+.portal-topbar-notif-wrap {
+  position: relative;
+}
+
 .portal-topbar-notif {
   position: relative;
   padding: 8px;
@@ -364,6 +415,117 @@
   background: none;
   border: none;
   cursor: pointer;
+  transition: color 200ms;
+}
+
+.portal-topbar-notif:hover {
+  color: var(--p-cream);
+}
+
+.portal-topbar-notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--p-red);
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Notification dropdown */
+.portal-topbar-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: var(--p-bg-card);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--p-shadow-lg);
+  z-index: 100;
+  overflow: hidden;
+  animation: portal-dropdown-in 150ms ease;
+}
+
+@keyframes portal-dropdown-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.portal-topbar-dropdown-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--p-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 16px 8px;
+  margin: 0;
+}
+
+.portal-topbar-dropdown-empty {
+  font-size: 0.8125rem;
+  color: var(--p-text-muted);
+  padding: 12px 16px 16px;
+  margin: 0;
+  text-align: center;
+}
+
+.portal-topbar-dropdown-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-topbar-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 150ms;
+  color: var(--p-cream);
+}
+
+.portal-topbar-dropdown-item:hover {
+  background: var(--p-bg-hover);
+}
+
+.portal-topbar-dropdown-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--p-red-subtle);
+  color: var(--p-red);
+  flex-shrink: 0;
+}
+
+.portal-topbar-dropdown-label {
+  flex: 1;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.portal-topbar-dropdown-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--p-red);
+  background: var(--p-red-subtle);
+  padding: 2px 8px;
+  border-radius: 10px;
 }
 
 .portal-topbar-user {

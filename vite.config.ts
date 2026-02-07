@@ -6,4 +6,14 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 export default defineConfig({
     plugins: [react(), basicSsl()],
     base: '/',
+    server: {
+        port: 443,
+        https: true,
+        host: true,
+        hmr: {
+            host: 'local.siodelhi.org',
+            port: 443,
+            protocol: 'wss',
+        },
+    },
 })

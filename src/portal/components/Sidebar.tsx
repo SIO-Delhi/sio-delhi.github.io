@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { ChevronDown, ChevronLeft, Menu, X, LogOut } from 'lucide-react'
 import { useClerk } from '@clerk/clerk-react'
 import { usePortalAuth } from '../context/PortalAuthContext'
+import { useNotifications } from '../hooks/useNotifications'
 import { NAV_CONFIG, ROLE_LABELS } from '../constants'
 import type { NavItem } from '../constants'
 import { UserAvatar } from './UserAvatar'
@@ -12,6 +13,7 @@ export function Sidebar() {
   const { user } = usePortalAuth()
   const { signOut } = useClerk()
   const location = useLocation()
+  const { counts: notifications } = useNotifications()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -31,10 +33,25 @@ export function Sidebar() {
   const isActive = (path: string) => location.pathname === path
   const isParentActive = (item: NavItem) => item.children?.some(c => location.pathname === c.path) ?? false
 
+  function getBadgeCount(item: NavItem): number {
+    if (!item.badgeKey) return 0
+    return notifications[item.badgeKey] ?? 0
+  }
+
+  function renderBadge(count: number) {
+    if (count <= 0) return null
+    return (
+      <span className="portal-sidebar-badge">
+        {count > 99 ? '99+' : count}
+      </span>
+    )
+  }
+
   function renderItem(item: NavItem) {
     const Icon = item.icon
     const hasChildren = !!item.children?.length
     const open = expanded.has(item.label) || isParentActive(item)
+    const badgeCount = getBadgeCount(item)
 
     if (hasChildren) {
       return (
@@ -43,10 +60,14 @@ export function Sidebar() {
             onClick={() => toggleExpand(item.label)}
             className={`portal-sidebar-nav-item ${isParentActive(item) ? 'active' : ''}`}
           >
-            <Icon size={20} className="shrink-0" />
+            <span className="portal-sidebar-icon-wrap">
+              <Icon size={20} className="shrink-0" />
+              {collapsed && renderBadge(badgeCount)}
+            </span>
             {!collapsed && (
               <>
                 <span className="flex-1 text-left">{item.label}</span>
+                {renderBadge(badgeCount)}
                 <ChevronDown
                   size={16}
                   className={`portal-sidebar-expand-icon ${open ? 'open' : ''}`}
@@ -79,8 +100,16 @@ export function Sidebar() {
         onClick={() => setMobileOpen(false)}
         className={`portal-sidebar-nav-item ${isActive(item.path) ? 'active' : ''}`}
       >
-        <Icon size={20} className="shrink-0" />
-        {!collapsed && <span>{item.label}</span>}
+        <span className="portal-sidebar-icon-wrap">
+          <Icon size={20} className="shrink-0" />
+          {collapsed && renderBadge(badgeCount)}
+        </span>
+        {!collapsed && (
+          <>
+            <span className="flex-1">{item.label}</span>
+            {renderBadge(badgeCount)}
+          </>
+        )}
       </NavLink>
     )
   }

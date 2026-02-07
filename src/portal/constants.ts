@@ -19,11 +19,15 @@ import type { PortalRole, CSVFieldDef, EditField, Permission } from './types'
 
 /* ── Navigation ── */
 
+export type BadgeKey = 'unreadMessages' | 'pendingMigrations' | 'pendingForms'
+
 export interface NavItem {
   label: string
   path: string
   icon: typeof LayoutDashboard
   children?: NavItem[]
+  /** If set, a notification badge with the count for this key is shown on this nav item. */
+  badgeKey?: BadgeKey
 }
 
 export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
@@ -64,6 +68,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
         { label: 'Manage', path: '/portal/admin/regional-presidents/manage', icon: Globe },
       ],
     },
+    { label: 'Regions', path: '/portal/admin/regions', icon: Globe },
     {
       label: 'Unit Presidents', path: '#', icon: UserCheck,
       children: [
@@ -79,10 +84,10 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
       ],
     },
     { label: 'Titles', path: '/portal/admin/titles', icon: Award },
-    { label: 'Performance', path: '/portal/admin/performance', icon: BarChart3 },
-    { label: 'Migrations', path: '/portal/admin/migrations', icon: ArrowRightLeft },
+    { label: 'Performance', path: '/portal/admin/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    { label: 'Migrations', path: '/portal/admin/migrations', icon: ArrowRightLeft, badgeKey: 'pendingMigrations' },
     {
-      label: 'Messages', path: '#', icon: MessageSquare,
+      label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
       children: [
         { label: 'Compose', path: '/portal/admin/messages/compose', icon: Send },
         { label: 'Inbox', path: '/portal/admin/messages/inbox', icon: Inbox },
@@ -94,14 +99,15 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
     { label: 'Units', path: '/portal/zonal/units', icon: Building2 },
     { label: 'Circles', path: '/portal/zonal/circles', icon: CircleDot },
     { label: 'Campuses', path: '/portal/zonal/campuses', icon: GraduationCap },
+    { label: 'Regions', path: '/portal/zonal/regions', icon: Globe },
     { label: 'Regional Presidents', path: '/portal/zonal/regional-presidents', icon: Globe },
     { label: 'Unit Presidents', path: '/portal/zonal/unit-presidents', icon: UserCheck },
     { label: 'Members', path: '/portal/zonal/members', icon: Users },
     { label: 'Titles', path: '/portal/zonal/titles', icon: Award },
-    { label: 'Performance', path: '/portal/zonal/performance', icon: BarChart3 },
-    { label: 'Migrations', path: '/portal/zonal/migrations', icon: ArrowRightLeft },
+    { label: 'Performance', path: '/portal/zonal/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    { label: 'Migrations', path: '/portal/zonal/migrations', icon: ArrowRightLeft, badgeKey: 'pendingMigrations' },
     {
-      label: 'Messages', path: '#', icon: MessageSquare,
+      label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
       children: [
         { label: 'Compose', path: '/portal/zonal/messages/compose', icon: Send },
         { label: 'Inbox', path: '/portal/zonal/messages/inbox', icon: Inbox },
@@ -113,10 +119,10 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
     { label: 'Units', path: '/portal/regional/units', icon: Building2 },
     { label: 'Unit Presidents', path: '/portal/regional/unit-presidents', icon: UserCheck },
     { label: 'Members', path: '/portal/regional/members', icon: Users },
-    { label: 'Performance', path: '/portal/regional/performance', icon: BarChart3 },
-    { label: 'Migrations', path: '/portal/regional/migrations', icon: ArrowRightLeft },
+    { label: 'Performance', path: '/portal/regional/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    { label: 'Migrations', path: '/portal/regional/migrations', icon: ArrowRightLeft, badgeKey: 'pendingMigrations' },
     {
-      label: 'Messages', path: '#', icon: MessageSquare,
+      label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
       children: [
         { label: 'Compose', path: '/portal/regional/messages/compose', icon: Send },
         { label: 'Inbox', path: '/portal/regional/messages/inbox', icon: Inbox },
@@ -127,9 +133,9 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
     { label: 'Dashboard', path: '/portal/unit/dashboard', icon: LayoutDashboard },
     { label: 'Members', path: '/portal/unit/members', icon: Users },
     { label: 'Titles', path: '/portal/unit/titles', icon: Award },
-    { label: 'Performance', path: '/portal/unit/performance', icon: BarChart3 },
+    { label: 'Performance', path: '/portal/unit/performance', icon: BarChart3, badgeKey: 'pendingForms' },
     {
-      label: 'Messages', path: '#', icon: MessageSquare,
+      label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
       children: [
         { label: 'Compose', path: '/portal/unit/messages/compose', icon: Send },
         { label: 'Inbox', path: '/portal/unit/messages/inbox', icon: Inbox },
@@ -139,10 +145,10 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
   member: [
     { label: 'Dashboard', path: '/portal/member/dashboard', icon: LayoutDashboard },
     { label: 'Profile', path: '/portal/member/profile', icon: User },
-    { label: 'Performance', path: '/portal/member/performance', icon: BarChart3 },
-    { label: 'Migrations', path: '/portal/member/migrations', icon: ArrowRightLeft },
+    { label: 'Performance', path: '/portal/member/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    { label: 'Migrations', path: '/portal/member/migrations', icon: ArrowRightLeft, badgeKey: 'pendingMigrations' },
     {
-      label: 'Messages', path: '#', icon: MessageSquare,
+      label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
       children: [
         { label: 'Compose', path: '/portal/member/messages/compose', icon: Send },
         { label: 'Inbox', path: '/portal/member/messages/inbox', icon: Inbox },

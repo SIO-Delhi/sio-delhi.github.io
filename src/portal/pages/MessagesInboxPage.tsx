@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react'
-import { Mail, MailOpen, ArrowLeft, Clock } from 'lucide-react'
+import { Mail, MailOpen, ArrowLeft, Clock, Reply, Users, User, Radio } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { usePortalAuth } from '../context/PortalAuthContext'
+import { useNotifications } from '../context/NotificationContext'
 import * as api from '../api'
 import type { PortalMessage } from '../types'
 import { ROLE_LABELS } from '../constants'
 import { EmptyState } from '../components/EmptyState'
+import { UserAvatar } from '../components/UserAvatar'
 
 type Tab = 'inbox' | 'sent'
 
 export function MessagesInboxPage() {
   const { user } = usePortalAuth()
+  const { decrement } = useNotifications()
+  const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('inbox')
   const [messages, setMessages] = useState<PortalMessage[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,26 +36,73 @@ export function MessagesInboxPage() {
   async function handleOpen(msg: PortalMessage) {
     setSelected(msg)
     if (tab === 'inbox' && !msg.is_read) {
-      try { await api.markMessageAsRead(msg.id); setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, is_read: true } : m)) } catch { /* non-critical */ }
+      try {
+        await api.markMessageAsRead(msg.id)
+        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, is_read: true } : m))
+        decrement('unreadMessages')
+      } catch { /* non-critical */ }
     }
+  }
+
+  function handleReply(msg: PortalMessage) {
+    // Navigate to compose with pre-filled reply info via URL params
+    const basePath = `/portal/${user!.role === 'unit_president' ? 'unit' : user!.role === 'regional_president' ? 'regional' : user!.role === 'zonal_secretary' ? 'zonal' : user!.role === 'admin' ? 'admin' : 'member'}/messages/compose`
+    const params = new URLSearchParams()
+    if (msg.sender_id && msg.sender_id !== user!.id) {
+      params.set('replyTo', msg.sender_id)
+      params.set('replyName', msg.sender_name ?? '')
+    }
+    params.set('subject', `Re: ${msg.subject.replace(/^Re:\s*/i, '')}`)
+    navigate(`${basePath}?${params}`)
+  }
+
+  function isBroadcast(msg: PortalMessage): boolean {
+    // PHP/MySQL may return TINYINT as string "0"/"1", number 0/1, or boolean
+    return msg.is_broadcast === true || msg.is_broadcast === (1 as any) || msg.is_broadcast === ('1' as any)
+  }
+
+  function getMessageType(msg: PortalMessage): { label: string; icon: JSX.Element; className: string } {
+    if (isBroadcast(msg)) return { label: 'Broadcast', icon: <Radio size={12} />, className: 'portal-msg-type-broadcast' }
+    if (msg.recipient_role) return { label: ROLE_LABELS[msg.recipient_role] ?? msg.recipient_role, icon: <Users size={12} />, className: 'portal-msg-type-role' }
+    return { label: 'Direct', icon: <User size={12} />, className: 'portal-msg-type-direct' }
   }
 
   // Detail view
   if (selected) {
+    const msgType = getMessageType(selected)
+    const canReply = tab === 'inbox' && selected.sender_id !== user.id
+
     return (
       <div className="portal-page portal-page-narrow">
         <button onClick={() => setSelected(null)} className="portal-btn portal-btn-ghost portal-btn-sm portal-self-start">
           <ArrowLeft size={16} /> Back to {tab}
         </button>
-        <div className="portal-card portal-card-body">
-          <h2 className="portal-msg-detail-subject">{selected.subject}</h2>
-          <div className="portal-msg-detail-meta">
-            <span>From: <strong>{selected.sender_name ?? 'Unknown'}</strong>{selected.sender_role && ` (${ROLE_LABELS[selected.sender_role]})`}</span>
-            {selected.recipient_name && <span>To: <strong>{selected.recipient_name}</strong></span>}
-            {selected.is_broadcast && <span className="portal-badge portal-badge-migrated">Broadcast</span>}
-            <span className="portal-sort-indicator"><Clock size={12} /> {fmtDate(selected.created_at)}</span>
+        <div className="portal-card portal-card-body portal-msg-detail">
+          <div className="portal-msg-detail-top">
+            <h2 className="portal-msg-detail-subject">{selected.subject}</h2>
+            <span className={`portal-msg-type-badge ${msgType.className}`}>{msgType.icon} {msgType.label}</span>
           </div>
+          <div className="portal-msg-detail-meta">
+            <div className="portal-msg-detail-sender">
+              <UserAvatar name={selected.sender_name ?? 'Unknown'} size="sm" />
+              <div>
+                <p className="portal-msg-detail-sender-name">{selected.sender_name ?? 'Unknown'}{selected.sender_role && <span className="portal-msg-detail-sender-role"> ({ROLE_LABELS[selected.sender_role]})</span>}</p>
+                {selected.recipient_name && !isBroadcast(selected) && <p className="portal-msg-detail-to">To: {selected.recipient_name}</p>}
+                {isBroadcast(selected) && <p className="portal-msg-detail-to">To: Everyone</p>}
+              </div>
+            </div>
+            <span className="portal-msg-detail-time"><Clock size={13} /> {fmtDate(selected.created_at)}</span>
+          </div>
+          <div className="portal-msg-detail-divider" />
           <div className="portal-msg-detail-body">{selected.body}</div>
+          {canReply && (
+            <>
+              <div className="portal-msg-detail-divider" />
+              <button onClick={() => handleReply(selected)} className="portal-btn portal-btn-secondary portal-btn-sm">
+                <Reply size={16} /> Reply
+              </button>
+            </>
+          )}
         </div>
       </div>
     )
@@ -86,24 +138,34 @@ export function MessagesInboxPage() {
 
       {!loading && messages.length > 0 && (
         <div className="portal-msg-list">
-          {messages.map(msg => (
-            <button key={msg.id} onClick={() => handleOpen(msg)} className={`portal-msg-card ${!msg.is_read && tab === 'inbox' ? 'unread' : ''}`}>
-              <div className="portal-msg-row">
-                <div className={`portal-msg-icon ${msg.is_read || tab === 'sent' ? 'portal-msg-icon-read' : 'portal-msg-icon-unread'}`}>
-                  {msg.is_read || tab === 'sent' ? <MailOpen size={16} /> : <Mail size={16} />}
-                </div>
-                <div className="portal-msg-body">
-                  <div className="portal-msg-header">
-                    <p className={`portal-msg-subject ${!msg.is_read && tab === 'inbox' ? 'portal-msg-subject-unread' : ''}`}>{msg.subject}</p>
-                    <span className="portal-msg-time">{fmtRelative(msg.created_at)}</span>
+          {messages.map(msg => {
+            const msgType = getMessageType(msg)
+            const isUnread = !msg.is_read && tab === 'inbox'
+            const fromName = tab === 'inbox' ? (msg.sender_name ?? 'Unknown') : (msg.recipient_name ?? (isBroadcast(msg) ? 'Everyone' : 'Unknown'))
+            const preview = msg.body?.slice(0, 100) ?? ''
+
+            return (
+              <button key={msg.id} onClick={() => handleOpen(msg)} className={`portal-msg-card ${isUnread ? 'unread' : ''}`}>
+                <div className="portal-msg-row">
+                  <div className="portal-msg-avatar-col">
+                    <UserAvatar name={fromName} size="sm" />
+                    {isUnread && <span className="portal-msg-unread-dot" />}
                   </div>
-                  <p className="portal-msg-snippet">
-                    {tab === 'inbox' ? `From: ${msg.sender_name ?? 'Unknown'}${msg.is_broadcast ? ' (Broadcast)' : ''}` : `To: ${msg.recipient_name ?? (msg.is_broadcast ? 'Everyone' : 'Unknown')}`}
-                  </p>
+                  <div className="portal-msg-body">
+                    <div className="portal-msg-header">
+                      <div className="portal-msg-header-left">
+                        <p className={`portal-msg-from ${isUnread ? 'portal-msg-from-unread' : ''}`}>{fromName}</p>
+                        <span className={`portal-msg-type-pill ${msgType.className}`}>{msgType.label}</span>
+                      </div>
+                      <span className="portal-msg-time">{fmtRelative(msg.created_at)}</span>
+                    </div>
+                    <p className={`portal-msg-subject ${isUnread ? 'portal-msg-subject-unread' : ''}`}>{msg.subject}</p>
+                    <p className="portal-msg-snippet">{preview}{preview.length >= 100 ? '…' : ''}</p>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

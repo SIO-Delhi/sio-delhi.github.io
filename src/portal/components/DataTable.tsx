@@ -14,6 +14,7 @@ interface DataTableProps<T extends Record<string, unknown>> {
   pageSize?: number
   onEdit?: (row: T) => void
   onDelete?: (row: T) => void
+  onRowClick?: (row: T) => void
   exportFilename?: string
   emptyTitle?: string
   emptyDescription?: string
@@ -24,7 +25,7 @@ interface DataTableProps<T extends Record<string, unknown>> {
 
 export function DataTable<T extends Record<string, unknown>>({
   data, columns, loading = false, error = null, searchable = true,
-  searchPlaceholder = 'Search…', pageSize = 10, onEdit, onDelete,
+  searchPlaceholder = 'Search…', pageSize = 10, onEdit, onDelete, onRowClick,
   exportFilename, emptyTitle = 'No data found',
   emptyDescription = 'There are no records to display yet.',
   emptyActionLabel, emptyActionHref, filterElement,
@@ -147,11 +148,17 @@ export function DataTable<T extends Record<string, unknown>>({
             <tbody>
               {paginated.map((row, idx) => (
                 <tr key={String(row.id ?? idx)}>
-                  {columns.map(col => (
-                    <td key={col.key} className={alignClass(col.align)}>
-                      {col.render ? col.render(row[col.key], row) : (row[col.key] != null ? String(row[col.key]) : '—')}
-                    </td>
-                  ))}
+                  {columns.map((col, colIdx) => {
+                    const cellContent = col.render ? col.render(row[col.key], row) : (row[col.key] != null ? String(row[col.key]) : '—')
+                    const isClickableCell = colIdx === 0 && !!onRowClick
+                    return (
+                      <td key={col.key} className={alignClass(col.align)}>
+                        {isClickableCell ? (
+                          <button className="portal-table-link" onClick={() => onRowClick(row)}>{cellContent}</button>
+                        ) : cellContent}
+                      </td>
+                    )
+                  })}
                   {hasActions && (
                     <td className="portal-text-right">
                       <div className="portal-action-row">

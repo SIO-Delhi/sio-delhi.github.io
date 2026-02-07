@@ -70,6 +70,14 @@ function portalSetup() {
     ");
 
     $db->exec("
+        CREATE TABLE IF NOT EXISTS portal_regions (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $db->exec("
         CREATE TABLE IF NOT EXISTS portal_circles (
             id VARCHAR(36) PRIMARY KEY,
             name VARCHAR(255) NOT NULL UNIQUE,
@@ -188,6 +196,49 @@ function portalSetup() {
             UNIQUE KEY uq_rg (regional_president_id, unit_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
+
+    // Region: unit belongs to a region; regional president is assigned to a region (like unit has unit president)
+    try {
+        $db->exec("ALTER TABLE portal_units ADD COLUMN region_id VARCHAR(36) NULL AFTER name");
+    } catch (Exception $e) {
+        // Column already exists
+    }
+    try {
+        $db->exec("ALTER TABLE portal_units ADD CONSTRAINT fk_portal_units_region FOREIGN KEY (region_id) REFERENCES portal_regions(id) ON DELETE SET NULL");
+    } catch (Exception $e) {
+        // Constraint already exists
+    }
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN region_id VARCHAR(36) NULL AFTER unit_id");
+    } catch (Exception $e) {
+        // Column already exists
+    }
+    try {
+        $db->exec("ALTER TABLE portal_users ADD CONSTRAINT fk_portal_users_region FOREIGN KEY (region_id) REFERENCES portal_regions(id) ON DELETE SET NULL");
+    } catch (Exception $e) {
+        // Constraint already exists
+    }
+    // Backfill from portal_region_units: one region per RP, set users.region_id and units.region_id
+    $regionCount = (int)$db->query("SELECT COUNT(*) FROM portal_regions")->fetchColumn();
+    if ($regionCount === 0) {
+        $rps = $db->query("SELECT DISTINCT regional_president_id FROM portal_region_units")->fetchAll();
+        foreach ($rps as $row) {
+            $rpId = $row['regional_president_id'];
+            $rp = $db->prepare("SELECT id, first_name, middle_name, last_name FROM portal_users WHERE id = ? AND role = 'regional_president'");
+            $rp->execute([$rpId]);
+            $rp = $rp->fetch();
+            if (!$rp) continue;
+            $regionName = 'Region - ' . trim($rp['first_name'] . ' ' . ($rp['middle_name'] ?? '') . ' ' . $rp['last_name']);
+            $regionId = uuid();
+            $db->prepare("INSERT INTO portal_regions (id, name) VALUES (?, ?)")->execute([$regionId, $regionName]);
+            $db->prepare("UPDATE portal_users SET region_id = ? WHERE id = ?")->execute([$regionId, $rpId]);
+            $unitIds = $db->prepare("SELECT unit_id FROM portal_region_units WHERE regional_president_id = ?");
+            $unitIds->execute([$rpId]);
+            foreach ($unitIds->fetchAll(PDO::FETCH_COLUMN) as $uid) {
+                $db->prepare("UPDATE portal_units SET region_id = ? WHERE id = ?")->execute([$regionId, $uid]);
+            }
+        }
+    }
 
     $db->exec("
         CREATE TABLE IF NOT EXISTS portal_migration_requests (
@@ -351,19 +402,35 @@ function portalSeed() {
         return $db->query("SELECT id FROM portal_users WHERE phone = " . $db->quote($phone))->fetchColumn();
     };
 
-    // Region mappings
+    // Region mappings: Region is a separate entity; each has a regional president and units.
     $vikramId = $getUserId('9312456780');
     $nehaId = $getUserId('9456123780');
     if ($vikramId) {
+        $regionId1 = uuid();
+        $db->prepare("INSERT IGNORE INTO portal_regions (id, name) VALUES (?, ?)")->execute([$regionId1, 'Region - Vikram Tandon']);
+        $db->prepare("UPDATE portal_users SET region_id = ? WHERE id = ?")->execute([$regionId1, $vikramId]);
+        foreach (['Jamia Unit', 'Okhla Unit'] as $uname) {
+            if (isset($unitIds[$uname])) {
+                $db->prepare("UPDATE portal_units SET region_id = ? WHERE id = ?")->execute([$regionId1, $unitIds[$uname]]);
+            }
+        }
         $stmtR = $db->prepare("INSERT IGNORE INTO portal_region_units (id, regional_president_id, unit_id) VALUES (?,?,?)");
-        $stmtR->execute([uuid(), $vikramId, $unitIds['Jamia Unit']]);
-        $stmtR->execute([uuid(), $vikramId, $unitIds['Okhla Unit']]);
+        if (isset($unitIds['Jamia Unit'])) $stmtR->execute([uuid(), $vikramId, $unitIds['Jamia Unit']]);
+        if (isset($unitIds['Okhla Unit'])) $stmtR->execute([uuid(), $vikramId, $unitIds['Okhla Unit']]);
     }
     if ($nehaId) {
+        $regionId2 = uuid();
+        $db->prepare("INSERT IGNORE INTO portal_regions (id, name) VALUES (?, ?)")->execute([$regionId2, 'Region - Neha Kapoor']);
+        $db->prepare("UPDATE portal_users SET region_id = ? WHERE id = ?")->execute([$regionId2, $nehaId]);
+        foreach (['Laxmi Nagar Unit', 'Chandni Chowk Unit', 'Rohini Unit'] as $uname) {
+            if (isset($unitIds[$uname])) {
+                $db->prepare("UPDATE portal_units SET region_id = ? WHERE id = ?")->execute([$regionId2, $unitIds[$uname]]);
+            }
+        }
         $stmtR = $db->prepare("INSERT IGNORE INTO portal_region_units (id, regional_president_id, unit_id) VALUES (?,?,?)");
-        $stmtR->execute([uuid(), $nehaId, $unitIds['Laxmi Nagar Unit']]);
-        $stmtR->execute([uuid(), $nehaId, $unitIds['Chandni Chowk Unit']]);
-        $stmtR->execute([uuid(), $nehaId, $unitIds['Rohini Unit']]);
+        if (isset($unitIds['Laxmi Nagar Unit'])) $stmtR->execute([uuid(), $nehaId, $unitIds['Laxmi Nagar Unit']]);
+        if (isset($unitIds['Chandni Chowk Unit'])) $stmtR->execute([uuid(), $nehaId, $unitIds['Chandni Chowk Unit']]);
+        if (isset($unitIds['Rohini Unit'])) $stmtR->execute([uuid(), $nehaId, $unitIds['Rohini Unit']]);
     }
 
     // Title assignments
@@ -511,7 +578,13 @@ function portalAuthMe() {
 
 function portalGetUnits() {
     $db = getDB();
-    $rows = $db->query("SELECT * FROM portal_units ORDER BY name")->fetchAll();
+    $rows = $db->query("
+        SELECT u.id, u.name, u.created_at, u.region_id,
+            r.name AS region_name
+        FROM portal_units u
+        LEFT JOIN portal_regions r ON r.id = u.region_id
+        ORDER BY u.name
+    ")->fetchAll();
     return $rows;
 }
 
@@ -519,9 +592,10 @@ function portalCreateUnits() {
     $body = jsonBody();
     $units = $body['units'] ?? [];
     $db = getDB();
-    $stmt = $db->prepare("INSERT INTO portal_units (id, name) VALUES (?, ?)");
+    $stmt = $db->prepare("INSERT INTO portal_units (id, name, region_id) VALUES (?, ?, ?)");
     foreach ($units as $u) {
-        $stmt->execute([uuid(), $u['name']]);
+        $regionId = !empty($u['region_id']) ? $u['region_id'] : null;
+        $stmt->execute([uuid(), $u['name'], $regionId]);
     }
     return ['success' => true, 'count' => count($units)];
 }
@@ -529,8 +603,13 @@ function portalCreateUnits() {
 function portalUpdateUnit($id) {
     $body = jsonBody();
     $db = getDB();
-    $stmt = $db->prepare("UPDATE portal_units SET name = ? WHERE id = ?");
-    $stmt->execute([$body['name'], $id]);
+    if (array_key_exists('name', $body)) {
+        $db->prepare("UPDATE portal_units SET name = ? WHERE id = ?")->execute([$body['name'], $id]);
+    }
+    if (array_key_exists('region_id', $body)) {
+        $regionId = $body['region_id'] ?: null;
+        $db->prepare("UPDATE portal_units SET region_id = ? WHERE id = ?")->execute([$regionId, $id]);
+    }
     return ['success' => true];
 }
 
@@ -538,6 +617,49 @@ function portalDeleteUnit($id) {
     $db = getDB();
     $db->prepare("DELETE FROM portal_units WHERE id = ?")->execute([$id]);
     return ['success' => true];
+}
+
+function portalGetUnit($id) {
+    $db = getDB();
+    try {
+        $stmt = $db->prepare("
+            SELECT u.id, u.name, u.created_at, u.region_id,
+                r.name AS region_name
+            FROM portal_units u
+            LEFT JOIN portal_regions r ON r.id = u.region_id
+            WHERE u.id = ?
+        ");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+    } catch (Exception $e) {
+        $stmt = $db->prepare("SELECT id, name, created_at FROM portal_units WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if ($row) {
+            $row['region_id'] = null;
+            $row['region_name'] = null;
+        }
+    }
+    if (!$row) {
+        http_response_code(404);
+        return ['error' => 'Unit not found.'];
+    }
+    return $row;
+}
+
+function portalGetUnitMembers($id) {
+    $db = getDB();
+    $stmt = $db->prepare("
+        SELECT u.*, pu.name AS unit_name, pc.name AS circle_name, pca.name AS campus_name
+        FROM portal_users u
+        LEFT JOIN portal_units pu ON u.unit_id = pu.id
+        LEFT JOIN portal_circles pc ON u.circle_id = pc.id
+        LEFT JOIN portal_campuses pca ON u.campus_id = pca.id
+        WHERE u.unit_id = ?
+        ORDER BY u.first_name, u.last_name
+    ");
+    $stmt->execute([$id]);
+    return array_map('formatUser', $stmt->fetchAll());
 }
 
 /* ═══════════════════════════════════════════
@@ -684,7 +806,7 @@ function portalCreateUsers() {
 function portalUpdateUser($id) {
     $body = jsonBody();
     $db = getDB();
-    $allowed = ['first_name','middle_name','last_name','username','phone','password','date_of_birth','role','unit_id','circle_id','campus_id','avatar_url','status','permission_overrides'];
+    $allowed = ['first_name','middle_name','last_name','username','phone','password','date_of_birth','role','unit_id','region_id','circle_id','campus_id','avatar_url','status','permission_overrides'];
     $sets = []; $params = [];
     foreach ($allowed as $key) {
         if (array_key_exists($key, $body)) {
@@ -726,6 +848,38 @@ function portalRevokeTitle($id) {
     $stmt = $db->prepare("UPDATE portal_users SET title = NULL, title_assigned_by = NULL, title_assigned_at = NULL WHERE id = ?");
     $stmt->execute([$id]);
     return ['success' => true];
+}
+
+/* ═══════════════════════════════════════════
+   Regions (region entity; has name and a regional president assigned; units belong to region)
+   ═══════════════════════════════════════════ */
+
+function portalGetRegions() {
+    $db = getDB();
+    $regions = $db->query("SELECT id, name, created_at FROM portal_regions ORDER BY name")->fetchAll();
+    $out = [];
+    foreach ($regions as $r) {
+        $rp = $db->prepare("
+            SELECT id AS regional_president_id,
+                TRIM(CONCAT_WS(' ', first_name, middle_name, last_name)) AS regional_president_name,
+                phone
+            FROM portal_users
+            WHERE role = 'regional_president' AND region_id = ?
+        ");
+        $rp->execute([$r['id']]);
+        $rpRow = $rp->fetch();
+        $units = $db->prepare("SELECT id, name FROM portal_units WHERE region_id = ? ORDER BY name");
+        $units->execute([$r['id']]);
+        $out[] = [
+            'region_id' => $r['id'],
+            'region_name' => $r['name'],
+            'regional_president_id' => $rpRow['regional_president_id'] ?? null,
+            'regional_president_name' => $rpRow['regional_president_name'] ?? null,
+            'phone' => $rpRow['phone'] ?? null,
+            'units' => $units->fetchAll(),
+        ];
+    }
+    return $out;
 }
 
 /* ═══════════════════════════════════════════
@@ -780,6 +934,70 @@ function portalDashboardStats() {
     }
 
     return $stats;
+}
+
+function portalNotificationCounts() {
+    $db = getDB();
+    $userId = $_GET['userId'] ?? null;
+    $role = $_GET['role'] ?? 'member';
+    $unitId = $_GET['unitId'] ?? null;
+
+    $out = ['unreadMessages' => 0, 'pendingMigrations' => 0, 'pendingForms' => 0];
+
+    if ($userId) {
+        $stmt = $db->prepare("SELECT COUNT(*) FROM portal_messages WHERE recipient_id = ? AND is_read = 0");
+        $stmt->execute([$userId]);
+        $out['unreadMessages'] = (int)$stmt->fetchColumn();
+    }
+
+    $migSql = "SELECT COUNT(*) FROM portal_migration_requests WHERE status = 'pending'";
+    $migParams = [];
+    if ($role === 'regional_president' && $userId) {
+        $migSql = "SELECT COUNT(*) FROM portal_migration_requests WHERE status = 'pending' AND from_unit_id IN (SELECT id FROM portal_units WHERE region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president'))";
+        $migParams = [$userId];
+    } elseif ($role === 'unit_president' && $unitId) {
+        $migSql = "SELECT COUNT(*) FROM portal_migration_requests WHERE status = 'pending' AND from_unit_id = ?";
+        $migParams = [$unitId];
+    } elseif ($role === 'member' && $userId) {
+        $migSql = "SELECT COUNT(*) FROM portal_migration_requests WHERE status = 'pending' AND requested_by = ?";
+        $migParams = [$userId];
+    }
+    if ($migParams) {
+        $stmt = $db->prepare($migSql);
+        $stmt->execute($migParams);
+        $out['pendingMigrations'] = (int)$stmt->fetchColumn();
+    } else {
+        $out['pendingMigrations'] = (int)$db->query($migSql)->fetchColumn();
+    }
+
+    if ($role === 'member' && $userId && $unitId) {
+        $stmt = $db->prepare("
+            SELECT COUNT(*) FROM portal_perf_forms f
+            WHERE f.is_active = 1 AND (f.scope_unit_id = ? OR f.scope_unit_id IS NULL)
+            AND NOT EXISTS (SELECT 1 FROM portal_perf_responses r WHERE r.form_id = f.id AND r.member_id = ?)
+        ");
+        $stmt->execute([$unitId, $userId]);
+        $out['pendingForms'] = (int)$stmt->fetchColumn();
+    } elseif (in_array($role, ['admin', 'zonal_secretary', 'regional_president', 'unit_president'], true) && $userId) {
+        $base = "SELECT COUNT(*) FROM portal_perf_responses r WHERE NOT EXISTS (SELECT 1 FROM portal_perf_reviews rev WHERE rev.response_id = r.id)";
+        $params = [];
+        if ($role === 'unit_president' && $unitId) {
+            $base .= " AND r.member_id IN (SELECT id FROM portal_users WHERE unit_id = ?)";
+            $params[] = $unitId;
+        } elseif ($role === 'regional_president') {
+            $base .= " AND r.member_id IN (SELECT id FROM portal_users WHERE unit_id IN (SELECT id FROM portal_units WHERE region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president')))";
+            $params[] = $userId;
+        }
+        if ($params) {
+            $stmt = $db->prepare($base);
+            $stmt->execute($params);
+            $out['pendingForms'] = (int)$stmt->fetchColumn();
+        } else {
+            $out['pendingForms'] = (int)$db->query($base)->fetchColumn();
+        }
+    }
+
+    return $out;
 }
 
 /* ═══════════════════════════════════════════
@@ -963,13 +1181,9 @@ function portalGetPerfForms() {
                 OR f.created_by IN (
                     SELECT pu2.id FROM portal_users pu2
                     WHERE pu2.role = 'unit_president'
-                    AND pu2.unit_id IN (
-                        SELECT ru.unit_id FROM portal_region_units ru WHERE ru.regional_president_id = ?
-                    )
+                    AND pu2.unit_id IN (SELECT id FROM portal_units WHERE region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president'))
                 )
-                OR f.scope_unit_id IN (
-                    SELECT ru.unit_id FROM portal_region_units ru WHERE ru.regional_president_id = ?
-                )
+                OR f.scope_unit_id IN (SELECT id FROM portal_units WHERE region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president'))
             )
         ";
         $params = [$userId, $userId, $userId];
@@ -1199,7 +1413,7 @@ function canReviewResponse($db, $reviewerId, $responseId) {
     if ($role === 'admin' || $role === 'zonal_secretary') return true;
     if ($role === 'unit_president' && $reviewer['unit_id'] === $row['member_unit_id']) return true;
     if ($role === 'regional_president') {
-        $check = $db->prepare("SELECT 1 FROM portal_region_units WHERE regional_president_id = ? AND unit_id = ?");
+        $check = $db->prepare("SELECT 1 FROM portal_users rp JOIN portal_units u ON u.region_id = rp.region_id WHERE rp.id = ? AND rp.role = 'regional_president' AND u.id = ?");
         $check->execute([$reviewerId, $row['member_unit_id']]);
         return $check->fetch() ? true : false;
     }

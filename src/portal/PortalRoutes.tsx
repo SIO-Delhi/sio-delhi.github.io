@@ -20,6 +20,11 @@ import { PerfFormFillPage } from './pages/PerfFormFillPage'
 import { PerfResponsesPage } from './pages/PerfResponsesPage'
 import { MigrationsPage } from './pages/MigrationsPage'
 import { MemberProfilePage } from './pages/MemberProfilePage'
+import { ViewMemberPage } from './pages/ViewMemberPage'
+import { ViewUnitPage } from './pages/ViewUnitPage'
+import { ViewCirclePage } from './pages/ViewCirclePage'
+import { ViewCampusPage } from './pages/ViewCampusPage'
+import { RegionsPage } from './pages/RegionsPage'
 import { MemberAccountPage } from './pages/MemberAccountPage'
 import { PortalLogoutPage } from './pages/PortalLogoutPage'
 
@@ -128,10 +133,13 @@ export function PortalRoutes() {
                 <Route path="admin/dashboard" element={<DashboardPage />} />
                 <Route path="admin/units/add" element={<BulkAddPage entity="units" />} />
                 <Route path="admin/units/manage" element={<ManagePage entity="units" />} />
+                <Route path="admin/units/:unitId" element={<ViewUnitPage />} />
                 <Route path="admin/circles/add" element={<BulkAddPage entity="circles" />} />
                 <Route path="admin/circles/manage" element={<ManagePage entity="circles" />} />
                 <Route path="admin/campuses/add" element={<BulkAddPage entity="campuses" />} />
                 <Route path="admin/campuses/manage" element={<ManagePage entity="campuses" />} />
+                <Route path="admin/campuses/:campusId" element={<ViewCampusPage />} />
+                <Route path="admin/regions" element={<RegionsPage />} />
                 <Route path="admin/zonal-secretaries/add" element={<BulkAddPage entity="zonal-secretaries" />} />
                 <Route path="admin/zonal-secretaries/manage" element={<ManagePage entity="zonal-secretaries" />} />
                 <Route path="admin/regional-presidents/add" element={<BulkAddPage entity="regional-presidents" />} />
@@ -140,10 +148,12 @@ export function PortalRoutes() {
                 <Route path="admin/unit-presidents/manage" element={<ManagePage entity="unit-presidents" />} />
                 <Route path="admin/members/add" element={<BulkAddPage entity="members" />} />
                 <Route path="admin/members/manage" element={<ManagePage entity="members" />} />
+                <Route path="admin/members/:memberId" element={<ViewMemberPage />} />
                 <Route path="admin/titles" element={<TitlesPage />} />
                 <Route path="admin/migrations" element={<MigrationsPage />} />
                 <Route path="admin/performance" element={<PerformancePage />} />
                 <Route path="admin/performance/create" element={<PerfFormBuilderPage />} />
+                <Route path="admin/performance/:formId/edit" element={<PerfFormBuilderPage />} />
                 <Route path="admin/performance/:formId/fill" element={<PerfFormFillPage />} />
                 <Route path="admin/performance/:formId/responses" element={<PerfResponsesPage />} />
                 <Route path="admin/messages/compose" element={<MessagesComposePage />} />
@@ -154,14 +164,20 @@ export function PortalRoutes() {
               <Route element={<RoleGuard role="zonal_secretary" />}>
                 <Route path="zonal/dashboard" element={<DashboardPage />} />
                 <Route path="zonal/units" element={<ManagePage entity="units" readOnly />} />
+                <Route path="zonal/units/:unitId" element={<ViewUnitPage />} />
                 <Route path="zonal/circles" element={<ManagePage entity="circles" readOnly />} />
+                <Route path="zonal/circles/:circleId" element={<ViewCirclePage />} />
                 <Route path="zonal/campuses" element={<ManagePage entity="campuses" readOnly />} />
+                <Route path="zonal/campuses/:campusId" element={<ViewCampusPage />} />
+                <Route path="zonal/regions" element={<RegionsPage />} />
                 <Route path="zonal/regional-presidents" element={<ManagePage entity="regional-presidents" readOnly />} />
                 <Route path="zonal/unit-presidents" element={<ManagePage entity="unit-presidents" readOnly />} />
                 <Route path="zonal/members" element={<ManagePage entity="members" readOnly />} />
+                <Route path="zonal/members/:memberId" element={<ViewMemberPage />} />
                 <Route path="zonal/titles" element={<TitlesPage />} />
                 <Route path="zonal/performance" element={<PerformancePage />} />
                 <Route path="zonal/performance/create" element={<PerfFormBuilderPage />} />
+                <Route path="zonal/performance/:formId/edit" element={<PerfFormBuilderPage />} />
                 <Route path="zonal/performance/:formId/fill" element={<PerfFormFillPage />} />
                 <Route path="zonal/performance/:formId/responses" element={<PerfResponsesPage />} />
                 <Route path="zonal/migrations" element={<MigrationsPage />} />
@@ -173,10 +189,13 @@ export function PortalRoutes() {
               <Route element={<RoleGuard role="regional_president" />}>
                 <Route path="regional/dashboard" element={<DashboardPage />} />
                 <Route path="regional/units" element={<ManagePage entity="units" readOnly />} />
+                <Route path="regional/units/:unitId" element={<ViewUnitPage />} />
                 <Route path="regional/unit-presidents" element={<ManagePage entity="unit-presidents" readOnly />} />
                 <Route path="regional/members" element={<ManagePage entity="members" readOnly />} />
+                <Route path="regional/members/:memberId" element={<ViewMemberPage />} />
                 <Route path="regional/performance" element={<PerformancePage />} />
                 <Route path="regional/performance/create" element={<PerfFormBuilderPage />} />
+                <Route path="regional/performance/:formId/edit" element={<PerfFormBuilderPage />} />
                 <Route path="regional/performance/:formId/fill" element={<PerfFormFillPage />} />
                 <Route path="regional/performance/:formId/responses" element={<PerfResponsesPage />} />
                 <Route path="regional/migrations" element={<MigrationsPage />} />
@@ -188,9 +207,11 @@ export function PortalRoutes() {
               <Route element={<RoleGuard role="unit_president" />}>
                 <Route path="unit/dashboard" element={<DashboardPage />} />
                 <Route path="unit/members" element={<ManagePage entity="members" readOnly />} />
+                <Route path="unit/members/:memberId" element={<ViewMemberPage />} />
                 <Route path="unit/titles" element={<TitlesPage />} />
                 <Route path="unit/performance" element={<PerformancePage />} />
                 <Route path="unit/performance/create" element={<PerfFormBuilderPage />} />
+                <Route path="unit/performance/:formId/edit" element={<PerfFormBuilderPage />} />
                 <Route path="unit/performance/:formId/fill" element={<PerfFormFillPage />} />
                 <Route path="unit/performance/:formId/responses" element={<PerfResponsesPage />} />
                 <Route path="unit/messages/compose" element={<MessagesComposePage />} />

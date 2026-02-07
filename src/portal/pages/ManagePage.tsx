@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { DataTable } from '../components/DataTable'
 import { EditDialog } from '../components/EditDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -11,8 +12,17 @@ import type { PortalRole } from '../types'
 
 interface ManagePageProps { entity: EntityType; readOnly?: boolean }
 
+const ROLE_PREFIX: Record<string, string> = {
+  admin: '/portal/admin',
+  zonal_secretary: '/portal/zonal',
+  regional_president: '/portal/regional',
+  unit_president: '/portal/unit',
+  member: '/portal/member',
+}
+
 export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
   const { user } = usePortalAuth()
+  const navigate = useNavigate()
   const [data, setData] = useState<Record<string, unknown>[]>([])
   const [units, setUnits] = useState<PortalUnit[]>([])
   const [circles, setCircles] = useState<PortalCircle[]>([])
@@ -68,6 +78,8 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
       cols.push({ key: 'title', label: 'Title', sortable: true, render: v => v ? <span className="portal-badge portal-badge-title">{v as string}</span> : <span className="portal-text-muted">—</span> })
     if (entity === 'members')
       cols.push({ key: 'status', label: 'Status', sortable: true, render: v => <StatusBadge status={v as string} /> })
+    if (entity === 'members' && user?.role === 'admin')
+      cols.push({ key: 'date_of_birth', label: 'Age', sortable: true, render: (v) => renderAgeBar(v as string | null) })
     cols.push({ key: 'created_at', label: 'Joined', sortable: true, render: v => fmtDate(v as string) })
     return cols
   }
@@ -152,6 +164,22 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
   const canEdit = !readOnly && user?.role === 'admin'
   const deleteName = deleteRow ? String(deleteRow.name ?? deleteRow.full_name ?? 'this record') : ''
 
+  const prefix = user ? (ROLE_PREFIX[user.role] ?? '/portal/member') : '/portal/member'
+  // User entities: clickable name -> member profile
+  const isUserEntity = entity !== 'units' && entity !== 'circles' && entity !== 'campuses'
+  // Unit/Circle/Campus: clickable name -> entity detail page
+  const isEntityDetail = entity === 'units' || entity === 'circles' || entity === 'campuses'
+  const handleRowClick = isUserEntity
+    ? (row: Record<string, unknown>) => navigate(`${prefix}/members/${row.id}`)
+    : isEntityDetail
+      ? (row: Record<string, unknown>) => {
+          const id = row.id as string
+          if (entity === 'units') navigate(`${prefix}/units/${id}`)
+          else if (entity === 'circles') navigate(`${prefix}/circles/${id}`)
+          else navigate(`${prefix}/campuses/${id}`)
+        }
+      : undefined
+
   return (
     <div className="portal-page">
       <div>
@@ -161,6 +189,7 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
 
       <DataTable data={data} columns={getColumns()} loading={loading} error={error} searchPlaceholder={`Search ${labels.plural.toLowerCase()}…`}
         onEdit={canEdit ? row => setEditRow(row) : undefined} onDelete={canEdit ? row => setDeleteRow(row) : undefined}
+        onRowClick={handleRowClick}
         exportFilename={`${entity}.csv`} emptyTitle={`No ${labels.plural.toLowerCase()} found`} emptyDescription={`There are no ${labels.plural.toLowerCase()} registered yet.`} />
 
       {canEdit && <EditDialog open={!!editRow} title={`Edit ${labels.singular}`} fields={getEditFields()} initialValues={editRow ? getInitialEditValues(editRow) : {}} onSave={handleSaveEdit} onCancel={() => setEditRow(null)} />}
@@ -173,4 +202,32 @@ function fmtDate(iso: string): string {
   if (!iso) return '—'
   try { return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) }
   catch { return iso }
+}
+
+/** Parse DDMMYYYY DOB string and return age this year */
+function getAgeThisYear(dob: string | null): number | null {
+  if (!dob || dob.length !== 8) return null
+  const birthYear = parseInt(dob.substring(4, 8), 10)
+  if (isNaN(birthYear) || birthYear < 1900) return null
+  return new Date().getFullYear() - birthYear
+}
+
+/** Render an age progress bar (18→30) for the manage members table */
+function renderAgeBar(dob: string | null) {
+  const age = getAgeThisYear(dob)
+  if (age === null) return <span className="portal-text-muted">—</span>
+  const min = 18, max = 30
+  const pct = Math.round((Math.max(min, Math.min(max, age)) - min) / (max - min) * 100)
+  const isRetired = age >= 30
+  return (
+    <div className="portal-age-bar-cell">
+      <div className="portal-age-bar">
+        <div
+          className={`portal-age-bar-fill ${isRetired ? 'portal-age-bar-gold' : ''}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className={`portal-age-bar-label ${isRetired ? 'portal-age-label-gold' : ''}`}>{age}</span>
+    </div>
+  )
 }

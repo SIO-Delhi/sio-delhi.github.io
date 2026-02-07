@@ -1,9 +1,14 @@
 import { useState, useRef } from 'react'
-import { User, Phone, Building2, Activity, Save, CheckCircle, Award, Camera, Trash2, Lock } from 'lucide-react'
+import {
+  User, Phone, Building2, Activity, Save, CheckCircle, Award,
+  Camera, Trash2, Lock, MapPin, Shield, Calendar, ChevronRight,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { StatusBadge } from '../components/StatusBadge'
 import { UserAvatar } from '../components/UserAvatar'
+import { HeroAgeBar } from '../components/AgeBar'
+import { ROLE_LABELS } from '../constants'
 import * as api from '../api'
 
 export function MemberProfilePage() {
@@ -46,12 +51,9 @@ export function MemberProfilePage() {
   async function handleAvatarSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !user) return
-
-    // Validate file type & size
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
     if (!validTypes.includes(file.type)) { setError('Please upload a JPG, PNG, WebP, or GIF image.'); return }
     if (file.size > 5 * 1024 * 1024) { setError('Image must be smaller than 5 MB.'); return }
-
     setUploading(true); setError(null); setSuccess(false)
     try {
       const url = await api.uploadAvatar(user.id, file)
@@ -77,21 +79,26 @@ export function MemberProfilePage() {
   }
 
   return (
-    <div className="portal-page portal-page-narrow">
+    <div className="portal-page">
       <div>
         <h1 className="portal-heading">My Profile</h1>
         <p className="portal-subheading">
-          {isMember ? 'View your profile. You can only change your photo and password.' : 'View and update your personal information.'}
+          {isMember ? 'View your profile. You can change your photo and password.' : 'View and update your personal information.'}
         </p>
       </div>
 
-      <div className="portal-card portal-card-body">
-        {/* Avatar + name */}
-        <div className="portal-profile-header">
-          <div className="portal-profile-avatar-wrap">
+      {/* Status messages */}
+      {success && <div className="portal-alert portal-alert-success"><CheckCircle size={16} /> <p>Profile updated successfully!</p></div>}
+      {error && <div className="portal-alert portal-alert-error">{error}</div>}
+
+      {/* ── Hero card: avatar + identity ── */}
+      <div className="portal-profile-hero">
+        <div className="portal-profile-hero-accent" />
+        <div className="portal-profile-hero-body">
+          <div className="portal-profile-hero-avatar-wrap">
             <UserAvatar name={displayName} avatarUrl={avatarUrl} size="xl" />
-            <label className="portal-profile-avatar-upload" aria-label="Change photo">
-              <Camera size={22} />
+            <label className="portal-profile-hero-avatar-overlay" aria-label="Change photo">
+              <Camera size={20} />
               <input
                 ref={fileInputRef}
                 type="file"
@@ -101,14 +108,15 @@ export function MemberProfilePage() {
               />
             </label>
           </div>
-          <div>
-            <h2 className="portal-profile-name">{displayName}</h2>
-            <p className="portal-profile-name-label">Full name</p>
-            <div className="portal-profile-contact">
-              <span className="portal-profile-contact-phone">{user.phone}</span>
+          <div className="portal-profile-hero-info">
+            <h2 className="portal-profile-hero-name">{displayName}</h2>
+            <div className="portal-profile-hero-role">
+              <Shield size={14} />
+              <span>{ROLE_LABELS[user.role]}</span>
               <StatusBadge status={user.status} />
             </div>
-            <div className="portal-profile-avatar-actions">
+            <HeroAgeBar dob={user.date_of_birth} />
+            <div className="portal-profile-hero-actions">
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
@@ -126,100 +134,118 @@ export function MemberProfilePage() {
                 </button>
               )}
             </div>
-            <p className="portal-profile-avatar-hint">JPG, PNG, WebP, or GIF — max 5 MB</p>
+            <p className="portal-profile-hero-hint">JPG, PNG, WebP, or GIF — max 5 MB</p>
           </div>
         </div>
+      </div>
 
-        {/* Info grid */}
-        <div className="portal-grid-info portal-mb-6">
-          <div className="portal-card-inset portal-profile-info-item">
-            <Building2 size={18} className="portal-profile-info-icon" />
+      {/* ── Info details grid ── */}
+      <div className="portal-profile-details">
+        <h3 className="portal-section-title">Personal Information</h3>
+        <div className="portal-profile-details-grid">
+          <div className="portal-profile-detail-item">
+            <div className="portal-profile-detail-icon"><User size={16} /></div>
             <div>
-              <p className="portal-profile-info-label">Unit</p>
-              <p className="portal-profile-info-value">{user.unit_name ?? '—'}</p>
+              <span className="portal-profile-detail-label">Full Name</span>
+              <span className="portal-profile-detail-value">{displayName}</span>
             </div>
           </div>
-          <div className="portal-card-inset portal-profile-info-item">
-            <Activity size={18} className="portal-profile-info-icon" />
+          <div className="portal-profile-detail-item">
+            <div className="portal-profile-detail-icon"><Phone size={16} /></div>
             <div>
-              <p className="portal-profile-info-label">Status</p>
-              <p className="portal-profile-info-value portal-profile-info-value-cap">{user.status}</p>
+              <span className="portal-profile-detail-label">Phone Number</span>
+              <span className="portal-profile-detail-value">{user.phone}</span>
             </div>
           </div>
-          {user.title && (
-            <div className="portal-card-inset portal-profile-info-item portal-profile-title-item">
-              <Award size={18} className="portal-profile-title-icon" />
+          {user.unit_name && (
+            <div className="portal-profile-detail-item">
+              <div className="portal-profile-detail-icon"><Building2 size={16} /></div>
               <div>
-                <p className="portal-profile-title-label">Title / Designation</p>
-                <p className="portal-profile-title-value">{user.title}</p>
+                <span className="portal-profile-detail-label">Unit</span>
+                <span className="portal-profile-detail-value">{user.unit_name}</span>
+              </div>
+            </div>
+          )}
+          <div className="portal-profile-detail-item">
+            <div className="portal-profile-detail-icon"><MapPin size={16} /></div>
+            <div>
+              <span className="portal-profile-detail-label">Zone</span>
+              <span className="portal-profile-detail-value">Delhi</span>
+            </div>
+          </div>
+          <div className="portal-profile-detail-item">
+            <div className="portal-profile-detail-icon"><Activity size={16} /></div>
+            <div>
+              <span className="portal-profile-detail-label">Status</span>
+              <span className="portal-profile-detail-value portal-profile-detail-value-cap">{user.status}</span>
+            </div>
+          </div>
+          {user.created_at && (
+            <div className="portal-profile-detail-item">
+              <div className="portal-profile-detail-icon"><Calendar size={16} /></div>
+              <div>
+                <span className="portal-profile-detail-label">Joined</span>
+                <span className="portal-profile-detail-value">{new Date(user.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </div>
+            </div>
+          )}
+          {user.title && (
+            <div className="portal-profile-detail-item portal-profile-detail-title">
+              <div className="portal-profile-detail-icon portal-profile-detail-icon-title"><Award size={16} /></div>
+              <div>
+                <span className="portal-profile-detail-label">Title / Designation</span>
+                <span className="portal-profile-detail-value">{user.title}</span>
               </div>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Change password */}
-        <div className="portal-card-inset portal-mb-6" style={{ padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <Lock size={20} className="portal-profile-info-icon" />
-            <div>
-              <p className="portal-profile-info-label">Password</p>
-              <p className="portal-profile-info-value" style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                Change your login password (set a custom one after first sign-in)
-              </p>
-            </div>
-          </div>
-          <Link to="/portal/member/account" className="portal-btn portal-btn-secondary portal-btn-sm">
-            Account settings &amp; password
-          </Link>
-        </div>
-
-        {/* Status messages */}
-        {success && <div className="portal-alert portal-alert-success portal-mb-4"><CheckCircle size={16} /> <p>Profile updated successfully!</p></div>}
-        {error && <div className="portal-alert portal-alert-error portal-mb-4">{error}</div>}
-
-        {/* Overview: name and details (read-only for members) */}
-        <div className="portal-card-inset portal-mb-6">
-          <h3 className="portal-overview-card-title">Profile details</h3>
-          <div className="portal-grid-overview">
-            {[
-              { label: 'Full name', value: displayName },
-              { label: 'Phone', value: user.phone },
-              ...(user.unit_name ? [{ label: 'Unit', value: user.unit_name }] : []),
-              ...(user.campus_name ? [{ label: 'Campus', value: user.campus_name }] : []),
-            ].map(item => (
-              <div key={item.label} className="portal-card-inset portal-overview-item">
-                <span className="portal-overview-item-label">{item.label}</span>
-                <span className="portal-overview-item-value">{item.value}</span>
-              </div>
-            ))}
+      {/* ── Password & Security ── */}
+      <div className="portal-profile-security">
+        <div className="portal-profile-security-left">
+          <div className="portal-profile-security-icon"><Lock size={18} /></div>
+          <div>
+            <h3 className="portal-section-title" style={{ marginBottom: 4 }}>Password &amp; Security</h3>
+            <p className="portal-profile-security-desc">Change your login password or set a custom one after your first sign-in.</p>
           </div>
         </div>
+        <Link to="/portal/member/account" className="portal-btn portal-btn-secondary portal-btn-sm">
+          Manage <ChevronRight size={14} />
+        </Link>
+      </div>
 
-        {/* Editable form (only for non-members; members cannot change name/phone/etc.) */}
-        {canEditProfileDetails && (
+      {/* ── Editable form (only for non-members) ── */}
+      {canEditProfileDetails && (
+        <div className="portal-card portal-card-body">
+          <h3 className="portal-section-title" style={{ marginBottom: 20 }}>Edit Profile</h3>
           <form onSubmit={handleSave} className="portal-form-stack">
-            <div>
-              <label className="portal-label portal-label-icon"><User size={14} /> First Name</label>
-              <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="portal-input" />
+            <div className="portal-form-row">
+              <div style={{ flex: 1 }}>
+                <label className="portal-label portal-label-icon"><User size={14} /> First Name</label>
+                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="portal-input" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="portal-label portal-label-icon"><User size={14} /> Middle Name</label>
+                <input type="text" value={middleName} onChange={e => setMiddleName(e.target.value)} className="portal-input" placeholder="Optional" />
+              </div>
             </div>
-            <div>
-              <label className="portal-label portal-label-icon"><User size={14} /> Middle Name</label>
-              <input type="text" value={middleName} onChange={e => setMiddleName(e.target.value)} className="portal-input" placeholder="Optional" />
-            </div>
-            <div>
-              <label className="portal-label portal-label-icon"><User size={14} /> Last Name</label>
-              <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="portal-input" />
-            </div>
-            <div>
-              <label className="portal-label portal-label-icon"><Phone size={14} /> Phone Number</label>
-              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="portal-input" />
+            <div className="portal-form-row">
+              <div style={{ flex: 1 }}>
+                <label className="portal-label portal-label-icon"><User size={14} /> Last Name</label>
+                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="portal-input" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="portal-label portal-label-icon"><Phone size={14} /> Phone Number</label>
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="portal-input" />
+              </div>
             </div>
             <button type="submit" disabled={saving} className="portal-btn portal-btn-primary portal-self-start">
               <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
             </button>
           </form>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

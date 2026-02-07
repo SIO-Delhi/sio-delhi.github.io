@@ -50,12 +50,13 @@ The Vite dev server can proxy Clerk requests so the app works **without** clerk.
 
 To use **production** keys and **production** users (e.g. `adnan1998`) while developing on your machine, the request Origin must be a subdomain of `siodelhi.org`. Do the following:
 
-1. **Map a subdomain to this machine**  
-   Add a line to your hosts file so `local.siodelhi.org` resolves to `127.0.0.1`:
-   ```bash
-   # Linux/macOS (run with sudo if needed)
-   echo "127.0.0.1 local.siodelhi.org" | sudo tee -a /etc/hosts
-   ```
+1. **Map a subdomain to this machine (hosts file only)**  
+   **Do not add this in Cloudflare or any public DNS.** This mapping must be only on your development machine, in your **hosts file**, so that only your browser on this computer resolves `local.siodelhi.org` to your localhost (`127.0.0.1`).
+   - **Linux/macOS:** Edit `/etc/hosts` and add a line: `127.0.0.1 local.siodelhi.org`
+     ```bash
+     echo "127.0.0.1 local.siodelhi.org" | sudo tee -a /etc/hosts
+     ```
+   - **Windows:** Edit `C:\Windows\System32\drivers\etc\hosts` (as Administrator) and add: `127.0.0.1 local.siodelhi.org`
 
 2. **Run the app on HTTPS port 443**  
    Clerk’s origin check fails if the port is in the Origin (e.g. `https://local.siodelhi.org:5174`). You must use **port 443** so the Origin is `https://local.siodelhi.org` with no port.

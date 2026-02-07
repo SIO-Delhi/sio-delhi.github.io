@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Send, CheckCircle } from 'lucide-react'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import * as api from '../api'
@@ -9,8 +10,8 @@ type RecipientMode = 'individual' | 'role' | 'broadcast'
 
 function getAvailableRoleTargets(userRole: PortalRole): PortalRole[] {
   switch (userRole) {
-    case 'admin': return ['zonal_secretary', 'regional_president', 'unit_president', 'member']
-    case 'zonal_secretary': return ['regional_president', 'unit_president', 'member']
+    case 'admin': return ['admin', 'zonal_secretary', 'regional_president', 'unit_president', 'member']
+    case 'zonal_secretary': return ['admin', 'zonal_secretary', 'regional_president', 'unit_president', 'member']
     case 'regional_president': return ['unit_president', 'member']
     case 'unit_president': return ['member']
     case 'member': return ['unit_president', 'zonal_secretary']
@@ -19,6 +20,7 @@ function getAvailableRoleTargets(userRole: PortalRole): PortalRole[] {
 
 export function MessagesComposePage() {
   const { user } = usePortalAuth()
+  const [searchParams] = useSearchParams()
   const [mode, setMode] = useState<RecipientMode>('individual')
   const [recipientId, setRecipientId] = useState('')
   const [recipientRole, setRecipientRole] = useState<PortalRole | ''>('')
@@ -28,6 +30,14 @@ export function MessagesComposePage() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  // Pre-fill from reply params
+  useEffect(() => {
+    const replyTo = searchParams.get('replyTo')
+    const replySubject = searchParams.get('subject')
+    if (replyTo) { setMode('individual'); setRecipientId(replyTo) }
+    if (replySubject) setSubject(replySubject)
+  }, [searchParams])
 
   useEffect(() => { api.fetchUsers().then(setUsers).catch(() => {}) }, [])
   const roleTargets = user ? getAvailableRoleTargets(user.role) : []
@@ -78,23 +88,25 @@ export function MessagesComposePage() {
 
       <div className="portal-card portal-card-body">
         <form onSubmit={handleSend} className="portal-form-stack-lg">
-          <div>
-            <label className="portal-label">Send To</label>
-            <div className="portal-tab-group">
-              {availableModes.map(m => (
-                <button key={m} type="button" onClick={() => { setMode(m); setRecipientId(''); setRecipientRole('') }} className={`portal-tab ${mode === m ? 'active' : ''}`}>
-                  {m === 'individual' ? 'Individual' : m === 'role' ? 'By Role' : 'Broadcast All'}
-                </button>
-              ))}
+          {!memberOnlyIndividual && (
+            <div>
+              <label className="portal-label">Send To</label>
+              <div className="portal-tab-group">
+                {availableModes.map(m => (
+                  <button key={m} type="button" onClick={() => { setMode(m); setRecipientId(''); setRecipientRole('') }} className={`portal-tab ${mode === m ? 'active' : ''}`}>
+                    {m === 'individual' ? 'Individual' : m === 'role' ? 'By Role' : 'Broadcast All'}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {mode === 'individual' && (
             <div>
-              <label className="portal-label">Recipient</label>
+              <label className="portal-label">{memberOnlyIndividual ? 'Send To' : 'Recipient'}</label>
               <select value={recipientId} onChange={e => setRecipientId(e.target.value)} className="portal-input portal-select">
-                <option value="">Select recipient…</option>
-                {individualRecipients.map(u => <option key={u.id} value={u.id}>{u.full_name} ({ROLE_LABELS[u.role]}) — {u.phone}</option>)}
+                <option value="">{memberOnlyIndividual ? 'Select unit president or zonal secretary…' : 'Select recipient…'}</option>
+                {individualRecipients.map(u => <option key={u.id} value={u.id}>{u.full_name} ({ROLE_LABELS[u.role]}){u.unit_name ? ` — ${u.unit_name}` : ''}</option>)}
               </select>
             </div>
           )}

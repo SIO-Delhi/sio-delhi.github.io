@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, GripVertical, Save } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Plus, Trash2, GripVertical, Save, ArrowLeft, Loader2 } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import * as api from '../api'
 import type { PortalUnit, PerfFieldType } from '../types'
@@ -31,16 +31,56 @@ function newField(): FieldDraft {
 export function PerfFormBuilderPage() {
   const { user } = usePortalAuth()
   const navigate = useNavigate()
+  const { formId } = useParams<{ formId?: string }>()
+  const isEditMode = !!formId
+
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [period, setPeriod] = useState('')
   const [scopeUnitId, setScopeUnitId] = useState<string>('')
+  const [isActive, setIsActive] = useState(true)
   const [fields, setFields] = useState<FieldDraft[]>([newField()])
   const [units, setUnits] = useState<PortalUnit[]>([])
   const [saving, setSaving] = useState(false)
+  const [loadingForm, setLoadingForm] = useState(isEditMode)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { api.fetchUnits().then(setUnits).catch(() => {}) }, [])
+
+  // Load existing form data when editing
+  useEffect(() => {
+    if (!formId) return
+    let cancelled = false
+    async function load() {
+      try {
+        const form = await api.fetchPerfForm(formId!)
+        if (cancelled) return
+        setTitle(form.title)
+        setDescription(form.description ?? '')
+        setPeriod(form.period ?? '')
+        setScopeUnitId(form.scope_unit_id ?? '')
+        setIsActive(typeof form.is_active === 'boolean' ? form.is_active : Number(form.is_active) === 1)
+        if (form.fields && form.fields.length > 0) {
+          setFields(form.fields.map(f => ({
+            key: f.id || crypto.randomUUID(),
+            type: f.type,
+            label: f.label,
+            description: f.description ?? '',
+            options: f.options && f.options.length > 0 ? f.options : [''],
+            is_required: typeof f.is_required === 'boolean' ? f.is_required : Number(f.is_required) === 1,
+            max_value: f.max_value ?? 10,
+          })))
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load form.')
+      } finally {
+        if (!cancelled) setLoadingForm(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [formId])
+
   if (!user) return null
 
   const pathPrefix = `/portal/${user.role === 'admin' ? 'admin' : user.role === 'zonal_secretary' ? 'zonal' : user.role === 'regional_president' ? 'regional' : 'unit'}`
@@ -65,6 +105,17 @@ export function PerfFormBuilderPage() {
     setFields(prev => prev.map(f => f.key === fieldKey ? { ...f, options: f.options.filter((_, i) => i !== idx) } : f))
   }
 
+  function buildFieldsPayload() {
+    return fields.map(f => ({
+      type: f.type,
+      label: f.label.trim(),
+      description: f.description.trim() || undefined,
+      options: (f.type === 'mcq' || f.type === 'msq') ? f.options.filter(o => o.trim()) : undefined,
+      is_required: f.is_required,
+      max_value: (f.type === 'number' || f.type === 'rating') ? f.max_value : undefined,
+    }))
+  }
+
   async function handleSave() {
     setError(null)
     if (!title.trim()) { setError('Title is required.'); return }
@@ -78,31 +129,50 @@ export function PerfFormBuilderPage() {
 
     setSaving(true)
     try {
-      await api.createPerfForm({
-        title: title.trim(),
-        description: description.trim() || undefined,
-        created_by: user!.id,
-        scope_unit_id: scopeUnitId || null,
-        period: period.trim() || undefined,
-        fields: fields.map(f => ({
-          type: f.type,
-          label: f.label.trim(),
-          description: f.description.trim() || undefined,
-          options: (f.type === 'mcq' || f.type === 'msq') ? f.options.filter(o => o.trim()) : undefined,
-          is_required: f.is_required,
-          max_value: (f.type === 'number' || f.type === 'rating') ? f.max_value : undefined,
-        })),
-      })
+      if (isEditMode) {
+        await api.updatePerfForm(formId!, {
+          title: title.trim(),
+          description: description.trim() || null,
+          scope_unit_id: scopeUnitId || null,
+          period: period.trim() || null,
+          is_active: isActive,
+          fields: buildFieldsPayload(),
+        })
+      } else {
+        await api.createPerfForm({
+          title: title.trim(),
+          description: description.trim() || undefined,
+          created_by: user!.id,
+          scope_unit_id: scopeUnitId || null,
+          period: period.trim() || undefined,
+          fields: buildFieldsPayload(),
+        })
+      }
       navigate(`${pathPrefix}/performance`)
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to save.') }
     finally { setSaving(false) }
   }
 
+  if (loadingForm) {
+    return (
+      <div className="portal-page portal-page-narrow">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', padding: 40 }}>
+          <Loader2 size={20} className="portal-spin" /> <span style={{ color: 'var(--p-text-secondary)' }}>Loading form…</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="portal-page portal-page-narrow">
       <div>
-        <h1 className="portal-heading">Create Performance Form</h1>
-        <p className="portal-subheading">Design a form with custom fields for members to fill.</p>
+        <button onClick={() => navigate(`${pathPrefix}/performance`)} className="portal-btn portal-btn-ghost portal-btn-sm portal-self-start" style={{ marginBottom: 8 }}>
+          <ArrowLeft size={14} /> Back to Performance
+        </button>
+        <h1 className="portal-heading">{isEditMode ? 'Edit Performance Form' : 'Create Performance Form'}</h1>
+        <p className="portal-subheading">
+          {isEditMode ? 'Update the form metadata and fields.' : 'Design a form with custom fields for members to fill.'}
+        </p>
       </div>
 
       {error && <div className="portal-alert portal-alert-error">{error}</div>}
@@ -131,6 +201,12 @@ export function PerfFormBuilderPage() {
               </select>
             </div>
           </div>
+          {isEditMode && (
+            <label className="portal-perf-required-toggle">
+              <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} />
+              <span>Active (members can fill this form)</span>
+            </label>
+          )}
         </div>
       </div>
 
@@ -200,7 +276,7 @@ export function PerfFormBuilderPage() {
 
       {/* Save */}
       <button onClick={handleSave} disabled={saving} className="portal-btn portal-btn-primary portal-self-start">
-        <Save size={16} /> {saving ? 'Saving…' : 'Create Form'}
+        <Save size={16} /> {saving ? 'Saving…' : isEditMode ? 'Save Changes' : 'Create Form'}
       </button>
     </div>
   )

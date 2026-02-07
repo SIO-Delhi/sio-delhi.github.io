@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { CheckCircle, ArrowLeft } from 'lucide-react'
 import { usePortalAuth } from '../context/PortalAuthContext'
+import { useNotifications } from '../context/NotificationContext'
 import * as api from '../api'
 import type { PerfForm, PerfField } from '../types'
 
 export function PerfFormFillPage() {
   const { formId } = useParams<{ formId: string }>()
   const { user } = usePortalAuth()
+  const { decrement } = useNotifications()
   const navigate = useNavigate()
   const [form, setForm] = useState<PerfForm | null>(null)
   const [answers, setAnswers] = useState<Record<string, unknown>>({})
@@ -20,11 +22,20 @@ export function PerfFormFillPage() {
     if (!formId) return
     let cancelled = false
     api.fetchPerfForm(formId)
-      .then(data => { if (!cancelled) setForm(data) })
+      .then(data => {
+        if (cancelled) return
+        setForm(data)
+        // Mark as "seen" for members so the notification badge decreases
+        if (user && user.role === 'member') {
+          api.markPerfFormSeen(formId, user.id)
+            .then(() => decrement('pendingForms'))
+            .catch(() => {})
+        }
+      })
       .catch(err => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load form.') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [formId])
+  }, [formId, user, decrement])
 
   if (!user) return null
 

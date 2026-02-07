@@ -8,6 +8,7 @@ import type {
   MigrationRequest,
   PortalMessage,
   DashboardStats,
+  RetiringMember,
   PerfForm,
   PerfResponse,
   PerfReview,
@@ -71,6 +72,14 @@ export async function fetchUnits(): Promise<PortalUnit[]> {
   return get<PortalUnit[]>('/units')
 }
 
+export async function fetchUnit(id: string): Promise<PortalUnit> {
+  return get<PortalUnit>(`/units/${id}`)
+}
+
+export async function fetchUnitMembers(unitId: string): Promise<PortalUser[]> {
+  return get<PortalUser[]>(`/units/${unitId}/members`)
+}
+
 export async function createUnits(units: { name: string }[]): Promise<void> {
   await post('/units', { units })
 }
@@ -91,6 +100,14 @@ export async function fetchCircles(): Promise<PortalCircle[]> {
   return get<PortalCircle[]>('/circles')
 }
 
+export async function fetchCircle(id: string): Promise<PortalCircle> {
+  return get<PortalCircle>(`/circles/${id}`)
+}
+
+export async function fetchCircleMembers(circleId: string): Promise<PortalUser[]> {
+  return get<PortalUser[]>(`/circles/${circleId}/members`)
+}
+
 export async function createCircles(circles: { name: string }[]): Promise<void> {
   await post('/circles', { circles })
 }
@@ -109,6 +126,14 @@ export async function deleteCircle(id: string): Promise<void> {
 
 export async function fetchCampuses(): Promise<PortalCampus[]> {
   return get<PortalCampus[]>('/campuses')
+}
+
+export async function fetchCampus(id: string): Promise<PortalCampus> {
+  return get<PortalCampus>(`/campuses/${id}`)
+}
+
+export async function fetchCampusMembers(campusId: string): Promise<PortalUser[]> {
+  return get<PortalUser[]>(`/campuses/${campusId}/members`)
 }
 
 export async function createCampuses(campuses: { name: string }[]): Promise<void> {
@@ -183,19 +208,49 @@ export async function fetchDashboardStats(
   return get<DashboardStats>(`/dashboard/stats?${params.toString()}`)
 }
 
+export async function fetchRetiringMembers(): Promise<RetiringMember[]> {
+  return get<RetiringMember[]>('/retiring-members')
+}
+
+export async function lockUser(
+  id: string,
+  locked: boolean,
+  actor?: { userId: string; role: string; unitId?: string | null },
+): Promise<void> {
+  const body: { locked: boolean; actorUserId?: string; actorRole?: string; actorUnitId?: string | null } = { locked }
+  if (actor) {
+    body.actorUserId = actor.userId
+    body.actorRole = actor.role
+    body.actorUnitId = actor.unitId ?? undefined
+  }
+  await put(`/users/${id}/lock`, body)
+}
+
 /* ═══════════════════════════════════════════
    Migrations
    ═══════════════════════════════════════════ */
 
-export async function fetchMigrations(statusFilter?: string): Promise<MigrationRequest[]> {
-  const qs = statusFilter && statusFilter !== 'all' ? `?status=${statusFilter}` : ''
+export async function fetchMigrations(filters?: {
+  status?: string
+  role?: string
+  userId?: string
+  unitId?: string
+}): Promise<MigrationRequest[]> {
+  const params = new URLSearchParams()
+  if (filters?.status && filters.status !== 'all') params.set('status', filters.status)
+  if (filters?.role) params.set('role', filters.role)
+  if (filters?.userId) params.set('userId', filters.userId)
+  if (filters?.unitId) params.set('unitId', filters.unitId)
+  const qs = params.toString() ? `?${params}` : ''
   return get<MigrationRequest[]>(`/migrations${qs}`)
 }
 
 export async function createMigration(data: {
   member_id: string
   from_unit_id: string
-  to_unit_id: string
+  to_unit_id?: string
+  to_location?: string
+  reason?: string
   requested_by: string
 }): Promise<void> {
   await post('/migrations', data)
@@ -209,15 +264,27 @@ export async function resolveMigration(
   await put(`/migrations/${id}`, { status, resolved_by: resolvedBy })
 }
 
+/** Mark all resolved migrations as "seen" for a member (clears their notification badge) */
+export async function markMigrationsSeen(memberId: string): Promise<void> {
+  await post('/migrations/mark-seen', { member_id: memberId })
+}
+
 /* ═══════════════════════════════════════════
    Messages
    ═══════════════════════════════════════════ */
+
+/** Helper: coerce PHP TINYINT values ("0"/"1", 0/1) to real booleans */
+function toBool(v: unknown): boolean {
+  return v === true || v === 1 || v === '1'
+}
 
 export async function fetchMessages(
   userId: string,
   type: 'inbox' | 'sent',
 ): Promise<PortalMessage[]> {
-  return get<PortalMessage[]>(`/messages?userId=${userId}&type=${type}`)
+  const rows = await get<PortalMessage[]>(`/messages?userId=${userId}&type=${type}`)
+  // Normalize TINYINT fields to real JS booleans
+  return rows.map(m => ({ ...m, is_broadcast: toBool(m.is_broadcast), is_read: toBool(m.is_read) }))
 }
 
 export async function sendMessage(msg: {
@@ -279,6 +346,11 @@ export async function submitPerfResponse(formId: string, memberId: string, respo
   await post(`/performance/forms/${formId}/respond`, { member_id: memberId, response_data: responseData })
 }
 
+/** Record that a member has opened/seen a performance form (clears its notification badge) */
+export async function markPerfFormSeen(formId: string, memberId: string): Promise<void> {
+  await post(`/performance/forms/${formId}/seen`, { member_id: memberId })
+}
+
 export async function fetchPerfResponseReviews(formId: string, responseId: string): Promise<PerfReview[]> {
   return get<PerfReview[]>(`/performance/forms/${formId}/responses/${responseId}/reviews`)
 }
@@ -302,6 +374,26 @@ export async function updatePerfReview(reviewId: string, reviewerId: string, dat
 
 export async function deletePerfReview(reviewId: string, reviewerId: string): Promise<void> {
   await del(`/performance/reviews/${reviewId}?reviewer_id=${encodeURIComponent(reviewerId)}`)
+}
+
+/* ═══════════════════════════════════════════
+   Member Profile Activity
+   ═══════════════════════════════════════════ */
+
+/** Fetch all messages sent to/from a specific user (leader view) */
+export async function fetchUserMessages(userId: string): Promise<PortalMessage[]> {
+  const rows = await get<PortalMessage[]>(`/users/${userId}/messages`)
+  return rows.map(m => ({ ...m, is_broadcast: toBool(m.is_broadcast), is_read: toBool(m.is_read) }))
+}
+
+/** Fetch migration requests involving a specific user */
+export async function fetchUserMigrations(userId: string): Promise<MigrationRequest[]> {
+  return get<MigrationRequest[]>(`/users/${userId}/migrations`)
+}
+
+/** Fetch performance responses submitted by a specific user */
+export async function fetchUserPerformance(userId: string): Promise<(PerfResponse & { form_title?: string; form_description?: string; form_period?: string })[]> {
+  return get<(PerfResponse & { form_title?: string; form_description?: string; form_period?: string })[]>(`/users/${userId}/performance`)
 }
 
 /* ═══════════════════════════════════════════
@@ -333,4 +425,37 @@ export async function removeAvatar(userId: string): Promise<void> {
 
 export async function fetchRegionUnits(regionalPresidentId: string): Promise<string[]> {
   return get<string[]>(`/regions/${regionalPresidentId}/units`)
+}
+
+export interface RegionWithUnits {
+  region_id: string
+  region_name: string
+  regional_president_id: string | null
+  regional_president_name: string | null
+  phone?: string | null
+  units: { id: string; name: string }[]
+}
+
+export async function fetchRegions(): Promise<RegionWithUnits[]> {
+  return get<RegionWithUnits[]>('/regions')
+}
+
+/* ═══════════════════════════════════════════
+   Notification Counts (sidebar badges)
+   ═══════════════════════════════════════════ */
+
+export interface NotificationCounts {
+  unreadMessages: number
+  pendingMigrations: number
+  pendingForms: number
+}
+
+export async function fetchNotificationCounts(filters: {
+  userId: string
+  role: string
+  unitId?: string
+}): Promise<NotificationCounts> {
+  const params = new URLSearchParams({ userId: filters.userId, role: filters.role })
+  if (filters.unitId) params.set('unitId', filters.unitId)
+  return get<NotificationCounts>(`/notifications?${params}`)
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BarChart3, Plus, Eye, FileText, Users, Trash2 } from 'lucide-react'
+import { BarChart3, Plus, Eye, FileText, Users, Trash2, Pencil } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -108,6 +108,11 @@ export function PerformancePage() {
                     <Link to={`${pathPrefix}/performance/${form.id}/responses`} className="portal-btn portal-btn-secondary portal-btn-sm">
                       <Eye size={14} /> Responses
                     </Link>
+                    {canCreate && (
+                      <Link to={`${pathPrefix}/performance/${form.id}/edit`} className="portal-btn portal-btn-ghost portal-btn-sm">
+                        <Pencil size={14} /> Edit
+                      </Link>
+                    )}
                     <Link to={`${pathPrefix}/performance/${form.id}/fill`} className="portal-btn portal-btn-ghost portal-btn-sm">
                       <FileText size={14} /> Preview
                     </Link>

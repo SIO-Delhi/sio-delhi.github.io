@@ -62,8 +62,10 @@ export interface MigrationRequest {
   member_name?: string
   from_unit_id: string
   from_unit_name?: string
-  to_unit_id: string
+  to_unit_id: string | null
   to_unit_name?: string
+  to_location?: string | null
+  reason?: string
   status: MigrationStatus
   requested_by: string
   requested_by_name?: string
@@ -154,6 +156,23 @@ export interface DashboardStats {
   totalZonalSecretaries: number
   pendingMigrations: number
   unreadMessages: number
+  retiringMembers: number
+}
+
+export interface RetiringMember {
+  id: string
+  first_name: string
+  middle_name: string | null
+  last_name: string
+  full_name: string
+  phone: string
+  date_of_birth: string
+  status: string
+  avatar_url: string | null
+  unit_id: string | null
+  unit_name: string | null
+  created_at: string
+  age_this_year: number
 }
 
 /* ── Shared component prop types ── */
@@ -188,6 +207,10 @@ export interface DashboardStat {
   icon: ComponentType<{ size?: number }>
   color: 'blue' | 'green' | 'amber' | 'red' | 'slate' | 'indigo'
   change?: string
+  /** If set, clicking the stat card navigates to this path */
+  to?: string
+  /** If set, clicking the stat card calls this handler instead of navigating */
+  onClick?: () => void
 }
 
 export type EntityType = 'units' | 'circles' | 'campuses' | 'zonal-secretaries' | 'regional-presidents' | 'unit-presidents' | 'members'
