@@ -385,6 +385,104 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
+  flex: 1;
+}
+
+/* Search (admin/zonal) */
+.portal-topbar-search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 320px;
+  min-width: 160px;
+}
+
+.portal-topbar-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--p-text-muted);
+  pointer-events: none;
+}
+
+.portal-topbar-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 38px;
+  font-size: 0.875rem;
+  color: var(--p-cream);
+  background: var(--p-bg-input, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-md, 8px);
+  outline: none;
+  transition: border-color 200ms, box-shadow 200ms;
+}
+
+.portal-topbar-search-input::placeholder {
+  color: var(--p-text-muted);
+}
+
+.portal-topbar-search-input:focus {
+  border-color: var(--p-amber);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.portal-topbar-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--p-bg-card);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--p-shadow-lg);
+  z-index: 100;
+  padding: 8px 0;
+  animation: portal-dropdown-in 150ms ease;
+}
+
+.portal-topbar-search-section-title {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--p-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 6px 12px 4px;
+}
+
+.portal-topbar-search-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  color: var(--p-cream);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms;
+}
+
+.portal-topbar-search-item:hover {
+  background: var(--p-bg-hover);
+}
+
+.portal-topbar-search-meta {
+  font-size: 0.75rem;
+  color: var(--p-text-muted);
+  margin-top: 2px;
+}
+
+.portal-topbar-search-empty {
+  font-size: 0.8125rem;
+  color: var(--p-text-muted);
+  padding: 12px;
+  margin: 0;
+  text-align: center;
 }
 
 .portal-topbar-title {

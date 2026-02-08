@@ -466,6 +466,17 @@
   letter-spacing: 0.01em;
 }
 
+.portal-stat-sublabel {
+  font-size: 0.75rem;
+  color: var(--p-text-muted);
+  margin-top: 2px;
+}
+
+.portal-stat-sublabel-detail {
+  font-size: 0.7rem;
+  word-break: break-word;
+}
+
 .portal-stat-change {
   font-size: 0.75rem;
   color: var(--p-text-muted);

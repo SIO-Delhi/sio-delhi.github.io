@@ -706,6 +706,33 @@ function portalGetCampuses() {
     return $db->query("SELECT * FROM portal_campuses ORDER BY name")->fetchAll();
 }
 
+function portalGetCampus($id) {
+    $db = getDB();
+    $stmt = $db->prepare("SELECT * FROM portal_campuses WHERE id = ?");
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        http_response_code(404);
+        return ['error' => 'Campus not found.'];
+    }
+    return $row;
+}
+
+function portalGetCampusMembers($id) {
+    $db = getDB();
+    $stmt = $db->prepare("
+        SELECT u.*, pu.name AS unit_name, pc.name AS circle_name, pca.name AS campus_name
+        FROM portal_users u
+        LEFT JOIN portal_units pu ON u.unit_id = pu.id
+        LEFT JOIN portal_circles pc ON u.circle_id = pc.id
+        LEFT JOIN portal_campuses pca ON u.campus_id = pca.id
+        WHERE u.campus_id = ?
+        ORDER BY u.first_name, u.last_name
+    ");
+    $stmt->execute([$id]);
+    return array_map('formatUser', $stmt->fetchAll());
+}
+
 function portalCreateCampuses() {
     $body = jsonBody();
     $campuses = $body['campuses'] ?? [];
@@ -756,6 +783,15 @@ function portalGetUsers() {
     $campusId = $_GET['campusId'] ?? null;
     if ($campusId) { $sql .= " AND u.campus_id = ?"; $params[] = $campusId; }
     if ($titleOnly) { $sql .= " AND u.title IS NOT NULL"; }
+    // Unit Presidents list: show only region/area unit presidents; campus unit presidents appear under Campus Presidents
+    $excludeCampusUnits = isset($_GET['excludeCampusUnits']) && $_GET['excludeCampusUnits'] !== '0' && $_GET['excludeCampusUnits'] !== '';
+    $campusUnitsOnly = isset($_GET['campusUnitsOnly']) && $_GET['campusUnitsOnly'] !== '0' && $_GET['campusUnitsOnly'] !== '';
+    if ($role === 'unit_president' && $excludeCampusUnits) {
+        $sql .= " AND pu.region_id IS NOT NULL";
+    }
+    if ($role === 'unit_president' && $campusUnitsOnly) {
+        $sql .= " AND pu.region_id IS NULL";
+    }
 
     $sql .= " ORDER BY u.first_name, u.last_name";
     $stmt = $db->prepare($sql);
@@ -894,11 +930,14 @@ function portalDashboardStats() {
 
     $stats = [];
 
-    // Units count
+    // Units: separate region/area units (have region_id) from campus units (in portal_campuses). PDF lists 27 units; DB may have more; we split for display.
     $stats['totalUnits'] = (int)$db->query("SELECT COUNT(*) FROM portal_units")->fetchColumn();
+    $stats['totalRegionUnits'] = (int)$db->query("SELECT COUNT(*) FROM portal_units WHERE region_id IS NOT NULL")->fetchColumn();
+    $stats['totalCircles'] = (int)$db->query("SELECT COUNT(*) FROM portal_circles")->fetchColumn();
+    $stats['totalCampuses'] = (int)$db->query("SELECT COUNT(*) FROM portal_campuses")->fetchColumn();
 
-    // Members count (scoped)
-    $memberSql = "SELECT status, COUNT(*) as cnt FROM portal_users WHERE role = 'member'";
+    // Total people in the organisation: count ALL users (not just role='member'). Previously only role='member' was counted, so unit presidents etc. were excluded and the number looked lower.
+    $memberSql = "SELECT status, COUNT(*) as cnt FROM portal_users WHERE 1=1";
     $params = [];
     if ($role === 'unit_president' && $unitId) { $memberSql .= " AND unit_id = ?"; $params[] = $unitId; }
     $memberSql .= " GROUP BY status";
@@ -919,8 +958,19 @@ function portalDashboardStats() {
     $stats['inactiveMembers'] = $inactive;
     $stats['migratedMembers'] = $migrated;
 
-    // Aggregates
+    // Unit presidents: count assigned; units without president = only region/area units (have region_id), so count matches PDF
     $stats['totalUnitPresidents'] = (int)$db->query("SELECT COUNT(*) FROM portal_users WHERE role='unit_president'")->fetchColumn();
+    $stats['unitsWithoutPresident'] = (int)$db->query("
+        SELECT COUNT(*) FROM portal_units u
+        LEFT JOIN portal_users up ON up.unit_id = u.id AND up.role = 'unit_president'
+        WHERE up.id IS NULL AND u.region_id IS NOT NULL
+    ")->fetchColumn();
+    $stats['regionUnitsWithoutPresident'] = $db->query("
+        SELECT u.id, u.name FROM portal_units u
+        LEFT JOIN portal_users up ON up.unit_id = u.id AND up.role = 'unit_president'
+        WHERE up.id IS NULL AND u.region_id IS NOT NULL
+        ORDER BY u.name
+    ")->fetchAll(PDO::FETCH_ASSOC);
     $stats['totalZonalSecretaries'] = (int)$db->query("SELECT COUNT(*) FROM portal_users WHERE role='zonal_secretary'")->fetchColumn();
     $stats['pendingMigrations'] = (int)$db->query("SELECT COUNT(*) FROM portal_migration_requests WHERE status='pending'")->fetchColumn();
 
@@ -933,7 +983,98 @@ function portalDashboardStats() {
         $stats['unreadMessages'] = 0;
     }
 
+    // Retiring members: only those who have turned 30 by 31 Dec of current year (DOB format DDMMYYYY)
+    $year = (int)date('Y');
+    $stmt = $db->prepare("SELECT COUNT(*) FROM portal_users WHERE date_of_birth IS NOT NULL AND LENGTH(date_of_birth) >= 4 AND (? - CAST(RIGHT(date_of_birth, 4) AS UNSIGNED)) >= 30");
+    $stmt->execute([$year]);
+    $stats['retiringMembers'] = (int)$stmt->fetchColumn();
+
     return $stats;
+}
+
+function portalGetRegionUnitsWithoutPresident() {
+    $db = getDB();
+    return $db->query("
+        SELECT u.id, u.name FROM portal_units u
+        LEFT JOIN portal_users up ON up.unit_id = u.id AND up.role = 'unit_president'
+        WHERE up.id IS NULL AND u.region_id IS NOT NULL
+        ORDER BY u.name
+    ")->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function portalGetRetiringMembers() {
+    $db = getDB();
+    $year = (int)date('Y');
+    // Age = current year - birth year (DOB format DDMMYYYY); only those who have turned 30 by 31 Dec of current year
+    $sql = "SELECT u.*, pu.name AS unit_name,
+            (? - CAST(RIGHT(u.date_of_birth, 4) AS UNSIGNED)) AS age_this_year
+            FROM portal_users u
+            LEFT JOIN portal_units pu ON u.unit_id = pu.id
+            WHERE u.date_of_birth IS NOT NULL AND LENGTH(u.date_of_birth) >= 4
+            AND (? - CAST(RIGHT(u.date_of_birth, 4) AS UNSIGNED)) >= 30
+            ORDER BY age_this_year DESC, u.last_name, u.first_name";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$year, $year]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $out = [];
+    foreach ($rows as $row) {
+        $u = formatUser($row);
+        $u['age_this_year'] = (int)($row['age_this_year'] ?? 0);
+        $out[] = $u;
+    }
+    return $out;
+}
+
+/**
+ * Global search for admin/zonal: members (name, phone), units, regions, circles, campuses.
+ * GET /portal/search?q=...
+ */
+function portalSearch() {
+    $db = getDB();
+    $q = trim($_GET['q'] ?? '');
+    if ($q === '') {
+        return ['members' => [], 'units' => [], 'regions' => [], 'circles' => [], 'campuses' => []];
+    }
+    $term = '%' . $q . '%';
+
+    // Members: first_name, middle_name, last_name, phone
+    $stmt = $db->prepare("SELECT u.id, u.first_name, u.middle_name, u.last_name, u.phone, pu.name AS unit_name FROM portal_users u
+        LEFT JOIN portal_units pu ON u.unit_id = pu.id
+        WHERE (u.first_name LIKE ? OR u.middle_name LIKE ? OR u.last_name LIKE ? OR u.phone LIKE ?
+        OR CONCAT(COALESCE(u.first_name,''), ' ', COALESCE(u.middle_name,''), ' ', COALESCE(u.last_name,'')) LIKE ?)
+        ORDER BY u.first_name, u.last_name LIMIT 20");
+    $stmt->execute([$term, $term, $term, $term, $term]);
+    $members = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $members[] = [
+            'id' => $row['id'],
+            'full_name' => buildFullName($row['first_name'], $row['middle_name'], $row['last_name']),
+            'phone' => $row['phone'],
+            'unit_name' => $row['unit_name'],
+        ];
+    }
+
+    // Units
+    $stmt = $db->prepare("SELECT id, name FROM portal_units WHERE name LIKE ? ORDER BY name LIMIT 15");
+    $stmt->execute([$term]);
+    $units = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Regions
+    $stmt = $db->prepare("SELECT id, name FROM portal_regions WHERE name LIKE ? ORDER BY name LIMIT 15");
+    $stmt->execute([$term]);
+    $regions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Circles
+    $stmt = $db->prepare("SELECT id, name FROM portal_circles WHERE name LIKE ? ORDER BY name LIMIT 15");
+    $stmt->execute([$term]);
+    $circles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Campuses
+    $stmt = $db->prepare("SELECT id, name FROM portal_campuses WHERE name LIKE ? ORDER BY name LIMIT 15");
+    $stmt->execute([$term]);
+    $campuses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    return ['members' => $members, 'units' => $units, 'regions' => $regions, 'circles' => $circles, 'campuses' => $campuses];
 }
 
 function portalNotificationCounts() {

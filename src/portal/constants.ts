@@ -77,6 +77,12 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
       ],
     },
     {
+      label: 'Campus Presidents', path: '#', icon: GraduationCap,
+      children: [
+        { label: 'Manage', path: '/portal/admin/campus-presidents/manage', icon: GraduationCap },
+      ],
+    },
+    {
       label: 'Members', path: '#', icon: Users,
       children: [
         { label: 'Add', path: '/portal/admin/members/add', icon: Users },
@@ -102,6 +108,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
     { label: 'Regions', path: '/portal/zonal/regions', icon: Globe },
     { label: 'Regional Presidents', path: '/portal/zonal/regional-presidents', icon: Globe },
     { label: 'Unit Presidents', path: '/portal/zonal/unit-presidents', icon: UserCheck },
+    { label: 'Campus Presidents', path: '/portal/zonal/campus-presidents', icon: GraduationCap },
     { label: 'Members', path: '/portal/zonal/members', icon: Users },
     { label: 'Titles', path: '/portal/zonal/titles', icon: Award },
     { label: 'Performance', path: '/portal/zonal/performance', icon: BarChart3, badgeKey: 'pendingForms' },
@@ -281,6 +288,15 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'circle_id', label: 'Circle', type: 'select', required: false },
     { key: 'campus_id', label: 'Campus', type: 'select', required: false },
   ],
+  'campus-presidents': [
+    { key: 'first_name', label: 'First Name', type: 'text', required: true },
+    { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
+    { key: 'last_name', label: 'Last Name', type: 'text', required: true },
+    { key: 'phone', label: 'Phone', type: 'tel', required: true },
+    { key: 'unit_id', label: 'Unit', type: 'select', required: true },
+    { key: 'circle_id', label: 'Circle', type: 'select', required: false },
+    { key: 'campus_id', label: 'Campus', type: 'select', required: false },
+  ],
   members: [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
@@ -329,6 +345,14 @@ export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
     { key: 'phone', label: 'Phone', required: true, example: '9652748391' },
     { key: 'password', label: 'Password', required: true, example: 'ghMlCiih9#Y' },
   ],
+  'campus-presidents': [
+    { key: 'first_name', label: 'First Name', required: true, example: 'Priya' },
+    { key: 'middle_name', label: 'Middle Name', required: false, example: '' },
+    { key: 'last_name', label: 'Last Name', required: true, example: 'Jain' },
+    { key: 'unit_name', label: 'Unit Name', required: true, example: 'Academy' },
+    { key: 'phone', label: 'Phone', required: true, example: '9652748391' },
+    { key: 'password', label: 'Password', required: true, example: 'ghMlCiih9#Y' },
+  ],
   members: [
     { key: 'first_name', label: 'First Name', required: true, example: 'Nandini' },
     { key: 'middle_name', label: 'Middle Name', required: false, example: '' },
@@ -347,6 +371,7 @@ export const ENTITY_LABELS: Record<string, { plural: string; singular: string }>
   'zonal-secretaries': { plural: 'Zonal Secretaries', singular: 'Zonal Secretary' },
   'regional-presidents': { plural: 'Regional Presidents', singular: 'Regional President' },
   'unit-presidents': { plural: 'Unit Presidents', singular: 'Unit President' },
+  'campus-presidents': { plural: 'Campus Presidents', singular: 'Campus President' },
   members: { plural: 'Members', singular: 'Member' },
 }
 
@@ -357,6 +382,7 @@ export const ENTITY_ROLE_MAP: Record<string, PortalRole | null> = {
   'zonal-secretaries': 'zonal_secretary',
   'regional-presidents': 'regional_president',
   'unit-presidents': 'unit_president',
+  'campus-presidents': 'unit_president',
   members: 'member',
 }
 

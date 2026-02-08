@@ -43,7 +43,10 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
       else if (entity === 'campuses') setData(await api.fetchCampuses() as unknown as Record<string, unknown>[])
       else {
         const unitId = user?.role === 'unit_president' ? (user.unit_id ?? undefined) : undefined
-        setData(await api.fetchUsers(role ?? undefined, unitId) as unknown as Record<string, unknown>[])
+        const excludeCampusUnits = entity === 'unit-presidents'
+        const campusUnitsOnly = entity === 'campus-presidents'
+        const options = excludeCampusUnits ? { excludeCampusUnits: true } : campusUnitsOnly ? { campusUnitsOnly: true } : undefined
+        setData(await api.fetchUsers(role ?? undefined, unitId, options) as unknown as Record<string, unknown>[])
       }
       setUnits(await api.fetchUnits())
       setCircles(await api.fetchCircles())
@@ -74,7 +77,7 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
     cols.push({ key: 'unit_name', label: 'Unit', sortable: true, render: v => (v as string) || '—' })
     cols.push({ key: 'circle_name', label: 'Circle', sortable: true, render: v => (v as string) || '—' })
     cols.push({ key: 'campus_name', label: 'Campus', sortable: true, render: v => (v as string) || '—' })
-    if (entity === 'members' || entity === 'zonal-secretaries' || entity === 'unit-presidents')
+    if (entity === 'members' || entity === 'zonal-secretaries' || entity === 'unit-presidents' || entity === 'campus-presidents')
       cols.push({ key: 'title', label: 'Title', sortable: true, render: v => v ? <span className="portal-badge portal-badge-title">{v as string}</span> : <span className="portal-text-muted">—</span> })
     if (entity === 'members')
       cols.push({ key: 'status', label: 'Status', sortable: true, render: v => <StatusBadge status={v as string} /> })

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Building2, Users, UserCheck, UserCog, ArrowRightLeft, Mail,
   Activity, UserX, TrendingUp, Phone, MapPin, Shield, Calendar,
-  Clock, Lock, Unlock, Trash2,
+  Clock, Lock, Unlock, Trash2, CircleDot, GraduationCap,
 } from 'lucide-react'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { UserAvatar } from '../components/UserAvatar'
@@ -99,13 +99,22 @@ export function DashboardPage() {
     const cards: DashboardStat[] = []
 
     if (role === 'admin' || role === 'zonal_secretary' || role === 'regional_president') {
+      const regionUnits = stats.totalRegionUnits ?? stats.totalUnits
       cards.push(
-        { label: 'Total Units', value: stats.totalUnits, icon: Building2, color: 'amber', to: `${prefix}/units${role === 'admin' ? '/manage' : ''}` },
+        { label: 'Region Units', value: regionUnits, icon: Building2, color: 'amber', to: `${prefix}/units${role === 'admin' ? '/manage' : ''}` },
+      )
+      if (role === 'admin' || role === 'zonal_secretary') {
+        cards.push(
+          { label: 'Total Circles', value: stats.totalCircles ?? 0, icon: CircleDot, color: 'amber', to: `${prefix}/circles${role === 'admin' ? '/manage' : ''}` },
+          { label: 'Campuses', value: stats.totalCampuses ?? 0, icon: GraduationCap, color: 'amber', to: `${prefix}/campuses${role === 'admin' ? '/manage' : ''}` },
+        )
+      }
+      cards.push(
         { label: 'Total Members', value: stats.totalMembers, icon: Users, color: 'red', to: `${prefix}/members${role === 'admin' ? '/manage' : ''}` },
         { label: 'Active Members', value: stats.activeMembers, icon: Activity, color: 'green', to: `${prefix}/members${role === 'admin' ? '/manage' : ''}` },
         { label: 'Inactive Members', value: stats.inactiveMembers, icon: UserX, color: 'slate', to: `${prefix}/members${role === 'admin' ? '/manage' : ''}` },
         { label: 'Migrated', value: stats.migratedMembers, icon: ArrowRightLeft, color: 'amber', to: `${prefix}/migrations` },
-        { label: 'Unit Presidents', value: stats.totalUnitPresidents, icon: UserCheck, color: 'amber', to: `${prefix}/unit-presidents${role === 'admin' ? '/manage' : ''}` },
+        { label: 'Unit Presidents', value: regionUnits ? `${stats.totalUnitPresidents} / ${regionUnits}` : stats.totalUnitPresidents, sublabel: typeof stats.unitsWithoutPresident === 'number' && stats.unitsWithoutPresident > 0 ? `${stats.unitsWithoutPresident} region unit(s) without president` : undefined, sublabelDetail: (stats.regionUnitsWithoutPresident?.length ?? 0) > 0 ? stats.regionUnitsWithoutPresident!.map((u) => u.name).join(', ') : undefined, icon: UserCheck, color: 'amber', to: role === 'admin' && (stats.unitsWithoutPresident ?? 0) > 0 ? `${prefix}/unit-presidents/units-without-president` : `${prefix}/unit-presidents${role === 'admin' ? '/manage' : ''}` },
       )
       if (role === 'admin') cards.push({ label: 'Zonal Secretaries', value: stats.totalZonalSecretaries, icon: UserCog, color: 'red', to: `${prefix}/zonal-secretaries/manage` })
       cards.push(
@@ -207,7 +216,7 @@ export function DashboardPage() {
         <>
           <div className="portal-dashboard-section-heading">
             <h2>Retiring Members</h2>
-            <p>Members turning 30 by December {new Date().getFullYear()} — approaching retirement age</p>
+            <p>Members who have turned 30 by December 31 — retired (age 30+ as of year end)</p>
           </div>
           <div className="portal-card portal-card-body">
             <div className="portal-retiring-list">

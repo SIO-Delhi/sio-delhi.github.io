@@ -82,12 +82,13 @@ export function ViewEntityDetailPage({ entity, paramKey }: ViewEntityDetailPageP
   const migrated = members.filter(m => m.status === 'migrated')
 
   function MemberRow({ m }: { m: PortalUser }) {
+    const subtitle = [m.unit_name ?? '—', m.title].filter(Boolean).join(' · ') + (m.phone ? ` · ${m.phone}` : '')
     return (
       <button className="portal-entity-member-row" onClick={() => navigate(`${prefix}/members/${m.id}`)}>
         <UserAvatar name={m.full_name} avatarUrl={m.avatar_url} size="sm" />
         <div className="portal-entity-member-info">
           <span className="portal-entity-member-name">{m.full_name}</span>
-          <span className="portal-text-muted" style={{ fontSize: '0.75rem' }}>{m.unit_name ?? '—'} · {m.phone}</span>
+          <span className="portal-text-muted" style={{ fontSize: '0.75rem' }}>{subtitle || '—'}</span>
         </div>
         <StatusBadge status={m.status} />
       </button>

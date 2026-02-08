@@ -148,15 +148,31 @@ export interface PerfReview {
 
 export interface DashboardStats {
   totalUnits: number
+  /** Region/area units (have region_id); 38 total = totalRegionUnits + campus units */
+  totalRegionUnits: number
+  totalCircles: number
+  totalCampuses: number
   totalMembers: number
   activeMembers: number
   inactiveMembers: number
   migratedMembers: number
   totalUnitPresidents: number
+  /** Number of units that have no unit_president assigned */
+  unitsWithoutPresident?: number
+  /** Region units (id, name) that have no unit_president assigned */
+  regionUnitsWithoutPresident?: { id: string; name: string }[]
   totalZonalSecretaries: number
   pendingMigrations: number
   unreadMessages: number
   retiringMembers: number
+}
+
+export interface PortalSearchResult {
+  members: { id: string; full_name: string; phone: string; unit_name: string | null }[]
+  units: { id: string; name: string }[]
+  regions: { id: string; name: string }[]
+  circles: { id: string; name: string }[]
+  campuses: { id: string; name: string }[]
 }
 
 export interface RetiringMember {
@@ -204,6 +220,10 @@ export interface CSVFieldDef {
 export interface DashboardStat {
   label: string
   value: number | string
+  /** Optional line under the value (e.g. "22 unit(s) without president") */
+  sublabel?: string
+  /** Optional second line (e.g. list of unit names) */
+  sublabelDetail?: string
   icon: ComponentType<{ size?: number }>
   color: 'blue' | 'green' | 'amber' | 'red' | 'slate' | 'indigo'
   change?: string
@@ -213,7 +233,7 @@ export interface DashboardStat {
   onClick?: () => void
 }
 
-export type EntityType = 'units' | 'circles' | 'campuses' | 'zonal-secretaries' | 'regional-presidents' | 'unit-presidents' | 'members'
+export type EntityType = 'units' | 'circles' | 'campuses' | 'zonal-secretaries' | 'regional-presidents' | 'unit-presidents' | 'campus-presidents' | 'members'
 
 /* ── RBAC Permissions ── */
 

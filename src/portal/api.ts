@@ -9,6 +9,7 @@ import type {
   PortalMessage,
   DashboardStats,
   RetiringMember,
+  PortalSearchResult,
   PerfForm,
   PerfResponse,
   PerfReview,
@@ -152,10 +153,16 @@ export async function deleteCampus(id: string): Promise<void> {
    Users
    ═══════════════════════════════════════════ */
 
-export async function fetchUsers(role?: PortalRole | string, unitId?: string): Promise<PortalUser[]> {
+export async function fetchUsers(
+  role?: PortalRole | string,
+  unitId?: string,
+  options?: { excludeCampusUnits?: boolean; campusUnitsOnly?: boolean },
+): Promise<PortalUser[]> {
   const params = new URLSearchParams()
   if (role) params.append('role', role)
   if (unitId) params.append('unitId', unitId)
+  if (options?.excludeCampusUnits) params.append('excludeCampusUnits', '1')
+  if (options?.campusUnitsOnly) params.append('campusUnitsOnly', '1')
   const qs = params.toString()
   return get<PortalUser[]>(`/users${qs ? `?${qs}` : ''}`)
 }
@@ -198,6 +205,10 @@ export async function fetchUsersWithTitles(): Promise<PortalUser[]> {
    Dashboard Stats
    ═══════════════════════════════════════════ */
 
+export async function fetchRegionUnitsWithoutPresident(): Promise<{ id: string; name: string }[]> {
+  return get<{ id: string; name: string }[]>('/region-units-without-president')
+}
+
 export async function fetchDashboardStats(
   role: PortalRole,
   userId: string,
@@ -210,6 +221,12 @@ export async function fetchDashboardStats(
 
 export async function fetchRetiringMembers(): Promise<RetiringMember[]> {
   return get<RetiringMember[]>('/retiring-members')
+}
+
+export async function searchPortal(q: string): Promise<PortalSearchResult> {
+  if (!q.trim()) return { members: [], units: [], regions: [], circles: [], campuses: [] }
+  const params = new URLSearchParams({ q: q.trim() })
+  return get<PortalSearchResult>(`/search?${params}`)
 }
 
 export async function lockUser(

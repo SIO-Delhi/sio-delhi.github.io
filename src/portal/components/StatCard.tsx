@@ -37,6 +37,8 @@ export function StatCard({ stat }: { stat: DashboardStat }) {
       <div className="portal-stat-body">
         <p className="portal-stat-label">{stat.label}</p>
         <p className={`portal-stat-value ${isTextValue ? 'portal-stat-value-text' : ''}`}>{stat.value}</p>
+        {stat.sublabel && <p className="portal-stat-sublabel">{stat.sublabel}</p>}
+        {stat.sublabelDetail && <p className="portal-stat-sublabel portal-stat-sublabel-detail">{stat.sublabelDetail}</p>}
         {stat.change && <p className="portal-stat-change">{stat.change}</p>}
       </div>
       {clickable && (

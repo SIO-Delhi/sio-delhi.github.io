@@ -24,6 +24,7 @@ import { ViewMemberPage } from './pages/ViewMemberPage'
 import { ViewUnitPage } from './pages/ViewUnitPage'
 import { ViewCirclePage } from './pages/ViewCirclePage'
 import { ViewCampusPage } from './pages/ViewCampusPage'
+import { UnitsWithoutPresidentPage } from './pages/UnitsWithoutPresidentPage'
 import { RegionsPage } from './pages/RegionsPage'
 import { MemberAccountPage } from './pages/MemberAccountPage'
 import { PortalLogoutPage } from './pages/PortalLogoutPage'
@@ -145,7 +146,9 @@ export function PortalRoutes() {
                 <Route path="admin/regional-presidents/add" element={<BulkAddPage entity="regional-presidents" />} />
                 <Route path="admin/regional-presidents/manage" element={<ManagePage entity="regional-presidents" />} />
                 <Route path="admin/unit-presidents/add" element={<BulkAddPage entity="unit-presidents" />} />
+                <Route path="admin/unit-presidents/units-without-president" element={<UnitsWithoutPresidentPage />} />
                 <Route path="admin/unit-presidents/manage" element={<ManagePage entity="unit-presidents" />} />
+                <Route path="admin/campus-presidents/manage" element={<ManagePage entity="campus-presidents" />} />
                 <Route path="admin/members/add" element={<BulkAddPage entity="members" />} />
                 <Route path="admin/members/manage" element={<ManagePage entity="members" />} />
                 <Route path="admin/members/:memberId" element={<ViewMemberPage />} />
@@ -172,6 +175,7 @@ export function PortalRoutes() {
                 <Route path="zonal/regions" element={<RegionsPage />} />
                 <Route path="zonal/regional-presidents" element={<ManagePage entity="regional-presidents" readOnly />} />
                 <Route path="zonal/unit-presidents" element={<ManagePage entity="unit-presidents" readOnly />} />
+                <Route path="zonal/campus-presidents" element={<ManagePage entity="campus-presidents" readOnly />} />
                 <Route path="zonal/members" element={<ManagePage entity="members" readOnly />} />
                 <Route path="zonal/members/:memberId" element={<ViewMemberPage />} />
                 <Route path="zonal/titles" element={<TitlesPage />} />
