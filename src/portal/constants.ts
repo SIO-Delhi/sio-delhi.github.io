@@ -318,6 +318,9 @@ export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
   units: [
     { key: 'name', label: 'Unit Name', required: true, example: 'Jamia Unit' },
   ],
+  circles: [
+    { key: 'name', label: 'Circle Name', required: true, example: 'Study Circle A' },
+  ],
   campuses: [
     { key: 'name', label: 'Campus Name', required: true, example: 'Jamia Campus' },
   ],
@@ -384,6 +387,74 @@ export const ENTITY_ROLE_MAP: Record<string, PortalRole | null> = {
   'unit-presidents': 'unit_president',
   'campus-presidents': 'unit_president',
   members: 'member',
+}
+
+/** Allowed title badge colors (for assign-title picker and consistent coding) */
+export const TITLE_BADGE_COLORS = [
+  { value: 'gold', label: 'Gold (zonal)' },
+  { value: 'silver', label: 'Silver (secretary)' },
+  { value: 'green', label: 'Green (regional)' },
+  { value: 'magenta', label: 'Magenta (campus)' },
+  { value: 'red', label: 'Red' },
+  { value: 'blue', label: 'Blue' },
+  { value: 'slate', label: 'Slate' },
+] as const
+
+/** Zonal-level titles shown in gold */
+const ZONAL_TITLE_PATTERNS = ['zonal', 'joint secretary', 'jac secretary']
+/** Secretary titles (non-campus) shown in silver */
+const SECRETARY_TITLE_PATTERNS = ['unit secretary']
+/** Campus titles shown in magenta */
+const CAMPUS_TITLE_PATTERNS = ['campus president', 'campus secretary']
+const REGIONAL_PRESIDENT_PATTERN = 'regional president'
+/** Unit President (designation) shown in red */
+const UNIT_PRESIDENT_PATTERN = 'unit president'
+
+/** Level options for Assign Title (required). Sets tag color by scope (e.g. JAC Secretary at zonal = gold, at unit = silver or red for unit pres). */
+export const TITLE_LEVELS = [
+  { value: 'regional', label: 'Regional' },
+  { value: 'campus', label: 'Campus' },
+  { value: 'zonal', label: 'Zonal' },
+  { value: 'unit', label: 'Unit' },
+] as const
+
+/** Default tag color when assigning by level. Stored as title_color so JAC Secretary can be gold (zonal) or silver (unit). */
+export function getDefaultColorForLevel(level: string, titleText: string): string {
+  const t = (titleText ?? '').trim().toLowerCase()
+  switch (level) {
+    case 'regional': return 'green'
+    case 'campus': return 'magenta'
+    case 'zonal': return 'gold'
+    case 'unit': return t.includes('secretary') ? 'silver' : t.includes('president') ? 'red' : 'blue'
+    default: return ''
+  }
+}
+
+export function getTitleBadgeColorClass(displayTitle: string | null | undefined, titleColor: string | null | undefined): string {
+  const allowed = ['silver', 'gold', 'red', 'blue', 'green', 'slate', 'magenta']
+  if (titleColor && allowed.includes(titleColor)) return titleColor
+  const t = (displayTitle ?? '').toLowerCase()
+  if (t.includes(REGIONAL_PRESIDENT_PATTERN)) return 'green'
+  if (CAMPUS_TITLE_PATTERNS.some(p => t.includes(p))) return 'magenta'
+  if (t.includes(UNIT_PRESIDENT_PATTERN)) return 'red'
+  if (ZONAL_TITLE_PATTERNS.some(p => t.includes(p))) return 'gold'
+  if (SECRETARY_TITLE_PATTERNS.some(p => t.includes(p)) || (t.includes('secretary') && !t.includes('campus'))) return 'silver'
+  return 'blue'
+}
+
+/** Default title options by role: select one or use Custom. Members cannot assign titles. */
+export const TITLE_PRESETS_BY_ROLE: Record<string, string[]> = {
+  admin: [
+    'Zonal President', 'Regional President', 'Unit President', 'Campus President',
+    'Unit Secretary', 'Campus Secretary', 'Joint Secretary', 'Media Secretary', 'JAC Secretary', 'Treasurer',
+  ],
+  zonal_secretary: [
+    'Regional President', 'Unit President', 'Campus President',
+    'Unit Secretary', 'Campus Secretary', 'Joint Secretary', 'Media Secretary', 'JAC Secretary',
+  ],
+  unit_president: [
+    'Unit Secretary', 'Joint Secretary', 'JAC Secretary', 'Treasurer',
+  ],
 }
 
 export const STATUS_COLORS: Record<string, string> = {

@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import {
   Building2, Users, UserCheck, UserCog, ArrowRightLeft, Mail,
   Activity, UserX, TrendingUp, Phone, MapPin, Shield, Calendar,
-  Clock, Lock, Unlock, Trash2, CircleDot, GraduationCap,
+  Clock, Lock, Unlock, Trash2, CircleDot, GraduationCap, Globe,
 } from 'lucide-react'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { UserAvatar } from '../components/UserAvatar'
 import { StatusBadge } from '../components/StatusBadge'
 import { StatCard } from '../components/StatCard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { HeroAgeBar } from '../components/AgeBar'
+import { HeroAgeBar, formatPreciseAge } from '../components/AgeBar'
 import * as api from '../api'
 import type { DashboardStats, DashboardStat, RetiringMember } from '../types'
 import { ROLE_LABELS } from '../constants'
@@ -99,12 +99,12 @@ export function DashboardPage() {
     const cards: DashboardStat[] = []
 
     if (role === 'admin' || role === 'zonal_secretary' || role === 'regional_president') {
-      const regionUnits = stats.totalRegionUnits ?? stats.totalUnits
       cards.push(
-        { label: 'Region Units', value: regionUnits, icon: Building2, color: 'amber', to: `${prefix}/units${role === 'admin' ? '/manage' : ''}` },
+        { label: 'Units', value: stats.totalUnits, icon: Building2, color: 'amber', to: `${prefix}/units${role === 'admin' ? '/manage' : ''}` },
       )
       if (role === 'admin' || role === 'zonal_secretary') {
         cards.push(
+          { label: 'Regions', value: stats.totalRegions ?? 0, icon: Globe, color: 'indigo', to: `${prefix}/regions` },
           { label: 'Total Circles', value: stats.totalCircles ?? 0, icon: CircleDot, color: 'amber', to: `${prefix}/circles${role === 'admin' ? '/manage' : ''}` },
           { label: 'Campuses', value: stats.totalCampuses ?? 0, icon: GraduationCap, color: 'amber', to: `${prefix}/campuses${role === 'admin' ? '/manage' : ''}` },
         )
@@ -114,7 +114,7 @@ export function DashboardPage() {
         { label: 'Active Members', value: stats.activeMembers, icon: Activity, color: 'green', to: `${prefix}/members${role === 'admin' ? '/manage' : ''}` },
         { label: 'Inactive Members', value: stats.inactiveMembers, icon: UserX, color: 'slate', to: `${prefix}/members${role === 'admin' ? '/manage' : ''}` },
         { label: 'Migrated', value: stats.migratedMembers, icon: ArrowRightLeft, color: 'amber', to: `${prefix}/migrations` },
-        { label: 'Unit Presidents', value: regionUnits ? `${stats.totalUnitPresidents} / ${regionUnits}` : stats.totalUnitPresidents, sublabel: typeof stats.unitsWithoutPresident === 'number' && stats.unitsWithoutPresident > 0 ? `${stats.unitsWithoutPresident} region unit(s) without president` : undefined, sublabelDetail: (stats.regionUnitsWithoutPresident?.length ?? 0) > 0 ? stats.regionUnitsWithoutPresident!.map((u) => u.name).join(', ') : undefined, icon: UserCheck, color: 'amber', to: role === 'admin' && (stats.unitsWithoutPresident ?? 0) > 0 ? `${prefix}/unit-presidents/units-without-president` : `${prefix}/unit-presidents${role === 'admin' ? '/manage' : ''}` },
+        { label: 'Unit Presidents', value: stats.totalRegionUnits ? `${stats.totalUnitPresidents} / ${stats.totalRegionUnits}` : stats.totalUnitPresidents, sublabel: typeof stats.unitsWithoutPresident === 'number' && stats.unitsWithoutPresident > 0 ? `${stats.unitsWithoutPresident} region unit(s) without president` : undefined, icon: UserCheck, color: 'amber', to: role === 'admin' && (stats.unitsWithoutPresident ?? 0) > 0 ? `${prefix}/unit-presidents/units-without-president` : `${prefix}/unit-presidents${role === 'admin' ? '/manage' : ''}` },
       )
       if (role === 'admin') cards.push({ label: 'Zonal Secretaries', value: stats.totalZonalSecretaries, icon: UserCog, color: 'red', to: `${prefix}/zonal-secretaries/manage` })
       cards.push(
@@ -231,7 +231,7 @@ export function DashboardPage() {
                       <div className="portal-retiring-details">
                         <button className="portal-table-link portal-retiring-name" onClick={() => navigate(`${prefix}/members/${member.id}`)}>{member.full_name}</button>
                         <span className="portal-retiring-meta">
-                          {member.unit_name ?? 'No unit'} &middot; Age {age}
+                          {member.unit_name ?? 'No unit'} &middot; {formatPreciseAge(member.date_of_birth, true) ?? `Age ${age}`}
                           {member.status !== 'active' && <StatusBadge status={member.status} />}
                         </span>
                       </div>

@@ -189,8 +189,15 @@ export async function deleteUser(id: string): Promise<void> {
    Titles
    ═══════════════════════════════════════════ */
 
-export async function assignTitle(userId: string, title: string, assignedBy: string): Promise<void> {
-  await put(`/users/${userId}/title`, { title, assigned_by: assignedBy })
+export async function assignTitle(
+  userId: string,
+  title: string,
+  assignedBy: string,
+  titleColor?: string | null,
+): Promise<void> {
+  const body: { title: string; assigned_by: string; title_color?: string } = { title, assigned_by: assignedBy }
+  if (titleColor != null && titleColor !== '') body.title_color = titleColor
+  await put(`/users/${userId}/title`, body)
 }
 
 export async function revokeTitle(userId: string): Promise<void> {

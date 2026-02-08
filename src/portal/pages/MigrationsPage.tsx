@@ -27,6 +27,7 @@ export function MigrationsPage() {
   const [reason, setReason] = useState('')
   const [creating, setCreating] = useState(false)
   const [actionRow, setActionRow] = useState<{ migration: MigrationRequest; action: 'approved' | 'rejected' } | null>(null)
+  const [regionUnitIds, setRegionUnitIds] = useState<string[]>([])
 
   const isMember = user?.role === 'member'
   const isUnitPres = user?.role === 'unit_president'
@@ -68,6 +69,12 @@ export function MigrationsPage() {
     api.fetchUnits().then(setUnits).catch(() => {})
   }, [user, isMember])
 
+  useEffect(() => {
+    if (isRegional && user) {
+      api.fetchRegionUnits(user.id).then(setRegionUnitIds).catch(() => {})
+    }
+  }, [isRegional, user])
+
   if (!user) return null
 
   // For member: auto-select self. For higher roles: filter members by hierarchy
@@ -76,7 +83,7 @@ export function MigrationsPage() {
     : isUnitPres
       ? members.filter(m => m.unit_id === user.unit_id)
       : isRegional
-        ? members // TODO: filter by region if portal_region_units is available on frontend
+        ? members.filter(m => m.unit_id && regionUnitIds.includes(m.unit_id))
         : members // admin/zonal see all
 
   // Determine the selected member's current unit for display

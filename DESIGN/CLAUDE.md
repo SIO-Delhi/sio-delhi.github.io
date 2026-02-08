@@ -25,6 +25,33 @@ Titles are additional designations assigned to users by higher-ups. They do **no
 - A user retains their base role (e.g., `member`) and gains an optional `title` that appears next to their name and may grant elevated permissions.
 - Title names are free-text — the assigning authority types the title (no fixed list).
 
+### Display title (Campus vs Unit)
+
+For **campus units** (units with no region, e.g. Academy, Jamia Millia Islamia, D.U, JNU, Jamia Hamdard), the API returns a **display_title** so the UI shows:
+- **"Campus President"** when the stored title is "Unit President" and the user's unit is a campus unit.
+- **"Campus Secretary"** when the stored title is "Unit Secretary" and the user's unit is a campus unit.
+
+Everywhere we show a title (manage tables, Titles page, unit/campus member list, member profile), we use **display_title** when present, otherwise **title**. Region units continue to show "Unit President" and "Unit Secretary".
+
+### Title tag colors
+
+Title badges use a consistent color code. **Stored `title_color` takes precedence** when set; otherwise auto rules from title text apply.
+
+- **Green**: Regional President.
+- **Magenta**: Campus President, Campus Secretary.
+- **Gold**: Zonal-level titles (Zonal President, Joint Secretary, JAC Secretary at zonal level, etc.).
+- **Silver**: Secretary-type at unit level (Unit Secretary, JAC Secretary at unit level, any title containing "secretary" in a unit context).
+- **Blue**: Other unit-level titles (default when no rule matches).
+
+When **assigning** a title, the assigner can set a **Level** (Campus, Regional, Zonal, Unit) so the same title name can get the right color by scope — e.g. **JAC Secretary** at **Zonal** → gold, at **Unit** → silver. Level drives the default tag color; only **admin** can override via the **Tag color** dropdown. Level options:
+- **Auto (from title text)** — color is derived from title text only (no level stored).
+- **Regional** → green.
+- **Campus** → magenta.
+- **Zonal** → gold.
+- **Unit** → silver if title contains "secretary", else blue.
+
+Optional **title_color** per user is stored in `portal_users.title_color`. Assign and edit APIs accept optional `title_color`; when present it is used first in the UI. If no color is set, the auto rules above apply.
+
 ## Access Control (RBAC)
 
 The system uses Role-Based Access Control. Each role has a fixed set of default permissions. Titles can optionally grant additional permissions on top of the base role.
@@ -57,7 +84,10 @@ This thing is to keep track of the members, their performance, and if they are m
 
 ### Campuses
 
-**Campuses** are at the same level as **Units** and **Circles**: a separate grouping. Each user can optionally belong to one **campus**. Campuses have their own list and CRUD (Add/Manage) under Admin; Zonal can view campuses. Members are assigned to a campus via the user's `campus_id` (and `campus_name` in the UI).
+**Campuses** are at the same level as **Units** and **Circles**: a separate grouping. Each user can optionally belong to one **campus**. Campuses have their own list and CRUD (Add/Manage) under Admin; Zonal can view campuses. Members are assigned to a campus via the user's `campus_id` (and `campus_name` in the UI). **Campus units** are units that have no region (`portal_units.region_id IS NULL`), e.g. Academy (IIISR), Jamia Millia Islamia, D.U, JNU, Jamia Hamdard. Presidents of these units are **Campus Presidents** and appear under the **Campus Presidents** section (not under Unit Presidents). The API exposes:
+- `GET /portal/campuses` — list all campuses.
+- `GET /portal/campuses/:id` — single campus.
+- `GET /portal/campuses/:id/members` — members belonging to that campus (users with `campus_id = :id`).
 
 ### Everyone in a unit
 
@@ -184,7 +214,7 @@ The portal uses **Clerk** for authentication — the same Clerk instance used fo
 - `/admin/login` - Ability to login with phone number and password.
 - `/admin/dashboard` - Collapsible menu on the left with logout option and a dashboard on the right showing total units, total members, members by status [active, inactive, migrated], retiring members count, and overall performance summary for the Delhi zone. Below the stats grid is a **Retiring Members** section listing all members aged 28+ (approaching or past 30) with their name, unit, age, and a progress bar showing proximity to the retirement age of 30. The bar turns **golden** when the member has reached 30. Admin can set members **active/inactive** or **delete** a retiring member directly from this section.
 - `/admin/units/add` - Ability to add units in bulk via CSV [check `units.csv` below] with format examples shown on upload page.
-- `/admin/units/manage` - Ability to view, update, and delete units with search and filter functionality, and export to CSV functionality. **Clicking a unit name** opens the unit detail page (`/admin/units/:unitId`) showing active members, inactive members, migrated, and all members with clickable names that go to member profiles.
+- `/admin/units/manage` - Ability to view, update, and delete units with search and filter functionality, and export to CSV functionality. **Clicking a unit name** opens the unit detail page (`/admin/units/:unitId`) showing active members, inactive members, migrated, and all members with clickable names that go to member profiles. The **member list on unit detail** shows each member's **title** (e.g. Unit President, Unit Secretary, or Campus President / Campus Secretary for campus units) so who is president and who is secretary is visible.
 - `/admin/campuses/add` - Ability to add campuses in bulk (or one-by-one) with format examples on upload page.
 - `/admin/campuses/manage` - Ability to view, update, and delete campuses. **Clicking a campus name** opens the campus detail page (`/admin/campuses/:campusId`) with member lists and clickable names.
 - `/admin/zonal-secretaries/add` - Ability to add zonal secretary accounts in bulk via CSV [check `zonal-secretaries.csv` below] with format examples shown on upload page.
@@ -192,11 +222,13 @@ The portal uses **Clerk** for authentication — the same Clerk instance used fo
 - `/admin/regional-presidents/add` - Ability to add regional president accounts in bulk via CSV [check `regional-presidents.csv` below] with format examples shown on upload page.
 - `/admin/regional-presidents/manage` - Ability to view regional president accounts, update via inline edit dialogs, delete with confirmation dialogs, search and filter, and export to CSV functionality.
 - `/admin/unit-presidents/add` - Ability to add unit president accounts in bulk via CSV [check `unit-presidents.csv` below] with format examples shown on upload page. Unit presidents are mapped to their unit via `Unit Name` column.
-- `/admin/unit-presidents/manage` - Ability to view unit president accounts, update via inline edit dialogs, delete with confirmation dialogs, search and filter, and export to CSV functionality.
+- `/admin/unit-presidents/manage` - Ability to view **region/area** unit president accounts only (campus unit presidents appear under Campus Presidents). Update via inline edit dialogs, delete with confirmation dialogs, search and filter, and export to CSV. The dashboard **Unit Presidents** card shows "X / Y" and "N region unit(s) without president" with a list of unit names; **clicking the card** when there are units without a president navigates to the **Units without president** page.
+- `/admin/unit-presidents/units-without-president` - Lists region units that have no unit president assigned. Each unit is shown with an "Assign president" action; assigning is done via Unit Presidents → Manage (add or edit user, set role and unit).
+- `/admin/campus-presidents/manage` - Ability to view **campus** unit president accounts only (presidents of units with no region, or users with `campus_id` set). Read-only list with same columns as unit presidents; titles show as "Campus President" / "Campus Secretary" where applicable.
 - `/admin/members/add` - Ability to add member accounts in bulk via CSV [check `members.csv` below] with format examples shown on upload page. Members are mapped to their unit via `Unit Name` column.
 - `/admin/members/manage` - Ability to view member accounts, update via inline edit dialogs, delete with confirmation dialogs, search and filter, and export to CSV functionality. Title column shows any assigned designation. An **Age** column shows a progress bar indicating how close each member is to age 30 (the organisation's retirement age). The bar fills from age 18 to 30; at 30+ the bar turns **golden** and the age number is highlighted in gold. Admin can set members **active/inactive** or **delete** member profiles directly from the table or the dashboard retiring members section. **Clicking any member/user name** in the table navigates to their detailed profile page.
 - `/admin/members/:memberId` - **Member Profile View**: Full profile page for any user. Shows hero card (avatar, name, role, status, age bar, title), personal information grid, and tabbed sections: **Details** (full info), **Messages** (all sent/received messages for that user), **Performance** (all performance form responses), **Migrations** (migration request history), and **Permissions** (view/edit effective permission overrides). Admin has **full edit access**: can modify name, phone, DOB, unit, circle, campus, status, role, avatar, and permission overrides directly from this page. The same profile view is available for zonal-secretaries, regional-presidents, and unit-presidents — clicking their name in the manage table also opens this page.
-- `/admin/titles` - Ability to view all title assignments across the zone with search and filter. Admin can also assign or revoke titles for any user.
+- `/admin/titles` - Ability to view all title assignments across the zone with search and filter. Admin can assign or revoke titles for any user. **Assign Title** dialog: searchable **User** field (by name, phone, or unit); **Position (preset)** or custom **Title**; **Level** (Campus / Regional / Zonal / Unit) to set tag color by scope (e.g. JAC Secretary at Zonal = gold, at Unit = silver); **Tag color** (admin only, overrides level default). Only admin can set or change tag color; zonal and unit presidents use defaults from level/title. Presets and Edit Title dialog allow editing title text and (for admin) tag color.
 - `/admin/performance` - Ability to create and manage performance evaluation forms for the entire zone or specific units. Can design forms with custom fields (MCQ, MSQ, Subjective, Checkbox, Number, Rating), view all responses, and delete forms.
 - `/admin/migrations` - Ability to view all member migration requests [unit-to-unit or zone transfers], approve or reject pending requests, and view migration history with search and filter functionality. Admin can also initiate a migration on behalf of any member by selecting the member, target unit (or target zone/location for out-of-system transfers), and reason.
 - `/admin/messages/compose` - Ability to send messages to any individual in the entire organization, by role group (including other admins), or broadcast to everyone.
@@ -208,7 +240,8 @@ The portal uses **Clerk** for authentication — the same Clerk instance used fo
 - `/zonal/dashboard` - Collapsible menu on the left with logout option and a dashboard on the right showing total units, total members, members by status [active, inactive, migrated], and performance summary. The zonal secretary can see everything down the hierarchy [all regional presidents, unit presidents, and members across all units].
 - `/zonal/units` - Ability to view all units with member counts, search and filter functionality, and export to CSV functionality.
 - `/zonal/regional-presidents` - Ability to view all regional president accounts with search and filter functionality, and export to CSV functionality.
-- `/zonal/unit-presidents` - Ability to view all unit president accounts with search and filter functionality, and export to CSV functionality.
+- `/zonal/unit-presidents` - Ability to view all **region/area** unit president accounts (campus unit presidents are under Campus Presidents).
+- `/zonal/campus-presidents` - Ability to view all **campus** unit president accounts (read-only list).
 - `/zonal/members` - Ability to view all members across all units with search and filter functionality, and export to CSV functionality. Includes performance indicators, title, and migration status for each member. **Clicking a member name** opens the read-only member profile view (`/zonal/members/:memberId`) with tabs for details, messages, performance, and migration history.
 - `/zonal/titles` - Ability to assign zonal-level titles (e.g., Zonal President, Media Secretary, Education Secretary) to any user below them. View and manage all zonal title assignments.
 - `/zonal/performance` - Ability to create performance evaluation forms and view responses. Can create zone-wide or unit-scoped forms with custom fields (MCQ, MSQ, Subjective, Checkbox, Number, Rating).
@@ -313,7 +346,9 @@ Sample title assignments (pre-seeded):
 - Who can assign titles? -> The Admin can assign titles to anyone. The Zonal Secretary can assign zonal-level titles. The Unit President can assign unit-level titles to members within their unit.
 - What is a Regional President? -> A Regional President oversees a group of units within the zone. They sit between the Zonal Secretary and Unit Presidents in the hierarchy. They can view data and initiate migrations within their region but cannot manage users or approve migrations.
 - How are regions defined? -> **Region** is a separate entity (like Unit). A region has a **name** and an assigned **Regional President** (one user with role `regional_president` and `region_id` set). Units belong to a region via `portal_units.region_id`. So: Region has many units; Region has one Regional President (assigned via `portal_users.region_id` for that user). The Admin manages regions and assigns units and RPs to regions.
-- What is a campus? -> A campus is a grouping at the same level as a unit and a circle. Each user can optionally be assigned to one campus. Admin can add/manage campuses; Zonal can view them. Use `campus_id` / `campus_name` in the user record and UI.
+- What is a campus? -> A campus is a grouping at the same level as a unit and a circle. Each user can optionally be assigned to one campus. Admin can add/manage campuses; Zonal can view them. Use `campus_id` / `campus_name` in the user record and UI. **Campus Presidents** are unit presidents whose unit is a campus unit (unit has no region, or user has `campus_id` set); they appear under the **Campus Presidents** section, not under Unit Presidents. The API filters: `GET /portal/users?role=unit_president&excludeCampusUnits=1` for Unit Presidents (region only); `GET /portal/users?role=unit_president&campusUnitsOnly=1` for Campus Presidents. Single campus and campus members: `GET /portal/campuses/:id`, `GET /portal/campuses/:id/members`.
+- Units without president? -> Dashboard stats include `unitsWithoutPresident` (count) and `regionUnitsWithoutPresident` (list of `{ id, name }`). `GET /portal/region-units-without-president` returns that list. When the admin clicks the Unit Presidents card and there are units without a president, they go to **Units without president** page; otherwise to Unit Presidents manage.
+- Title display and colors? -> User API responses include `display_title` (e.g. "Campus President" when title is "Unit President" and the user's unit is a campus unit) and optional `title_color` (silver, gold, red, blue, green, slate, magenta). Badge color: **stored `title_color` is used first**; if unset, auto rules apply (Regional President = green, Campus President/Secretary = magenta, zonal = gold, unit secretary = silver, other = blue). Assign-title flow includes a **Level** field (Campus / Regional / Zonal / Unit) so the same title (e.g. JAC Secretary) can get the correct color by scope (zonal → gold, unit → silver); level drives the default tag color sent as `title_color`. Only admin can set or change tag color in the UI. Assign-title API accepts optional `title_color`; `portal_users.title_color` is stored and cleared on revoke.
 - Do users have profile photos? -> Yes, every user has an optional `avatar_url` field. Users can upload their profile photo from the `/member/profile` page. Avatars are stored on the server (`/uploads/avatars/`). When no avatar is uploaded, the UI displays the user's first initial on a colored background as a fallback. Avatars appear in the sidebar, top bar, profile page, and message views.
 - What can members edit on their profile? -> Members can only update their profile photo (avatar) and password. They cannot change their name, phone, unit, username, or any other profile details; those are managed by admin or unit president. The profile overview (on dashboard and profile page) must always display the member's full name prominently. The "Account settings & password" link opens a Security-only page (`/member/account`) with Clerk's password change UI — no profile editing, no username change, no "Delete account", no Clerk branding.
 - Do sidebar items show notification badges? -> Yes. The sidebar navigation shows notification badges (red pill-shaped counts) on three items: **Performance** (pending forms — for members: active forms not yet filled; for leaders: unreviewed responses), **Migrations** (pending migration requests scoped by role), and **Messages** (unread messages). Counts are fetched from `GET /portal/notifications` and polled every 60 seconds. The badge supports collapsed sidebar mode (appears as a small dot on the icon). A subtle pulse animation plays 3 times when the badge first appears.

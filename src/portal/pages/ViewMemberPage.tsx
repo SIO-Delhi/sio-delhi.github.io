@@ -8,7 +8,7 @@ import {
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { UserAvatar } from '../components/UserAvatar'
 import { StatusBadge } from '../components/StatusBadge'
-import { HeroAgeBar, getAgeThisYear } from '../components/AgeBar'
+import { HeroAgeBar, formatPreciseAge } from '../components/AgeBar'
 import { ROLE_LABELS, ALL_PERMISSIONS, PERMISSION_LABELS, hasPermission } from '../constants'
 import * as api from '../api'
 import type { PortalUser, PortalMessage, MigrationRequest, PerfResponse, PortalRole } from '../types'
@@ -203,7 +203,6 @@ export function ViewMemberPage() {
 
   const prefix = currentUser ? rolePrefix(currentUser.role) : '/portal/member'
   const displayName = member.full_name || [member.first_name, member.middle_name, member.last_name].filter(Boolean).join(' ')
-  const age = getAgeThisYear(member.date_of_birth)
 
   const tabs: { key: Tab; label: string; icon: typeof Mail }[] = [
     { key: 'info', label: 'Details', icon: User },
@@ -243,7 +242,7 @@ export function ViewMemberPage() {
               <Shield size={14} />
               <span>{ROLE_LABELS[member.role]}</span>
               <StatusBadge status={member.status} />
-              {member.title && <span className="portal-dashboard-hero-title">{member.title}</span>}
+              {(member.display_title ?? member.title) && <span className="portal-dashboard-hero-title">{member.display_title ?? member.title}</span>}
             </div>
             <HeroAgeBar dob={member.date_of_birth} />
             {isAdmin && (
@@ -308,9 +307,9 @@ export function ViewMemberPage() {
                 {member.circle_name && <InfoItem icon={Building2} label="Circle" value={member.circle_name} />}
                 {member.campus_name && <InfoItem icon={Building2} label="Campus" value={member.campus_name} />}
                 <InfoItem icon={Calendar} label="Date of Birth" value={member.date_of_birth ? formatDob(member.date_of_birth) : '—'} />
-                <InfoItem icon={Activity} label="Age" value={age !== null ? `${age} years` : '—'} />
+                <InfoItem icon={Activity} label="Age" value={formatPreciseAge(member.date_of_birth) ?? '—'} />
                 <InfoItem icon={Activity} label="Status" value={member.status} capitalize />
-                {member.title && <InfoItem icon={Award} label="Title" value={member.title} />}
+                {(member.display_title ?? member.title) && <InfoItem icon={Award} label="Title" value={(member.display_title ?? member.title) ?? ''} />}
                 <InfoItem icon={Calendar} label="Joined" value={member.created_at ? new Date(member.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'} />
                 {member.username && <InfoItem icon={User} label="Username" value={member.username} />}
               </div>

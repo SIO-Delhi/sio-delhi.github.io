@@ -192,6 +192,103 @@
   pointer-events: none;
 }
 
+/* Searchable user select (Assign Title modal) */
+.portal-search-select-wrap {
+  position: relative;
+}
+
+.portal-search-select-wrap .portal-search-select-input {
+  padding-left: 36px;
+  padding-right: 36px;
+}
+
+.portal-search-select-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--p-text-muted);
+  pointer-events: none;
+}
+
+.portal-search-select-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--p-text-muted);
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portal-search-select-clear:hover {
+  color: var(--p-cream);
+  background: var(--p-bg-surface);
+}
+
+.portal-search-select-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--p-bg-card);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.portal-search-select-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  color: var(--p-cream);
+  font-size: 0.875rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--p-border);
+  transition: background 0.15s;
+}
+
+.portal-search-select-option:last-child {
+  border-bottom: none;
+}
+
+.portal-search-select-option:hover,
+.portal-search-select-option.selected {
+  background: var(--p-bg-surface);
+}
+
+.portal-search-select-option-name {
+  display: block;
+  font-weight: 500;
+}
+
+.portal-search-select-option-meta {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--p-text-muted);
+  margin-top: 2px;
+}
+
+.portal-search-select-empty {
+  padding: 12px;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--p-text-muted);
+}
+
 /* ── Tables ── */
 
 .portal-table-wrap {
@@ -389,6 +486,13 @@
 .portal-badge-approved { background: rgba(5, 150, 105, 0.15); color: #34d399; border-color: rgba(5, 150, 105, 0.3); }
 .portal-badge-rejected { background: rgba(220, 38, 38, 0.15); color: #f87171; border-color: rgba(220, 38, 38, 0.3); }
 .portal-badge-title    { background: var(--p-red-subtle); color: var(--p-red-light); border-color: rgba(255, 59, 59, 0.2); font-weight: 700; }
+.portal-badge-title-silver { background: rgba(148, 163, 184, 0.2); color: #94a3b8; border-color: rgba(148, 163, 184, 0.35); font-weight: 600; }
+.portal-badge-title-gold   { background: rgba(217, 119, 6, 0.2); color: var(--p-gold); border-color: rgba(217, 119, 6, 0.35); font-weight: 700; }
+.portal-badge-title-red   { background: var(--p-red-subtle); color: var(--p-red-light); border-color: rgba(255, 59, 59, 0.2); font-weight: 700; }
+.portal-badge-title-blue  { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border-color: rgba(59, 130, 246, 0.35); font-weight: 600; }
+.portal-badge-title-green { background: rgba(34, 197, 94, 0.2); color: #4ade80; border-color: rgba(34, 197, 94, 0.35); font-weight: 600; }
+.portal-badge-title-slate { background: rgba(100, 116, 139, 0.2); color: #94a3b8; border-color: rgba(100, 116, 139, 0.35); font-weight: 600; }
+.portal-badge-title-magenta { background: rgba(192, 132, 252, 0.25); color: #c084fc; border-color: rgba(192, 132, 252, 0.4); font-weight: 600; }
 
 /* ── Stat Cards ── */
 

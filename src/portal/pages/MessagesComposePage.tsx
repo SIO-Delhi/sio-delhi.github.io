@@ -46,7 +46,9 @@ export function MessagesComposePage() {
   const individualRecipients = user.role === 'member'
     ? users.filter(u => u.id !== user.id && (
         (u.role === 'unit_president' && u.unit_id === user.unit_id) ||
-        u.role === 'zonal_secretary'
+        u.role === 'regional_president' ||
+        u.role === 'zonal_secretary' ||
+        u.role === 'admin'
       ))
     : users.filter(u => u.id !== user.id)
   const canBroadcast = user.role !== 'member' || !!user.title
@@ -78,7 +80,7 @@ export function MessagesComposePage() {
         <h1 className="portal-heading">Compose Message</h1>
         <p className="portal-subheading">
           {user.role === 'member'
-            ? 'Send a message to your unit president or zonal secretary.'
+            ? 'Send a message to your unit president, regional president, zonal secretary, or admin.'
             : 'Send a message to individuals, groups, or broadcast to everyone.'}
         </p>
       </div>
@@ -105,7 +107,7 @@ export function MessagesComposePage() {
             <div>
               <label className="portal-label">{memberOnlyIndividual ? 'Send To' : 'Recipient'}</label>
               <select value={recipientId} onChange={e => setRecipientId(e.target.value)} className="portal-input portal-select">
-                <option value="">{memberOnlyIndividual ? 'Select unit president or zonal secretary…' : 'Select recipient…'}</option>
+                <option value="">{memberOnlyIndividual ? 'Select recipient…' : 'Select recipient…'}</option>
                 {individualRecipients.map(u => <option key={u.id} value={u.id}>{u.full_name} ({ROLE_LABELS[u.role]}){u.unit_name ? ` — ${u.unit_name}` : ''}</option>)}
               </select>
             </div>

@@ -25,7 +25,7 @@ interface DataTableProps<T extends Record<string, unknown>> {
 
 export function DataTable<T extends Record<string, unknown>>({
   data, columns, loading = false, error = null, searchable = true,
-  searchPlaceholder = 'Search…', pageSize = 10, onEdit, onDelete, onRowClick,
+  searchPlaceholder = 'Search…', pageSize = 20, onEdit, onDelete, onRowClick,
   exportFilename, emptyTitle = 'No data found',
   emptyDescription = 'There are no records to display yet.',
   emptyActionLabel, emptyActionHref, filterElement,

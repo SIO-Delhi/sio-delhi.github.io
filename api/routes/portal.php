@@ -218,6 +218,11 @@ function portalSetup() {
     } catch (Exception $e) {
         // Constraint already exists
     }
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN title_color VARCHAR(32) NULL AFTER title_assigned_at");
+    } catch (Exception $e) {
+        // Column already exists
+    }
     // Backfill from portal_region_units: one region per RP, set users.region_id and units.region_id
     $regionCount = (int)$db->query("SELECT COUNT(*) FROM portal_regions")->fetchColumn();
     if ($regionCount === 0) {
@@ -257,6 +262,19 @@ function portalSetup() {
             FOREIGN KEY (requested_by) REFERENCES portal_users(id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
+    // Make to_unit_id nullable for zone/location migrations
+    try {
+        $db->exec("ALTER TABLE portal_migration_requests MODIFY to_unit_id VARCHAR(36) NULL");
+    } catch (Exception $e) {}
+    try {
+        $db->exec("ALTER TABLE portal_migration_requests ADD COLUMN to_location VARCHAR(255) NULL AFTER to_unit_id");
+    } catch (Exception $e) {}
+    try {
+        $db->exec("ALTER TABLE portal_migration_requests ADD COLUMN reason TEXT NULL AFTER to_location");
+    } catch (Exception $e) {}
+    try {
+        $db->exec("ALTER TABLE portal_migration_requests ADD COLUMN seen_at TIMESTAMP NULL AFTER resolved_at");
+    } catch (Exception $e) {}
 
     $db->exec("
         CREATE TABLE IF NOT EXISTS portal_messages (
@@ -650,7 +668,7 @@ function portalGetUnit($id) {
 function portalGetUnitMembers($id) {
     $db = getDB();
     $stmt = $db->prepare("
-        SELECT u.*, pu.name AS unit_name, pc.name AS circle_name, pca.name AS campus_name
+        SELECT u.*, pu.name AS unit_name, pu.region_id AS unit_region_id, pc.name AS circle_name, pca.name AS campus_name
         FROM portal_users u
         LEFT JOIN portal_units pu ON u.unit_id = pu.id
         LEFT JOIN portal_circles pc ON u.circle_id = pc.id
@@ -721,7 +739,7 @@ function portalGetCampus($id) {
 function portalGetCampusMembers($id) {
     $db = getDB();
     $stmt = $db->prepare("
-        SELECT u.*, pu.name AS unit_name, pc.name AS circle_name, pca.name AS campus_name
+        SELECT u.*, pu.name AS unit_name, pu.region_id AS unit_region_id, pc.name AS circle_name, pca.name AS campus_name
         FROM portal_users u
         LEFT JOIN portal_units pu ON u.unit_id = pu.id
         LEFT JOIN portal_circles pc ON u.circle_id = pc.id
@@ -770,7 +788,7 @@ function portalGetUsers() {
     $circleId = $_GET['circleId'] ?? null;
     $titleOnly = $_GET['titleOnly'] ?? null;
 
-    $sql = "SELECT u.*, pu.name AS unit_name, pc.name AS circle_name, pca.name AS campus_name FROM portal_users u
+    $sql = "SELECT u.*, pu.name AS unit_name, pu.region_id AS unit_region_id, pc.name AS circle_name, pca.name AS campus_name FROM portal_users u
             LEFT JOIN portal_units pu ON u.unit_id = pu.id
             LEFT JOIN portal_circles pc ON u.circle_id = pc.id
             LEFT JOIN portal_campuses pca ON u.campus_id = pca.id
@@ -790,7 +808,11 @@ function portalGetUsers() {
         $sql .= " AND pu.region_id IS NOT NULL";
     }
     if ($role === 'unit_president' && $campusUnitsOnly) {
-        $sql .= " AND pu.region_id IS NULL";
+        // All 5 campuses: Academy (IIISR), Jamia Millia Islamia, D.U, JNU, Jamia Hamdard. Include any unit_president whose unit is one of these (by name or region_id NULL or user has campus_id).
+        $sql .= " AND (
+            u.unit_id IN (SELECT id FROM portal_units WHERE region_id IS NULL OR LOWER(TRIM(name)) IN ('iiisr', 'jamia millia islamia', 'd.u', 'jnu', 'jamia hamdard'))
+            OR u.campus_id IS NOT NULL
+        )";
     }
 
     $sql .= " ORDER BY u.first_name, u.last_name";
@@ -802,7 +824,7 @@ function portalGetUsers() {
 
 function portalGetUser($id) {
     $db = getDB();
-    $stmt = $db->prepare("SELECT u.*, pu.name AS unit_name, pc.name AS circle_name, pca.name AS campus_name FROM portal_users u
+    $stmt = $db->prepare("SELECT u.*, pu.name AS unit_name, pu.region_id AS unit_region_id, pc.name AS circle_name, pca.name AS campus_name FROM portal_users u
             LEFT JOIN portal_units pu ON u.unit_id = pu.id
             LEFT JOIN portal_circles pc ON u.circle_id = pc.id
             LEFT JOIN portal_campuses pca ON u.campus_id = pca.id
@@ -867,21 +889,50 @@ function portalDeleteUser($id) {
     return ['success' => true];
 }
 
+function portalLockUser($id) {
+    $body = jsonBody();
+    $db = getDB();
+    $locked = $body['locked'] ?? false;
+    $newStatus = $locked ? 'inactive' : 'active';
+    $db->prepare("UPDATE portal_users SET status = ? WHERE id = ?")->execute([$newStatus, $id]);
+    return ['success' => true, 'status' => $newStatus];
+}
+
 /* ═══════════════════════════════════════════
    Titles
    ═══════════════════════════════════════════ */
 
 function portalAssignTitle($id) {
     $body = jsonBody();
+    if (!isset($body['title']) || !isset($body['assigned_by'])) {
+        http_response_code(400);
+        return ['error' => 'Missing title or assigned_by.'];
+    }
     $db = getDB();
-    $stmt = $db->prepare("UPDATE portal_users SET title = ?, title_assigned_by = ?, title_assigned_at = NOW() WHERE id = ?");
-    $stmt->execute([$body['title'], $body['assigned_by'], $id]);
+    $hasTitleColorCol = $db->query("SHOW COLUMNS FROM portal_users LIKE 'title_color'")->fetch();
+    $updateColor = $hasTitleColorCol && array_key_exists('title_color', $body);
+    $titleColor = $updateColor ? (isset($body['title_color']) && $body['title_color'] !== '' && $body['title_color'] !== null ? $body['title_color'] : null) : null;
+    if ($hasTitleColorCol && $updateColor) {
+        $stmt = $db->prepare("UPDATE portal_users SET title = ?, title_assigned_by = ?, title_assigned_at = NOW(), title_color = ? WHERE id = ?");
+        $stmt->execute([$body['title'], $body['assigned_by'], $titleColor, $id]);
+    } elseif ($hasTitleColorCol) {
+        $stmt = $db->prepare("UPDATE portal_users SET title = ?, title_assigned_by = ?, title_assigned_at = NOW() WHERE id = ?");
+        $stmt->execute([$body['title'], $body['assigned_by'], $id]);
+    } else {
+        $stmt = $db->prepare("UPDATE portal_users SET title = ?, title_assigned_by = ?, title_assigned_at = NOW() WHERE id = ?");
+        $stmt->execute([$body['title'], $body['assigned_by'], $id]);
+    }
     return ['success' => true];
 }
 
 function portalRevokeTitle($id) {
     $db = getDB();
-    $stmt = $db->prepare("UPDATE portal_users SET title = NULL, title_assigned_by = NULL, title_assigned_at = NULL WHERE id = ?");
+    $hasTitleColorCol = $db->query("SHOW COLUMNS FROM portal_users LIKE 'title_color'")->fetch();
+    if ($hasTitleColorCol) {
+        $stmt = $db->prepare("UPDATE portal_users SET title = NULL, title_assigned_by = NULL, title_assigned_at = NULL, title_color = NULL WHERE id = ?");
+    } else {
+        $stmt = $db->prepare("UPDATE portal_users SET title = NULL, title_assigned_by = NULL, title_assigned_at = NULL WHERE id = ?");
+    }
     $stmt->execute([$id]);
     return ['success' => true];
 }
@@ -935,6 +986,7 @@ function portalDashboardStats() {
     $stats['totalRegionUnits'] = (int)$db->query("SELECT COUNT(*) FROM portal_units WHERE region_id IS NOT NULL")->fetchColumn();
     $stats['totalCircles'] = (int)$db->query("SELECT COUNT(*) FROM portal_circles")->fetchColumn();
     $stats['totalCampuses'] = (int)$db->query("SELECT COUNT(*) FROM portal_campuses")->fetchColumn();
+    $stats['totalRegions'] = (int)$db->query("SELECT COUNT(*) FROM portal_regions")->fetchColumn();
 
     // Total people in the organisation: count ALL users (not just role='member'). Previously only role='member' was counted, so unit presidents etc. were excluded and the number looked lower.
     $memberSql = "SELECT status, COUNT(*) as cnt FROM portal_users WHERE 1=1";
@@ -1148,10 +1200,14 @@ function portalNotificationCounts() {
 function portalGetMigrations() {
     $db = getDB();
     $status = $_GET['status'] ?? 'all';
+    $role = $_GET['role'] ?? null;
+    $userId = $_GET['userId'] ?? null;
+    $unitId = $_GET['unitId'] ?? null;
 
     $sql = "
         SELECT m.*,
             TRIM(CONCAT_WS(' ', mem.first_name, mem.middle_name, mem.last_name)) AS member_name,
+            mem.role AS member_role,
             fu.name AS from_unit_name,
             tu.name AS to_unit_name,
             TRIM(CONCAT_WS(' ', req.first_name, req.middle_name, req.last_name)) AS requested_by_name
@@ -1160,11 +1216,39 @@ function portalGetMigrations() {
         LEFT JOIN portal_units fu ON m.from_unit_id = fu.id
         LEFT JOIN portal_units tu ON m.to_unit_id = tu.id
         LEFT JOIN portal_users req ON m.requested_by = req.id
+        WHERE 1=1
     ";
     $params = [];
-    if ($status !== 'all') { $sql .= " WHERE m.status = ?"; $params[] = $status; }
-    $sql .= " ORDER BY m.created_at DESC";
 
+    if ($status !== 'all') {
+        $sql .= " AND m.status = ?";
+        $params[] = $status;
+    }
+
+    // Role-based access filtering
+    if ($role === 'member' && $userId) {
+        // Members only see their own migrations
+        $sql .= " AND (m.member_id = ? OR m.requested_by = ?)";
+        $params[] = $userId;
+        $params[] = $userId;
+    } elseif ($role === 'unit_president' && $unitId && $userId) {
+        // Unit presidents see migrations from their unit (members only) + their own
+        $sql .= " AND ((m.from_unit_id = ? AND mem.role = 'member') OR m.member_id = ?)";
+        $params[] = $unitId;
+        $params[] = $userId;
+    } elseif ($role === 'regional_president' && $userId) {
+        // Regional presidents see migrations from units in their region (members + unit presidents) + their own
+        $sql .= " AND (
+            (m.from_unit_id IN (SELECT id FROM portal_units WHERE region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president'))
+             AND mem.role IN ('member', 'unit_president'))
+            OR m.member_id = ?
+        )";
+        $params[] = $userId;
+        $params[] = $userId;
+    }
+    // admin / zonal_secretary: no filter — see all
+
+    $sql .= " ORDER BY m.created_at DESC";
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
     return $stmt->fetchAll();
@@ -1173,28 +1257,118 @@ function portalGetMigrations() {
 function portalCreateMigration() {
     $body = jsonBody();
     $db = getDB();
+
+    $memberId = $body['member_id'] ?? null;
+    $fromUnitId = $body['from_unit_id'] ?? null;
+    $toUnitId = !empty($body['to_unit_id']) ? $body['to_unit_id'] : null;
+    $toLocation = !empty($body['to_location']) ? trim($body['to_location']) : null;
+    $reason = !empty($body['reason']) ? trim($body['reason']) : null;
+    $requestedBy = $body['requested_by'] ?? null;
+
+    if (!$memberId || !$fromUnitId || !$requestedBy) {
+        http_response_code(400);
+        return ['error' => 'member_id, from_unit_id, and requested_by are required.'];
+    }
+    if (!$toUnitId && !$toLocation) {
+        http_response_code(400);
+        return ['error' => 'Either to_unit_id or to_location is required.'];
+    }
+
+    // Validate requester permissions
+    $requester = $db->prepare("SELECT role, unit_id, region_id FROM portal_users WHERE id = ?");
+    $requester->execute([$requestedBy]);
+    $req = $requester->fetch();
+    if (!$req) { http_response_code(403); return ['error' => 'Requester not found.']; }
+
+    $reqRole = $req['role'];
+    if ($reqRole === 'member') {
+        if ($memberId !== $requestedBy) {
+            http_response_code(403);
+            return ['error' => 'Members can only initiate their own migration.'];
+        }
+    } elseif ($reqRole === 'unit_president') {
+        if ($memberId !== $requestedBy) {
+            $mem = $db->prepare("SELECT unit_id FROM portal_users WHERE id = ?");
+            $mem->execute([$memberId]);
+            $memRow = $mem->fetch();
+            if (!$memRow || $memRow['unit_id'] !== $req['unit_id']) {
+                http_response_code(403);
+                return ['error' => 'Unit presidents can only initiate migrations for their unit members.'];
+            }
+        }
+    } elseif ($reqRole === 'regional_president') {
+        if ($memberId !== $requestedBy) {
+            $mem = $db->prepare("SELECT u.unit_id, pu.region_id FROM portal_users u LEFT JOIN portal_units pu ON u.unit_id = pu.id WHERE u.id = ?");
+            $mem->execute([$memberId]);
+            $memRow = $mem->fetch();
+            $rpRegion = $req['region_id'];
+            if (!$memRow || $memRow['region_id'] !== $rpRegion) {
+                http_response_code(403);
+                return ['error' => 'Regional presidents can only initiate migrations for members in their region.'];
+            }
+        }
+    }
+    // admin / zonal_secretary: no restriction
+
     $id = uuid();
-    $stmt = $db->prepare("INSERT INTO portal_migration_requests (id, member_id, from_unit_id, to_unit_id, requested_by) VALUES (?,?,?,?,?)");
-    $stmt->execute([$id, $body['member_id'], $body['from_unit_id'], $body['to_unit_id'], $body['requested_by']]);
+    $stmt = $db->prepare("INSERT INTO portal_migration_requests (id, member_id, from_unit_id, to_unit_id, to_location, reason, requested_by) VALUES (?,?,?,?,?,?,?)");
+    $stmt->execute([$id, $memberId, $fromUnitId, $toUnitId, $toLocation, $reason, $requestedBy]);
     return ['success' => true, 'id' => $id];
 }
 
 function portalResolveMigration($id) {
     $body = jsonBody();
     $db = getDB();
-    $stmt = $db->prepare("UPDATE portal_migration_requests SET status = ?, resolved_by = ?, resolved_at = NOW() WHERE id = ?");
-    $stmt->execute([$body['status'], $body['resolved_by'], $id]);
 
-    // If approved, move member
-    if ($body['status'] === 'approved') {
-        $mig = $db->prepare("SELECT member_id, to_unit_id FROM portal_migration_requests WHERE id = ?");
+    $resolvedBy = $body['resolved_by'] ?? null;
+    $newStatus = $body['status'] ?? null;
+    if (!$resolvedBy || !$newStatus) {
+        http_response_code(400);
+        return ['error' => 'status and resolved_by are required.'];
+    }
+
+    // Only admin or zonal_secretary can approve/reject
+    $resolver = $db->prepare("SELECT role FROM portal_users WHERE id = ?");
+    $resolver->execute([$resolvedBy]);
+    $resolverRow = $resolver->fetch();
+    if (!$resolverRow || !in_array($resolverRow['role'], ['admin', 'zonal_secretary'])) {
+        http_response_code(403);
+        return ['error' => 'Only admin or zonal secretary can approve/reject migrations.'];
+    }
+
+    $stmt = $db->prepare("UPDATE portal_migration_requests SET status = ?, resolved_by = ?, resolved_at = NOW() WHERE id = ?");
+    $stmt->execute([$newStatus, $resolvedBy, $id]);
+
+    // If approved, handle member transfer
+    if ($newStatus === 'approved') {
+        $mig = $db->prepare("SELECT member_id, to_unit_id, to_location FROM portal_migration_requests WHERE id = ?");
         $mig->execute([$id]);
         $row = $mig->fetch();
         if ($row) {
-            $db->prepare("UPDATE portal_users SET unit_id = ?, status = 'migrated' WHERE id = ?")
-                ->execute([$row['to_unit_id'], $row['member_id']]);
+            if ($row['to_unit_id']) {
+                // Within-zone (unit→unit): reassign unit, do NOT mark as migrated
+                $db->prepare("UPDATE portal_users SET unit_id = ? WHERE id = ?")
+                    ->execute([$row['to_unit_id'], $row['member_id']]);
+            } else {
+                // Cross-zone (to another zone/location): mark as migrated
+                $db->prepare("UPDATE portal_users SET status = 'migrated' WHERE id = ?")
+                    ->execute([$row['member_id']]);
+            }
         }
     }
+    return ['success' => true];
+}
+
+function portalMarkMigrationsSeen() {
+    $body = jsonBody();
+    $memberId = $body['member_id'] ?? null;
+    if (!$memberId) {
+        http_response_code(400);
+        return ['error' => 'member_id required.'];
+    }
+    $db = getDB();
+    $stmt = $db->prepare("UPDATE portal_migration_requests SET seen_at = NOW() WHERE member_id = ? AND status != 'pending' AND seen_at IS NULL");
+    $stmt->execute([$memberId]);
     return ['success' => true];
 }
 
@@ -1243,7 +1417,7 @@ function portalSendMessage() {
     if ($senderRow && $senderRow['role'] === 'member') {
         if (!empty($body['is_broadcast']) || !empty($body['recipient_role'])) {
             http_response_code(403);
-            return ['error' => 'Members can only message their unit president or zonal secretary.'];
+            return ['error' => 'Members can only message their unit president, regional president, zonal secretary, or admin.'];
         }
         $recipientId = $body['recipient_id'] ?? null;
         if (!$recipientId) {
@@ -1253,9 +1427,11 @@ function portalSendMessage() {
         $rec = $db->prepare("SELECT role, unit_id FROM portal_users WHERE id = ?");
         $rec->execute([$recipientId]);
         $recRow = $rec->fetch();
-        if (!$recRow || ($recRow['role'] !== 'zonal_secretary' && !($recRow['role'] === 'unit_president' && $recRow['unit_id'] === $senderRow['unit_id']))) {
+        $allowedRoles = ['zonal_secretary', 'regional_president', 'admin'];
+        $isOwnUnitPres = $recRow && $recRow['role'] === 'unit_president' && $recRow['unit_id'] === $senderRow['unit_id'];
+        if (!$recRow || (!in_array($recRow['role'], $allowedRoles) && !$isOwnUnitPres)) {
             http_response_code(403);
-            return ['error' => 'Members can only message their unit president or zonal secretary.'];
+            return ['error' => 'Members can only message their unit president, regional president, zonal secretary, or admin.'];
         }
     }
 
@@ -1671,6 +1847,15 @@ function formatUser($row) {
         $decoded = json_decode($overrides, true);
         $overrides = is_array($decoded) ? $decoded : null;
     }
+    $title = $row['title'] ?? null;
+    $unitRegionId = $row['unit_region_id'] ?? null;
+    $isCampusUnit = ($unitRegionId === null && isset($row['unit_id']) && $row['unit_id'] !== null);
+    $displayTitle = $title;
+    if ($title === 'Unit President' && $isCampusUnit) {
+        $displayTitle = 'Campus President';
+    } elseif ($title === 'Unit Secretary' && $isCampusUnit) {
+        $displayTitle = 'Campus Secretary';
+    }
     return [
         'id' => $row['id'],
         'first_name' => $row['first_name'] ?? null,
@@ -1689,7 +1874,9 @@ function formatUser($row) {
         'permission_overrides' => $overrides,
         'date_of_birth' => $row['date_of_birth'] ?? null,
         'avatar_url' => $row['avatar_url'] ?? null,
-        'title' => $row['title'] ?? null,
+        'title' => $title,
+        'display_title' => $displayTitle,
+        'title_color' => $row['title_color'] ?? null,
         'title_assigned_by' => $row['title_assigned_by'] ?? null,
         'title_assigned_at' => $row['title_assigned_at'] ?? null,
         'status' => $row['status'] ?? 'active',

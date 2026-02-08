@@ -42,6 +42,10 @@ export interface PortalUser {
   date_of_birth: string | null
   avatar_url: string | null
   title: string | null
+  /** Display label (e.g. "Campus President" when title is "Unit President" and unit is campus) */
+  display_title?: string | null
+  /** Badge color key: silver, gold, red, blue, green, slate */
+  title_color?: string | null
   title_assigned_by: string | null
   title_assigned_at: string | null
   status: MemberStatus
@@ -152,6 +156,7 @@ export interface DashboardStats {
   totalRegionUnits: number
   totalCircles: number
   totalCampuses: number
+  totalRegions: number
   totalMembers: number
   activeMembers: number
   inactiveMembers: number

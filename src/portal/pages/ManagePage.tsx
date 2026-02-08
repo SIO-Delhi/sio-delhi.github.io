@@ -6,7 +6,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StatusBadge } from '../components/StatusBadge'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import * as api from '../api'
-import { ENTITY_LABELS, ENTITY_EDIT_FIELDS, ENTITY_ROLE_MAP, ALL_PERMISSIONS, hasPermission, ROLE_LABELS } from '../constants'
+import { ENTITY_LABELS, ENTITY_EDIT_FIELDS, ENTITY_ROLE_MAP, ALL_PERMISSIONS, hasPermission, ROLE_LABELS, getTitleBadgeColorClass } from '../constants'
+import { getAgeThisYear, formatPreciseAge } from '../components/AgeBar'
 import type { EntityType, TableColumn, PortalUnit, PortalCircle, PortalCampus, EditField } from '../types'
 import type { PortalRole } from '../types'
 
@@ -78,7 +79,13 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
     cols.push({ key: 'circle_name', label: 'Circle', sortable: true, render: v => (v as string) || '—' })
     cols.push({ key: 'campus_name', label: 'Campus', sortable: true, render: v => (v as string) || '—' })
     if (entity === 'members' || entity === 'zonal-secretaries' || entity === 'unit-presidents' || entity === 'campus-presidents')
-      cols.push({ key: 'title', label: 'Title', sortable: true, render: v => v ? <span className="portal-badge portal-badge-title">{v as string}</span> : <span className="portal-text-muted">—</span> })
+      cols.push({ key: 'title', label: 'Title', sortable: true, render: (v, row) => {
+        const displayTitle = (row?.display_title ?? v) as string | null
+        const titleColor = row?.title_color as string | null | undefined
+        if (!displayTitle) return <span className="portal-text-muted">—</span>
+        const colorClass = getTitleBadgeColorClass(displayTitle, titleColor)
+        return <span className={`portal-badge portal-badge-title portal-badge-title-${colorClass}`}>{displayTitle}</span>
+      } })
     if (entity === 'members')
       cols.push({ key: 'status', label: 'Status', sortable: true, render: v => <StatusBadge status={v as string} /> })
     if (entity === 'members' && user?.role === 'admin')
@@ -207,14 +214,6 @@ function fmtDate(iso: string): string {
   catch { return iso }
 }
 
-/** Parse DDMMYYYY DOB string and return age this year */
-function getAgeThisYear(dob: string | null): number | null {
-  if (!dob || dob.length !== 8) return null
-  const birthYear = parseInt(dob.substring(4, 8), 10)
-  if (isNaN(birthYear) || birthYear < 1900) return null
-  return new Date().getFullYear() - birthYear
-}
-
 /** Render an age progress bar (18→30) for the manage members table */
 function renderAgeBar(dob: string | null) {
   const age = getAgeThisYear(dob)
@@ -230,7 +229,7 @@ function renderAgeBar(dob: string | null) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className={`portal-age-bar-label ${isRetired ? 'portal-age-label-gold' : ''}`}>{age}</span>
+      <span className={`portal-age-bar-label ${isRetired ? 'portal-age-label-gold' : ''}`}>{formatPreciseAge(dob, true) ?? String(age)}</span>
     </div>
   )
 }
