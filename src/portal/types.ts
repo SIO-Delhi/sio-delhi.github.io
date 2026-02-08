@@ -6,6 +6,8 @@ export type MemberStatus = 'active' | 'inactive' | 'migrated'
 
 export type MigrationStatus = 'pending' | 'approved' | 'rejected'
 
+export type MembershipType = 'unit' | 'circle' | 'campus'
+
 export interface PortalUnit {
   id: string
   name: string
@@ -15,6 +17,8 @@ export interface PortalUnit {
 export interface PortalCircle {
   id: string
   name: string
+  region_id?: string | null
+  region_name?: string | null
   created_at: string
 }
 
@@ -32,13 +36,28 @@ export interface PortalUser {
   full_name: string
   username?: string | null
   phone: string
+  alt_phone?: string | null
   role: PortalRole
-  unit_id: string | null
-  unit_name?: string
+  /** Unified membership: type of membership (unit, circle, or campus) */
+  membership_type?: MembershipType | null
+  /** Unified membership: ID of the unit/circle/campus */
+  membership_id?: string | null
+  /** Unified membership: name of the unit/circle/campus */
+  membership_name?: string | null
+  /** @deprecated Use membership_type/membership_id instead */
+  unit_id?: string | null
+  /** @deprecated Use membership_name instead */
+  unit_name?: string | null
+  /** @deprecated Use membership_type/membership_id instead */
   circle_id?: string | null
+  /** @deprecated Use membership_name instead */
   circle_name?: string | null
+  /** @deprecated Use membership_type/membership_id instead */
   campus_id?: string | null
+  /** @deprecated Use membership_name instead */
   campus_name?: string | null
+  region_id?: string | null
+  region_name?: string | null
   date_of_birth: string | null
   avatar_url: string | null
   title: string | null
@@ -238,7 +257,7 @@ export interface DashboardStat {
   onClick?: () => void
 }
 
-export type EntityType = 'units' | 'circles' | 'campuses' | 'zonal-secretaries' | 'regional-presidents' | 'unit-presidents' | 'campus-presidents' | 'members'
+export type EntityType = 'units' | 'circles' | 'campuses' | 'regions' | 'zonal-secretaries' | 'regional-presidents' | 'unit-presidents' | 'campus-presidents' | 'members'
 
 /* ── RBAC Permissions ── */
 

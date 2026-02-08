@@ -140,7 +140,9 @@ export function PortalRoutes() {
                 <Route path="admin/campuses/add" element={<BulkAddPage entity="campuses" />} />
                 <Route path="admin/campuses/manage" element={<ManagePage entity="campuses" />} />
                 <Route path="admin/campuses/:campusId" element={<ViewCampusPage />} />
-                <Route path="admin/regions" element={<RegionsPage />} />
+                <Route path="admin/regions/add" element={<BulkAddPage entity="regions" />} />
+                <Route path="admin/regions/manage" element={<ManagePage entity="regions" />} />
+                <Route path="admin/regions" element={<Navigate to="/portal/admin/regions/manage" replace />} />
                 <Route path="admin/zonal-secretaries/add" element={<BulkAddPage entity="zonal-secretaries" />} />
                 <Route path="admin/zonal-secretaries/manage" element={<ManagePage entity="zonal-secretaries" />} />
                 <Route path="admin/regional-presidents/add" element={<BulkAddPage entity="regional-presidents" />} />

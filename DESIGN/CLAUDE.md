@@ -80,18 +80,31 @@ This thing is to keep track of the members, their performance, and if they are m
 
 ### Circles
 
-**Circles** are at the same level as **Units** and **Campuses**: they are a separate grouping. Each user can belong to one **unit** (required in practice; admin/zonal/regional are assigned to e.g. "SIO Delhi HQ") and optionally to one **circle**. Circles have their own list and CRUD (Add/Manage) under Admin; Zonal can view circles. Members are assigned to a circle via the user’s `circle_id` (and `circle_name` in the UI).
+**Circles** are study groups within regions, at the same level as **Units**. A user belongs to exactly **one** membership type: Unit OR Circle OR Campus. Circles have their own list and CRUD (Add/Manage) under Admin; Zonal can view circles.
+
+**Data Model:**
+- `portal_circles.region_id` → circles belong to a region (like units)
+- `portal_users.membership_type = 'circle'` and `membership_id = circle_id`
 
 ### Campuses
 
-**Campuses** are at the same level as **Units** and **Circles**: a separate grouping. Each user can optionally belong to one **campus**. Campuses have their own list and CRUD (Add/Manage) under Admin; Zonal can view campuses. Members are assigned to a campus via the user's `campus_id` (and `campus_name` in the UI). **Campus units** are units that have no region (`portal_units.region_id IS NULL`), e.g. Academy (IIISR), Jamia Millia Islamia, D.U, JNU, Jamia Hamdard. Presidents of these units are **Campus Presidents** and appear under the **Campus Presidents** section (not under Unit Presidents). The API exposes:
-- `GET /portal/campuses` — list all campuses.
-- `GET /portal/campuses/:id` — single campus.
-- `GET /portal/campuses/:id/members` — members belonging to that campus (users with `campus_id = :id`).
+**Campuses** are university-based chapters and are **standalone** (no region association). A user belongs to exactly **one** membership type: Unit OR Circle OR Campus. Campuses have their own list and CRUD (Add/Manage) under Admin.
 
-### Everyone in a unit
+**Data Model:**
+- `portal_campuses` has no region_id (campuses are independent of regions)
+- `portal_users.membership_type = 'campus'` and `membership_id = campus_id`
+- Campus examples: Academy (IIISR), Jamia Millia Islamia, D.U, JNU, Jamia Hamdard
 
-Every user (including Admin, Zonal Secretary, Regional President) is assigned to a **unit**. Zone-level roles use a dedicated unit such as **SIO Delhi HQ**. Unit is required when creating/editing users; the backend and seed reflect this.
+### Unified Membership Model
+
+Each user belongs to exactly **ONE** of: Unit, Circle, or Campus. This is stored in:
+- `portal_users.membership_type` — ENUM('unit', 'circle', 'campus')
+- `portal_users.membership_id` — UUID referencing the respective table
+
+**Region assignment:**
+- Units → have `region_id`
+- Circles → have `region_id`  
+- Campuses → NO `region_id` (standalone)
 
 ### Permission overrides (admin toggles)
 

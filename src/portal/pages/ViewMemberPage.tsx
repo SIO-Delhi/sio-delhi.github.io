@@ -3,13 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Phone, Building2, MapPin, Shield, Calendar, Award, Activity,
   User, Mail, ArrowRightLeft, BarChart3, Lock, Camera, Trash2, Save,
-  CheckCircle, ChevronDown,
+  CheckCircle, ChevronDown, Key,
 } from 'lucide-react'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { UserAvatar } from '../components/UserAvatar'
 import { StatusBadge } from '../components/StatusBadge'
 import { HeroAgeBar, formatPreciseAge } from '../components/AgeBar'
 import { ROLE_LABELS, ALL_PERMISSIONS, PERMISSION_LABELS, hasPermission } from '../constants'
+import { Toast } from '../components/Toast'
 import * as api from '../api'
 import type { PortalUser, PortalMessage, MigrationRequest, PerfResponse, PortalRole } from '../types'
 
@@ -49,7 +50,7 @@ export function ViewMemberPage() {
   const [editValues, setEditValues] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
 
   // Permissions edit
@@ -63,6 +64,8 @@ export function ViewMemberPage() {
   const isAdmin = currentUser?.role === 'admin'
   const canSetActiveInactive = currentUser && ['admin', 'zonal_secretary', 'regional_president', 'unit_president'].includes(currentUser.role)
   const [statusUpdating, setStatusUpdating] = useState(false)
+  const [passwordResetting, setPasswordResetting] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   // Load member data
   useEffect(() => {
@@ -116,6 +119,7 @@ export function ViewMemberPage() {
         middle_name: member.middle_name ?? '',
         last_name: member.last_name ?? '',
         phone: member.phone ?? '',
+        alt_phone: member.alt_phone ?? '',
         date_of_birth: member.date_of_birth ?? '',
         unit_id: member.unit_id ?? '',
         circle_id: member.circle_id ?? '',
@@ -133,7 +137,7 @@ export function ViewMemberPage() {
 
   async function handleSave() {
     if (!member) return
-    setSaving(true); setSaveError(null); setSaveSuccess(false)
+    setSaving(true); setSaveError(null); setSuccessMessage(null)
     try {
       const payload: Record<string, unknown> = { ...editValues }
       // Compute permission overrides diff
@@ -148,7 +152,7 @@ export function ViewMemberPage() {
       const updated = await api.fetchUser(member.id)
       setMember(updated)
       setEditing(false)
-      setSaveSuccess(true)
+      setSuccessMessage('Profile updated successfully!')
     } catch (err) { setSaveError(err instanceof Error ? err.message : 'Save failed.') }
     finally { setSaving(false) }
   }
@@ -187,6 +191,17 @@ export function ViewMemberPage() {
     finally { setStatusUpdating(false) }
   }
 
+  async function handleResetPassword() {
+    if (!member || !isAdmin) return
+    setPasswordResetting(true); setSaveError(null); setSuccessMessage(null)
+    try {
+      await api.resetUserPassword(member.id)
+      setSuccessMessage('Password reset to default successfully.')
+      setShowResetConfirm(false)
+    } catch (err) { setSaveError(err instanceof Error ? err.message : 'Failed to reset password.') }
+    finally { setPasswordResetting(false) }
+  }
+
   if (loading) return (
     <div className="portal-page">
       <div className="portal-skeleton portal-skeleton-card" style={{ height: 120 }} />
@@ -220,7 +235,7 @@ export function ViewMemberPage() {
       </button>
 
       {/* ── Status messages ── */}
-      {saveSuccess && <div className="portal-alert portal-alert-success"><CheckCircle size={16} /> <p>Profile updated successfully!</p></div>}
+      {successMessage && <Toast message={successMessage} type="success" onDismiss={() => setSuccessMessage(null)} />}
       {saveError && <div className="portal-alert portal-alert-error">{saveError}</div>}
 
       {/* ── Hero card ── */}
@@ -302,6 +317,7 @@ export function ViewMemberPage() {
               <div className="portal-profile-details-grid">
                 <InfoItem icon={User} label="Full Name" value={displayName} />
                 <InfoItem icon={Phone} label="Phone" value={member.phone} />
+                {member.alt_phone && <InfoItem icon={Phone} label="Alt Phone" value={member.alt_phone} />}
                 <InfoItem icon={Building2} label="Unit" value={member.unit_name ?? '—'} />
                 <InfoItem icon={MapPin} label="Zone" value="Delhi" />
                 {member.circle_name && <InfoItem icon={Building2} label="Circle" value={member.circle_name} />}
@@ -326,6 +342,30 @@ export function ViewMemberPage() {
                   </button>
                 </div>
               )}
+              {isAdmin && (
+                <div className="portal-view-status-actions" style={{ marginTop: 12 }}>
+                  <span className="portal-view-status-label">Password:</span>
+                  {!showResetConfirm ? (
+                    <button onClick={() => setShowResetConfirm(true)} className="portal-btn portal-btn-ghost portal-btn-sm">
+                      <Key size={14} /> Reset Password
+                    </button>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--p-amber)' }}>Reset to default password?</span>
+                      <button
+                        onClick={handleResetPassword}
+                        disabled={passwordResetting}
+                        className="portal-btn portal-btn-primary portal-btn-sm"
+                      >
+                        {passwordResetting ? 'Resetting…' : 'Confirm'}
+                      </button>
+                      <button onClick={() => setShowResetConfirm(false)} disabled={passwordResetting} className="portal-btn portal-btn-ghost portal-btn-sm">
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -341,6 +381,7 @@ export function ViewMemberPage() {
                 <EditFieldInput label="Middle Name" value={editValues.middle_name} onChange={v => setEditValues(p => ({ ...p, middle_name: v }))} />
                 <EditFieldInput label="Last Name" value={editValues.last_name} onChange={v => setEditValues(p => ({ ...p, last_name: v }))} required />
                 <EditFieldInput label="Phone" value={editValues.phone} onChange={v => setEditValues(p => ({ ...p, phone: v }))} type="tel" required />
+                <EditFieldInput label="Alt Phone" value={editValues.alt_phone} onChange={v => setEditValues(p => ({ ...p, alt_phone: v }))} type="tel" />
                 <EditFieldInput label="Date of Birth (DDMMYYYY)" value={editValues.date_of_birth} onChange={v => setEditValues(p => ({ ...p, date_of_birth: v }))} placeholder="e.g. 25031999" />
                 <div className="portal-edit-field">
                   <label className="portal-label portal-label-required">Unit</label>

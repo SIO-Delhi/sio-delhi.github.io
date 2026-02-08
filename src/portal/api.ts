@@ -69,8 +69,11 @@ export async function lookupPortalUserByUsername(username: string): Promise<Port
    Units
    ═══════════════════════════════════════════ */
 
-export async function fetchUnits(): Promise<PortalUnit[]> {
-  return get<PortalUnit[]>('/units')
+export async function fetchUnits(options?: { excludeCampusUnits?: boolean }): Promise<PortalUnit[]> {
+  const params = new URLSearchParams()
+  if (options?.excludeCampusUnits) params.set('excludeCampusUnits', 'true')
+  const query = params.toString()
+  return get<PortalUnit[]>(`/units${query ? `?${query}` : ''}`)
 }
 
 export async function fetchUnit(id: string): Promise<PortalUnit> {
@@ -172,7 +175,7 @@ export async function fetchUser(id: string): Promise<PortalUser> {
 }
 
 export async function createUsers(
-  users: { first_name: string; middle_name?: string; last_name: string; phone: string; password?: string; date_of_birth?: string; role: PortalRole; unit_id?: string; circle_id?: string; campus_id?: string }[],
+  users: { first_name: string; middle_name?: string; last_name: string; phone: string; alt_phone?: string; password?: string; date_of_birth?: string; role: PortalRole; unit_id?: string; circle_id?: string; campus_id?: string }[],
 ): Promise<void> {
   await post('/users', { users })
 }
@@ -248,6 +251,14 @@ export async function lockUser(
     body.actorUnitId = actor.unitId ?? undefined
   }
   await put(`/users/${id}/lock`, body)
+}
+
+/**
+ * Reset a user's Clerk password back to their stored default password.
+ * This is admin-only functionality.
+ */
+export async function resetUserPassword(userId: string): Promise<void> {
+  await post(`/users/${userId}/reset-password`, {})
 }
 
 /* ═══════════════════════════════════════════

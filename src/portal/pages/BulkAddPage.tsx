@@ -34,7 +34,7 @@ export function BulkAddPage({ entity }: BulkAddPageProps) {
     if (isUserEntity) {
       Promise.all([api.fetchUnits(), api.fetchCircles(), api.fetchCampuses()])
         .then(([u, c, ca]) => { setUnits(u); setCircles(c); setCampuses(ca) })
-        .catch(() => {})
+        .catch(() => { })
     }
   }, [isUserEntity])
 
@@ -52,8 +52,6 @@ export function BulkAddPage({ entity }: BulkAddPageProps) {
         if (f.key === 'campus_id') return { ...f, options: [{ value: '', label: '-- None --' }, ...campuses.map(c => ({ value: c.id, label: c.name }))] }
         return f
       })
-    // Add password field
-    fields.push({ key: 'password', label: 'Password', type: 'text', required: false, placeholder: 'Leave empty for auto-generated' })
     return fields
   }
 
@@ -82,10 +80,10 @@ export function BulkAddPage({ entity }: BulkAddPageProps) {
           first_name: (values.first_name ?? '').trim(),
           last_name: (values.last_name ?? '').trim(),
           phone: (values.phone ?? '').trim(),
+          alt_phone: (values.alt_phone ?? '').trim(),
           role: targetRole as PortalRole,
         }
         if (values.middle_name?.trim()) userData.middle_name = values.middle_name.trim()
-        if (values.password?.trim()) userData.password = values.password.trim()
         if (values.date_of_birth?.trim()) userData.date_of_birth = values.date_of_birth.trim()
         if (values.unit_id) userData.unit_id = values.unit_id
         if (values.circle_id) userData.circle_id = values.circle_id
@@ -109,14 +107,14 @@ export function BulkAddPage({ entity }: BulkAddPageProps) {
     const unitMap = new Map(units.map(u => [u.name.toLowerCase(), u.id]))
     const circleMap = new Map(circles.map(c => [c.name.toLowerCase(), c.id]))
     const users = rows.map((r, idx) => {
-      const user: { first_name: string; middle_name?: string; last_name: string; phone: string; password?: string; date_of_birth?: string; role: PortalRole; unit_id?: string; circle_id?: string; campus_id?: string } = {
+      const user: { first_name: string; middle_name?: string; last_name: string; phone: string; alt_phone?: string; date_of_birth?: string; role: PortalRole; unit_id?: string; circle_id?: string; campus_id?: string } = {
         first_name: (r.first_name ?? '').trim(),
         last_name: (r.last_name ?? '').trim(),
         phone: r.phone,
+        alt_phone: r.alt_phone,
         role: targetRole as PortalRole,
       }
       if (r.middle_name != null && r.middle_name.trim() !== '') user.middle_name = r.middle_name.trim()
-      if (r.password != null && r.password.trim() !== '') user.password = r.password.trim()
       if (r.date_of_birth != null && r.date_of_birth.trim() !== '') user.date_of_birth = r.date_of_birth.trim()
       if (r.unit_name) {
         const unitId = unitMap.get(r.unit_name.toLowerCase())

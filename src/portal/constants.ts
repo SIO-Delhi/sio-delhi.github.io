@@ -38,6 +38,8 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
       children: [
         { label: 'Add Units', path: '/portal/admin/units/add', icon: Building2 },
         { label: 'Manage Units', path: '/portal/admin/units/manage', icon: Building2 },
+        { label: 'Add Unit President', path: '/portal/admin/unit-presidents/add', icon: UserCheck },
+        { label: 'Manage Unit Presidents', path: '/portal/admin/unit-presidents/manage', icon: UserCheck },
       ],
     },
     {
@@ -52,6 +54,16 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
       children: [
         { label: 'Add Campuses', path: '/portal/admin/campuses/add', icon: GraduationCap },
         { label: 'Manage Campuses', path: '/portal/admin/campuses/manage', icon: GraduationCap },
+        { label: 'Manage Campus Presidents', path: '/portal/admin/campus-presidents/manage', icon: GraduationCap },
+      ],
+    },
+    {
+      label: 'Regions', path: '#', icon: Globe,
+      children: [
+        { label: 'Add Regions', path: '/portal/admin/regions/add', icon: Globe },
+        { label: 'Manage Regions', path: '/portal/admin/regions/manage', icon: Globe },
+        { label: 'Add Regional President', path: '/portal/admin/regional-presidents/add', icon: Globe },
+        { label: 'Manage Regional Presidents', path: '/portal/admin/regional-presidents/manage', icon: Globe },
       ],
     },
     {
@@ -59,27 +71,6 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
       children: [
         { label: 'Add', path: '/portal/admin/zonal-secretaries/add', icon: UserCog },
         { label: 'Manage', path: '/portal/admin/zonal-secretaries/manage', icon: UserCog },
-      ],
-    },
-    {
-      label: 'Regional Presidents', path: '#', icon: Globe,
-      children: [
-        { label: 'Add', path: '/portal/admin/regional-presidents/add', icon: Globe },
-        { label: 'Manage', path: '/portal/admin/regional-presidents/manage', icon: Globe },
-      ],
-    },
-    { label: 'Regions', path: '/portal/admin/regions', icon: Globe },
-    {
-      label: 'Unit Presidents', path: '#', icon: UserCheck,
-      children: [
-        { label: 'Add', path: '/portal/admin/unit-presidents/add', icon: UserCheck },
-        { label: 'Manage', path: '/portal/admin/unit-presidents/manage', icon: UserCheck },
-      ],
-    },
-    {
-      label: 'Campus Presidents', path: '#', icon: GraduationCap,
-      children: [
-        { label: 'Manage', path: '/portal/admin/campus-presidents/manage', icon: GraduationCap },
       ],
     },
     {
@@ -262,11 +253,15 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
   campuses: [
     { key: 'name', label: 'Campus Name', type: 'text', required: true, placeholder: 'e.g. Jamia Campus' },
   ],
+  regions: [
+    { key: 'name', label: 'Region Name', type: 'text', required: true, placeholder: 'e.g. Delhi North Region' },
+  ],
   'zonal-secretaries': [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
     { key: 'last_name', label: 'Last Name', type: 'text', required: true },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
+    { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     { key: 'unit_id', label: 'Unit', type: 'select', required: true },
     { key: 'circle_id', label: 'Circle', type: 'select', required: false },
   ],
@@ -275,6 +270,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
     { key: 'last_name', label: 'Last Name', type: 'text', required: true },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
+    { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     { key: 'unit_id', label: 'Unit', type: 'select', required: true },
     { key: 'circle_id', label: 'Circle', type: 'select', required: false },
     { key: 'campus_id', label: 'Campus', type: 'select', required: false },
@@ -284,6 +280,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
     { key: 'last_name', label: 'Last Name', type: 'text', required: true },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
+    { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     { key: 'unit_id', label: 'Unit', type: 'select', required: true },
     { key: 'circle_id', label: 'Circle', type: 'select', required: false },
     { key: 'campus_id', label: 'Campus', type: 'select', required: false },
@@ -293,6 +290,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
     { key: 'last_name', label: 'Last Name', type: 'text', required: true },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
+    { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     { key: 'unit_id', label: 'Unit', type: 'select', required: true },
     { key: 'circle_id', label: 'Circle', type: 'select', required: false },
     { key: 'campus_id', label: 'Campus', type: 'select', required: false },
@@ -302,15 +300,18 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
     { key: 'last_name', label: 'Last Name', type: 'text', required: true },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
+    { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     { key: 'date_of_birth', label: 'Date of Birth (DDMMYYYY)', type: 'text', required: true, placeholder: 'e.g. 25031999' },
     { key: 'unit_id', label: 'Unit', type: 'select', required: true },
     { key: 'circle_id', label: 'Circle', type: 'select', required: false },
     { key: 'campus_id', label: 'Campus', type: 'select', required: false },
-    { key: 'status', label: 'Status', type: 'select', required: true, options: [
-      { value: 'active', label: 'Active' },
-      { value: 'inactive', label: 'Inactive' },
-      { value: 'migrated', label: 'Migrated' },
-    ] },
+    {
+      key: 'status', label: 'Status', type: 'select', required: true, options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+        { value: 'migrated', label: 'Migrated' },
+      ]
+    },
   ],
 }
 
@@ -323,6 +324,9 @@ export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
   ],
   campuses: [
     { key: 'name', label: 'Campus Name', required: true, example: 'Jamia Campus' },
+  ],
+  regions: [
+    { key: 'name', label: 'Region Name', required: true, example: 'Delhi North' },
   ],
   'zonal-secretaries': [
     { key: 'first_name', label: 'First Name', required: true, example: 'Ramesh' },
@@ -371,6 +375,7 @@ export const ENTITY_LABELS: Record<string, { plural: string; singular: string }>
   units: { plural: 'Units', singular: 'Unit' },
   circles: { plural: 'Circles', singular: 'Circle' },
   campuses: { plural: 'Campuses', singular: 'Campus' },
+  regions: { plural: 'Regions', singular: 'Region' },
   'zonal-secretaries': { plural: 'Zonal Secretaries', singular: 'Zonal Secretary' },
   'regional-presidents': { plural: 'Regional Presidents', singular: 'Regional President' },
   'unit-presidents': { plural: 'Unit Presidents', singular: 'Unit President' },
@@ -382,6 +387,7 @@ export const ENTITY_ROLE_MAP: Record<string, PortalRole | null> = {
   units: null,
   circles: null,
   campuses: null,
+  regions: null,
   'zonal-secretaries': 'zonal_secretary',
   'regional-presidents': 'regional_president',
   'unit-presidents': 'unit_president',

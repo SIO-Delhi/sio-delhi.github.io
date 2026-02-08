@@ -39,10 +39,14 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
   const fetchData = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      if (entity === 'units') setData(await api.fetchUnits() as unknown as Record<string, unknown>[])
+      if (entity === 'units') setData(await api.fetchUnits({ excludeCampusUnits: true }) as unknown as Record<string, unknown>[])
       else if (entity === 'circles') setData(await api.fetchCircles() as unknown as Record<string, unknown>[])
       else if (entity === 'campuses') setData(await api.fetchCampuses() as unknown as Record<string, unknown>[])
-      else {
+      else if (entity === 'regions') {
+        // Fetch regions and transform to simple format for table
+        const regions = await api.fetchRegions()
+        setData(regions.map(r => ({ id: r.region_id, name: r.region_name, regional_president_name: r.regional_president_name ?? '—', created_at: '' })))
+      } else {
         const unitId = user?.role === 'unit_president' ? (user.unit_id ?? undefined) : undefined
         const excludeCampusUnits = entity === 'unit-presidents'
         const campusUnitsOnly = entity === 'campus-presidents'
@@ -71,21 +75,31 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
       { key: 'name', label: 'Campus Name', sortable: true },
       { key: 'created_at', label: 'Created', sortable: true, render: v => fmtDate(v as string) },
     ]
+    if (entity === 'regions') return [
+      { key: 'name', label: 'Region Name', sortable: true },
+      { key: 'regional_president_name', label: 'Regional President', sortable: true },
+    ]
     const cols: TableColumn<Record<string, unknown>>[] = [
       { key: 'full_name', label: 'Full Name', sortable: true },
       { key: 'phone', label: 'Phone', sortable: true },
     ]
+    // Add Region column for regional-presidents
+    if (entity === 'regional-presidents') {
+      cols.push({ key: 'region_name', label: 'Region', sortable: true, render: v => (v as string) || '—' })
+    }
     cols.push({ key: 'unit_name', label: 'Unit', sortable: true, render: v => (v as string) || '—' })
     cols.push({ key: 'circle_name', label: 'Circle', sortable: true, render: v => (v as string) || '—' })
     cols.push({ key: 'campus_name', label: 'Campus', sortable: true, render: v => (v as string) || '—' })
     if (entity === 'members' || entity === 'zonal-secretaries' || entity === 'unit-presidents' || entity === 'campus-presidents')
-      cols.push({ key: 'title', label: 'Title', sortable: true, render: (v, row) => {
-        const displayTitle = (row?.display_title ?? v) as string | null
-        const titleColor = row?.title_color as string | null | undefined
-        if (!displayTitle) return <span className="portal-text-muted">—</span>
-        const colorClass = getTitleBadgeColorClass(displayTitle, titleColor)
-        return <span className={`portal-badge portal-badge-title portal-badge-title-${colorClass}`}>{displayTitle}</span>
-      } })
+      cols.push({
+        key: 'title', label: 'Title', sortable: true, render: (v, row) => {
+          const displayTitle = (row?.display_title ?? v) as string | null
+          const titleColor = row?.title_color as string | null | undefined
+          if (!displayTitle) return <span className="portal-text-muted">—</span>
+          const colorClass = getTitleBadgeColorClass(displayTitle, titleColor)
+          return <span className={`portal-badge portal-badge-title portal-badge-title-${colorClass}`}>{displayTitle}</span>
+        }
+      })
     if (entity === 'members')
       cols.push({ key: 'status', label: 'Status', sortable: true, render: v => <StatusBadge status={v as string} /> })
     if (entity === 'members' && user?.role === 'admin')
@@ -119,7 +133,7 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
     const vals: Record<string, string> = {}
     const fields = ENTITY_EDIT_FIELDS[entity] ?? []
     for (const field of fields) vals[field.key] = String(row[field.key] ?? '')
-    if (entity !== 'units' && entity !== 'circles' && entity !== 'campuses') {
+    if (entity !== 'units' && entity !== 'circles' && entity !== 'campuses' && entity !== 'regions') {
       vals['role'] = String(row['role'] ?? 'member')
       if (user?.role === 'admin') {
         const role = (row.role as PortalRole) ?? 'member'
@@ -140,7 +154,10 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
     if (entity === 'units') await api.updateUnit(id, { name: values.name })
     else if (entity === 'circles') await api.updateCircle(id, { name: values.name })
     else if (entity === 'campuses') await api.updateCampus(id, { name: values.name })
-    else {
+    else if (entity === 'regions') {
+      // Regions update not supported yet - backend endpoints needed
+      throw new Error('Region update not yet implemented. Please use the Regions page.')
+    } else {
       const payload: Record<string, unknown> = { ...values }
       if (values.permission_overrides !== undefined && editRow.role) {
         try {
@@ -166,7 +183,9 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
       if (entity === 'units') await api.deleteUnit(deleteRow.id as string)
       else if (entity === 'circles') await api.deleteCircle(deleteRow.id as string)
       else if (entity === 'campuses') await api.deleteCampus(deleteRow.id as string)
-      else await api.deleteUser(deleteRow.id as string)
+      else if (entity === 'regions') {
+        throw new Error('Region delete not yet implemented. Please use the Regions page.')
+      } else await api.deleteUser(deleteRow.id as string)
       setDeleteRow(null); await fetchData()
     } catch (err) { setError(err instanceof Error ? err.message : 'Delete failed.') }
   }
@@ -176,18 +195,18 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
 
   const prefix = user ? (ROLE_PREFIX[user.role] ?? '/portal/member') : '/portal/member'
   // User entities: clickable name -> member profile
-  const isUserEntity = entity !== 'units' && entity !== 'circles' && entity !== 'campuses'
-  // Unit/Circle/Campus: clickable name -> entity detail page
+  const isUserEntity = entity !== 'units' && entity !== 'circles' && entity !== 'campuses' && entity !== 'regions'
+  // Unit/Circle/Campus/Region: clickable name -> entity detail page
   const isEntityDetail = entity === 'units' || entity === 'circles' || entity === 'campuses'
   const handleRowClick = isUserEntity
     ? (row: Record<string, unknown>) => navigate(`${prefix}/members/${row.id}`)
     : isEntityDetail
       ? (row: Record<string, unknown>) => {
-          const id = row.id as string
-          if (entity === 'units') navigate(`${prefix}/units/${id}`)
-          else if (entity === 'circles') navigate(`${prefix}/circles/${id}`)
-          else navigate(`${prefix}/campuses/${id}`)
-        }
+        const id = row.id as string
+        if (entity === 'units') navigate(`${prefix}/units/${id}`)
+        else if (entity === 'circles') navigate(`${prefix}/circles/${id}`)
+        else navigate(`${prefix}/campuses/${id}`)
+      }
       : undefined
 
   return (

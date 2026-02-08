@@ -35,8 +35,8 @@ $allowedOrigins = [
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
 // Check if origin matches allowed list OR is localhost/127.0.0.1
-$isAllowed = in_array($origin, $allowedOrigins) || 
-             preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin);
+$isAllowed = in_array($origin, $allowedOrigins) ||
+    preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin);
 
 if ($isAllowed) {
     header('Access-Control-Allow-Origin: ' . $origin);
@@ -69,7 +69,7 @@ $uri = rtrim($uri, '/');
 // Simple router
 $routes = [
     // Health check
-    'GET /health' => function() {
+    'GET /health' => function () {
         return ['status' => 'ok', 'message' => 'API is running'];
     },
 
@@ -169,6 +169,7 @@ $routes = [
     'GET /portal/retiring-members' => 'routes/portal.php@portalGetRetiringMembers',
     'GET /portal/search' => 'routes/portal.php@portalSearch',
     'PUT /portal/users/([^/]+)/lock' => 'routes/portal.php@portalLockUser',
+    'POST /portal/users/([^/]+)/reset-password' => 'routes/portal.php@portalResetUserPassword',
     'GET /portal/notifications' => 'routes/portal.php@portalNotificationCounts',
     'GET /portal/migrations' => 'routes/portal.php@portalGetMigrations',
     'POST /portal/migrations' => 'routes/portal.php@portalCreateMigration',
@@ -205,7 +206,8 @@ $matched = false;
 foreach ($routes as $pattern => $handler) {
     list($routeMethod, $routePath) = explode(' ', $pattern, 2);
 
-    if ($method !== $routeMethod) continue;
+    if ($method !== $routeMethod)
+        continue;
 
     $regex = '#^' . $routePath . '$#';
     if (preg_match($regex, $uri, $matches)) {
