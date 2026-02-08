@@ -80,7 +80,6 @@ export function MigrationsPage() {
         : members // admin/zonal see all
 
   // Determine the selected member's current unit for display
-  const activeMemberId = isMember ? user.id : selectedMember
   const activeMember = isMember ? user : members.find(m => m.id === selectedMember)
   const fromUnitName = activeMember?.unit_name ?? units.find(u => u.id === activeMember?.unit_id)?.name ?? '—'
 

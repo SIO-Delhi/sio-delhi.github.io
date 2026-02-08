@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Mail, MailOpen, ArrowLeft, Clock, Reply, Users, User, Radio } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { ArrowLeft, Clock, Reply, Users, User, Radio } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { useNotifications } from '../context/NotificationContext'
@@ -61,7 +61,7 @@ export function MessagesInboxPage() {
     return msg.is_broadcast === true || msg.is_broadcast === (1 as any) || msg.is_broadcast === ('1' as any)
   }
 
-  function getMessageType(msg: PortalMessage): { label: string; icon: JSX.Element; className: string } {
+  function getMessageType(msg: PortalMessage): { label: string; icon: React.ReactNode; className: string } {
     if (isBroadcast(msg)) return { label: 'Broadcast', icon: <Radio size={12} />, className: 'portal-msg-type-broadcast' }
     if (msg.recipient_role) return { label: ROLE_LABELS[msg.recipient_role] ?? msg.recipient_role, icon: <Users size={12} />, className: 'portal-msg-type-role' }
     return { label: 'Direct', icon: <User size={12} />, className: 'portal-msg-type-direct' }

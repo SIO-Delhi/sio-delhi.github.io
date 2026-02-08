@@ -8,7 +8,6 @@ export default defineConfig({
     base: '/',
     server: {
         port: 443,
-        https: true,
         host: true,
         hmr: {
             host: 'local.siodelhi.org',

@@ -124,7 +124,7 @@ export function ViewMemberPage() {
         role: member.role ?? 'member',
       })
       // Populate permissions
-      const overrides = (member as Record<string, unknown>).permission_overrides as Record<string, boolean> | null
+      const overrides = (member as unknown as Record<string, unknown>).permission_overrides as Record<string, boolean> | null
       const effective: Record<string, boolean> = {}
       for (const p of ALL_PERMISSIONS) effective[p] = overrides?.[p] ?? hasPermission(member.role, p)
       setPermOverrides(effective)
@@ -479,7 +479,7 @@ export function ViewMemberPage() {
           </p>
           <div className="portal-edit-perms-grid">
             {ALL_PERMISSIONS.map(p => {
-              const overrides = (member as Record<string, unknown>).permission_overrides as Record<string, boolean> | null
+              const overrides = (member as unknown as Record<string, unknown>).permission_overrides as Record<string, boolean> | null
               const effective = overrides?.[p] ?? hasPermission(member.role, p)
               return (
                 <div key={p} className="portal-edit-perm-item" style={{ cursor: 'default' }}>
@@ -522,7 +522,7 @@ function EditFieldInput({ label, value, onChange, type = 'text', required, place
   )
 }
 
-function PerfResponseCard({ resp, prefix }: { resp: PerfResponseWithForm; prefix: string }) {
+function PerfResponseCard({ resp }: { resp: PerfResponseWithForm; prefix: string }) {
   const [expanded, setExpanded] = useState(false)
   return (
     <div className="portal-view-perf-item">
