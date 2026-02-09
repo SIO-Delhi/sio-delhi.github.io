@@ -12,6 +12,9 @@ export interface PortalUnit {
   id: string
   name: string
   created_at: string
+  region_id?: string | null
+  region_name?: string | null
+  is_campus?: boolean
 }
 
 export interface PortalCircle {
