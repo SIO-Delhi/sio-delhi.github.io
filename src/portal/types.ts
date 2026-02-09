@@ -1,6 +1,6 @@
 import type { ReactNode, ComponentType } from 'react'
 
-export type PortalRole = 'admin' | 'zonal_secretary' | 'regional_president' | 'unit_president' | 'member'
+export type PortalRole = 'admin' | 'zonal_secretary' | 'regional_president' | 'unit_president' | 'campus_president' | 'member'
 
 export type MemberStatus = 'active' | 'inactive' | 'migrated'
 
@@ -15,6 +15,7 @@ export interface PortalUnit {
   region_id?: string | null
   region_name?: string | null
   is_campus?: boolean
+  unit_president_name?: string | null
 }
 
 export interface PortalCircle {
@@ -29,6 +30,7 @@ export interface PortalCampus {
   id: string
   name: string
   created_at: string
+  campus_president_name?: string | null
 }
 
 export interface PortalUser {
@@ -192,6 +194,21 @@ export interface DashboardStats {
   pendingMigrations: number
   unreadMessages: number
   retiringMembers: number
+  /** Members missing required details (e.g. phone or DOB) */
+  membersWithIncompleteDetails?: number
+}
+
+export interface IncompleteDetailsMember {
+  id: string
+  full_name: string
+  phone: string
+  date_of_birth: string
+  unit_name: string | null
+  circle_name?: string | null
+  campus_name?: string | null
+  /** Unit, circle, or campus name for display (whichever applies) */
+  membership_name?: string | null
+  missing: ('phone' | 'date_of_birth')[]
 }
 
 export interface PortalSearchResult {

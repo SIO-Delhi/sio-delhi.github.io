@@ -170,6 +170,7 @@ $routes = [
     'GET /portal/dashboard/stats' => 'routes/portal.php@portalDashboardStats',
     'GET /portal/region-units-without-president' => 'routes/portal.php@portalGetRegionUnitsWithoutPresident',
     'GET /portal/retiring-members' => 'routes/portal.php@portalGetRetiringMembers',
+    'GET /portal/members-incomplete-details' => 'routes/portal.php@portalGetMembersWithIncompleteDetails',
     'GET /portal/search' => 'routes/portal.php@portalSearch',
     'PUT /portal/users/([^/]+)/lock' => 'routes/portal.php@portalLockUser',
     'POST /portal/users/([^/]+)/reset-password' => 'routes/portal.php@portalResetUserPassword',

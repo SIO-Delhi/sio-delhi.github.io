@@ -10,6 +10,7 @@ import type {
   PortalMessage,
   DashboardStats,
   RetiringMember,
+  IncompleteDetailsMember,
   PortalSearchResult,
   PerfForm,
   PerfResponse,
@@ -237,6 +238,17 @@ export async function fetchDashboardStats(
 
 export async function fetchRetiringMembers(): Promise<RetiringMember[]> {
   return get<RetiringMember[]>('/retiring-members')
+}
+
+export async function fetchMembersWithIncompleteDetails(
+  role: string,
+  regionId?: string | null,
+  unitId?: string | null,
+): Promise<IncompleteDetailsMember[]> {
+  const params = new URLSearchParams({ role })
+  if (regionId) params.set('regionId', regionId)
+  if (unitId) params.set('unitId', unitId)
+  return get(`/members-incomplete-details?${params.toString()}`)
 }
 
 export async function searchPortal(q: string): Promise<PortalSearchResult> {

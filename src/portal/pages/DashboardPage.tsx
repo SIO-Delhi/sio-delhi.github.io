@@ -4,6 +4,7 @@ import {
   Building2, Users, UserCheck, UserCog, ArrowRightLeft, Mail,
   Activity, UserX, TrendingUp, Phone, MapPin, Shield, Calendar,
   Clock, Lock, Unlock, Trash2, CircleDot, GraduationCap, Globe,
+  AlertCircle,
 } from 'lucide-react'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { UserAvatar } from '../components/UserAvatar'
@@ -12,7 +13,7 @@ import { StatCard } from '../components/StatCard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { HeroAgeBar, formatPreciseAge } from '../components/AgeBar'
 import * as api from '../api'
-import type { DashboardStats, DashboardStat, RetiringMember } from '../types'
+import type { DashboardStats, DashboardStat, RetiringMember, IncompleteDetailsMember } from '../types'
 import { ROLE_LABELS } from '../constants'
 
 /** Return the URL prefix for a given role, e.g. admin → /portal/admin */
@@ -41,11 +42,13 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [retiringMembers, setRetiringMembers] = useState<RetiringMember[]>([])
+  const [incompleteDetailsMembers, setIncompleteDetailsMembers] = useState<IncompleteDetailsMember[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lockTarget, setLockTarget] = useState<RetiringMember | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<RetiringMember | null>(null)
   const [retiringOpen, setRetiringOpen] = useState(false)
+  const [incompleteDetailsOpen, setIncompleteDetailsOpen] = useState<boolean>(false)
 
   const isLeader = user?.role === 'admin' || user?.role === 'zonal_secretary'
 
@@ -58,8 +61,14 @@ export function DashboardPage() {
         if (!cancelled) setStats(data)
         // Fetch retiring members for admin / zonal
         if (user!.role === 'admin' || user!.role === 'zonal_secretary') {
-          const retiring = await api.fetchRetiringMembers()
-          if (!cancelled) setRetiringMembers(retiring)
+          const [retiring, incomplete] = await Promise.all([
+            api.fetchRetiringMembers(),
+            api.fetchMembersWithIncompleteDetails(user!.role, user!.region_id, user!.unit_id),
+          ])
+          if (!cancelled) { setRetiringMembers(retiring); setIncompleteDetailsMembers(incomplete) }
+        } else if (user!.role === 'regional_president' || user!.role === 'unit_president') {
+          const incomplete = await api.fetchMembersWithIncompleteDetails(user!.role, user!.region_id, user!.unit_id)
+          if (!cancelled) setIncompleteDetailsMembers(incomplete)
         }
       }
       catch (err) { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load stats.') }
@@ -119,6 +128,7 @@ export function DashboardPage() {
       if (role === 'admin') cards.push({ label: 'Zonal Secretaries', value: stats.totalZonalSecretaries, icon: UserCog, color: 'red', to: `${prefix}/zonal-secretaries/manage` })
       cards.push(
         { label: 'Retiring Members', value: stats.retiringMembers ?? 0, icon: Clock, color: 'amber', onClick: () => setRetiringOpen(prev => !prev) },
+        { label: 'Incomplete Details', value: stats.membersWithIncompleteDetails ?? 0, icon: AlertCircle, color: 'amber', onClick: () => setIncompleteDetailsOpen(prev => !prev) },
         { label: 'Pending Migrations', value: stats.pendingMigrations, icon: ArrowRightLeft, color: 'amber', to: `${prefix}/migrations` },
         { label: 'Unread Messages', value: stats.unreadMessages, icon: Mail, color: 'red', to: `${prefix}/messages/inbox` },
       )
@@ -130,6 +140,7 @@ export function DashboardPage() {
         { label: 'Active', value: stats.activeMembers, icon: Activity, color: 'green', to: `${prefix}/members` },
         { label: 'Inactive', value: stats.inactiveMembers, icon: UserX, color: 'slate', to: `${prefix}/members` },
         { label: 'Migrated', value: stats.migratedMembers, icon: ArrowRightLeft, color: 'amber', to: `${prefix}/members` },
+        { label: 'Incomplete Details', value: stats.membersWithIncompleteDetails ?? 0, icon: AlertCircle, color: 'amber', onClick: () => setIncompleteDetailsOpen(prev => !prev) },
         { label: 'Performance', value: 'View', icon: TrendingUp, color: 'green', to: `${prefix}/performance` },
         { label: 'Unread Messages', value: stats.unreadMessages, icon: Mail, color: 'red', to: `${prefix}/messages/inbox` },
       )
@@ -209,6 +220,40 @@ export function DashboardPage() {
         <div className="portal-grid-stats">
           {getStatCards().map((stat, i) => <StatCard key={i} stat={stat} />)}
         </div>
+      )}
+
+      {/* ── Incomplete Details Section ── */}
+      {(user.role === 'admin' || user.role === 'zonal_secretary' || user.role === 'regional_president' || user.role === 'unit_president') && incompleteDetailsMembers.length > 0 && incompleteDetailsOpen && (
+        <>
+          <div className="portal-dashboard-section-heading">
+            <h2>Members with incomplete details</h2>
+            <p>Missing phone number and/or date of birth — click a name to edit their profile</p>
+          </div>
+          <div className="portal-card portal-card-body">
+            <div className="portal-retiring-list">
+              {incompleteDetailsMembers.map((member: IncompleteDetailsMember) => (
+                <div key={member.id} className="portal-retiring-row">
+                  <div className="portal-retiring-info">
+                    <UserAvatar name={member.full_name} size="sm" />
+                    <div className="portal-retiring-details">
+                      <button type="button" className="portal-table-link portal-retiring-name" onClick={() => navigate(`${prefix}/members/${member.id}`)}>
+                        {member.full_name}
+                      </button>
+                      <span className="portal-retiring-meta">
+                        {member.membership_name ?? '—'}
+                        {member.missing.length > 0 && (
+                          <span className="portal-text-muted" style={{ marginLeft: 8 }}>
+                            · Missing: {member.missing.map((m: 'phone' | 'date_of_birth') => m === 'phone' ? 'Phone' : 'DOB').join(', ')}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
       {/* ── Retiring Members Section (admin/zonal only) ── */}

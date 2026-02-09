@@ -81,6 +81,18 @@ export function ViewEntityDetailPage({ entity, paramKey }: ViewEntityDetailPageP
   const inactive = members.filter(m => m.status === 'inactive')
   const migrated = members.filter(m => m.status === 'migrated')
 
+  // President and secretaries/titled members for display under the entity name
+  const unitPresident = entity === 'unit' ? members.find(m => m.role === 'unit_president') : null
+  const campusPresident = entity === 'campus' ? members.find(m => m.role === 'campus_president') : null
+  const titledMembers = members.filter(m => {
+    const title = m.display_title ?? m.title
+    if (!title || !title.trim()) return false
+    if (entity === 'unit' && m.role === 'unit_president') return false
+    if (entity === 'campus' && m.role === 'campus_president') return false
+    return true
+  })
+  const hasLeaders = (entity === 'unit' && unitPresident) || (entity === 'campus' && campusPresident) || titledMembers.length > 0
+
   function MemberRow({ m }: { m: PortalUser }) {
     const titleLabel = m.display_title ?? m.title
     const subtitle = [m.unit_name ?? '—', titleLabel].filter(Boolean).join(' · ') + (m.phone ? ` · ${m.phone}` : '')
@@ -107,6 +119,21 @@ export function ViewEntityDetailPage({ entity, paramKey }: ViewEntityDetailPageP
         <div>
           <h1 className="portal-entity-hero-name">{name}</h1>
           <p className="portal-entity-hero-meta">{labels.singular} · {members.length} member{members.length !== 1 ? 's' : ''}</p>
+          {hasLeaders && (
+            <div className="portal-entity-hero-leaders" style={{ marginTop: 10, fontSize: '0.875rem', color: 'var(--p-text-muted)', display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}>
+              {entity === 'unit' && unitPresident && (
+                <span><strong style={{ color: 'var(--p-cream)' }}>Unit President:</strong> {unitPresident.full_name}</span>
+              )}
+              {entity === 'campus' && campusPresident && (
+                <span><strong style={{ color: 'var(--p-cream)' }}>Campus President:</strong> {campusPresident.full_name}</span>
+              )}
+              {titledMembers.map(m => (
+                <span key={m.id}>
+                  <strong style={{ color: 'var(--p-cream)' }}>{(m.display_title ?? m.title)?.trim()}:</strong> {m.full_name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

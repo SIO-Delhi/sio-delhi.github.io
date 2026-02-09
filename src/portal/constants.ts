@@ -140,6 +140,19 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
       ],
     },
   ],
+  campus_president: [
+    { label: 'Dashboard', path: '/portal/unit/dashboard', icon: LayoutDashboard },
+    { label: 'Members', path: '/portal/unit/members', icon: Users },
+    { label: 'Titles', path: '/portal/unit/titles', icon: Award },
+    { label: 'Performance', path: '/portal/unit/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    {
+      label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
+      children: [
+        { label: 'Compose', path: '/portal/unit/messages/compose', icon: Send },
+        { label: 'Inbox', path: '/portal/unit/messages/inbox', icon: Inbox },
+      ],
+    },
+  ],
   member: [
     { label: 'Dashboard', path: '/portal/member/dashboard', icon: LayoutDashboard },
     { label: 'Profile', path: '/portal/member/profile', icon: User },
@@ -162,6 +175,7 @@ export const ROLE_LABELS: Record<PortalRole, string> = {
   zonal_secretary: 'Zonal Secretary',
   regional_president: 'Regional President',
   unit_president: 'Unit President',
+  campus_president: 'Campus President',
   member: 'Member',
 }
 
@@ -170,6 +184,7 @@ export const ROLE_DASHBOARD_PATHS: Record<PortalRole, string> = {
   zonal_secretary: '/portal/zonal/dashboard',
   regional_president: '/portal/regional/dashboard',
   unit_president: '/portal/unit/dashboard',
+  campus_president: '/portal/unit/dashboard',
   member: '/portal/member/dashboard',
 }
 
@@ -193,6 +208,11 @@ export const ROLE_PERMISSIONS: Record<PortalRole, Permission[]> = {
     'view_own_profile', 'edit_own_profile',
   ],
   unit_president: [
+    'view_all_units', 'view_all_users', 'assign_titles',
+    'view_performance', 'send_messages', 'broadcast_messages',
+    'view_own_profile', 'edit_own_profile',
+  ],
+  campus_president: [
     'view_all_units', 'view_all_users', 'assign_titles',
     'view_performance', 'send_messages', 'broadcast_messages',
     'view_own_profile', 'edit_own_profile',

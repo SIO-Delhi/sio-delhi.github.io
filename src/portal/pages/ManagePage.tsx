@@ -70,6 +70,7 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
   function getColumns(): TableColumn<Record<string, unknown>>[] {
     if (entity === 'units') return [
       { key: 'name', label: 'Unit Name', sortable: true },
+      { key: 'unit_president_name', label: 'President', sortable: true, render: v => (v as string) || '—' },
       { key: 'created_at', label: 'Created', sortable: true, render: v => fmtDate(v as string) },
     ]
     if (entity === 'circles') return [
@@ -78,6 +79,7 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
     ]
     if (entity === 'campuses') return [
       { key: 'name', label: 'Campus Name', sortable: true },
+      { key: 'campus_president_name', label: 'President', sortable: true, render: v => (v as string) || '—' },
       { key: 'created_at', label: 'Created', sortable: true, render: v => fmtDate(v as string) },
     ]
     if (entity === 'regions') return [

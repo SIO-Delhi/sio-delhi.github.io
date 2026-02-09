@@ -10,11 +10,13 @@ type RecipientMode = 'individual' | 'role' | 'broadcast'
 
 function getAvailableRoleTargets(userRole: PortalRole): PortalRole[] {
   switch (userRole) {
-    case 'admin': return ['admin', 'zonal_secretary', 'regional_president', 'unit_president', 'member']
-    case 'zonal_secretary': return ['admin', 'zonal_secretary', 'regional_president', 'unit_president', 'member']
-    case 'regional_president': return ['unit_president', 'member']
+    case 'admin': return ['admin', 'zonal_secretary', 'regional_president', 'unit_president', 'campus_president', 'member']
+    case 'zonal_secretary': return ['admin', 'zonal_secretary', 'regional_president', 'unit_president', 'campus_president', 'member']
+    case 'regional_president': return ['unit_president', 'campus_president', 'member']
     case 'unit_president': return ['member']
+    case 'campus_president': return ['member']
     case 'member': return ['unit_president', 'zonal_secretary']
+    default: return []
   }
 }
 

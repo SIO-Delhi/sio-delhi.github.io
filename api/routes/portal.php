@@ -811,10 +811,12 @@ function portalGetUnits()
     $regionCols = hasRegionColumns($db);
     $hasRegionsTable = tableExists($db, 'portal_regions');
 
+    $presidentSub = "(SELECT TRIM(CONCAT_WS(' ', first_name, middle_name, last_name)) FROM portal_users WHERE unit_id = u.id AND role = 'unit_president' LIMIT 1)";
     if ($regionCols['units'] && $hasRegionsTable) {
         $sql = "
             SELECT u.id, u.name, u.created_at, u.region_id,
-                r.name AS region_name
+                r.name AS region_name,
+                $presidentSub AS unit_president_name
             FROM portal_units u
             LEFT JOIN portal_regions r ON r.id = u.region_id
         ";
@@ -824,7 +826,8 @@ function portalGetUnits()
     } elseif ($regionCols['units']) {
         $sql = "
             SELECT u.id, u.name, u.created_at, u.region_id,
-                NULL AS region_name
+                NULL AS region_name,
+                $presidentSub AS unit_president_name
             FROM portal_units u
         ";
         if ($excludeCampusUnits) {
@@ -833,7 +836,8 @@ function portalGetUnits()
     } else {
         $sql = "
             SELECT u.id, u.name, u.created_at, NULL AS region_id,
-                NULL AS region_name
+                NULL AS region_name,
+                $presidentSub AS unit_president_name
             FROM portal_units u
         ";
     }
@@ -1011,7 +1015,12 @@ Campuses (same level as units and circles)
 function portalGetCampuses()
 {
     $db = getDB();
-    return $db->query("SELECT * FROM portal_campuses ORDER BY name")->fetchAll();
+    return $db->query("
+        SELECT c.*,
+            (SELECT TRIM(CONCAT_WS(' ', first_name, middle_name, last_name)) FROM portal_users WHERE campus_id = c.id AND role = 'campus_president' LIMIT 1) AS campus_president_name
+        FROM portal_campuses c
+        ORDER BY c.name
+    ")->fetchAll();
 }
 
 function portalGetCampus($id)
@@ -1766,6 +1775,28 @@ function portalDashboardStats()
     $stmt->execute([$year]);
     $stats['retiringMembers'] = (int) $stmt->fetchColumn();
 
+    // Members with incomplete details: missing phone or DOB (same scope as member count)
+    $incompleteCond = "(COALESCE(TRIM(phone), '') = '' OR COALESCE(TRIM(date_of_birth), '') = '')";
+    $incompleteSql = "SELECT COUNT(*) FROM portal_users WHERE 1=1";
+    $incompleteParams = [];
+    if ($role === 'unit_president' && $unitId) {
+        $incompleteSql .= " AND unit_id = ?";
+        $incompleteParams[] = $unitId;
+    } elseif ($role === 'regional_president' && $regionId && $hasRegion) {
+        if ($hasCircleRegion) {
+            $incompleteSql .= " AND (unit_id IN (SELECT id FROM portal_units WHERE region_id = ?) OR circle_id IN (SELECT id FROM portal_circles WHERE region_id = ?))";
+            $incompleteParams[] = $regionId;
+            $incompleteParams[] = $regionId;
+        } else {
+            $incompleteSql .= " AND unit_id IN (SELECT id FROM portal_units WHERE region_id = ?)";
+            $incompleteParams[] = $regionId;
+        }
+    }
+    $incompleteSql .= " AND " . $incompleteCond;
+    $stmt = $db->prepare($incompleteSql);
+    $stmt->execute($incompleteParams);
+    $stats['membersWithIncompleteDetails'] = (int) $stmt->fetchColumn();
+
     return $stats;
 }
 
@@ -1810,6 +1841,73 @@ function portalGetRetiringMembers()
         $u = formatUser($row);
         $u['age_this_year'] = (int) ($row['age_this_year'] ?? 0);
         $out[] = $u;
+    }
+    return $out;
+}
+
+/**
+ * Members with incomplete details (missing phone or DOB). Scoped by role (admin/zonal = all; regional = region; unit = unit).
+ * GET params: role, regionId (optional), unitId (optional). Returns list with id, full_name, phone, date_of_birth, unit_name, circle_name, campus_name, membership_name (unit or circle or campus for display), missing (array of 'phone' | 'date_of_birth').
+ */
+function portalGetMembersWithIncompleteDetails()
+{
+    $db = getDB();
+    $role = $_GET['role'] ?? 'admin';
+    $regionId = $_GET['regionId'] ?? null;
+    $unitId = $_GET['unitId'] ?? null;
+    $regionCols = hasRegionColumns($db);
+    $hasRegion = $regionCols['units'] ?? false;
+    $hasCircleRegion = $regionCols['circles'] ?? false;
+
+    $where = " (COALESCE(TRIM(u.phone), '') = '' OR COALESCE(TRIM(u.date_of_birth), '') = '')";
+    $params = [];
+    if ($role === 'unit_president' && $unitId) {
+        $where = " u.unit_id = ? AND" . $where;
+        $params[] = $unitId;
+    } elseif ($role === 'regional_president' && $regionId && $hasRegion) {
+        if ($hasCircleRegion) {
+            $where = " (u.unit_id IN (SELECT id FROM portal_units WHERE region_id = ?) OR u.circle_id IN (SELECT id FROM portal_circles WHERE region_id = ?)) AND" . $where;
+            $params[] = $regionId;
+            $params[] = $regionId;
+        } else {
+            $where = " u.unit_id IN (SELECT id FROM portal_units WHERE region_id = ?) AND" . $where;
+            $params[] = $regionId;
+        }
+    }
+
+    $sql = "SELECT u.id, u.first_name, u.middle_name, u.last_name, u.phone, u.date_of_birth, u.unit_id,
+                pu.name AS unit_name, pc.name AS circle_name, pca.name AS campus_name
+            FROM portal_users u
+            LEFT JOIN portal_units pu ON u.unit_id = pu.id
+            LEFT JOIN portal_circles pc ON u.circle_id = pc.id
+            LEFT JOIN portal_campuses pca ON u.campus_id = pca.id
+            WHERE" . $where . "
+            ORDER BY u.first_name, u.last_name";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $out = [];
+    foreach ($rows as $row) {
+        $missing = [];
+        if (trim($row['phone'] ?? '') === '') $missing[] = 'phone';
+        if (trim($row['date_of_birth'] ?? '') === '') $missing[] = 'date_of_birth';
+        $fullName = trim(implode(' ', array_filter([$row['first_name'] ?? '', $row['middle_name'] ?? '', $row['last_name'] ?? '']))) ?: '—';
+        $unitName = isset($row['unit_name']) && trim($row['unit_name']) !== '' ? $row['unit_name'] : null;
+        $circleName = isset($row['circle_name']) && trim($row['circle_name']) !== '' ? $row['circle_name'] : null;
+        $campusName = isset($row['campus_name']) && trim($row['campus_name']) !== '' ? $row['campus_name'] : null;
+        $membershipName = $unitName ?? $circleName ?? $campusName;
+        $out[] = [
+            'id' => $row['id'],
+            'full_name' => $fullName,
+            'phone' => $row['phone'] ?? '',
+            'date_of_birth' => $row['date_of_birth'] ?? '',
+            'unit_name' => $unitName,
+            'circle_name' => $circleName,
+            'campus_name' => $campusName,
+            'membership_name' => $membershipName,
+            'missing' => $missing,
+        ];
     }
     return $out;
 }
