@@ -25,5 +25,6 @@ dist-ssr
 .vercel
 
 # API secrets
+.env
 api/.env
 api/.clerk_jwks_cache.json
