@@ -47,11 +47,11 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
         const regions = await api.fetchRegions()
         setData(regions.map(r => ({ id: r.region_id, name: r.region_name, regional_president_name: r.regional_president_name ?? '—', created_at: '' })))
       } else {
-        const unitId = user?.role === 'unit_president' ? (user.unit_id ?? undefined) : undefined
+        const membershipId = user?.role === 'unit_president' ? (user.membership_id ?? undefined) : undefined
         const excludeCampusUnits = entity === 'unit-presidents'
         const campusUnitsOnly = entity === 'campus-presidents'
         const options = excludeCampusUnits ? { excludeCampusUnits: true } : campusUnitsOnly ? { campusUnitsOnly: true } : undefined
-        setData(await api.fetchUsers(role ?? undefined, unitId, options) as unknown as Record<string, unknown>[])
+        setData(await api.fetchUsers(role ?? undefined, membershipId, options) as unknown as Record<string, unknown>[])
       }
       setUnits(await api.fetchUnits())
       setCircles(await api.fetchCircles())
@@ -87,9 +87,7 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
     if (entity === 'regional-presidents') {
       cols.push({ key: 'region_name', label: 'Region', sortable: true, render: v => (v as string) || '—' })
     }
-    cols.push({ key: 'unit_name', label: 'Unit', sortable: true, render: v => (v as string) || '—' })
-    cols.push({ key: 'circle_name', label: 'Circle', sortable: true, render: v => (v as string) || '—' })
-    cols.push({ key: 'campus_name', label: 'Campus', sortable: true, render: v => (v as string) || '—' })
+    cols.push({ key: 'membership_name', label: 'Unit/Circle/Campus', sortable: true, render: v => (v as string) || '—' })
     if (entity === 'members' || entity === 'zonal-secretaries' || entity === 'unit-presidents' || entity === 'campus-presidents')
       cols.push({
         key: 'title', label: 'Title', sortable: true, render: (v, row) => {
@@ -111,9 +109,16 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
   function getEditFields(): EditField[] {
     const base = ENTITY_EDIT_FIELDS[entity] ?? []
     const withOptions = base.map(f => {
-      if (f.key === 'unit_id') return { ...f, options: units.map(u => ({ value: u.id, label: u.name })) }
-      if (f.key === 'circle_id') return { ...f, options: [{ value: '', label: '— None —' }, ...circles.map(c => ({ value: c.id, label: c.name }))] }
-      if (f.key === 'campus_id') return { ...f, options: [{ value: '', label: '— None —' }, ...campuses.map(c => ({ value: c.id, label: c.name }))] }
+      // Dynamic options for membership_id based on membership_type
+      if (f.key === 'membership_id') {
+        // For editing we need to provide all options; the form should use the current membership_type
+        const allOptions = [
+          ...units.map(u => ({ value: u.id, label: `Unit: ${u.name}` })),
+          ...circles.map(c => ({ value: c.id, label: `Circle: ${c.name}` })),
+          ...campuses.map(c => ({ value: c.id, label: `Campus: ${c.name}` })),
+        ]
+        return { ...f, options: allOptions }
+      }
       return f
     })
     if (entity !== 'units' && entity !== 'circles' && entity !== 'campuses' && user?.role === 'admin') {

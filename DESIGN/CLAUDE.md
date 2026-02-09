@@ -100,6 +100,7 @@ This thing is to keep track of the members, their performance, and if they are m
 Each user belongs to exactly **ONE** of: Unit, Circle, or Campus. This is stored in:
 - `portal_users.membership_type` — ENUM('unit', 'circle', 'campus')
 - `portal_users.membership_id` — UUID referencing the respective table
+- **Note:** `membership_name` is **not** stored in `portal_users`. It is computed dynamically (JOINs) in API responses.
 
 **Region assignment:**
 - Units → have `region_id`

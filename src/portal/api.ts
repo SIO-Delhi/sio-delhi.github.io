@@ -5,6 +5,7 @@ import type {
   PortalCampus,
   PortalUser,
   PortalRole,
+  MembershipType,
   MigrationRequest,
   PortalMessage,
   DashboardStats,
@@ -175,7 +176,7 @@ export async function fetchUser(id: string): Promise<PortalUser> {
 }
 
 export async function createUsers(
-  users: { first_name: string; middle_name?: string; last_name: string; phone: string; alt_phone?: string; password?: string; date_of_birth?: string; role: PortalRole; unit_id?: string; circle_id?: string; campus_id?: string }[],
+  users: { first_name: string; middle_name?: string; last_name: string; phone: string; alt_phone?: string; password?: string; date_of_birth?: string; role: PortalRole; membership_type?: MembershipType; membership_id?: string }[],
 ): Promise<void> {
   await post('/users', { users })
 }

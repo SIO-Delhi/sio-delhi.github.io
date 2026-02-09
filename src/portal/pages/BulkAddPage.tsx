@@ -5,7 +5,7 @@ import { CSVUpload } from '../components/CSVUpload'
 import { ENTITY_LABELS, ENTITY_CSV_FIELDS, ENTITY_EDIT_FIELDS, ENTITY_ROLE_MAP } from '../constants'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import * as api from '../api'
-import type { EntityType, PortalRole, PortalUnit, PortalCircle, PortalCampus, EditField } from '../types'
+import type { EntityType, PortalRole, PortalUnit, PortalCircle, PortalCampus, EditField, MembershipType } from '../types'
 
 interface BulkAddPageProps { entity: EntityType }
 
@@ -47,9 +47,15 @@ export function BulkAddPage({ entity }: BulkAddPageProps) {
     const fields = base
       .filter(f => f.key !== 'status') // new users default to active
       .map(f => {
-        if (f.key === 'unit_id') return { ...f, options: units.map(u => ({ value: u.id, label: u.name })) }
-        if (f.key === 'circle_id') return { ...f, options: [{ value: '', label: '-- None --' }, ...circles.map(c => ({ value: c.id, label: c.name }))] }
-        if (f.key === 'campus_id') return { ...f, options: [{ value: '', label: '-- None --' }, ...campuses.map(c => ({ value: c.id, label: c.name }))] }
+        // Dynamic options for membership_id based on selected membership_type
+        if (f.key === 'membership_id') {
+          const membershipType = values.membership_type as MembershipType | undefined
+          let options: { value: string; label: string }[] = []
+          if (membershipType === 'unit') options = units.map(u => ({ value: u.id, label: u.name }))
+          else if (membershipType === 'circle') options = circles.map(c => ({ value: c.id, label: c.name }))
+          else if (membershipType === 'campus') options = campuses.map(c => ({ value: c.id, label: c.name }))
+          return { ...f, options }
+        }
         return f
       })
     return fields
@@ -85,9 +91,8 @@ export function BulkAddPage({ entity }: BulkAddPageProps) {
         }
         if (values.middle_name?.trim()) userData.middle_name = values.middle_name.trim()
         if (values.date_of_birth?.trim()) userData.date_of_birth = values.date_of_birth.trim()
-        if (values.unit_id) userData.unit_id = values.unit_id
-        if (values.circle_id) userData.circle_id = values.circle_id
-        if (values.campus_id) userData.campus_id = values.campus_id
+        if (values.membership_type) userData.membership_type = values.membership_type as MembershipType
+        if (values.membership_id) userData.membership_id = values.membership_id
         await api.createUsers([userData as Parameters<typeof api.createUsers>[0][0]])
       }
       setSuccess(true)
@@ -106,8 +111,9 @@ export function BulkAddPage({ entity }: BulkAddPageProps) {
     const [units, circles, campuses] = await Promise.all([api.fetchUnits(), api.fetchCircles(), api.fetchCampuses()])
     const unitMap = new Map(units.map(u => [u.name.toLowerCase(), u.id]))
     const circleMap = new Map(circles.map(c => [c.name.toLowerCase(), c.id]))
+    const campusMap = new Map(campuses.map(c => [c.name.toLowerCase(), c.id]))
     const users = rows.map((r, idx) => {
-      const user: { first_name: string; middle_name?: string; last_name: string; phone: string; alt_phone?: string; date_of_birth?: string; role: PortalRole; unit_id?: string; circle_id?: string; campus_id?: string } = {
+      const user: { first_name: string; middle_name?: string; last_name: string; phone: string; alt_phone?: string; date_of_birth?: string; role: PortalRole; membership_type?: MembershipType; membership_id?: string } = {
         first_name: (r.first_name ?? '').trim(),
         last_name: (r.last_name ?? '').trim(),
         phone: r.phone,
@@ -116,18 +122,24 @@ export function BulkAddPage({ entity }: BulkAddPageProps) {
       }
       if (r.middle_name != null && r.middle_name.trim() !== '') user.middle_name = r.middle_name.trim()
       if (r.date_of_birth != null && r.date_of_birth.trim() !== '') user.date_of_birth = r.date_of_birth.trim()
+      // Support both old (unit_name/circle_name/campus_name) and new (membership_type/membership_id) CSV formats
       if (r.unit_name) {
         const unitId = unitMap.get(r.unit_name.toLowerCase())
         if (!unitId) throw new Error(`Row ${idx + 1}: Unit "${r.unit_name}" not found.`)
-        user.unit_id = unitId
-      }
-      if (r.circle_name) {
+        user.membership_type = 'unit'
+        user.membership_id = unitId
+      } else if (r.circle_name) {
         const circleId = circleMap.get(r.circle_name.trim().toLowerCase())
-        if (circleId) user.circle_id = circleId
-      }
-      if (r.campus_name) {
-        const campusId = campuses.find(c => c.name.toLowerCase() === r.campus_name.trim().toLowerCase())?.id
-        if (campusId) user.campus_id = campusId
+        if (circleId) {
+          user.membership_type = 'circle'
+          user.membership_id = circleId
+        }
+      } else if (r.campus_name) {
+        const campusId = campusMap.get(r.campus_name.trim().toLowerCase())
+        if (campusId) {
+          user.membership_type = 'campus'
+          user.membership_id = campusId
+        }
       }
       return user
     })

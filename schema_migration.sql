@@ -128,3 +128,57 @@ SELECT membership_type, COUNT(*) as count FROM portal_users GROUP BY membership_
 -- ALTER TABLE portal_users DROP COLUMN unit_id;
 -- ALTER TABLE portal_users DROP COLUMN circle_id;
 -- ALTER TABLE portal_users DROP COLUMN campus_id;
+
+-- =====================================================
+-- STEP 9: Manual Cleanup of Specific Erroneous Units
+-- Remove known Campuses and Circles that are wrongly listed in portal_units
+-- =====================================================
+DELETE FROM portal_units 
+WHERE name IN (
+    'D.U', 
+    'IIISR', 
+    'IIISR Academy', 
+    'Jamia Hamdard', 
+    'Jamia Millia Islamia', 
+    'JNU',
+    '3rd Pushta', 
+    'Ballimaran', 
+    'Bara Hindu Rao', 
+    'Chhajarsi', 
+    'Inderlok', 
+    'Indrapuri', 
+    'Karol Bagh', 
+    'Laxmi Nagar', 
+    'Mahipalpur', 
+    'Nihal Vihar', 
+    'Paschim Vihar', 
+    'Pasonda', 
+    'Saket', 
+    'Shahdara', 
+    'Usmanpur', 
+    'Vijay Nagar', 
+    'Vijaynagar'
+);
+
+-- =====================================================
+-- STEP 10: Add Missing Units from CSV
+-- Insert units that are valid but missing from portal_units
+-- =====================================================
+INSERT IGNORE INTO portal_units (id, name, created_at) VALUES 
+(UUID(), 'Abul Fazl Enclave North', NOW()),
+(UUID(), 'Abul Fazl Enclave South', NOW()),
+(UUID(), 'Batla House', NOW()),
+(UUID(), 'Ghonda', NOW()),
+(UUID(), 'Greater Noida', NOW()),
+(UUID(), 'Jahangir Puri', NOW()),
+(UUID(), 'Kanchankunj', NOW()),
+(UUID(), 'Kardampuri', NOW()),
+(UUID(), 'New Mustafabad', NOW()),
+(UUID(), 'Okhla Village', NOW()),
+(UUID(), 'Old Mustafabad', NOW()),
+(UUID(), 'Raghubir Nagar', NOW()),
+(UUID(), 'Seemapuri', NOW()),
+(UUID(), 'Shaheen Bagh', NOW()),
+(UUID(), 'Shakurpur', NOW()),
+(UUID(), 'Vikas Nagar', NOW());
+

@@ -223,7 +223,8 @@ foreach ($routes as $pattern => $handler) {
         }
 
         if (!$isPublic) {
-            requireAuth(); // Halts with 401 if invalid
+            $payload = requireAuth(); // Halts with 401 if invalid
+            $GLOBALS['AUTH_PAYLOAD'] = $payload;
         }
 
         if (is_callable($handler)) {

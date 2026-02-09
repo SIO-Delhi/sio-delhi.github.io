@@ -11,6 +11,17 @@
   gap: 20px;
 }
 
+@media (max-width: 640px) {
+  .portal-page {
+    gap: 12px;
+  }
+
+  .portal-heading {
+    margin-left: 4px;
+    /* Align with cell content if table is full width */
+  }
+}
+
 .portal-page-narrow {
   max-width: 640px;
   margin-left: auto;
@@ -29,13 +40,13 @@
 
 .portal-grid-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 14px;
 }
 
 .portal-grid-overview {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
 }
 
@@ -199,6 +210,7 @@
     align-items: flex-start;
     gap: 16px;
   }
+
   .portal-dashboard-hero-badges {
     flex-direction: row;
     align-items: center;
@@ -306,7 +318,7 @@
 
 .portal-profile-details-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
 }
 
@@ -412,6 +424,7 @@
     align-items: flex-start;
     gap: 16px;
   }
+
   .portal-profile-security {
     flex-direction: column;
     align-items: flex-start;
@@ -447,9 +460,20 @@
 
 /* ── Performance colors ── */
 
-.portal-perf-high   { font-weight: 700; color: #34d399; }
-.portal-perf-mid    { font-weight: 700; color: var(--p-gold); }
-.portal-perf-low    { font-weight: 700; color: #f87171; }
+.portal-perf-high {
+  font-weight: 700;
+  color: #34d399;
+}
+
+.portal-perf-mid {
+  font-weight: 700;
+  color: var(--p-gold);
+}
+
+.portal-perf-low {
+  font-weight: 700;
+  color: #f87171;
+}
 
 /* ── Clerk login overrides ── */
 
@@ -486,7 +510,7 @@
 /* Hide "Secured by Clerk" branding in UserProfile (internal element) */
 .portal-clerk-overrides .cl-internal-b3fm6y,
 .portal-clerk-overrides [class*="cl-internal"] a[href*="clerk.com"],
-.portal-clerk-overrides .cl-userProfile-root ~ footer,
+.portal-clerk-overrides .cl-userProfile-root~footer,
 .portal-clerk-overrides .cl-branded-footer,
 .portal-clerk-overrides div[class*="poweredBy"] {
   display: none !important;
@@ -517,6 +541,7 @@
   width: 100% !important;
   max-width: 640px !important;
 }
+
 .portal-clerk-security-only .cl-card {
   width: 100% !important;
   max-width: 100% !important;
@@ -524,11 +549,13 @@
   border: 1px solid var(--p-border) !important;
   border-radius: var(--p-radius) !important;
 }
+
 .portal-clerk-security-only .cl-pageScrollBox {
   padding: 24px !important;
   min-height: auto !important;
   height: auto !important;
 }
+
 .portal-clerk-security-only .cl-page {
   width: 100% !important;
   max-width: 100% !important;
@@ -553,6 +580,7 @@
   padding: 16px 0 !important;
   border-bottom: 1px solid var(--p-border) !important;
 }
+
 .portal-clerk-security-only .cl-profileSection:last-child {
   border-bottom: none !important;
 }
@@ -786,7 +814,7 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--p-border-subtle, rgba(255,255,255,0.06));
+  border-bottom: 1px solid var(--p-border-subtle, rgba(255, 255, 255, 0.06));
 }
 
 .portal-perf-detail-field-label {
@@ -961,6 +989,7 @@
     flex-wrap: wrap;
     gap: 8px;
   }
+
   .portal-retiring-info {
     min-width: 100%;
   }
@@ -1246,6 +1275,7 @@
   .portal-view-tabs {
     gap: 0;
   }
+
   .portal-view-tab {
     padding: 8px 12px;
     font-size: 0.75rem;

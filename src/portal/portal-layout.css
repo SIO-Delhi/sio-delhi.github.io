@@ -20,7 +20,15 @@
 @media (min-width: 1024px) {
   .portal-layout-main {
     margin-left: var(--p-sidebar-w);
+    width: calc(100% - var(--p-sidebar-w));
   }
+}
+
+/* Prevent accidental horizontal scroll on mobile */
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 .portal-layout-content {
@@ -47,7 +55,8 @@
   top: 0;
   left: 0;
   height: 100vh;
-  z-index: 40;
+  z-index: 50;
+  /* Higher than topbar (30) and overlay (39) */
   width: var(--p-sidebar-w);
   background: var(--p-bg-sidebar);
   border-right: 1px solid var(--p-border);
@@ -230,12 +239,20 @@
 
 /* Pulse animation for new notifications */
 @keyframes portal-badge-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
 }
 
 .portal-sidebar-badge {
-  animation: portal-badge-pulse 2s ease-in-out 3; /* pulse 3 times then stop */
+  animation: portal-badge-pulse 2s ease-in-out 3;
+  /* pulse 3 times then stop */
 }
 
 /* Footer */
@@ -352,7 +369,8 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  z-index: 39;
+  z-index: 45;
+  /* Below sidebar (50) but above everything else */
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
@@ -377,7 +395,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  justify-content: space-between;
   gap: 16px;
+}
+
+@media (max-width: 1023px) {
+  .portal-topbar {
+    padding-left: 64px;
+    /* Space for the fixed mobile toggle (left: 16px + width ~40px) */
+  }
 }
 
 .portal-topbar-left {
@@ -554,8 +580,15 @@
 }
 
 @keyframes portal-dropdown-in {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .portal-topbar-dropdown-title {

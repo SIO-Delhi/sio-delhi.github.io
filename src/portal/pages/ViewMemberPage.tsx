@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Phone, Building2, MapPin, Shield, Calendar, Award, Activity,
   User, Mail, ArrowRightLeft, BarChart3, Lock, Camera, Trash2, Save,
-  CheckCircle, ChevronDown, Key,
+  ChevronDown, Key,
 } from 'lucide-react'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { UserAvatar } from '../components/UserAvatar'
@@ -121,6 +121,9 @@ export function ViewMemberPage() {
         phone: member.phone ?? '',
         alt_phone: member.alt_phone ?? '',
         date_of_birth: member.date_of_birth ?? '',
+        membership_type: member.membership_type ?? 'unit',
+        membership_id: member.membership_id ?? '',
+        // Keep legacy fields for fallback but they will be overwritten on save
         unit_id: member.unit_id ?? '',
         circle_id: member.circle_id ?? '',
         campus_id: member.campus_id ?? '',
@@ -140,6 +143,23 @@ export function ViewMemberPage() {
     setSaving(true); setSaveError(null); setSuccessMessage(null)
     try {
       const payload: Record<string, unknown> = { ...editValues }
+
+      // Sync legacy fields based on membership_type
+      if (editValues.membership_type === 'unit') {
+        payload.unit_id = editValues.membership_id
+        payload.circle_id = null; payload.campus_id = null
+      } else if (editValues.membership_type === 'circle') {
+        payload.unit_id = null
+        payload.circle_id = editValues.membership_id
+        payload.campus_id = null
+      } else if (editValues.membership_type === 'campus') {
+        payload.unit_id = null; payload.circle_id = null
+        payload.campus_id = editValues.membership_id
+      } else {
+        // Clear all if no membership
+        payload.unit_id = null; payload.circle_id = null; payload.campus_id = null
+      }
+
       // Compute permission overrides diff
       const overrides: Record<string, boolean> = {}
       const role = (editValues.role || member.role) as PortalRole
@@ -317,11 +337,20 @@ export function ViewMemberPage() {
               <div className="portal-profile-details-grid">
                 <InfoItem icon={User} label="Full Name" value={displayName} />
                 <InfoItem icon={Phone} label="Phone" value={member.phone} />
-                {member.alt_phone && <InfoItem icon={Phone} label="Alt Phone" value={member.alt_phone} />}
-                <InfoItem icon={Building2} label="Unit" value={member.unit_name ?? '—'} />
+                <InfoItem icon={Phone} label="Alt Phone" value={member.alt_phone ?? ''} />
+
+                {/* Dynamic Membership Display */}
+                {(!member.membership_type || member.membership_type === 'unit') && (
+                  <InfoItem icon={Building2} label="Unit" value={member.unit_name ?? '—'} />
+                )}
+                {member.membership_type === 'circle' && (
+                  <InfoItem icon={Building2} label="Circle" value={member.circle_name ?? member.membership_name ?? '—'} />
+                )}
+                {member.membership_type === 'campus' && (
+                  <InfoItem icon={Building2} label="Campus" value={member.campus_name ?? member.membership_name ?? '—'} />
+                )}
+
                 <InfoItem icon={MapPin} label="Zone" value="Delhi" />
-                {member.circle_name && <InfoItem icon={Building2} label="Circle" value={member.circle_name} />}
-                {member.campus_name && <InfoItem icon={Building2} label="Campus" value={member.campus_name} />}
                 <InfoItem icon={Calendar} label="Date of Birth" value={member.date_of_birth ? formatDob(member.date_of_birth) : '—'} />
                 <InfoItem icon={Activity} label="Age" value={formatPreciseAge(member.date_of_birth) ?? '—'} />
                 <InfoItem icon={Activity} label="Status" value={member.status} capitalize />
@@ -377,31 +406,38 @@ export function ViewMemberPage() {
                 <button onClick={() => { setEditing(false); setSaveError(null) }} className="portal-btn portal-btn-ghost portal-btn-sm">Cancel</button>
               </div>
               <div className="portal-edit-grid portal-edit-grid-2col" style={{ marginTop: 16 }}>
-                <EditFieldInput label="First Name" value={editValues.first_name} onChange={v => setEditValues(p => ({ ...p, first_name: v }))} required />
-                <EditFieldInput label="Middle Name" value={editValues.middle_name} onChange={v => setEditValues(p => ({ ...p, middle_name: v }))} />
-                <EditFieldInput label="Last Name" value={editValues.last_name} onChange={v => setEditValues(p => ({ ...p, last_name: v }))} required />
-                <EditFieldInput label="Phone" value={editValues.phone} onChange={v => setEditValues(p => ({ ...p, phone: v }))} type="tel" required />
-                <EditFieldInput label="Alt Phone" value={editValues.alt_phone} onChange={v => setEditValues(p => ({ ...p, alt_phone: v }))} type="tel" />
-                <EditFieldInput label="Date of Birth (DDMMYYYY)" value={editValues.date_of_birth} onChange={v => setEditValues(p => ({ ...p, date_of_birth: v }))} placeholder="e.g. 25031999" />
+                <EditFieldInput label="First Name" value={editValues.first_name ?? ''} onChange={v => setEditValues(p => ({ ...p, first_name: v }))} required />
+                <EditFieldInput label="Middle Name" value={editValues.middle_name ?? ''} onChange={v => setEditValues(p => ({ ...p, middle_name: v }))} />
+                <EditFieldInput label="Last Name" value={editValues.last_name ?? ''} onChange={v => setEditValues(p => ({ ...p, last_name: v }))} />
+                <EditFieldInput label="Phone" value={editValues.phone ?? ''} onChange={v => setEditValues(p => ({ ...p, phone: v }))} type="tel" required />
+                <EditFieldInput label="Alt Phone" value={editValues.alt_phone ?? ''} onChange={v => setEditValues(p => ({ ...p, alt_phone: v }))} type="tel" />
+                <EditFieldInput label="Date of Birth (DDMMYYYY)" value={editValues.date_of_birth ?? ''} onChange={v => setEditValues(p => ({ ...p, date_of_birth: v }))} placeholder="e.g. 25031999" />
                 <div className="portal-edit-field">
-                  <label className="portal-label portal-label-required">Unit</label>
-                  <select value={editValues.unit_id} onChange={e => setEditValues(p => ({ ...p, unit_id: e.target.value }))} className="portal-input portal-select">
-                    <option value="">Select…</option>
-                    {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  <label className="portal-label">Membership Type</label>
+                  <select
+                    value={editValues.membership_type}
+                    onChange={e => {
+                      setEditValues(p => ({ ...p, membership_type: e.target.value, membership_id: '' }))
+                    }}
+                    className="portal-input portal-select"
+                  >
+                    <option value="unit">Unit</option>
+                    <option value="circle">Circle</option>
+                    <option value="campus">Campus</option>
                   </select>
                 </div>
+
                 <div className="portal-edit-field">
-                  <label className="portal-label">Circle</label>
-                  <select value={editValues.circle_id} onChange={e => setEditValues(p => ({ ...p, circle_id: e.target.value }))} className="portal-input portal-select">
-                    <option value="">— None —</option>
-                    {circles.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div className="portal-edit-field">
-                  <label className="portal-label">Campus</label>
-                  <select value={editValues.campus_id} onChange={e => setEditValues(p => ({ ...p, campus_id: e.target.value }))} className="portal-input portal-select">
-                    <option value="">— None —</option>
-                    {campuses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <label className="portal-label">Select {editValues.membership_type ? editValues.membership_type.charAt(0).toUpperCase() + editValues.membership_type.slice(1) : 'Unit/Circle'}</label>
+                  <select
+                    value={editValues.membership_id ?? ''}
+                    onChange={e => setEditValues(p => ({ ...p, membership_id: e.target.value }))}
+                    className="portal-input portal-select"
+                  >
+                    <option value="">— Select —</option>
+                    {editValues.membership_type === 'unit' && units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    {editValues.membership_type === 'circle' && circles.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {editValues.membership_type === 'campus' && campuses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="portal-edit-field">

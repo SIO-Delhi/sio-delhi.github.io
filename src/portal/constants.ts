@@ -262,8 +262,14 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'last_name', label: 'Last Name', type: 'text', required: true },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
-    { key: 'unit_id', label: 'Unit', type: 'select', required: true },
-    { key: 'circle_id', label: 'Circle', type: 'select', required: false },
+    {
+      key: 'membership_type', label: 'Membership Type', type: 'select', required: true, options: [
+        { value: 'unit', label: 'Unit' },
+        { value: 'circle', label: 'Circle' },
+        { value: 'campus', label: 'Campus' },
+      ]
+    },
+    { key: 'membership_id', label: 'Unit/Circle/Campus', type: 'select', required: true },
   ],
   'regional-presidents': [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
@@ -271,9 +277,14 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'last_name', label: 'Last Name', type: 'text', required: true },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
-    { key: 'unit_id', label: 'Unit', type: 'select', required: true },
-    { key: 'circle_id', label: 'Circle', type: 'select', required: false },
-    { key: 'campus_id', label: 'Campus', type: 'select', required: false },
+    {
+      key: 'membership_type', label: 'Membership Type', type: 'select', required: true, options: [
+        { value: 'unit', label: 'Unit' },
+        { value: 'circle', label: 'Circle' },
+        { value: 'campus', label: 'Campus' },
+      ]
+    },
+    { key: 'membership_id', label: 'Unit/Circle/Campus', type: 'select', required: true },
   ],
   'unit-presidents': [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
@@ -281,9 +292,14 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'last_name', label: 'Last Name', type: 'text', required: true },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
-    { key: 'unit_id', label: 'Unit', type: 'select', required: true },
-    { key: 'circle_id', label: 'Circle', type: 'select', required: false },
-    { key: 'campus_id', label: 'Campus', type: 'select', required: false },
+    {
+      key: 'membership_type', label: 'Membership Type', type: 'select', required: true, options: [
+        { value: 'unit', label: 'Unit' },
+        { value: 'circle', label: 'Circle' },
+        { value: 'campus', label: 'Campus' },
+      ]
+    },
+    { key: 'membership_id', label: 'Unit/Circle/Campus', type: 'select', required: true },
   ],
   'campus-presidents': [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
@@ -291,9 +307,14 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'last_name', label: 'Last Name', type: 'text', required: true },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
-    { key: 'unit_id', label: 'Unit', type: 'select', required: true },
-    { key: 'circle_id', label: 'Circle', type: 'select', required: false },
-    { key: 'campus_id', label: 'Campus', type: 'select', required: false },
+    {
+      key: 'membership_type', label: 'Membership Type', type: 'select', required: true, options: [
+        { value: 'unit', label: 'Unit' },
+        { value: 'circle', label: 'Circle' },
+        { value: 'campus', label: 'Campus' },
+      ]
+    },
+    { key: 'membership_id', label: 'Unit/Circle/Campus', type: 'select', required: true },
   ],
   members: [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
@@ -302,9 +323,14 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     { key: 'date_of_birth', label: 'Date of Birth (DDMMYYYY)', type: 'text', required: true, placeholder: 'e.g. 25031999' },
-    { key: 'unit_id', label: 'Unit', type: 'select', required: true },
-    { key: 'circle_id', label: 'Circle', type: 'select', required: false },
-    { key: 'campus_id', label: 'Campus', type: 'select', required: false },
+    {
+      key: 'membership_type', label: 'Membership Type', type: 'select', required: true, options: [
+        { value: 'unit', label: 'Unit' },
+        { value: 'circle', label: 'Circle' },
+        { value: 'campus', label: 'Campus' },
+      ]
+    },
+    { key: 'membership_id', label: 'Unit/Circle/Campus', type: 'select', required: true },
     {
       key: 'status', label: 'Status', type: 'select', required: true, options: [
         { value: 'active', label: 'Active' },
