@@ -743,19 +743,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     const hasGallery = post.galleryImages && post.galleryImages.length > 0
 
     // Build gallery URL based on current route
-    const galleryUrl = (() => {
-        if (sectionType === 'dynamic' && sectionId) {
-            return `/section/${sectionId}/${slug}/gallery`
-        }
-        const sectionPaths: Record<string, string> = {
-            about: 'about-us',
-            initiatives: 'initiative',
-            media: 'media',
-            leadership: 'leader',
-            resources: 'resource'
-        }
-        return `/${sectionPaths[sectionType] || sectionType}/${slug}/gallery`
-    })()
+    const galleryUrl = `${window.location.pathname.replace(/\/$/, '')}/gallery`
 
     // Render section-specific content
     const renderContent = () => {

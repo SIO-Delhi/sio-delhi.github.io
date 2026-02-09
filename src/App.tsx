@@ -4,7 +4,7 @@ import { CustomCursor } from './components/ui/CustomCursor'
 import { SplashScreen } from './components/ui/SplashScreen'
 import { EventPopup } from './components/ui/EventPopup'
 import { ContentProvider } from './context/ContentContext'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { PostDetail } from './pages/PostDetail'
 import { GalleryPage } from './pages/GalleryPage'
@@ -40,6 +40,14 @@ import { usePageTracker } from './hooks/usePageTracker'
 function PageTracker() {
   usePageTracker()
   return null
+}
+
+const SectionRoute = ({ sectionType }: { sectionType: 'about' | 'initiatives' | 'media' | 'leadership' | 'resources' | 'dynamic' }) => {
+  const location = useLocation()
+  if (location.pathname.endsWith('/gallery')) {
+    return <GalleryPage />
+  }
+  return <PostDetail sectionType={sectionType} />
 }
 
 function App() {
@@ -93,19 +101,14 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
-                  <Route path="/about-us/*/gallery" element={<GalleryPage />} />
-                  <Route path="/about-us/*" element={<PostDetail sectionType="about" />} />
-                  <Route path="/initiative/*/gallery" element={<GalleryPage />} />
-                  <Route path="/initiative/*" element={<PostDetail sectionType="initiatives" />} />
-                  <Route path="/media/*/gallery" element={<GalleryPage />} />
-                  <Route path="/media/*" element={<PostDetail sectionType="media" />} />
-                  <Route path="/leader/*/gallery" element={<GalleryPage />} />
-                  <Route path="/leader/*" element={<PostDetail sectionType="leadership" />} />
-                  <Route path="/resource/*/gallery" element={<GalleryPage />} />
-                  <Route path="/resource/*" element={<PostDetail sectionType="resources" />} />
+                  <Route path="/about-us/*" element={<SectionRoute sectionType="about" />} />
+                  <Route path="/initiative/*" element={<SectionRoute sectionType="initiatives" />} />
+                  <Route path="/media/*" element={<SectionRoute sectionType="media" />} />
+                  <Route path="/leader/*" element={<SectionRoute sectionType="leadership" />} />
+                  <Route path="/resource/*" element={<SectionRoute sectionType="resources" />} />
+
                   {/* Dynamic Sections Route */}
-                  <Route path="/section/:sectionId/:slug" element={<PostDetail sectionType="dynamic" />} />
-                  <Route path="/section/:sectionId/:slug/gallery" element={<GalleryPage />} />
+                  <Route path="/section/:sectionId/:slug/*" element={<SectionRoute sectionType="dynamic" />} />
 
                   {/* Public Utilities */}
                   <Route path="/utilities" element={<UtilitiesPage />} />
