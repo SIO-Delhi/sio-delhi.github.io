@@ -14,5 +14,12 @@ export default defineConfig({
             port: 443,
             protocol: 'wss',
         },
+        proxy: {
+            '/api': {
+                target: 'https://api.siodelhi.org',
+                changeOrigin: true,
+                secure: true,
+            },
+        },
     },
 })
