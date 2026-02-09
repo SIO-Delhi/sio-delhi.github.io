@@ -114,7 +114,7 @@ export function DashboardPage() {
         { label: 'Active Members', value: stats.activeMembers, icon: Activity, color: 'green', to: `${prefix}/members${role === 'admin' ? '/manage' : ''}` },
         { label: 'Inactive Members', value: stats.inactiveMembers, icon: UserX, color: 'slate', to: `${prefix}/members${role === 'admin' ? '/manage' : ''}` },
         { label: 'Migrated', value: stats.migratedMembers, icon: ArrowRightLeft, color: 'amber', to: `${prefix}/migrations` },
-        { label: 'Unit Presidents', value: stats.totalRegionUnits ? `${stats.totalUnitPresidents} / ${stats.totalRegionUnits}` : stats.totalUnitPresidents, sublabel: typeof stats.unitsWithoutPresident === 'number' && stats.unitsWithoutPresident > 0 ? `${stats.unitsWithoutPresident} region unit(s) without president` : undefined, icon: UserCheck, color: 'amber', to: role === 'admin' && (stats.unitsWithoutPresident ?? 0) > 0 ? `${prefix}/unit-presidents/units-without-president` : `${prefix}/unit-presidents${role === 'admin' ? '/manage' : ''}` },
+        { label: 'Unit Presidents', value: stats.totalRegionUnits ? `${stats.totalUnitPresidents} / ${stats.totalRegionUnits}` : stats.totalUnitPresidents, icon: UserCheck, color: 'amber', to: role === 'admin' && (stats.unitsWithoutPresident ?? 0) > 0 ? `${prefix}/unit-presidents/units-without-president` : `${prefix}/unit-presidents${role === 'admin' ? '/manage' : ''}` },
       )
       if (role === 'admin') cards.push({ label: 'Zonal Secretaries', value: stats.totalZonalSecretaries, icon: UserCog, color: 'red', to: `${prefix}/zonal-secretaries/manage` })
       cards.push(

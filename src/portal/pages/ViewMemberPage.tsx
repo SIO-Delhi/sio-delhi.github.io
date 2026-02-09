@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Phone, Building2, MapPin, Shield, Calendar, Award, Activity,
   User, Mail, ArrowRightLeft, BarChart3, Lock, Camera, Trash2, Save,
@@ -8,6 +8,7 @@ import {
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { UserAvatar } from '../components/UserAvatar'
 import { StatusBadge } from '../components/StatusBadge'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { HeroAgeBar, formatPreciseAge } from '../components/AgeBar'
 import { ROLE_LABELS, ALL_PERMISSIONS, PERMISSION_LABELS, hasPermission } from '../constants'
 import { Toast } from '../components/Toast'
@@ -33,6 +34,7 @@ export function ViewMemberPage() {
   const { memberId } = useParams<{ memberId: string }>()
   const { user: currentUser } = usePortalAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [member, setMember] = useState<PortalUser | null>(null)
@@ -66,6 +68,8 @@ export function ViewMemberPage() {
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [passwordResetting, setPasswordResetting] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // Load member data
   useEffect(() => {
@@ -222,6 +226,18 @@ export function ViewMemberPage() {
     finally { setPasswordResetting(false) }
   }
 
+  async function handleDeleteMember() {
+    if (!member || !isAdmin) return
+    setDeleting(true); setSaveError(null)
+    try {
+      await api.deleteUser(member.id)
+      setShowDeleteConfirm(false)
+      const membersListPath = location.pathname.replace(/\/[^/]+$/, '')
+      navigate(membersListPath || '/portal/admin/members')
+    } catch (err) { setSaveError(err instanceof Error ? err.message : 'Failed to delete member.') }
+    finally { setDeleting(false) }
+  }
+
   if (loading) return (
     <div className="portal-page">
       <div className="portal-skeleton portal-skeleton-card" style={{ height: 120 }} />
@@ -290,6 +306,14 @@ export function ViewMemberPage() {
                     <Trash2 size={14} /> Remove
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={deleting}
+                  className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red"
+                >
+                  <Trash2 size={14} /> Delete Member
+                </button>
               </div>
             )}
           </div>
@@ -569,6 +593,17 @@ export function ViewMemberPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Delete Member"
+        message={member ? `Permanently delete ${member.full_name || [member.first_name, member.last_name].filter(Boolean).join(' ') || 'this member'}? This will remove their portal account and their Clerk login. This cannot be undone.` : ''}
+        confirmLabel={deleting ? 'Deleting…' : 'Delete Member'}
+        cancelLabel="Cancel"
+        danger
+        onConfirm={handleDeleteMember}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   )
 }
