@@ -260,7 +260,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
   'zonal-secretaries': [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
-    { key: 'last_name', label: 'Last Name', type: 'text', required: true },
+    { key: 'last_name', label: 'Last Name', type: 'text', required: false },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     {
@@ -275,7 +275,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
   'regional-presidents': [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
-    { key: 'last_name', label: 'Last Name', type: 'text', required: true },
+    { key: 'last_name', label: 'Last Name', type: 'text', required: false },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     {
@@ -290,7 +290,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
   'unit-presidents': [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
-    { key: 'last_name', label: 'Last Name', type: 'text', required: true },
+    { key: 'last_name', label: 'Last Name', type: 'text', required: false },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     {
@@ -305,7 +305,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
   'campus-presidents': [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
-    { key: 'last_name', label: 'Last Name', type: 'text', required: true },
+    { key: 'last_name', label: 'Last Name', type: 'text', required: false },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     {
@@ -320,7 +320,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
   members: [
     { key: 'first_name', label: 'First Name', type: 'text', required: true },
     { key: 'middle_name', label: 'Middle Name', type: 'text', required: false },
-    { key: 'last_name', label: 'Last Name', type: 'text', required: true },
+    { key: 'last_name', label: 'Last Name', type: 'text', required: false },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
     { key: 'date_of_birth', label: 'Date of Birth (DDMMYYYY)', type: 'text', required: true, placeholder: 'e.g. 25031999' },
@@ -359,7 +359,7 @@ export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
   'zonal-secretaries': [
     { key: 'first_name', label: 'First Name', required: true, example: 'Ramesh' },
     { key: 'middle_name', label: 'Middle Name', required: false, example: '' },
-    { key: 'last_name', label: 'Last Name', required: true, example: 'Gautam' },
+    { key: 'last_name', label: 'Last Name', required: false, example: 'Gautam' },
     { key: 'phone', label: 'Phone', required: true, example: '9847263851' },
     { key: 'unit_name', label: 'Unit Name', required: true, example: 'SIO Delhi HQ' },
     { key: 'password', label: 'Password', required: true, example: '37LmZ#FdzLE' },
@@ -367,7 +367,7 @@ export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
   'regional-presidents': [
     { key: 'first_name', label: 'First Name', required: true, example: 'Vikram' },
     { key: 'middle_name', label: 'Middle Name', required: false, example: '' },
-    { key: 'last_name', label: 'Last Name', required: true, example: 'Tandon' },
+    { key: 'last_name', label: 'Last Name', required: false, example: 'Tandon' },
     { key: 'phone', label: 'Phone', required: true, example: '9312456780' },
     { key: 'unit_name', label: 'Unit Name', required: true, example: 'SIO Delhi HQ' },
     { key: 'password', label: 'Password', required: true, example: 'rP4#mKz8vXw' },
@@ -375,7 +375,7 @@ export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
   'unit-presidents': [
     { key: 'first_name', label: 'First Name', required: true, example: 'Priya' },
     { key: 'middle_name', label: 'Middle Name', required: false, example: '' },
-    { key: 'last_name', label: 'Last Name', required: true, example: 'Jain' },
+    { key: 'last_name', label: 'Last Name', required: false, example: 'Jain' },
     { key: 'unit_name', label: 'Unit Name', required: true, example: 'Jamia Unit' },
     { key: 'phone', label: 'Phone', required: true, example: '9652748391' },
     { key: 'password', label: 'Password', required: true, example: 'ghMlCiih9#Y' },
@@ -383,7 +383,7 @@ export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
   'campus-presidents': [
     { key: 'first_name', label: 'First Name', required: true, example: 'Priya' },
     { key: 'middle_name', label: 'Middle Name', required: false, example: '' },
-    { key: 'last_name', label: 'Last Name', required: true, example: 'Jain' },
+    { key: 'last_name', label: 'Last Name', required: false, example: 'Jain' },
     { key: 'unit_name', label: 'Unit Name', required: true, example: 'Academy' },
     { key: 'phone', label: 'Phone', required: true, example: '9652748391' },
     { key: 'password', label: 'Password', required: true, example: 'ghMlCiih9#Y' },
@@ -391,7 +391,7 @@ export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
   members: [
     { key: 'first_name', label: 'First Name', required: true, example: 'Nandini' },
     { key: 'middle_name', label: 'Middle Name', required: false, example: '' },
-    { key: 'last_name', label: 'Last Name', required: true, example: 'Bhatt' },
+    { key: 'last_name', label: 'Last Name', required: false, example: 'Bhatt' },
     { key: 'unit_name', label: 'Unit Name', required: true, example: 'Jamia Unit' },
     { key: 'phone', label: 'Phone', required: true, example: '8546392500' },
     { key: 'date_of_birth', label: 'Date of Birth (DDMMYYYY)', required: true, example: '25031999' },

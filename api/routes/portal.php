@@ -40,14 +40,17 @@ function createClerkAccount($username, $password, $firstName, $lastName)
     $ch = curl_init('https://api.clerk.com/v1/users');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+    $payload = [
         'username' => $username,
         'password' => $password,
         'first_name' => $firstName,
-        'last_name' => $lastName,
         'skip_password_checks' => true,
         'skip_password_requirement' => true,
-    ]));
+    ];
+    if ($lastName !== null && $lastName !== '') {
+        $payload['last_name'] = $lastName;
+    }
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Authorization: Bearer ' . $clerkSecret,
         'Content-Type: application/json',
@@ -224,7 +227,7 @@ function portalSetup()
                 id VARCHAR(36) PRIMARY KEY,
                 first_name VARCHAR(128) NOT NULL,
                 middle_name VARCHAR(128),
-                last_name VARCHAR(128) NOT NULL,
+                last_name VARCHAR(128),
                 username VARCHAR(64) UNIQUE,
                 phone VARCHAR(20) NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
@@ -257,6 +260,10 @@ function portalSetup()
             $db->exec("ALTER TABLE portal_users ADD COLUMN last_name VARCHAR(128) AFTER middle_name");
         } catch (Exception $e) { /* already added */
         }
+        // Allow last_name to be NULL (single-name people)
+        try {
+            $db->exec("ALTER TABLE portal_users MODIFY COLUMN last_name VARCHAR(128) NULL");
+        } catch (Exception $e) { /* ignore */ }
         $rows = $db->query("SELECT id, full_name FROM portal_users WHERE first_name IS NULL OR first_name = ''")->fetchAll();
         foreach ($rows as $r) {
             $parts = preg_split('/\s+/', trim($r['full_name']), -1, PREG_SPLIT_NO_EMPTY);
@@ -1221,6 +1228,7 @@ function portalCreateUsers()
         $first = trim($u['first_name'] ?? '');
         $middle = isset($u['middle_name']) ? trim($u['middle_name']) : null;
         $last = trim($u['last_name'] ?? '');
+        if ($last === '') $last = null;
         if ($first === '') {
             continue; // first name is required
         }
@@ -1303,8 +1311,72 @@ function portalUpdateUser($id)
 function portalDeleteUser($id)
 {
     $db = getDB();
+
+    // Get username before deleting, so we can remove from Clerk too
+    $stmt = $db->prepare("SELECT username FROM portal_users WHERE id = ?");
+    $stmt->execute([$id]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        http_response_code(404);
+        return ['error' => 'User not found.'];
+    }
+
+    $username = $user['username'] ?? null;
+
+    // Delete from portal database
     $db->prepare("DELETE FROM portal_users WHERE id = ?")->execute([$id]);
-    return ['success' => true];
+
+    // Also delete from Clerk (best-effort — don't fail if Clerk is unavailable)
+    $clerkError = null;
+    if ($username) {
+        $clerkSecret = getenv('CLERK_SECRET_KEY') ?: ($_ENV['CLERK_SECRET_KEY'] ?? null);
+        if ($clerkSecret) {
+            try {
+                // Find user in Clerk by username
+                $searchUrl = 'https://api.clerk.com/v1/users?username=' . urlencode($username);
+                $ch = curl_init($searchUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Authorization: Bearer ' . $clerkSecret,
+                    'Content-Type: application/json',
+                ]);
+                $searchResponse = curl_exec($ch);
+                $searchStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($searchStatus === 200) {
+                    $clerkUsers = json_decode($searchResponse, true);
+                    $clerkUserId = (!empty($clerkUsers) && is_array($clerkUsers)) ? ($clerkUsers[0]['id'] ?? null) : null;
+
+                    if ($clerkUserId) {
+                        // Delete from Clerk
+                        $deleteUrl = 'https://api.clerk.com/v1/users/' . $clerkUserId;
+                        $ch = curl_init($deleteUrl);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+                        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                            'Authorization: Bearer ' . $clerkSecret,
+                            'Content-Type: application/json',
+                        ]);
+                        $deleteResponse = curl_exec($ch);
+                        $deleteStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                        curl_close($ch);
+
+                        if ($deleteStatus !== 200) {
+                            $clerkError = 'Portal user deleted, but failed to remove Clerk account.';
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                $clerkError = 'Portal user deleted, but Clerk cleanup failed: ' . $e->getMessage();
+            }
+        }
+    }
+
+    $result = ['success' => true];
+    if ($clerkError) $result['warning'] = $clerkError;
+    return $result;
 }
 
 function portalLockUser($id)
