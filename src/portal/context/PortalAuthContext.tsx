@@ -59,8 +59,17 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
         const clerkUsername =
           (clerkUser as { username?: string | null }).username ??
           (clerkUser as { primaryUsername?: string | null }).primaryUsername
+
+        console.log('[PortalAuth] Clerk user:', {
+          clerkId: clerkUser!.id,
+          username: clerkUsername,
+          phones: clerkUser!.phoneNumbers?.map(p => p.phoneNumber),
+          email: clerkUser!.primaryEmailAddress?.emailAddress,
+        })
+
         if (clerkUsername && String(clerkUsername).trim()) {
           found = await api.lookupPortalUserByUsername(String(clerkUsername).trim())
+          console.log('[PortalAuth] Username lookup:', clerkUsername, found ? 'FOUND' : 'not found')
         }
         if (!found) {
           const phones = clerkUser!.phoneNumbers.map(p =>
@@ -68,20 +77,24 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
           )
           for (const phone of phones) {
             found = await api.lookupPortalUserByPhone(phone)
+            console.log('[PortalAuth] Phone lookup:', phone, found ? 'FOUND' : 'not found')
             if (found) break
           }
         }
 
         if (!cancelled) {
           if (found) {
+            console.log('[PortalAuth] Authenticated as:', found.full_name, '| role:', found.role)
             setPortalUser(found)
             setError(null)
           } else {
+            console.warn('[PortalAuth] No portal user found for this Clerk account')
             setPortalUser(null)
             setError('Your account is not registered in the portal. Contact your administrator.')
           }
         }
       } catch (err) {
+        console.error('[PortalAuth] Lookup error:', err)
         if (!cancelled) {
           setPortalUser(null)
           setError(err instanceof Error ? err.message : 'Failed to load portal user data.')

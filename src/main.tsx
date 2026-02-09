@@ -9,7 +9,10 @@ import { setAuthTokenProvider } from './lib/api'
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Publishable Key")
+  const hint = import.meta.env.DEV
+    ? "Restart the dev server (npm run dev) so Vite reloads .env."
+    : "Rebuild with .env present (npm run build). Deployed app? Set VITE_CLERK_PUBLISHABLE_KEY in the host's env and redeploy."
+  throw new Error(`Missing Clerk Publishable Key. ${hint}`)
 }
 
 // Bridges Clerk's auth token to the api.ts module so all API calls

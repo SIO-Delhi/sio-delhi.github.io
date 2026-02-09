@@ -152,6 +152,9 @@ $routes = [
     'PUT /portal/campuses/([^/]+)' => 'routes/portal.php@portalUpdateCampus',
     'DELETE /portal/campuses/([^/]+)' => 'routes/portal.php@portalDeleteCampus',
     'GET /portal/regions' => 'routes/portal.php@portalGetRegions',
+    'POST /portal/regions' => 'routes/portal.php@portalCreateRegions',
+    'PUT /portal/regions/([^/]+)' => 'routes/portal.php@portalUpdateRegion',
+    'DELETE /portal/regions/([^/]+)' => 'routes/portal.php@portalDeleteRegion',
     'GET /portal/users' => 'routes/portal.php@portalGetUsers',
     'GET /portal/users/([^/]+)/messages' => 'routes/portal.php@portalGetUserMessages',
     'GET /portal/users/([^/]+)/migrations' => 'routes/portal.php@portalGetUserMigrations',
@@ -227,17 +230,22 @@ foreach ($routes as $pattern => $handler) {
             $GLOBALS['AUTH_PAYLOAD'] = $payload;
         }
 
-        if (is_callable($handler)) {
-            // Direct function
-            $result = $handler(...$matches);
-        } else {
-            // File@function format
-            list($file, $func) = explode('@', $handler);
-            require_once __DIR__ . '/' . $file;
-            $result = $func(...$matches);
-        }
+        try {
+            if (is_callable($handler)) {
+                // Direct function
+                $result = $handler(...$matches);
+            } else {
+                // File@function format
+                list($file, $func) = explode('@', $handler);
+                require_once __DIR__ . '/' . $file;
+                $result = $func(...$matches);
+            }
 
-        echo json_encode($result);
+            echo json_encode($result);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage(), 'file' => basename($e->getFile()), 'line' => $e->getLine()]);
+        }
         break;
     }
 }

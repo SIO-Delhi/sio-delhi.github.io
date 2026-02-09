@@ -1,4 +1,6 @@
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+// In dev: empty (Vite proxy handles /api → api.siodelhi.org).
+// In prod (GitHub Pages): set VITE_API_URL=https://api.siodelhi.org in GitHub Secrets.
+export const API_BASE = import.meta.env.VITE_API_URL || ''
 
 // Auth token provider - set by AuthTokenSync component in main.tsx
 let getAuthToken: (() => Promise<string | null>) | null = null
@@ -178,8 +180,17 @@ interface ApiResponse<T> {
 
 async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        return { error: errorData.error || `HTTP ${response.status}` }
+        const text = await response.text().catch(() => '')
+        let errorMsg = `HTTP ${response.status}`
+        try {
+            const errorData = JSON.parse(text)
+            errorMsg = errorData.error || errorMsg
+        } catch {
+            // Server returned non-JSON (PHP fatal error)
+            if (text) console.error(`[API] Raw server error (${response.status}):`, text.substring(0, 500))
+            errorMsg = text ? text.substring(0, 200) : errorMsg
+        }
+        return { error: errorMsg }
     }
     const data = await response.json()
     return { data }

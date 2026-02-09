@@ -246,6 +246,7 @@ export function canUser(
 export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
   units: [
     { key: 'name', label: 'Unit Name', type: 'text', required: true, placeholder: 'e.g. Jamia Unit' },
+    { key: 'region_id', label: 'Region', type: 'select', required: true, options: [] },
   ],
   circles: [
     { key: 'name', label: 'Circle Name', type: 'text', required: true, placeholder: 'e.g. Study Circle A' },
@@ -344,6 +345,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
 export const ENTITY_CSV_FIELDS: Record<string, CSVFieldDef[]> = {
   units: [
     { key: 'name', label: 'Unit Name', required: true, example: 'Jamia Unit' },
+    { key: 'region_name', label: 'Region Name', required: true, example: 'Delhi North' },
   ],
   circles: [
     { key: 'name', label: 'Circle Name', required: true, example: 'Study Circle A' },

@@ -52,7 +52,8 @@ export async function lookupPortalUserByPhone(phone: string): Promise<PortalUser
   try {
     const user = await post<PortalUser>('/auth/me', { phone })
     return user
-  } catch {
+  } catch (err) {
+    console.error('[PortalAuth] Phone lookup error:', err instanceof Error ? err.message : err)
     return null
   }
 }
@@ -61,7 +62,8 @@ export async function lookupPortalUserByUsername(username: string): Promise<Port
   try {
     const user = await post<PortalUser>('/auth/me', { username })
     return user
-  } catch {
+  } catch (err) {
+    console.error('[PortalAuth] Username lookup error:', err instanceof Error ? err.message : err)
     return null
   }
 }
@@ -85,7 +87,7 @@ export async function fetchUnitMembers(unitId: string): Promise<PortalUser[]> {
   return get<PortalUser[]>(`/units/${unitId}/members`)
 }
 
-export async function createUnits(units: { name: string }[]): Promise<void> {
+export async function createUnits(units: { name: string; region_id?: string }[]): Promise<void> {
   await post('/units', { units })
 }
 
@@ -160,11 +162,12 @@ export async function deleteCampus(id: string): Promise<void> {
 export async function fetchUsers(
   role?: PortalRole | string,
   unitId?: string,
-  options?: { excludeCampusUnits?: boolean; campusUnitsOnly?: boolean },
+  options?: { excludeCampusUnits?: boolean; campusUnitsOnly?: boolean; regionId?: string },
 ): Promise<PortalUser[]> {
   const params = new URLSearchParams()
   if (role) params.append('role', role)
   if (unitId) params.append('unitId', unitId)
+  if (options?.regionId) params.append('regionId', options.regionId)
   if (options?.excludeCampusUnits) params.append('excludeCampusUnits', '1')
   if (options?.campusUnitsOnly) params.append('campusUnitsOnly', '1')
   const qs = params.toString()
@@ -177,8 +180,8 @@ export async function fetchUser(id: string): Promise<PortalUser> {
 
 export async function createUsers(
   users: { first_name: string; middle_name?: string; last_name: string; phone: string; alt_phone?: string; password?: string; date_of_birth?: string; role: PortalRole; membership_type?: MembershipType; membership_id?: string }[],
-): Promise<void> {
-  await post('/users', { users })
+): Promise<{ success: boolean; count: number; message?: string; clerk_warnings?: string[] }> {
+  return post('/users', { users })
 }
 
 export async function updateUser(id: string, updates: Record<string, unknown>): Promise<void> {
@@ -224,9 +227,11 @@ export async function fetchDashboardStats(
   role: PortalRole,
   userId: string,
   unitId?: string | null,
+  regionId?: string | null,
 ): Promise<DashboardStats> {
   const params = new URLSearchParams({ role, userId })
   if (unitId) params.append('unitId', unitId)
+  if (regionId) params.append('regionId', regionId)
   return get<DashboardStats>(`/dashboard/stats?${params.toString()}`)
 }
 
@@ -474,6 +479,18 @@ export interface RegionWithUnits {
 
 export async function fetchRegions(): Promise<RegionWithUnits[]> {
   return get<RegionWithUnits[]>('/regions')
+}
+
+export async function createRegions(regions: { name: string }[]): Promise<void> {
+  await post('/regions', { regions })
+}
+
+export async function updateRegion(id: string, updates: { name?: string }): Promise<void> {
+  await put(`/regions/${id}`, updates)
+}
+
+export async function deleteRegion(id: string): Promise<void> {
+  await del(`/regions/${id}`)
 }
 
 /* ═══════════════════════════════════════════

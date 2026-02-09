@@ -54,7 +54,7 @@ export function DashboardPage() {
     let cancelled = false
     async function load() {
       try {
-        const data = await api.fetchDashboardStats(user!.role, user!.id, user!.unit_id)
+        const data = await api.fetchDashboardStats(user!.role, user!.id, user!.unit_id, user!.region_id)
         if (!cancelled) setStats(data)
         // Fetch retiring members for admin / zonal
         if (user!.role === 'admin' || user!.role === 'zonal_secretary') {

@@ -285,16 +285,16 @@ export function Navbar() {
                     {/* Desktop: Right side buttons */}
                     {!isMobile && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {/* Shiny Get in touch Button */}
+                            {/* Sign In Button */}
                             <ShinyButton
-                                href="#contact"
+                                href="/portal"
                                 onClick={(e) => {
                                     e.preventDefault()
-                                    scrollToSection('#contact')
+                                    navigate('/portal')
                                 }}
-                                style={{ color: '#efc676' }}
+                                style={{ color: '#efc676', padding: '14px 36px' }}
                             >
-                                Get in touch
+                                Sign In
                             </ShinyButton>
 
                             {/* Donation Button (Replacing Theme Toggle) */}
@@ -395,19 +395,19 @@ export function Navbar() {
                                         )}
                                     </div>
                                 ))}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', width: '100%' }}>
-                                    {/* Get in touch Button */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', padding: '0 12px', margin: '60px auto 0' }}>
+                                    {/* Sign In Button */}
                                     <ShinyButton
-                                        href="#contact"
+                                        href="/portal"
                                         onClick={(e) => {
                                             e.preventDefault()
-                                            scrollToSection('#contact')
+                                            navigate('/portal')
                                             setIsOpen(false)
                                         }}
-                                        style={{ color: '#efc676' }}
+                                        style={{ color: '#efc676', padding: '11px 48px' }}
                                         containerClassName="w-full"
                                     >
-                                        Get in touch
+                                        Sign In
                                     </ShinyButton>
 
                                     {/* Support Us Button */}
@@ -416,7 +416,7 @@ export function Navbar() {
                                             setIsOpen(false)
                                             setShowDonation(true)
                                         }}
-                                        style={{ color: '#ff3b3b' }}
+                                        style={{ color: '#ff3b3b', padding: '11px 48px' }}
                                         containerClassName="w-full"
                                     >
                                         Support Us

@@ -5,7 +5,7 @@ import { DataTable } from '../components/DataTable'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import * as api from '../api'
 import type { PortalUser, TableColumn } from '../types'
-import { ROLE_LABELS, TITLE_BADGE_COLORS, getTitleBadgeColorClass, TITLE_PRESETS_BY_ROLE, TITLE_LEVELS, getDefaultColorForLevel } from '../constants'
+import { ROLE_LABELS, getTitleBadgeColorClass, TITLE_PRESETS_BY_ROLE, TITLE_LEVELS, getDefaultColorForLevel } from '../constants'
 
 export function TitlesPage() {
   const { user } = usePortalAuth()
@@ -16,7 +16,6 @@ export function TitlesPage() {
   const [showAssign, setShowAssign] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string>('')
   const [titleText, setTitleText] = useState<string>('')
-  const [titleColor, setTitleColor] = useState<string>('')
   const [titleLevel, setTitleLevel] = useState<string>('')
   const [assigning, setAssigning] = useState(false)
   const [userSearchQuery, setUserSearchQuery] = useState<string>('')
@@ -55,8 +54,6 @@ export function TitlesPage() {
   })
 
   const canAssign = isAdmin || isZonal || isUnitPres
-  /** Only admin can set or change tag color; zonal/unit pres use defaults (gold/silver/blue). */
-  const canEditColor = isAdmin
 
   const selectedUser = useMemo(() => assignableUsers.find(u => u.id === selectedUserId) ?? null, [assignableUsers, selectedUserId])
   const filteredAssignableUsers = useMemo(() => {
@@ -98,7 +95,6 @@ export function TitlesPage() {
       setSelectedUserId('')
       setUserSearchQuery('')
       setTitleText('')
-      setTitleColor('')
       setTitleLevel('')
       await fetchData()
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to assign title.') }
@@ -109,19 +105,25 @@ export function TitlesPage() {
     const u = row as unknown as PortalUser
     setEditTarget(u)
     setTitleText(typeof u.title === 'string' ? u.title : '')
-    setTitleColor(typeof u.title_color === 'string' ? u.title_color : '')
+    // Infer level from existing title_color
+    const c = typeof u.title_color === 'string' ? u.title_color : ''
+    if (c === 'gold') setTitleLevel('zonal')
+    else if (c === 'green') setTitleLevel('regional')
+    else if (c === 'magenta') setTitleLevel('campus')
+    else setTitleLevel('unit') // silver, red, blue → unit
   }
 
   async function handleEditTitle(e: React.FormEvent) {
     e.preventDefault()
-    if (!editTarget || !titleText.trim() || !user) return
+    if (!editTarget || !titleText.trim() || !titleLevel?.trim() || !user) return
     setAssigning(true)
     try {
-      const colorToSend = canEditColor ? ((titleColor && titleColor.trim()) || undefined) : undefined
+      const level = titleLevel.trim()
+      const colorToSend = getDefaultColorForLevel(level, titleText.trim()) || 'blue'
       await api.assignTitle(editTarget.id, titleText.trim(), user.id, colorToSend)
       setEditTarget(null)
       setTitleText('')
-      setTitleColor('')
+      setTitleLevel('')
       await fetchData()
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to update title.') }
     finally { setAssigning(false) }
@@ -227,40 +229,21 @@ export function TitlesPage() {
               </div>
               <div>
                 <label className="portal-label portal-label-required">Title</label>
-                <input type="text" value={titleText ?? ''} onChange={e => {
-                  const v = e.target.value
-                  setTitleText(v)
-                  if (titleLevel && canEditColor) setTitleColor(getDefaultColorForLevel(titleLevel, v))
-                }} placeholder="Or type a custom title" className="portal-input" />
-                <p className="portal-hint">Set level below to fix color (e.g. JAC Secretary at Zonal = gold, at Unit = silver).</p>
+                <input type="text" value={titleText ?? ''} onChange={e => setTitleText(e.target.value)} placeholder="Or type a custom title" className="portal-input" />
               </div>
               <div>
                 <label className="portal-label portal-label-required">Level</label>
                 <select
                   value={titleLevel ?? ''}
-                  onChange={e => {
-                    const v = e.target.value
-                    setTitleLevel(v)
-                    if (v && canEditColor) setTitleColor(getDefaultColorForLevel(v, titleText))
-                    else if (!v && canEditColor) setTitleColor('')
-                  }}
+                  onChange={e => setTitleLevel(e.target.value)}
                   className="portal-input portal-select"
                   required
                 >
                   <option value="">Select level…</option>
                   {TITLE_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
                 </select>
-                <p className="portal-hint">Required. Campus = magenta, Regional = green, Zonal = gold, Unit = silver/blue (unit president = red).</p>
+                <p className="portal-hint">Color is set by level: Campus = magenta, Regional = green, Zonal = gold, Unit = silver/blue (unit president = red).</p>
               </div>
-              {canEditColor && (
-                <div>
-                  <label className="portal-label">Tag color</label>
-                  <select value={titleColor ?? ''} onChange={e => setTitleColor(e.target.value)} className="portal-input portal-select">
-                    <option value="">Default (auto from title text)</option>
-                    {TITLE_BADGE_COLORS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </div>
-              )}
               <div className="portal-dialog-actions">
                 <button type="button" onClick={() => setShowAssign(false)} className="portal-btn portal-btn-secondary">Cancel</button>
                 <button type="submit" disabled={assigning || !selectedUserId || !titleText.trim() || !titleLevel?.trim()} className="portal-btn portal-btn-primary">{assigning ? 'Assigning…' : 'Assign Title'}</button>
@@ -273,28 +256,53 @@ export function TitlesPage() {
       {/* Edit title dialog */}
       {editTarget && (
         <div className="portal-overlay">
-          <div className="portal-overlay-bg" onClick={() => { setEditTarget(null); setTitleText(''); setTitleColor('') }} />
+          <div className="portal-overlay-bg" onClick={() => { setEditTarget(null); setTitleText(''); setTitleLevel('') }} />
           <div className="portal-dialog portal-dialog-md portal-card-body">
-            <button onClick={() => { setEditTarget(null); setTitleText(''); setTitleColor('') }} className="portal-dialog-close" aria-label="Close"><X size={18} /></button>
+            <button onClick={() => { setEditTarget(null); setTitleText(''); setTitleLevel('') }} className="portal-dialog-close" aria-label="Close"><X size={18} /></button>
             <h3 className="portal-dialog-title">Edit Title</h3>
-            <p className="portal-dialog-desc">Change the title or tag color for {editTarget.full_name}.</p>
+            <p className="portal-dialog-desc">Change the title or level for {editTarget.full_name}.</p>
             <form onSubmit={handleEditTitle} className="portal-form-stack">
               <div>
-                <label className="portal-label">Title</label>
-                <input type="text" value={titleText ?? ''} onChange={e => setTitleText(e.target.value)} placeholder="e.g. Joint Secretary" className="portal-input" />
+                <label className="portal-label">Position (preset)</label>
+                <select
+                  value={
+                    (TITLE_PRESETS_BY_ROLE[user.role] ?? []).includes(titleText)
+                      ? titleText
+                      : titleText ? '__custom__' : ''
+                  }
+                  onChange={e => {
+                    const v = e.target.value
+                    setTitleText(v === '__custom__' ? '' : v)
+                  }}
+                  className="portal-input portal-select"
+                >
+                  <option value="">Select a position…</option>
+                  {(TITLE_PRESETS_BY_ROLE[user.role] ?? []).map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                  <option value="__custom__">Custom title</option>
+                </select>
               </div>
-              {canEditColor && (
-                <div>
-                  <label className="portal-label">Tag color</label>
-                  <select value={titleColor ?? ''} onChange={e => setTitleColor(e.target.value)} className="portal-input portal-select">
-                    <option value="">Default (auto: secretary=silver, zonal=gold)</option>
-                    {TITLE_BADGE_COLORS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </div>
-              )}
+              <div>
+                <label className="portal-label portal-label-required">Title</label>
+                <input type="text" value={titleText ?? ''} onChange={e => setTitleText(e.target.value)} placeholder="Or type a custom title" className="portal-input" />
+              </div>
+              <div>
+                <label className="portal-label portal-label-required">Level</label>
+                <select
+                  value={titleLevel ?? ''}
+                  onChange={e => setTitleLevel(e.target.value)}
+                  className="portal-input portal-select"
+                  required
+                >
+                  <option value="">Select level…</option>
+                  {TITLE_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                </select>
+                <p className="portal-hint">Color is set by level: Campus = magenta, Regional = green, Zonal = gold, Unit = silver/blue (unit president = red).</p>
+              </div>
               <div className="portal-dialog-actions">
-                <button type="button" onClick={() => { setEditTarget(null); setTitleText(''); setTitleColor('') }} className="portal-btn portal-btn-secondary">Cancel</button>
-                <button type="submit" disabled={assigning || !titleText.trim()} className="portal-btn portal-btn-primary">{assigning ? 'Saving…' : 'Save'}</button>
+                <button type="button" onClick={() => { setEditTarget(null); setTitleText(''); setTitleLevel('') }} className="portal-btn portal-btn-secondary">Cancel</button>
+                <button type="submit" disabled={assigning || !titleText.trim() || !titleLevel?.trim()} className="portal-btn portal-btn-primary">{assigning ? 'Saving…' : 'Save'}</button>
               </div>
             </form>
           </div>

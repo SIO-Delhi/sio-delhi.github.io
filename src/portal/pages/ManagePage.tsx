@@ -48,9 +48,14 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
         setData(regions.map(r => ({ id: r.region_id, name: r.region_name, regional_president_name: r.regional_president_name ?? '—', created_at: '' })))
       } else {
         const membershipId = user?.role === 'unit_president' ? (user.membership_id ?? undefined) : undefined
+        const regionId = user?.role === 'regional_president' ? (user.region_id ?? undefined) : undefined
         const excludeCampusUnits = entity === 'unit-presidents'
         const campusUnitsOnly = entity === 'campus-presidents'
-        const options = excludeCampusUnits ? { excludeCampusUnits: true } : campusUnitsOnly ? { campusUnitsOnly: true } : undefined
+        const options = {
+          excludeCampusUnits,
+          campusUnitsOnly,
+          regionId
+        }
         setData(await api.fetchUsers(role ?? undefined, membershipId, options) as unknown as Record<string, unknown>[])
       }
       setUnits(await api.fetchUnits())
@@ -160,8 +165,7 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
     else if (entity === 'circles') await api.updateCircle(id, { name: values.name })
     else if (entity === 'campuses') await api.updateCampus(id, { name: values.name })
     else if (entity === 'regions') {
-      // Regions update not supported yet - backend endpoints needed
-      throw new Error('Region update not yet implemented. Please use the Regions page.')
+      await api.updateRegion(id, { name: values.name })
     } else {
       const payload: Record<string, unknown> = { ...values }
       if (values.permission_overrides !== undefined && editRow.role) {
@@ -182,15 +186,20 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
     setEditRow(null); await fetchData()
   }
 
+  /** President/secretary entities: demote to member instead of deleting the account */
+  const isDemoteEntity = ['regional-presidents', 'unit-presidents', 'campus-presidents', 'zonal-secretaries'].includes(entity)
+
   async function handleDelete() {
     if (!deleteRow) return
     try {
-      if (entity === 'units') await api.deleteUnit(deleteRow.id as string)
+      if (isDemoteEntity) {
+        // Demote back to member — don't delete their account
+        await api.updateUser(deleteRow.id as string, { role: 'member' })
+      } else if (entity === 'units') await api.deleteUnit(deleteRow.id as string)
       else if (entity === 'circles') await api.deleteCircle(deleteRow.id as string)
       else if (entity === 'campuses') await api.deleteCampus(deleteRow.id as string)
-      else if (entity === 'regions') {
-        throw new Error('Region delete not yet implemented. Please use the Regions page.')
-      } else await api.deleteUser(deleteRow.id as string)
+      else if (entity === 'regions') await api.deleteRegion(deleteRow.id as string)
+      else await api.deleteUser(deleteRow.id as string)
       setDeleteRow(null); await fetchData()
     } catch (err) { setError(err instanceof Error ? err.message : 'Delete failed.') }
   }
@@ -227,7 +236,17 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
         exportFilename={`${entity}.csv`} emptyTitle={`No ${labels.plural.toLowerCase()} found`} emptyDescription={`There are no ${labels.plural.toLowerCase()} registered yet.`} />
 
       {canEdit && <EditDialog open={!!editRow} title={`Edit ${labels.singular}`} fields={getEditFields()} initialValues={editRow ? getInitialEditValues(editRow) : {}} onSave={handleSaveEdit} onCancel={() => setEditRow(null)} />}
-      {canEdit && <ConfirmDialog open={!!deleteRow} title={`Delete ${labels.singular}`} message={`Are you sure you want to delete "${deleteName}"? This action cannot be undone.`} confirmLabel="Delete" danger onConfirm={handleDelete} onCancel={() => setDeleteRow(null)} />}
+      {canEdit && <ConfirmDialog
+        open={!!deleteRow}
+        title={isDemoteEntity ? `Remove ${labels.singular}` : `Delete ${labels.singular}`}
+        message={isDemoteEntity
+          ? `Remove "${deleteName}" from the ${labels.singular.toLowerCase()} role? They will be demoted back to Member. Their account will NOT be deleted.`
+          : `Are you sure you want to delete "${deleteName}"? This action cannot be undone.`}
+        confirmLabel={isDemoteEntity ? 'Remove' : 'Delete'}
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteRow(null)}
+      />}
     </div>
   )
 }
