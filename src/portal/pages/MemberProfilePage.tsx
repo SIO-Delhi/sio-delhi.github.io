@@ -8,6 +8,7 @@ import { usePortalAuth } from '../context/PortalAuthContext'
 import { StatusBadge } from '../components/StatusBadge'
 import { UserAvatar } from '../components/UserAvatar'
 import { HeroAgeBar } from '../components/AgeBar'
+import { DateInput } from '../components/DateInput'
 import { ROLE_LABELS } from '../constants'
 import * as api from '../api'
 
@@ -17,6 +18,7 @@ export function MemberProfilePage() {
   const [middleName, setMiddleName] = useState(user ? (user.middle_name ?? '') : '')
   const [lastName, setLastName] = useState(user ? user.last_name : '')
   const [phone, setPhone] = useState(user ? user.phone : '')
+  const [dob, setDob] = useState(user ? (user.date_of_birth ?? '') : '')
   const [avatarUrl, setAvatarUrl] = useState(user ? user.avatar_url : null)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -28,22 +30,32 @@ export function MemberProfilePage() {
 
   const displayName = user.full_name || [firstName, middleName, lastName].filter(Boolean).join(' ').trim()
   const isMember = user.role === 'member'
-  const canEditProfileDetails = !isMember
+  const canEditProfileDetails = true
+  const [pendingVerification, setPendingVerification] = useState(false)
 
   async function handleSave(e: React.FormEvent) {
-    e.preventDefault(); if (!user || !canEditProfileDetails) return; setError(null); setSuccess(false)
+    e.preventDefault(); if (!user || !canEditProfileDetails) return; setError(null); setSuccess(false); setPendingVerification(false)
     if (!firstName.trim()) { setError('First name is required.'); return }
-    if (!lastName.trim()) { setError('Last name is required.'); return }
     if (!phone.trim()) { setError('Phone number is required.'); return }
     setSaving(true)
     try {
-      await api.updateUser(user.id, {
+      const changes: Record<string, unknown> = {
         first_name: firstName.trim(),
         middle_name: middleName.trim() || null,
-        last_name: lastName.trim(),
+        last_name: lastName.trim() || null,
         phone: phone.trim(),
-      })
-      setSuccess(true)
+        date_of_birth: dob.trim() || null,
+      }
+      if (isMember) {
+        // Members: submit a verification request instead of saving directly
+        await api.createEditRequest(user.id, changes)
+        setPendingVerification(true)
+        setSuccess(true)
+      } else {
+        // Non-members: save directly
+        await api.updateUser(user.id, changes)
+        setSuccess(true)
+      }
     } catch (err) { setError(err instanceof Error ? err.message : 'Save failed.') }
     finally { setSaving(false) }
   }
@@ -83,12 +95,12 @@ export function MemberProfilePage() {
       <div>
         <h1 className="portal-heading">My Profile</h1>
         <p className="portal-subheading">
-          {isMember ? 'View your profile. You can change your photo and password.' : 'View and update your personal information.'}
+          {isMember ? 'View and update your profile. Changes to personal details require verification by your unit president.' : 'View and update your personal information.'}
         </p>
       </div>
 
       {/* Status messages */}
-      {success && <div className="portal-alert portal-alert-success"><CheckCircle size={16} /> <p>Profile updated successfully!</p></div>}
+      {success && <div className="portal-alert portal-alert-success"><CheckCircle size={16} /> <p>{pendingVerification ? 'Your changes have been submitted for verification by your unit president.' : 'Profile updated successfully!'}</p></div>}
       {error && <div className="portal-alert portal-alert-error">{error}</div>}
 
       {/* ── Hero card: avatar + identity ── */}
@@ -157,6 +169,15 @@ export function MemberProfilePage() {
               <span className="portal-profile-detail-value">{user.phone}</span>
             </div>
           </div>
+          {user.date_of_birth && (
+            <div className="portal-profile-detail-item">
+              <div className="portal-profile-detail-icon"><Calendar size={16} /></div>
+              <div>
+                <span className="portal-profile-detail-label">Date of Birth</span>
+                <span className="portal-profile-detail-value">{formatDob(user.date_of_birth)}</span>
+              </div>
+            </div>
+          )}
           {user.unit_name && (
             <div className="portal-profile-detail-item">
               <div className="portal-profile-detail-icon"><Building2 size={16} /></div>
@@ -218,7 +239,8 @@ export function MemberProfilePage() {
       {/* ── Editable form (only for non-members) ── */}
       {canEditProfileDetails && (
         <div className="portal-card portal-card-body">
-          <h3 className="portal-section-title" style={{ marginBottom: 20 }}>Edit Profile</h3>
+          <h3 className="portal-section-title" style={{ marginBottom: 4 }}>Edit Profile</h3>
+          {isMember && <p className="portal-text-muted" style={{ marginBottom: 16, fontSize: '0.8125rem' }}>Changes will be sent to your unit president for verification before taking effect.</p>}
           <form onSubmit={handleSave} className="portal-form-stack">
             <div className="portal-form-row">
               <div style={{ flex: 1 }}>
@@ -240,12 +262,28 @@ export function MemberProfilePage() {
                 <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="portal-input" />
               </div>
             </div>
+            <div className="portal-form-row">
+              <div style={{ flex: 1 }}>
+                <label className="portal-label portal-label-icon"><Calendar size={14} /> Date of Birth</label>
+                <DateInput value={dob} onChange={setDob} />
+              </div>
+            </div>
             <button type="submit" disabled={saving} className="portal-btn portal-btn-primary portal-self-start">
-              <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
+              <Save size={16} /> {saving ? (isMember ? 'Submitting…' : 'Saving…') : (isMember ? 'Submit for Verification' : 'Save Changes')}
             </button>
           </form>
         </div>
       )}
     </div>
   )
+}
+
+function formatDob(dob: string): string {
+  if (dob.length !== 8) return dob
+  const day = dob.substring(0, 2)
+  const month = dob.substring(2, 4)
+  const year = dob.substring(4, 8)
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const m = parseInt(month, 10)
+  return `${parseInt(day, 10)} ${months[m - 1] ?? month} ${year}`
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserPlus, Upload, CheckCircle, Search, X } from 'lucide-react'
 import { CSVUpload } from '../components/CSVUpload'
+import { DateInput } from '../components/DateInput'
 import { ENTITY_LABELS, ENTITY_CSV_FIELDS, ENTITY_EDIT_FIELDS, ENTITY_ROLE_MAP, ROLE_LABELS, TITLE_LEVELS, getDefaultColorForLevel } from '../constants'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import * as api from '../api'
@@ -469,6 +470,11 @@ export function BulkAddPage({ entity }: BulkAddPageProps) {
                       <option value="">Select...</option>
                       {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
+                  ) : field.type === 'date' ? (
+                    <DateInput
+                      value={values[field.key] ?? ''}
+                      onChange={v => setValues(prev => ({ ...prev, [field.key]: v }))}
+                    />
                   ) : (
                     <input
                       type={field.type === 'tel' ? 'tel' : 'text'}

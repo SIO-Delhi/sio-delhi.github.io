@@ -31,7 +31,7 @@ export function TopBar({ title }: { title?: string }) {
   const searchRef = useRef<HTMLDivElement>(null)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const showSearch = user?.role === 'admin' || user?.role === 'zonal_secretary'
+  const showSearch = !!user
 
   const runSearch = useCallback(async (q: string) => {
     if (!q.trim()) { setSearchResults(null); return }
@@ -83,7 +83,17 @@ export function TopBar({ title }: { title?: string }) {
     setSearchOpen(false)
     setSearchQuery('')
     setSearchResults(null)
-    if (type === 'member') navigate(`${prefix}/members/${id}`)
+    if (type === 'member') {
+      // Members searching for themselves should go to their profile page
+      if (user.role === 'member' && id === user.id) {
+        navigate(`${prefix}/profile`)
+      } else if (user.role === 'member') {
+        // Members can't view other members' profiles, go to profile
+        navigate(`${prefix}/profile`)
+      } else {
+        navigate(`${prefix}/members/${id}`)
+      }
+    }
     else if (type === 'unit') navigate(`${prefix}/units/${id}`)
     else if (type === 'region') navigate(`${prefix}/regions`)
     else if (type === 'circle') navigate(`${prefix}/circles/${id}`)

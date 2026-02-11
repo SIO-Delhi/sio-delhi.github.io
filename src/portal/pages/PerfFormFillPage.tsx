@@ -9,7 +9,7 @@ import type { PerfForm, PerfField } from '../types'
 export function PerfFormFillPage() {
   const { formId } = useParams<{ formId: string }>()
   const { user } = usePortalAuth()
-  const { decrement } = useNotifications()
+  const { decrement, refresh } = useNotifications()
   const navigate = useNavigate()
   const [form, setForm] = useState<PerfForm | null>(null)
   const [answers, setAnswers] = useState<Record<string, unknown>>({})
@@ -69,6 +69,7 @@ export function PerfFormFillPage() {
     try {
       await api.submitPerfResponse(formId, user.id, answers)
       setSuccess(true)
+      refresh()
     } catch (err) { setError(err instanceof Error ? err.message : 'Submission failed.') }
     finally { setSubmitting(false) }
   }

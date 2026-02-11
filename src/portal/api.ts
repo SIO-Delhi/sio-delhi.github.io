@@ -163,7 +163,7 @@ export async function deleteCampus(id: string): Promise<void> {
 export async function fetchUsers(
   role?: PortalRole | string,
   unitId?: string,
-  options?: { excludeCampusUnits?: boolean; campusUnitsOnly?: boolean; regionId?: string },
+  options?: { excludeCampusUnits?: boolean; campusUnitsOnly?: boolean; regionId?: string; requestingRole?: string },
 ): Promise<PortalUser[]> {
   const params = new URLSearchParams()
   if (role) params.append('role', role)
@@ -171,6 +171,7 @@ export async function fetchUsers(
   if (options?.regionId) params.append('regionId', options.regionId)
   if (options?.excludeCampusUnits) params.append('excludeCampusUnits', '1')
   if (options?.campusUnitsOnly) params.append('campusUnitsOnly', '1')
+  if (options?.requestingRole) params.append('requestingRole', options.requestingRole)
   const qs = params.toString()
   return get<PortalUser[]>(`/users${qs ? `?${qs}` : ''}`)
 }
@@ -261,14 +262,26 @@ export async function lockUser(
   id: string,
   locked: boolean,
   actor?: { userId: string; role: string; unitId?: string | null },
+  reasons?: string[],
 ): Promise<void> {
-  const body: { locked: boolean; actorUserId?: string; actorRole?: string; actorUnitId?: string | null } = { locked }
+  const body: { locked: boolean; actorUserId?: string; actorRole?: string; actorUnitId?: string | null; reasons?: string[] } = { locked }
   if (actor) {
     body.actorUserId = actor.userId
     body.actorRole = actor.role
     body.actorUnitId = actor.unitId ?? undefined
   }
+  if (reasons && reasons.length > 0) {
+    body.reasons = reasons
+  }
   await put(`/users/${id}/lock`, body)
+}
+
+export async function revokeUser(id: string, reason: string, actorUserId: string): Promise<void> {
+  await put(`/users/${id}/revoke`, { revoke: true, reason, actorUserId })
+}
+
+export async function unrevokeUser(id: string): Promise<void> {
+  await put(`/users/${id}/revoke`, { revoke: false })
 }
 
 /**
@@ -427,6 +440,43 @@ export async function updatePerfReview(reviewId: string, reviewerId: string, dat
 
 export async function deletePerfReview(reviewId: string, reviewerId: string): Promise<void> {
   await del(`/performance/reviews/${reviewId}?reviewer_id=${encodeURIComponent(reviewerId)}`)
+}
+
+/* ═══════════════════════════════════════════
+   Profile Edit Verification Requests
+   ═══════════════════════════════════════════ */
+
+export interface EditRequest {
+  id: string
+  member_id: string
+  member_name?: string
+  member_phone?: string
+  unit_id?: string
+  changes: Record<string, unknown>
+  status: 'pending' | 'approved' | 'rejected'
+  reviewed_by?: string | null
+  created_at: string
+  reviewed_at?: string | null
+}
+
+export async function createEditRequest(memberId: string, changes: Record<string, unknown>): Promise<{ id: string }> {
+  return post<{ id: string }>('/edit-requests', { member_id: memberId, changes })
+}
+
+export async function fetchEditRequests(filters?: { unitId?: string; status?: string }): Promise<EditRequest[]> {
+  const params = new URLSearchParams()
+  if (filters?.unitId) params.set('unitId', filters.unitId)
+  if (filters?.status) params.set('status', filters.status)
+  const qs = params.toString()
+  return get<EditRequest[]>(`/edit-requests${qs ? `?${qs}` : ''}`)
+}
+
+export async function resolveEditRequest(id: string, status: 'approved' | 'rejected', reviewedBy: string): Promise<void> {
+  await put(`/edit-requests/${id}`, { status, reviewed_by: reviewedBy })
+}
+
+export async function fetchMemberEditRequests(memberId: string): Promise<EditRequest[]> {
+  return get<EditRequest[]>(`/users/${memberId}/edit-requests`)
 }
 
 /* ═══════════════════════════════════════════

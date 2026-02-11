@@ -14,6 +14,7 @@ import {
   Globe,
   CircleDot,
   GraduationCap,
+  ClipboardCheck,
 } from 'lucide-react'
 import type { PortalRole, CSVFieldDef, EditField, Permission } from './types'
 
@@ -130,6 +131,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
   unit_president: [
     { label: 'Dashboard', path: '/portal/unit/dashboard', icon: LayoutDashboard },
     { label: 'Members', path: '/portal/unit/members', icon: Users },
+    { label: 'Edit Requests', path: '/portal/unit/edit-requests', icon: ClipboardCheck },
     { label: 'Titles', path: '/portal/unit/titles', icon: Award },
     { label: 'Performance', path: '/portal/unit/performance', icon: BarChart3, badgeKey: 'pendingForms' },
     {
@@ -143,6 +145,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
   campus_president: [
     { label: 'Dashboard', path: '/portal/unit/dashboard', icon: LayoutDashboard },
     { label: 'Members', path: '/portal/unit/members', icon: Users },
+    { label: 'Edit Requests', path: '/portal/unit/edit-requests', icon: ClipboardCheck },
     { label: 'Titles', path: '/portal/unit/titles', icon: Award },
     { label: 'Performance', path: '/portal/unit/performance', icon: BarChart3, badgeKey: 'pendingForms' },
     {
@@ -343,7 +346,7 @@ export const ENTITY_EDIT_FIELDS: Record<string, EditField[]> = {
     { key: 'last_name', label: 'Last Name', type: 'text', required: false },
     { key: 'phone', label: 'Phone', type: 'tel', required: true },
     { key: 'alt_phone', label: 'Alt Phone', type: 'tel', required: false },
-    { key: 'date_of_birth', label: 'Date of Birth (DDMMYYYY)', type: 'text', required: true, placeholder: 'e.g. 25031999' },
+    { key: 'date_of_birth', label: 'Date of Birth', type: 'date', required: true },
     {
       key: 'membership_type', label: 'Membership Type', type: 'select', required: true, options: [
         { value: 'unit', label: 'Unit' },

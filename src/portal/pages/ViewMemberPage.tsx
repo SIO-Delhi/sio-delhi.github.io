@@ -3,12 +3,15 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Phone, Building2, MapPin, Shield, Calendar, Award, Activity,
   User, Mail, ArrowRightLeft, BarChart3, Lock, Camera, Trash2, Save,
-  ChevronDown, Key,
+  ChevronDown, Key, AlertTriangle,
 } from 'lucide-react'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { UserAvatar } from '../components/UserAvatar'
 import { StatusBadge } from '../components/StatusBadge'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { InactiveChecklistDialog } from '../components/InactiveChecklistDialog'
+import { RevokeDialog } from '../components/RevokeDialog'
+import { DateInput } from '../components/DateInput'
 import { HeroAgeBar, formatPreciseAge } from '../components/AgeBar'
 import { ROLE_LABELS, ALL_PERMISSIONS, PERMISSION_LABELS, hasPermission } from '../constants'
 import { Toast } from '../components/Toast'
@@ -64,12 +67,20 @@ export function ViewMemberPage() {
   const [campuses, setCampuses] = useState<{ id: string; name: string }[]>([])
 
   const isAdmin = currentUser?.role === 'admin'
+  const isZonalSecretary = currentUser?.role === 'zonal_secretary'
+  const isUnitPresident = currentUser?.role === 'unit_president' || currentUser?.role === 'campus_president'
+  const canRevokeMembership = isAdmin || isZonalSecretary
   const canSetActiveInactive = currentUser && ['admin', 'zonal_secretary', 'regional_president', 'unit_president'].includes(currentUser.role)
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [passwordResetting, setPasswordResetting] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showInactiveDialog, setShowInactiveDialog] = useState(false)
+  const [inactivatedByName, setInactivatedByName] = useState<string | null>(null)
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false)
+  const [revoking, setRevoking] = useState(false)
+  const [revokedByName, setRevokedByName] = useState<string | null>(null)
 
   // Load member data
   useEffect(() => {
@@ -90,6 +101,26 @@ export function ViewMemberPage() {
     load()
     return () => { cancelled = true }
   }, [memberId, isAdmin])
+
+  // Resolve inactivated_by user name
+  useEffect(() => {
+    if (!member?.inactivated_by) { setInactivatedByName(null); return }
+    let cancelled = false
+    api.fetchUser(member.inactivated_by).then(u => {
+      if (!cancelled) setInactivatedByName(u.full_name || [u.first_name, u.last_name].filter(Boolean).join(' '))
+    }).catch(() => { if (!cancelled) setInactivatedByName(null) })
+    return () => { cancelled = true }
+  }, [member?.inactivated_by])
+
+  // Resolve revoked_by user name
+  useEffect(() => {
+    if (!member?.revoked_by) { setRevokedByName(null); return }
+    let cancelled = false
+    api.fetchUser(member.revoked_by).then(u => {
+      if (!cancelled) setRevokedByName(u.full_name || [u.first_name, u.last_name].filter(Boolean).join(' '))
+    }).catch(() => { if (!cancelled) setRevokedByName(null) })
+    return () => { cancelled = true }
+  }, [member?.revoked_by])
 
   // Load tab data
   useEffect(() => {
@@ -205,12 +236,14 @@ export function ViewMemberPage() {
     finally { setUploading(false) }
   }
 
-  async function handleSetActiveInactive(setInactive: boolean) {
+  async function handleSetActiveInactive(setInactive: boolean, reasons?: string[]) {
     if (!member || !currentUser) return
     setStatusUpdating(true); setSaveError(null)
     try {
-      await api.lockUser(member.id, setInactive, { userId: currentUser.id, role: currentUser.role, unitId: currentUser.unit_id })
-      setMember(prev => prev ? { ...prev, status: setInactive ? 'inactive' : 'active' } : prev)
+      await api.lockUser(member.id, setInactive, { userId: currentUser.id, role: currentUser.role, unitId: currentUser.unit_id }, reasons)
+      const updated = await api.fetchUser(member.id)
+      setMember(updated)
+      setShowInactiveDialog(false)
     } catch (err) { setSaveError(err instanceof Error ? err.message : 'Failed to update status.') }
     finally { setStatusUpdating(false) }
   }
@@ -227,7 +260,7 @@ export function ViewMemberPage() {
   }
 
   async function handleDeleteMember() {
-    if (!member || !isAdmin) return
+    if (!member || !canRevokeMembership) return
     setDeleting(true); setSaveError(null)
     try {
       await api.deleteUser(member.id)
@@ -236,6 +269,31 @@ export function ViewMemberPage() {
       navigate(membersListPath || '/portal/admin/members')
     } catch (err) { setSaveError(err instanceof Error ? err.message : 'Failed to delete member.') }
     finally { setDeleting(false) }
+  }
+
+  async function handleRevokeMember(reason: string) {
+    if (!member || !currentUser || !canRevokeMembership) return
+    setRevoking(true); setSaveError(null)
+    try {
+      await api.revokeUser(member.id, reason, currentUser.id)
+      const updated = await api.fetchUser(member.id)
+      setMember(updated)
+      setShowRevokeDialog(false)
+      setSuccessMessage('Membership revoked successfully.')
+    } catch (err) { setSaveError(err instanceof Error ? err.message : 'Failed to revoke membership.') }
+    finally { setRevoking(false) }
+  }
+
+  async function handleUnrevokeMember() {
+    if (!member || !currentUser || !canRevokeMembership) return
+    setRevoking(true); setSaveError(null)
+    try {
+      await api.unrevokeUser(member.id)
+      const updated = await api.fetchUser(member.id)
+      setMember(updated)
+      setSuccessMessage('Membership restored successfully.')
+    } catch (err) { setSaveError(err instanceof Error ? err.message : 'Failed to restore membership.') }
+    finally { setRevoking(false) }
   }
 
   if (loading) return (
@@ -296,24 +354,50 @@ export function ViewMemberPage() {
               {(member.display_title ?? member.title) && <span className="portal-dashboard-hero-title">{member.display_title ?? member.title}</span>}
             </div>
             <HeroAgeBar dob={member.date_of_birth} />
-            {isAdmin && (
+            {(isAdmin || canRevokeMembership) && (
               <div className="portal-profile-hero-actions">
-                <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="portal-btn portal-btn-ghost portal-btn-sm">
-                  <Camera size={14} /> {uploading ? 'Uploading…' : 'Change Photo'}
-                </button>
-                {member.avatar_url && (
-                  <button onClick={handleRemoveAvatar} disabled={uploading} className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red">
-                    <Trash2 size={14} /> Remove
+                {isAdmin && (
+                  <>
+                    <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="portal-btn portal-btn-ghost portal-btn-sm">
+                      <Camera size={14} /> {uploading ? 'Uploading…' : 'Change Photo'}
+                    </button>
+                    {member.avatar_url && (
+                      <button onClick={handleRemoveAvatar} disabled={uploading} className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red">
+                        <Trash2 size={14} /> Remove
+                      </button>
+                    )}
+                  </>
+                )}
+                {canRevokeMembership && member.status !== 'revoked' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowRevokeDialog(true)}
+                    disabled={revoking}
+                    className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red"
+                  >
+                    <AlertTriangle size={14} /> Revoke Membership
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  disabled={deleting}
-                  className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red"
-                >
-                  <Trash2 size={14} /> Delete Member
-                </button>
+                {canRevokeMembership && member.status === 'revoked' && (
+                  <button
+                    type="button"
+                    onClick={handleUnrevokeMember}
+                    disabled={revoking}
+                    className="portal-btn portal-btn-secondary portal-btn-sm"
+                  >
+                    {revoking ? 'Restoring…' : 'Restore Membership'}
+                  </button>
+                )}
+                {canRevokeMembership && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={deleting}
+                    className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red"
+                  >
+                    <Trash2 size={14} /> Delete Member
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -327,6 +411,24 @@ export function ViewMemberPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Member Banned banner (unit/regional viewing revoked member) ── */}
+      {member.status === 'revoked' && !isAdmin && !isZonalSecretary && (
+        <div style={{
+          padding: '20px 24px',
+          borderRadius: 8,
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '2px solid #ef4444',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>
+            MEMBER BANNED
+          </div>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--p-text-muted)', margin: 0 }}>
+            This member's membership has been revoked. Contact your zonal secretary for details.
+          </p>
+        </div>
+      )}
 
       {/* ── Tabs ── */}
       <div className="portal-view-tabs">
@@ -352,7 +454,7 @@ export function ViewMemberPage() {
             <div className="portal-profile-details">
               <div className="portal-view-section-header">
                 <h3 className="portal-section-title">Personal Information</h3>
-                {isAdmin && (
+                {(isAdmin || (isUnitPresident && member?.unit_id === currentUser?.unit_id)) && (
                   <button onClick={() => setEditing(true)} className="portal-btn portal-btn-secondary portal-btn-sm">
                     Edit Details
                   </button>
@@ -386,13 +488,62 @@ export function ViewMemberPage() {
                 <div className="portal-view-status-actions">
                   <span className="portal-view-status-label">Account status:</span>
                   <StatusBadge status={member.status} />
-                  <button
-                    onClick={() => handleSetActiveInactive(member.status === 'active')}
-                    disabled={statusUpdating}
-                    className={member.status === 'active' ? 'portal-btn portal-btn-ghost portal-btn-sm' : 'portal-btn portal-btn-secondary portal-btn-sm'}
-                  >
-                    {statusUpdating ? 'Updating…' : member.status === 'active' ? 'Set Inactive' : 'Set Active'}
-                  </button>
+                  {member.status === 'active' ? (
+                    <button
+                      onClick={() => setShowInactiveDialog(true)}
+                      disabled={statusUpdating}
+                      className="portal-btn portal-btn-ghost portal-btn-sm"
+                    >
+                      {statusUpdating ? 'Updating…' : 'Set Inactive'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSetActiveInactive(false)}
+                      disabled={statusUpdating}
+                      className="portal-btn portal-btn-secondary portal-btn-sm"
+                    >
+                      {statusUpdating ? 'Updating…' : 'Set Active'}
+                    </button>
+                  )}
+                </div>
+              )}
+              {/* Inactive metadata — visible to admin & zonal */}
+              {member.status === 'inactive' && (isAdmin || isZonalSecretary) && member.inactive_reason && (
+                <div style={{ marginTop: 12, padding: '12px 16px', borderRadius: 8, background: 'rgba(232, 197, 71, 0.06)', border: '1px solid var(--p-border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--p-amber)', fontSize: '0.8125rem', fontWeight: 600 }}>
+                    <AlertTriangle size={14} /> Inactive Details
+                  </div>
+                  {inactivatedByName && (
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--p-text-muted)', marginBottom: 4 }}>
+                      Set inactive by: <strong style={{ color: 'var(--p-cream)' }}>{inactivatedByName}</strong>
+                      {member.inactivated_at && <span> on {new Date(member.inactivated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+                    </p>
+                  )}
+                  <p style={{ fontSize: '0.75rem', color: 'var(--p-text-muted)', marginBottom: 4 }}>Reasons:</p>
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {member.inactive_reason.map((r, i) => (
+                      <li key={i} style={{ fontSize: '0.8125rem', color: 'var(--p-cream)', marginBottom: 2 }}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {/* Revoked metadata — visible to admin & zonal */}
+              {member.status === 'revoked' && (isAdmin || isZonalSecretary) && (
+                <div style={{ marginTop: 12, padding: '12px 16px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: '#ef4444', fontSize: '0.8125rem', fontWeight: 600 }}>
+                    <AlertTriangle size={14} /> Membership Revoked
+                  </div>
+                  {revokedByName && (
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--p-text-muted)', marginBottom: 4 }}>
+                      Revoked by: <strong style={{ color: 'var(--p-cream)' }}>{revokedByName}</strong>
+                      {member.revoked_at && <span> on {new Date(member.revoked_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+                    </p>
+                  )}
+                  {member.revoke_reason && (
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--p-cream)', marginBottom: 0 }}>
+                      Reason: {member.revoke_reason}
+                    </p>
+                  )}
                 </div>
               )}
               {isAdmin && (
@@ -422,8 +573,8 @@ export function ViewMemberPage() {
             </div>
           )}
 
-          {/* Admin edit form */}
-          {editing && isAdmin && (
+          {/* Edit form (admin: full access, unit president: basic member details only) */}
+          {editing && (isAdmin || (isUnitPresident && member?.unit_id === currentUser?.unit_id)) && (
             <div className="portal-card portal-card-body">
               <div className="portal-view-section-header">
                 <h3 className="portal-section-title">Edit Details</h3>
@@ -435,65 +586,74 @@ export function ViewMemberPage() {
                 <EditFieldInput label="Last Name" value={editValues.last_name ?? ''} onChange={v => setEditValues(p => ({ ...p, last_name: v }))} />
                 <EditFieldInput label="Phone" value={editValues.phone ?? ''} onChange={v => setEditValues(p => ({ ...p, phone: v }))} type="tel" required />
                 <EditFieldInput label="Alt Phone" value={editValues.alt_phone ?? ''} onChange={v => setEditValues(p => ({ ...p, alt_phone: v }))} type="tel" />
-                <EditFieldInput label="Date of Birth (DDMMYYYY)" value={editValues.date_of_birth ?? ''} onChange={v => setEditValues(p => ({ ...p, date_of_birth: v }))} placeholder="e.g. 25031999" />
                 <div className="portal-edit-field">
-                  <label className="portal-label">Membership Type</label>
-                  <select
-                    value={editValues.membership_type}
-                    onChange={e => {
-                      setEditValues(p => ({ ...p, membership_type: e.target.value, membership_id: '' }))
-                    }}
-                    className="portal-input portal-select"
-                  >
-                    <option value="unit">Unit</option>
-                    <option value="circle">Circle</option>
-                    <option value="campus">Campus</option>
-                  </select>
+                  <label className="portal-label">Date of Birth</label>
+                  <DateInput value={editValues.date_of_birth ?? ''} onChange={v => setEditValues(p => ({ ...p, date_of_birth: v }))} />
                 </div>
+                {isAdmin && (
+                  <>
+                    <div className="portal-edit-field">
+                      <label className="portal-label">Membership Type</label>
+                      <select
+                        value={editValues.membership_type}
+                        onChange={e => {
+                          setEditValues(p => ({ ...p, membership_type: e.target.value, membership_id: '' }))
+                        }}
+                        className="portal-input portal-select"
+                      >
+                        <option value="unit">Unit</option>
+                        <option value="circle">Circle</option>
+                        <option value="campus">Campus</option>
+                      </select>
+                    </div>
 
-                <div className="portal-edit-field">
-                  <label className="portal-label">Select {editValues.membership_type ? editValues.membership_type.charAt(0).toUpperCase() + editValues.membership_type.slice(1) : 'Unit/Circle'}</label>
-                  <select
-                    value={editValues.membership_id ?? ''}
-                    onChange={e => setEditValues(p => ({ ...p, membership_id: e.target.value }))}
-                    className="portal-input portal-select"
-                  >
-                    <option value="">— Select —</option>
-                    {editValues.membership_type === 'unit' && units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                    {editValues.membership_type === 'circle' && circles.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    {editValues.membership_type === 'campus' && campuses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div className="portal-edit-field">
-                  <label className="portal-label portal-label-required">Status</label>
-                  <select value={editValues.status} onChange={e => setEditValues(p => ({ ...p, status: e.target.value }))} className="portal-input portal-select">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="migrated">Migrated</option>
-                  </select>
-                </div>
-                <div className="portal-edit-field">
-                  <label className="portal-label portal-label-required">Role</label>
-                  <select value={editValues.role} onChange={e => setEditValues(p => ({ ...p, role: e.target.value }))} className="portal-input portal-select">
-                    {(['admin', 'zonal_secretary', 'regional_president', 'unit_president', 'member'] as const).map(r => (
-                      <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                    <div className="portal-edit-field">
+                      <label className="portal-label">Select {editValues.membership_type ? editValues.membership_type.charAt(0).toUpperCase() + editValues.membership_type.slice(1) : 'Unit/Circle'}</label>
+                      <select
+                        value={editValues.membership_id ?? ''}
+                        onChange={e => setEditValues(p => ({ ...p, membership_id: e.target.value }))}
+                        className="portal-input portal-select"
+                      >
+                        <option value="">— Select —</option>
+                        {editValues.membership_type === 'unit' && units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                        {editValues.membership_type === 'circle' && circles.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {editValues.membership_type === 'campus' && campuses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="portal-edit-field">
+                      <label className="portal-label portal-label-required">Status</label>
+                      <select value={editValues.status} onChange={e => setEditValues(p => ({ ...p, status: e.target.value }))} className="portal-input portal-select">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="migrated">Migrated</option>
+                      </select>
+                    </div>
+                    <div className="portal-edit-field">
+                      <label className="portal-label portal-label-required">Role</label>
+                      <select value={editValues.role} onChange={e => setEditValues(p => ({ ...p, role: e.target.value }))} className="portal-input portal-select">
+                        {(['admin', 'zonal_secretary', 'regional_president', 'unit_president', 'member'] as const).map(r => (
+                          <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Permissions (admin only) */}
+              {isAdmin && (
+                <div className="portal-edit-permissions">
+                  <label className="portal-label">Powers (override role)</label>
+                  <div className="portal-edit-perms-grid">
+                    {ALL_PERMISSIONS.map(p => (
+                      <label key={p} className="portal-edit-perm-item">
+                        <input type="checkbox" checked={permOverrides[p] ?? false} onChange={e => setPermOverrides(prev => ({ ...prev, [p]: e.target.checked }))} />
+                        <span>{PERMISSION_LABELS[p]}</span>
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </div>
-              </div>
-
-              {/* Permissions */}
-              <div className="portal-edit-permissions">
-                <label className="portal-label">Powers (override role)</label>
-                <div className="portal-edit-perms-grid">
-                  {ALL_PERMISSIONS.map(p => (
-                    <label key={p} className="portal-edit-perm-item">
-                      <input type="checkbox" checked={permOverrides[p] ?? false} onChange={e => setPermOverrides(prev => ({ ...prev, [p]: e.target.checked }))} />
-                      <span>{PERMISSION_LABELS[p]}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              )}
 
               <div className="portal-edit-actions">
                 <button onClick={() => { setEditing(false); setSaveError(null) }} disabled={saving} className="portal-btn portal-btn-secondary">Cancel</button>
@@ -593,6 +753,20 @@ export function ViewMemberPage() {
           </div>
         </div>
       )}
+
+      <InactiveChecklistDialog
+        open={showInactiveDialog}
+        memberName={displayName}
+        onConfirm={(reasons) => handleSetActiveInactive(true, reasons)}
+        onCancel={() => setShowInactiveDialog(false)}
+      />
+
+      <RevokeDialog
+        open={showRevokeDialog}
+        memberName={displayName}
+        onConfirm={handleRevokeMember}
+        onCancel={() => setShowRevokeDialog(false)}
+      />
 
       <ConfirmDialog
         open={showDeleteConfirm}

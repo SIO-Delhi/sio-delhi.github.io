@@ -54,7 +54,8 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
         const options = {
           excludeCampusUnits,
           campusUnitsOnly,
-          regionId
+          regionId,
+          requestingRole: user?.role,
         }
         setData(await api.fetchUsers(role ?? undefined, membershipId, options) as unknown as Record<string, unknown>[])
       }

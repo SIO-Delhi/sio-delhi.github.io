@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Save } from 'lucide-react'
 import { ALL_PERMISSIONS, PERMISSION_LABELS } from '../constants'
+import { DateInput } from './DateInput'
 import type { EditField } from '../types'
 
 interface EditDialogProps {
@@ -75,6 +76,11 @@ export function EditDialog({ open, title, fields, initialValues, onSave, onCance
                     <option value="">Select…</option>
                     {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
+                ) : field.type === 'date' ? (
+                  <DateInput
+                    value={values[field.key] ?? ''}
+                    onChange={v => setValues(prev => ({ ...prev, [field.key]: v }))}
+                  />
                 ) : (
                   <input
                     type={field.type === 'tel' ? 'tel' : 'text'}

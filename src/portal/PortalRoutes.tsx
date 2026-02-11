@@ -27,6 +27,7 @@ import { ViewCampusPage } from './pages/ViewCampusPage'
 import { UnitsWithoutPresidentPage } from './pages/UnitsWithoutPresidentPage'
 import { RegionsPage } from './pages/RegionsPage'
 import { MemberAccountPage } from './pages/MemberAccountPage'
+import { EditRequestsPage } from './pages/EditRequestsPage'
 import { PortalLogoutPage } from './pages/PortalLogoutPage'
 
 /* ── Clerk auth guard ── */
@@ -137,6 +138,7 @@ export function PortalRoutes() {
                 <Route path="admin/units/:unitId" element={<ViewUnitPage />} />
                 <Route path="admin/circles/add" element={<BulkAddPage entity="circles" />} />
                 <Route path="admin/circles/manage" element={<ManagePage entity="circles" />} />
+                <Route path="admin/circles/:circleId" element={<ViewCirclePage />} />
                 <Route path="admin/campuses/add" element={<BulkAddPage entity="campuses" />} />
                 <Route path="admin/campuses/manage" element={<ManagePage entity="campuses" />} />
                 <Route path="admin/campuses/:campusId" element={<ViewCampusPage />} />
@@ -154,6 +156,7 @@ export function PortalRoutes() {
                 <Route path="admin/members/add" element={<BulkAddPage entity="members" />} />
                 <Route path="admin/members/manage" element={<ManagePage entity="members" />} />
                 <Route path="admin/members/:memberId" element={<ViewMemberPage />} />
+                <Route path="admin/edit-requests" element={<EditRequestsPage />} />
                 <Route path="admin/titles" element={<TitlesPage />} />
                 <Route path="admin/migrations" element={<MigrationsPage />} />
                 <Route path="admin/performance" element={<PerformancePage />} />
@@ -212,7 +215,8 @@ export function PortalRoutes() {
               {/* Unit President */}
               <Route element={<RoleGuard role="unit_president" />}>
                 <Route path="unit/dashboard" element={<DashboardPage />} />
-                <Route path="unit/members" element={<ManagePage entity="members" readOnly />} />
+                <Route path="unit/members" element={<ManagePage entity="members" />} />
+                <Route path="unit/edit-requests" element={<EditRequestsPage />} />
                 <Route path="unit/members/:memberId" element={<ViewMemberPage />} />
                 <Route path="unit/titles" element={<TitlesPage />} />
                 <Route path="unit/performance" element={<PerformancePage />} />

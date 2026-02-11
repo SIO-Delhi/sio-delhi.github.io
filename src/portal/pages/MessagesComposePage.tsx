@@ -15,7 +15,7 @@ function getAvailableRoleTargets(userRole: PortalRole): PortalRole[] {
     case 'regional_president': return ['unit_president', 'campus_president', 'member']
     case 'unit_president': return ['member']
     case 'campus_president': return ['member']
-    case 'member': return ['unit_president', 'zonal_secretary']
+    case 'member': return ['unit_president', 'zonal_secretary', 'regional_president']
     default: return []
   }
 }
@@ -48,7 +48,8 @@ export function MessagesComposePage() {
   const individualRecipients = user.role === 'member'
     ? users.filter(u => u.id !== user.id && (
         (u.role === 'unit_president' && u.unit_id === user.unit_id) ||
-        u.role === 'regional_president' ||
+        (u.role === 'member' && u.unit_id === user.unit_id && u.title && /secretary/i.test(u.display_title ?? u.title ?? '')) ||
+        (u.role === 'regional_president' && u.region_id === user.region_id) ||
         u.role === 'zonal_secretary' ||
         u.role === 'admin'
       ))
@@ -82,7 +83,7 @@ export function MessagesComposePage() {
         <h1 className="portal-heading">Compose Message</h1>
         <p className="portal-subheading">
           {user.role === 'member'
-            ? 'Send a message to your unit president, regional president, zonal secretary, or admin.'
+            ? 'Send a message to your unit president, unit secretary, regional president, or zonal secretary.'
             : 'Send a message to individuals, groups, or broadcast to everyone.'}
         </p>
       </div>

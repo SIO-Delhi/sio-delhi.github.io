@@ -241,7 +241,7 @@ function portalSetup()
                 title VARCHAR(255),
                 title_assigned_by VARCHAR(36),
                 title_assigned_at TIMESTAMP NULL,
-                status ENUM('active','inactive','migrated') DEFAULT 'active',
+                status ENUM('active','inactive','migrated','revoked') DEFAULT 'active',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (unit_id) REFERENCES portal_units(id) ON DELETE SET NULL,
@@ -364,6 +364,30 @@ function portalSetup()
     } catch (Exception $e) {
         // Column already exists
     }
+    // Add inactive tracking columns
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN inactivated_by VARCHAR(36) NULL AFTER status");
+    } catch (Exception $e) { /* Column already exists */ }
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN inactive_reason JSON NULL AFTER inactivated_by");
+    } catch (Exception $e) { /* Column already exists */ }
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN inactivated_at TIMESTAMP NULL AFTER inactive_reason");
+    } catch (Exception $e) { /* Column already exists */ }
+    // Add revoke tracking columns
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN revoked_by VARCHAR(36) NULL AFTER inactivated_at");
+    } catch (Exception $e) { /* Column already exists */ }
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN revoke_reason TEXT NULL AFTER revoked_by");
+    } catch (Exception $e) { /* Column already exists */ }
+    try {
+        $db->exec("ALTER TABLE portal_users ADD COLUMN revoked_at TIMESTAMP NULL AFTER revoke_reason");
+    } catch (Exception $e) { /* Column already exists */ }
+    // Add 'revoked' to status ENUM if not present
+    try {
+        $db->exec("ALTER TABLE portal_users MODIFY COLUMN status ENUM('active','inactive','migrated','revoked') DEFAULT 'active'");
+    } catch (Exception $e) { /* Already updated */ }
     // Backfill from portal_region_units: one region per RP, set users.region_id and units.region_id
     $regionCount = (int) $db->query("SELECT COUNT(*) FROM portal_regions")->fetchColumn();
     if ($regionCount === 0) {
@@ -533,6 +557,22 @@ function portalSetup()
         // Migrate users with only campus_id
         $db->exec("UPDATE portal_users SET membership_type = 'campus', membership_id = campus_id WHERE unit_id IS NULL AND circle_id IS NULL AND campus_id IS NOT NULL AND (membership_type IS NULL OR membership_id IS NULL)");
     }
+
+    // Profile edit verification requests table
+    $db->exec("
+            CREATE TABLE IF NOT EXISTS portal_edit_requests (
+                id VARCHAR(36) PRIMARY KEY,
+                member_id VARCHAR(36) NOT NULL,
+                changes JSON NOT NULL,
+                status ENUM('pending','approved','rejected') DEFAULT 'pending',
+                reviewed_by VARCHAR(36),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reviewed_at TIMESTAMP NULL,
+                FOREIGN KEY (member_id) REFERENCES portal_users(id) ON DELETE CASCADE,
+                INDEX idx_per_member (member_id),
+                INDEX idx_per_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
 
     return ['success' => true, 'messssage' => 'Portal tables created.'];
 }
@@ -979,6 +1019,38 @@ function portalGetCircles()
     }
 }
 
+function portalGetCircle($id)
+{
+    $db = getDB();
+    $stmt = $db->prepare("SELECT * FROM portal_circles WHERE id = ?");
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        http_response_code(404);
+        return ['error' => 'Circle not found.'];
+    }
+    return $row;
+}
+
+function portalGetCircleMembers($id)
+{
+    $db = getDB();
+    $regionCols = hasRegionColumns($db);
+    $unitRegionSelect = $regionCols['units'] ? ', pu.region_id AS unit_region_id' : '';
+
+    $stmt = $db->prepare("
+            SELECT u.*, pu.name AS unit_name{$unitRegionSelect}, pc.name AS circle_name, pca.name AS campus_name
+            FROM portal_users u
+            LEFT JOIN portal_units pu ON u.unit_id = pu.id
+            LEFT JOIN portal_circles pc ON u.circle_id = pc.id
+            LEFT JOIN portal_campuses pca ON u.campus_id = pca.id
+            WHERE u.circle_id = ?
+            ORDER BY u.first_name, u.last_name
+        ");
+    $stmt->execute([$id]);
+    return array_map('formatUser', $stmt->fetchAll());
+}
+
 function portalCreateCircles()
 {
     $body = jsonBody();
@@ -1132,6 +1204,12 @@ function portalGetUsers()
                 {$regionJoin}
                 WHERE 1=1";
     $params = [];
+
+    // Hide revoked members from non-admin/non-zonal roles
+    $requestingRole = $_GET['requestingRole'] ?? null;
+    if ($requestingRole && $requestingRole !== 'admin' && $requestingRole !== 'zonal_secretary') {
+        $sql .= " AND u.status != 'revoked'";
+    }
 
     if ($role) {
         $sql .= " AND u.role = ?";
@@ -1394,8 +1472,45 @@ function portalLockUser($id)
     $db = getDB();
     $locked = $body['locked'] ?? false;
     $newStatus = $locked ? 'inactive' : 'active';
-    $db->prepare("UPDATE portal_users SET status = ? WHERE id = ?")->execute([$newStatus, $id]);
+    $actorUserId = $body['actorUserId'] ?? null;
+    $reasons = $body['reasons'] ?? null;
+
+    if ($locked) {
+        // Setting inactive: store who did it, why, and when
+        $reasonJson = $reasons ? json_encode($reasons) : null;
+        $db->prepare("UPDATE portal_users SET status = ?, inactivated_by = ?, inactive_reason = ?, inactivated_at = NOW() WHERE id = ?")
+            ->execute([$newStatus, $actorUserId, $reasonJson, $id]);
+    } else {
+        // Reactivating: clear inactive metadata
+        $db->prepare("UPDATE portal_users SET status = ?, inactivated_by = NULL, inactive_reason = NULL, inactivated_at = NULL WHERE id = ?")
+            ->execute([$newStatus, $id]);
+    }
+
     return ['success' => true, 'status' => $newStatus];
+}
+
+function portalRevokeUser($id)
+{
+    $body = jsonBody();
+    $db = getDB();
+    $revoke = $body['revoke'] ?? true;
+    $reason = $body['reason'] ?? null;
+    $actorUserId = $body['actorUserId'] ?? null;
+
+    if ($revoke) {
+        if (!$reason || trim($reason) === '') {
+            http_response_code(400);
+            return ['error' => 'Revoke reason is required.'];
+        }
+        $db->prepare("UPDATE portal_users SET status = 'revoked', revoked_by = ?, revoke_reason = ?, revoked_at = NOW() WHERE id = ?")
+            ->execute([$actorUserId, trim($reason), $id]);
+        return ['success' => true, 'status' => 'revoked'];
+    } else {
+        // Restore: set back to active, clear revoke metadata
+        $db->prepare("UPDATE portal_users SET status = 'active', revoked_by = NULL, revoke_reason = NULL, revoked_at = NULL WHERE id = ?")
+            ->execute([$id]);
+        return ['success' => true, 'status' => 'active'];
+    }
 }
 
 /**
@@ -2550,6 +2665,160 @@ function portalSubmitPerfResponse($formId)
 }
 
 /* ═══════════════════════════════════════════
+Profile Edit Verification Requests
+═══════════════════════════════════════════ */
+
+function portalCreateEditRequest()
+{
+    $db = getDB();
+    $body = jsonBody();
+    $memberId = $body['member_id'] ?? null;
+    $changes = $body['changes'] ?? null;
+
+    if (!$memberId || !$changes) {
+        http_response_code(400);
+        return ['error' => 'member_id and changes are required.'];
+    }
+
+    // Auto-create table if it doesn't exist yet
+    if (!tableExists($db, 'portal_edit_requests')) {
+        $db->exec("
+            CREATE TABLE IF NOT EXISTS portal_edit_requests (
+                id VARCHAR(36) PRIMARY KEY,
+                member_id VARCHAR(36) NOT NULL,
+                changes JSON NOT NULL,
+                status ENUM('pending','approved','rejected') DEFAULT 'pending',
+                reviewed_by VARCHAR(36),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reviewed_at TIMESTAMP NULL,
+                FOREIGN KEY (member_id) REFERENCES portal_users(id) ON DELETE CASCADE,
+                INDEX idx_per_member (member_id),
+                INDEX idx_per_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    }
+
+    // Cancel any existing pending request for this member
+    $db->prepare("UPDATE portal_edit_requests SET status = 'rejected' WHERE member_id = ? AND status = 'pending'")->execute([$memberId]);
+
+    $id = uuid();
+    $stmt = $db->prepare("INSERT INTO portal_edit_requests (id, member_id, changes) VALUES (?, ?, ?)");
+    $stmt->execute([$id, $memberId, json_encode($changes)]);
+
+    return ['success' => true, 'id' => $id];
+}
+
+function portalGetEditRequests()
+{
+    $db = getDB();
+    $unitId = $_GET['unitId'] ?? null;
+    $status = $_GET['status'] ?? 'pending';
+
+    if (!tableExists($db, 'portal_edit_requests')) {
+        return [];
+    }
+
+    $sql = "SELECT er.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS member_name, u.phone AS member_phone, u.unit_id
+            FROM portal_edit_requests er
+            JOIN portal_users u ON er.member_id = u.id";
+    $params = [];
+
+    $conditions = [];
+    if ($status && $status !== 'all') {
+        $conditions[] = "er.status = ?";
+        $params[] = $status;
+    }
+    if ($unitId) {
+        $conditions[] = "u.unit_id = ?";
+        $params[] = $unitId;
+    }
+
+    if ($conditions) {
+        $sql .= ' WHERE ' . implode(' AND ', $conditions);
+    }
+
+    $sql .= ' ORDER BY er.created_at DESC';
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll();
+
+    // Decode JSON changes
+    foreach ($rows as &$row) {
+        $row['changes'] = json_decode($row['changes'], true);
+    }
+    return $rows;
+}
+
+function portalResolveEditRequest($id)
+{
+    $db = getDB();
+    $body = jsonBody();
+    $status = $body['status'] ?? null;
+    $reviewedBy = $body['reviewed_by'] ?? null;
+
+    if (!$status || !in_array($status, ['approved', 'rejected'])) {
+        http_response_code(400);
+        return ['error' => 'status must be approved or rejected.'];
+    }
+
+    // Get the request
+    $stmt = $db->prepare("SELECT * FROM portal_edit_requests WHERE id = ?");
+    $stmt->execute([$id]);
+    $req = $stmt->fetch();
+    if (!$req) {
+        http_response_code(404);
+        return ['error' => 'Edit request not found.'];
+    }
+
+    if ($req['status'] !== 'pending') {
+        http_response_code(400);
+        return ['error' => 'Request already resolved.'];
+    }
+
+    // Update the request status
+    $db->prepare("UPDATE portal_edit_requests SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?")
+        ->execute([$status, $reviewedBy, $id]);
+
+    // If approved, apply the changes to the user record
+    if ($status === 'approved') {
+        $changes = json_decode($req['changes'], true);
+        if ($changes && is_array($changes)) {
+            $allowed = ['first_name', 'middle_name', 'last_name', 'phone', 'alt_phone', 'date_of_birth'];
+            $sets = [];
+            $vals = [];
+            foreach ($changes as $field => $value) {
+                if (in_array($field, $allowed)) {
+                    $sets[] = "$field = ?";
+                    $vals[] = $value;
+                }
+            }
+            if ($sets) {
+                $vals[] = $req['member_id'];
+                $db->prepare("UPDATE portal_users SET " . implode(', ', $sets) . " WHERE id = ?")->execute($vals);
+            }
+        }
+    }
+
+    return ['success' => true];
+}
+
+function portalGetMemberEditRequests($memberId)
+{
+    $db = getDB();
+    if (!tableExists($db, 'portal_edit_requests')) {
+        return [];
+    }
+    $stmt = $db->prepare("SELECT * FROM portal_edit_requests WHERE member_id = ? ORDER BY created_at DESC LIMIT 10");
+    $stmt->execute([$memberId]);
+    $rows = $stmt->fetchAll();
+    foreach ($rows as &$row) {
+        $row['changes'] = json_decode($row['changes'], true);
+    }
+    return $rows;
+}
+
+/* ═══════════════════════════════════════════
 Avatar Upload
 ═══════════════════════════════════════════ */
 
@@ -2829,6 +3098,12 @@ function formatUser($row)
         'title_assigned_by' => $row['title_assigned_by'] ?? null,
         'title_assigned_at' => $row['title_assigned_at'] ?? null,
         'status' => $row['status'] ?? 'active',
+        'inactivated_by' => $row['inactivated_by'] ?? null,
+        'inactive_reason' => isset($row['inactive_reason']) && is_string($row['inactive_reason']) ? json_decode($row['inactive_reason'], true) : ($row['inactive_reason'] ?? null),
+        'inactivated_at' => $row['inactivated_at'] ?? null,
+        'revoked_by' => $row['revoked_by'] ?? null,
+        'revoke_reason' => $row['revoke_reason'] ?? null,
+        'revoked_at' => $row['revoked_at'] ?? null,
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],
     ];

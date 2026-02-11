@@ -34,7 +34,8 @@ export function PerformancePage() {
   if (!user) return null
 
   const isMember = user.role === 'member'
-  const canCreate = user.role === 'admin' || user.role === 'zonal_secretary' || user.role === 'regional_president' || user.role === 'unit_president'
+  const isUnitPresident = user.role === 'unit_president'
+  const canCreate = user.role === 'admin' || user.role === 'zonal_secretary' || user.role === 'regional_president' || isUnitPresident
 
   const pathPrefix = `/portal/${user.role === 'admin' ? 'admin' : user.role === 'zonal_secretary' ? 'zonal' : user.role === 'regional_president' ? 'regional' : user.role === 'unit_president' ? 'unit' : 'member'}`
 
@@ -100,6 +101,11 @@ export function PerformancePage() {
 
               <div className="portal-perf-card-actions">
                 {isMember ? (
+                  <Link to={`${pathPrefix}/performance/${form.id}/fill`} className="portal-btn portal-btn-primary portal-btn-sm">
+                    <FileText size={14} /> Fill Form
+                  </Link>
+                ) : isUnitPresident && !form.scope_unit_id ? (
+                  /* Zone-level forms: unit presidents can only fill them, not edit/delete/view responses */
                   <Link to={`${pathPrefix}/performance/${form.id}/fill`} className="portal-btn portal-btn-primary portal-btn-sm">
                     <FileText size={14} /> Fill Form
                   </Link>

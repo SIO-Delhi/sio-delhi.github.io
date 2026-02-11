@@ -2,7 +2,7 @@ import type { ReactNode, ComponentType } from 'react'
 
 export type PortalRole = 'admin' | 'zonal_secretary' | 'regional_president' | 'unit_president' | 'campus_president' | 'member'
 
-export type MemberStatus = 'active' | 'inactive' | 'migrated'
+export type MemberStatus = 'active' | 'inactive' | 'migrated' | 'revoked'
 
 export type MigrationStatus = 'pending' | 'approved' | 'rejected'
 
@@ -73,6 +73,18 @@ export interface PortalUser {
   title_assigned_by: string | null
   title_assigned_at: string | null
   status: MemberStatus
+  /** Who set this member inactive (user ID) */
+  inactivated_by?: string | null
+  /** Reasons for setting inactive (checklist items) */
+  inactive_reason?: string[] | null
+  /** When the member was set inactive */
+  inactivated_at?: string | null
+  /** Who revoked this member's membership (user ID) */
+  revoked_by?: string | null
+  /** Reason for revoking membership */
+  revoke_reason?: string | null
+  /** When the membership was revoked */
+  revoked_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -248,7 +260,7 @@ export interface TableColumn<T = Record<string, unknown>> {
 export interface EditField {
   key: string
   label: string
-  type: 'text' | 'select' | 'tel' | 'permissions'
+  type: 'text' | 'select' | 'tel' | 'permissions' | 'date'
   required?: boolean
   options?: { value: string; label: string }[]
   placeholder?: string
