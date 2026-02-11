@@ -6,7 +6,8 @@
 // Include upload helpers for file deletion
 require_once __DIR__ . '/upload.php';
 
-function getAll() {
+function getAll()
+{
     $db = getDB();
 
     $where = [];
@@ -37,7 +38,8 @@ function getAll() {
     return array_map('mapPost', $posts);
 }
 
-function getOne($id) {
+function getOne($id)
+{
     $db = getDB();
     $stmt = $db->prepare("SELECT * FROM posts WHERE id = ?");
     $stmt->execute([$id]);
@@ -51,7 +53,8 @@ function getOne($id) {
     return mapPost($row);
 }
 
-function create() {
+function create()
+{
     $data = json_decode(file_get_contents('php://input'), true);
 
     if (empty($data['title'])) {
@@ -66,8 +69,8 @@ function create() {
         INSERT INTO posts (
             id, section_id, parent_id, is_subsection, title, subtitle, content,
             image, pdf_url, enable_audio, email, instagram, layout, display_order,
-            is_published, tags, icon, gallery_images
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            is_published, tags, icon, gallery_images, external_link, open_in_new_tab
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     $stmt->execute([
@@ -88,14 +91,17 @@ function create() {
         isset($data['isPublished']) ? ($data['isPublished'] ? 1 : 0) : 0,
         isset($data['tags']) ? json_encode($data['tags']) : null,
         $data['icon'] ?? null,
-        isset($data['galleryImages']) ? json_encode($data['galleryImages']) : null
+        isset($data['galleryImages']) ? json_encode($data['galleryImages']) : null,
+        $data['externalLink'] ?? null,
+        isset($data['openInNewTab']) ? ($data['openInNewTab'] ? 1 : 0) : 0
     ]);
 
     http_response_code(201);
     return getOne($id);
 }
 
-function update($id) {
+function update($id)
+{
     $data = json_decode(file_get_contents('php://input'), true);
 
     $db = getDB();
@@ -126,7 +132,9 @@ function update($id) {
         'layout' => 'layout',
         'order' => 'display_order',
         'isPublished' => 'is_published',
-        'icon' => 'icon'
+        'icon' => 'icon',
+        'externalLink' => 'external_link',
+        'openInNewTab' => 'open_in_new_tab'
     ];
 
     foreach ($fieldMap as $jsKey => $dbKey) {
@@ -135,7 +143,7 @@ function update($id) {
             $value = $data[$jsKey];
 
             // Handle booleans
-            if (in_array($jsKey, ['isSubsection', 'enableAudio', 'isPublished'])) {
+            if (in_array($jsKey, ['isSubsection', 'enableAudio', 'isPublished', 'openInNewTab'])) {
                 $value = $value ? 1 : 0;
             }
 
@@ -159,13 +167,23 @@ function update($id) {
 
     $params[] = $id;
     $sql = "UPDATE posts SET " . implode(', ', $updates) . " WHERE id = ?";
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
+
+    try {
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+    } catch (PDOException $e) {
+        if (function_exists('logError')) {
+            logError("Update Post Failed: " . $e->getMessage(), ['id' => $id, 'sql' => $sql]);
+        }
+        http_response_code(500);
+        return ['error' => 'Database update failed: ' . $e->getMessage()];
+    }
 
     return getOne($id);
 }
 
-function delete($id) {
+function delete($id)
+{
     $db = getDB();
 
     // Get post data before deleting (need file URLs)
@@ -197,7 +215,8 @@ function delete($id) {
 }
 
 // Helper to clean up all files associated with a post row
-function deletePostFiles($post) {
+function deletePostFiles($post)
+{
     if (!empty($post['image'])) {
         deleteFileByUrl($post['image']);
     }
@@ -223,38 +242,46 @@ function deletePostFiles($post) {
 }
 
 // Helper function to map database row to API response
-function mapPost($row) {
+function mapPost($row)
+{
     return [
         'id' => $row['id'],
         'sectionId' => $row['section_id'],
         'parentId' => $row['parent_id'],
-        'isSubsection' => (bool)$row['is_subsection'],
+        'isSubsection' => (bool) $row['is_subsection'],
         'title' => $row['title'],
         'subtitle' => $row['subtitle'],
         'content' => $row['content'],
         'image' => $row['image'],
         'pdfUrl' => $row['pdf_url'],
-        'enableAudio' => (bool)$row['enable_audio'],
+        'enableAudio' => (bool) $row['enable_audio'],
         'email' => $row['email'],
         'instagram' => $row['instagram'],
         'layout' => $row['layout'],
-        'order' => $row['display_order'] !== null ? (int)$row['display_order'] : null,
-        'isPublished' => (bool)$row['is_published'],
+        'order' => $row['display_order'] !== null ? (int) $row['display_order'] : null,
+        'isPublished' => (bool) $row['is_published'],
         'tags' => $row['tags'] ? json_decode($row['tags'], true) : [],
         'icon' => $row['icon'],
         'galleryImages' => $row['gallery_images'] ? json_decode($row['gallery_images'], true) : [],
+        'externalLink' => $row['external_link'] ?? null,
+        'openInNewTab' => (bool) ($row['open_in_new_tab'] ?? 0),
         'createdAt' => $row['created_at'] ? strtotime($row['created_at']) * 1000 : null,
         'updatedAt' => $row['updated_at'] ? strtotime($row['updated_at']) * 1000 : null
     ];
 }
 
 // Generate UUID v4
-function generateUUID() {
-    return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-        mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+function generateUUID()
+{
+    return sprintf(
+        '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
         mt_rand(0, 0xffff),
         mt_rand(0, 0x0fff) | 0x4000,
         mt_rand(0, 0x3fff) | 0x8000,
-        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff)
     );
 }

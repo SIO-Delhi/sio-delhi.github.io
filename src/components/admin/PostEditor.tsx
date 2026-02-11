@@ -86,91 +86,8 @@ const ICON_OPTIONS = [
     { name: 'Info', icon: Info }
 ]
 
-// --- Custom Text Direction Extension ---
-export const TextDirection = Extension.create({
-    name: 'textDirection',
-    addOptions() {
-        return {
-            types: ['heading', 'paragraph'],
-        }
-    },
-    addGlobalAttributes() {
-        return [
-            {
-                types: this.options.types,
-                attributes: {
-                    dir: {
-                        default: null,
-                        parseHTML: element => element.getAttribute('dir'),
-                        renderHTML: attributes => {
-                            if (!attributes.dir) {
-                                return {}
-                            }
-                            return {
-                                dir: attributes.dir,
-                            }
-                        },
-                    },
-                },
-            },
-        ]
-    },
-    addCommands() {
-        return {
-            setTextDirection: (direction: 'ltr' | 'rtl' | 'auto') => ({ commands }: any) => {
-                return this.options.types.every((type: string) => commands.updateAttributes(type, { dir: direction }))
-            },
-            unsetTextDirection: () => ({ commands }: any) => {
-                return this.options.types.every((type: string) => commands.resetAttributes(type, 'dir'))
-            },
-        }
-    },
-})
+// TextDirection and FontSize extensions removed in favor of shared imports
 
-export const FontSize = Extension.create({
-    name: 'fontSize',
-    addOptions() {
-        return {
-            types: ['textStyle'],
-        }
-    },
-    addGlobalAttributes() {
-        return [
-            {
-                types: this.options.types,
-                attributes: {
-                    fontSize: {
-                        default: null,
-                        parseHTML: element => element.style.fontSize.replace(/['"]+/g, ''),
-                        renderHTML: attributes => {
-                            if (!attributes.fontSize) {
-                                return {}
-                            }
-                            return {
-                                style: `font-size: ${attributes.fontSize}`,
-                            }
-                        },
-                    },
-                },
-            },
-        ]
-    },
-    addCommands() {
-        return {
-            setFontSize: (fontSize: string) => ({ chain }) => {
-                return chain()
-                    .setMark('textStyle', { fontSize })
-                    .run()
-            },
-            unsetFontSize: () => ({ chain }) => {
-                return chain()
-                    .setMark('textStyle', { fontSize: null })
-                    .removeEmptyTextStyle()
-                    .run()
-            },
-        }
-    },
-})
 
 // --- Floating Bubble Toolbar ---
 const BubbleToolbarButton = ({ icon: Icon, isActive, action, title }: {
@@ -203,12 +120,11 @@ const EditorToolbar = ({ editor }: { editor: any }) => {
     return (
         <BubbleMenu
             editor={editor}
-            // @ts-ignore
             tippyOptions={{
                 duration: 150,
                 placement: 'top',
                 interactive: true,
-                appendTo: () => document.body,
+                appendTo: document.body,
             }}
             shouldShow={({ state }: { state: any }) => {
                 const { from, to } = state.selection
@@ -403,16 +319,7 @@ const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange,
     onSubtitleColorChange?: (color: string) => void
 }) => {
     const editor = useEditor({
-        extensions: [
-            StarterKit,
-            Underline,
-            TextAlign.configure({ types: ['heading', 'paragraph'] }),
-            TextStyle,
-            Color,
-            FontSize,
-            TextDirection,
-            Link.configure({ openOnClick: false })
-        ],
+        extensions: EDITOR_EXTENSIONS,
         content: initialContent,
         onUpdate: ({ editor }) => {
             onChange(editor.getHTML())
@@ -1411,6 +1318,10 @@ export function PostEditor() {
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
     const [pendingFile, setPendingFile] = useState<File | null>(null)
 
+    // External Link State
+    const [externalLink, setExternalLink] = useState('')
+    const [openInNewTab, setOpenInNewTab] = useState(false)
+
     // Blocks State
     const [blocks, setBlocks] = useState<EditorBlock[]>([])
 
@@ -1451,6 +1362,8 @@ export function PostEditor() {
             if (post) {
                 setTitle(post.title)
                 setSubtitle(post.subtitle || '')
+                setExternalLink(post.externalLink || '')
+                setOpenInNewTab(post.openInNewTab || false)
                 if (post.image) {
                     try {
                         const parsed = JSON.parse(post.image)
@@ -1957,6 +1870,8 @@ export function PostEditor() {
                 icon: processedIcon, // Include icon in save
                 layout: 'default',
                 order,
+                externalLink, // Add externalLink
+                openInNewTab, // Add openInNewTab
                 createdAt: date ? new Date(date).getTime() : (post?.createdAt || Date.now()) // Use selected date or existing/current
             }
             if (isEditMode && id) {
@@ -2236,6 +2151,41 @@ export function PostEditor() {
                             )}
                         </div>
                     )}
+
+                    {/* External Link Section */}
+                    <div style={{ marginBottom: '24px', background: '#1a1a1a', padding: '16px', borderRadius: '12px', border: '1px solid #333' }}>
+                        <label style={{ display: 'block', color: '#666', fontSize: '0.85rem', marginBottom: '12px', fontWeight: 600 }}>
+                            EXTERNAL LINK (OPTIONAL)
+                        </label>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <LinkIcon size={18} color="#666" style={{ position: 'absolute', left: '12px' }} />
+                                <input
+                                    type="text"
+                                    value={externalLink}
+                                    onChange={(e) => setExternalLink(e.target.value)}
+                                    placeholder="https://example.com (Overrides detail page)"
+                                    style={{
+                                        width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px',
+                                        background: '#222', border: '1px solid #333', color: 'white',
+                                        fontSize: '0.9rem', outline: 'none'
+                                    }}
+                                />
+                            </div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#ccc', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={openInNewTab}
+                                    onChange={(e) => setOpenInNewTab(e.target.checked)}
+                                    style={{ accentColor: '#ff3b3b', width: '16px', height: '16px' }}
+                                />
+                                Open in new tab
+                            </label>
+                        </div>
+                        <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#666' }}>
+                            Providing a link here will make the card clickable accessing this URL directly, instead of opening the post details.
+                        </div>
+                    </div>
 
                     {/* Metadata Bar */}
                     <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>

@@ -241,7 +241,9 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 updatedAt: row.updatedAt ?? Date.now(),
                 tags: row.tags || [],
                 icon: row.icon || undefined,
-                galleryImages: row.galleryImages || []
+                galleryImages: row.galleryImages || [],
+                externalLink: row.externalLink || '',
+                openInNewTab: row.openInNewTab || false
             }))
 
             setPosts(mappedPosts)
@@ -345,7 +347,9 @@ export function ContentProvider({ children }: { children: ReactNode }) {
                 isPublished: newPostData.isPublished ?? false,
                 tags: newPostData.tags || undefined,
                 icon: newPostData.icon || undefined,
-                galleryImages: newPostData.galleryImages || undefined
+                galleryImages: newPostData.galleryImages || undefined,
+                externalLink: newPostData.externalLink || undefined,
+                openInNewTab: newPostData.openInNewTab || false
             })
 
             if (result.error) throw new Error(result.error)
@@ -375,6 +379,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
             if (updates.tags !== undefined) apiUpdates.tags = updates.tags
             if (updates.icon !== undefined) apiUpdates.icon = updates.icon || undefined
             if (updates.galleryImages !== undefined) apiUpdates.galleryImages = updates.galleryImages || undefined
+            if (updates.externalLink !== undefined) apiUpdates.externalLink = updates.externalLink || undefined
+            if (updates.openInNewTab !== undefined) apiUpdates.openInNewTab = updates.openInNewTab
 
             const result = await api.posts.update(id, apiUpdates)
 

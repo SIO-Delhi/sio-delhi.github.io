@@ -61,6 +61,8 @@ export interface PostDTO {
     tags?: string[]
     icon?: string
     galleryImages?: string[]
+    externalLink?: string
+    openInNewTab?: boolean
     createdAt?: number
     updatedAt?: number
 }

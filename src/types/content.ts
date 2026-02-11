@@ -23,6 +23,8 @@ export interface Post {
     tags?: string[] // Dynamic tags for Media/News
     icon?: string // Icon name for Resources/More section
     galleryImages?: string[] // Array of image URLs for the post gallery
+    externalLink?: string // External URL to open on click
+    openInNewTab?: boolean // Whether to open external link in new tab
 }
 
 export interface Section {

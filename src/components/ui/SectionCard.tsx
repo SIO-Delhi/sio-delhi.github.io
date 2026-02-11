@@ -14,6 +14,8 @@ interface SectionCardProps {
     description: string
     publishedDate?: string | number
     linkText?: string
+    externalLink?: string
+    openInNewTab?: boolean
     onClick?: () => void
     className?: string
     image?: string
@@ -49,9 +51,23 @@ export function SectionCard({
     icon,
     width,
     variant = 'default',
-    cardId
+    cardId,
+    externalLink,
+    openInNewTab
 }: SectionCardProps) {
     const cardRef = useRef<HTMLDivElement>(null)
+
+    const handleClick = () => {
+        if (externalLink) {
+            if (openInNewTab) {
+                window.open(externalLink, '_blank', 'noopener,noreferrer')
+            } else {
+                window.location.href = externalLink
+            }
+            return
+        }
+        onClick?.()
+    }
 
     // Normalize variant
     const currentVariant = variant === 'standard' ? 'default' : variant
@@ -80,7 +96,7 @@ export function SectionCard({
                 id={cardId}
                 className={`section-card-shine ${className || ''}`}
                 data-cursor="view"
-                onClick={onClick}
+                onClick={handleClick}
                 style={{
                     background: 'rgba(20, 20, 25, 0.65)',
                     backdropFilter: 'blur(20px)',
@@ -197,7 +213,7 @@ export function SectionCard({
                 id={cardId}
                 className={`section-card-shine ${className || ''}`}
                 data-cursor="view"
-                onClick={onClick}
+                onClick={handleClick}
                 style={{
                     background: 'rgba(255, 255, 255, 0.03)',
                     backdropFilter: 'blur(10px)',
@@ -306,7 +322,7 @@ export function SectionCard({
             id={cardId}
             className={`${className || ''} section-card-shine cursor-view`}
             data-cursor="view"
-            onClick={onClick}
+            onClick={handleClick}
             style={{
                 background: isMedia ? 'rgba(0, 0, 0, 0.4)' : 'rgba(20, 20, 25, 0.65)',
                 backdropFilter: 'blur(20px)',
@@ -356,57 +372,60 @@ export function SectionCard({
             draggable={false}
         >
             {/* Header: Date Badge for Media or Standard Dot */}
-            <div style={{
+            < div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'flex-start',
                 marginBottom: isMedia ? '20px' : '12px'
             }}>
-                {isMedia ? (
-                    <div style={{
-                        background: '#fdedcb',
-                        borderRadius: '6px',
-                        padding: '6px 12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                    }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff3b3b' }} />
-                        <span style={{ color: '#000000', fontSize: '0.75rem', fontWeight: 700 }}>
-                            {formattedDate}
-                        </span>
-                    </div>
-                ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {
+                    isMedia ? (
                         <div style={{
-                            width: '6px', height: '6px', borderRadius: '50%',
-                            background: labelColor, boxShadow: `0 0 8px ${labelColor}`
-                        }} />
-                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: labelColor, letterSpacing: '0.08em' }}>
-                            {formattedDate}
-                        </span>
-                    </div>
-                )}
-            </div>
+                            background: '#fdedcb',
+                            borderRadius: '6px',
+                            padding: '6px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }} >
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff3b3b' }} />
+                            <span style={{ color: '#000000', fontSize: '0.75rem', fontWeight: 700 }}>
+                                {formattedDate}
+                            </span>
+                        </div >
+                    ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                                width: '6px', height: '6px', borderRadius: '50%',
+                                background: labelColor, boxShadow: `0 0 8px ${labelColor}`
+                            }} />
+                            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: labelColor, letterSpacing: '0.08em' }}>
+                                {formattedDate}
+                            </span>
+                        </div>
+                    )}
+            </div >
 
             {/* Media Image */}
-            {isMedia && (
-                <div style={{
-                    width: '100%',
-                    aspectRatio: '16/9',
-                    background: '#1a1a1a',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    marginBottom: '20px',
-                    border: '1px solid #333'
-                }}>
-                    {imageUrl ? (
-                        <img src={imageUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-                    ) : (
-                        <div style={{ width: '100%', height: '100%', background: '#222' }} />
-                    )}
-                </div>
-            )}
+            {
+                isMedia && (
+                    <div style={{
+                        width: '100%',
+                        aspectRatio: '16/9',
+                        background: '#1a1a1a',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        marginBottom: '20px',
+                        border: '1px solid #333'
+                    }}>
+                        {imageUrl ? (
+                            <img src={imageUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                        ) : (
+                            <div style={{ width: '100%', height: '100%', background: '#222' }} />
+                        )}
+                    </div>
+                )
+            }
 
             {/* Title */}
             <h3 style={{
@@ -427,55 +446,59 @@ export function SectionCard({
             </h3>
 
             {/* Default Layout: Description & Bottom Image */}
-            {!isMedia && (
-                <>
-                    <p style={{
-                        fontSize: '0.85rem', color: '#fdedcb', margin: '0 0 16px 0',
-                        lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-                    }}>
-                        {description.replace(/<[^>]+>/g, '')}
-                    </p>
+            {
+                !isMedia && (
+                    <>
+                        <p style={{
+                            fontSize: '0.85rem', color: '#fdedcb', margin: '0 0 16px 0',
+                            lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                        }}>
+                            {description.replace(/<[^>]+>/g, '')}
+                        </p>
 
-                    {onClick && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: '#fdedcb', marginBottom: '16px', cursor: 'pointer' }}>
-                            <span>Read More</span>
-                            <span style={{ color: labelColor, transition: 'transform 0.2s ease' }}>→</span>
-                        </div>
-                    )}
-
-                    <div style={{
-                        marginTop: 'auto', borderRadius: '10px', overflow: 'hidden', height: '140px', width: '100%',
-                        flexShrink: 0, position: 'relative', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: imageUrl ? 'none' : '1px solid rgba(255,255,255,0.05)'
-                    }}>
-                        {imageUrl ? (
-                            <img src={imageUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
-                        ) : (
-                            <div style={{ width: '100%', height: '100%', opacity: 0.3 }} />
+                        {onClick && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: '#fdedcb', marginBottom: '16px', cursor: 'pointer' }}>
+                                <span>Read More</span>
+                                <span style={{ color: labelColor, transition: 'transform 0.2s ease' }}>→</span>
+                            </div>
                         )}
-                    </div>
-                </>
-            )}
+
+                        <div style={{
+                            marginTop: 'auto', borderRadius: '10px', overflow: 'hidden', height: '140px', width: '100%',
+                            flexShrink: 0, position: 'relative', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            border: imageUrl ? 'none' : '1px solid rgba(255,255,255,0.05)'
+                        }}>
+                            {imageUrl ? (
+                                <img src={imageUrl} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
+                            ) : (
+                                <div style={{ width: '100%', height: '100%', opacity: 0.3 }} />
+                            )}
+                        </div>
+                    </>
+                )
+            }
 
             {/* Media Layout: Description at bottom */}
-            {isMedia && (
-                <div style={{ position: 'relative' }}>
-                    <p style={{
-                        fontSize: '0.85rem', color: '#fdedcb', margin: '0 0 4px 0',
-                        lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                        fontFamily: '"DM Sans", sans-serif',
-                        textOverflow: 'ellipsis'
-                    }}>
-                        {description.replace(/<[^>]+>/g, '')}
-                    </p>
-                    <span style={{
-                        fontSize: '0.75rem', fontWeight: 700, color: '#ff3b3b',
-                        textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer'
-                    }}>
-                        Read More
-                    </span>
-                </div>
-            )}
-        </div>
+            {
+                isMedia && (
+                    <div style={{ position: 'relative' }}>
+                        <p style={{
+                            fontSize: '0.85rem', color: '#fdedcb', margin: '0 0 4px 0',
+                            lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                            fontFamily: '"DM Sans", sans-serif',
+                            textOverflow: 'ellipsis'
+                        }}>
+                            {description.replace(/<[^>]+>/g, '')}
+                        </p>
+                        <span style={{
+                            fontSize: '0.75rem', fontWeight: 700, color: '#ff3b3b',
+                            textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer'
+                        }}>
+                            Read More
+                        </span>
+                    </div>
+                )
+            }
+        </div >
     )
 }
