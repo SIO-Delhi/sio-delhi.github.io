@@ -80,6 +80,7 @@ export function TopBar({ title }: { title?: string }) {
   const total = counts.unreadMessages + counts.pendingMigrations + counts.pendingForms
 
   function handleSearchSelect(type: 'member' | 'unit' | 'region' | 'circle' | 'campus', id: string) {
+    if (!user) return
     setSearchOpen(false)
     setSearchQuery('')
     setSearchResults(null)
