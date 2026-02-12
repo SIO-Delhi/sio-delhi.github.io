@@ -18,10 +18,19 @@ export function SplashScreen() {
     useEffect(() => {
         const checkScrollAndHash = () => {
             // Check for hash, scroll, OR Google Text Fragments (#:~:text=)
+            // Also check referrer for search engines to auto-skip splash
+            const isSearchReferrer = document.referrer && (
+                document.referrer.includes('google.') ||
+                document.referrer.includes('bing.') ||
+                document.referrer.includes('duckduckgo.') ||
+                document.referrer.includes('yahoo.')
+            )
+
             if (
                 location.hash ||
                 window.scrollY > 10 ||
-                window.location.href.includes('#:~:text=')
+                window.location.href.includes('#:~:text=') ||
+                isSearchReferrer
             ) {
                 setIsCollapsed(true)
                 sessionStorage.setItem('sio_splash_seen', 'true')
@@ -31,9 +40,22 @@ export function SplashScreen() {
         // Check immediately
         checkScrollAndHash()
 
-        // Check again after a slight delay for browser auto-scroll
-        const timer = setTimeout(checkScrollAndHash, 100)
-        return () => clearTimeout(timer)
+        // Poll for scroll position for 2 seconds (covers browser auto-scroll to text fragment)
+        const interval = setInterval(() => {
+            if (window.scrollY > 10) {
+                setIsCollapsed(true)
+                sessionStorage.setItem('sio_splash_seen', 'true')
+                clearInterval(interval)
+            }
+        }, 100)
+
+        // Clear interval after 2 seconds
+        const timeout = setTimeout(() => clearInterval(interval), 2000)
+
+        return () => {
+            clearInterval(interval)
+            clearTimeout(timeout)
+        }
     }, [location.hash])
 
     // Refs for Splash Elements
