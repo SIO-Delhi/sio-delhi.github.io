@@ -287,7 +287,7 @@ function trackDuration()
 
     $page = substr(trim($page), 0, 255);
     $visitorId = substr(trim($visitorId), 0, 36);
-    $duration = min(max((int)$duration, 0), 3600); // cap at 1 hour
+    $duration = min(max((int) $duration, 0), 3600); // cap at 1 hour
 
     $today = date('Y-m-d');
     $db = getDB();
@@ -326,7 +326,8 @@ function getVisitStats()
     $from = $_GET['from'] ?? null;
     $to = $_GET['to'] ?? null;
     $trendDays = (int) ($_GET['trend_days'] ?? 7);
-    if (!in_array($trendDays, [7, 30, 90])) $trendDays = 7;
+    if (!in_array($trendDays, [7, 30, 90]))
+        $trendDays = 7;
 
     $dateFilter = '';
     $dateParams = [];
@@ -652,4 +653,95 @@ function heartbeat()
     $stmt->execute([':visitor_id' => $visitorId, ':today' => $today]);
 
     return ['success' => true];
+}
+
+/**
+ * Ensure analytics_events table exists
+ */
+function ensureEventsTable()
+{
+    $db = getDB();
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS analytics_events (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            event_name VARCHAR(100) NOT NULL,
+            event_label VARCHAR(255) DEFAULT NULL,
+            visitor_id VARCHAR(36) DEFAULT NULL,
+            page VARCHAR(255) DEFAULT NULL,
+            count INT DEFAULT 1,
+            event_date DATE NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_event (event_name),
+            INDEX idx_visitor (visitor_id),
+            UNIQUE KEY unique_event_day (event_name, event_label, visitor_id, event_date)
+        )
+    ");
+}
+
+/**
+ * POST /analytics/event
+ * Track a generic event (e.g. clicks)
+ */
+function trackEvent()
+{
+    ensureEventsTable();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $eventName = $input['event_name'] ?? null;
+    $eventLabel = $input['event_label'] ?? null;
+    $visitorId = $input['visitor_id'] ?? null;
+    $page = $input['page'] ?? null;
+
+    if (!$eventName || !$visitorId) {
+        http_response_code(400);
+        return ['error' => 'Missing required fields'];
+    }
+
+    $eventName = substr(trim($eventName), 0, 100);
+    $eventLabel = $eventLabel ? substr(trim($eventLabel), 0, 255) : null;
+    $visitorId = substr(trim($visitorId), 0, 36);
+    $page = $page ? substr(trim($page), 0, 255) : null;
+
+    $db = getDB();
+    // Increment count if same event happens multiple times per day for same user (optional logic)
+    // Or just treat unique key as "one record per day per user" and effectively ignore dupes or increment count.
+    // Let's increment count.
+    $stmt = $db->prepare("
+        INSERT INTO analytics_events (event_name, event_label, visitor_id, page, count, event_date, created_at)
+        VALUES (:name, :label, :visitor_id, :page, 1, CURDATE(), NOW())
+        ON DUPLICATE KEY UPDATE count = count + 1, updated_at = NOW()
+    ");
+
+    $stmt->execute([
+        ':name' => $eventName,
+        ':label' => $eventLabel,
+        ':visitor_id' => $visitorId,
+        ':page' => $page
+    ]);
+
+    return ['success' => true];
+}
+
+/**
+ * GET /analytics/events
+ * Get aggregated event stats
+ */
+function getEventStats()
+{
+    ensureEventsTable();
+    $db = getDB();
+
+    $stmt = $db->query("
+        SELECT 
+            event_name,
+            event_label,
+            SUM(count) as total_count,
+            COUNT(DISTINCT visitor_id) as unique_users
+        FROM analytics_events
+        GROUP BY event_name, event_label
+        ORDER BY total_count DESC
+    ");
+
+    return ['events' => $stmt->fetchAll()];
 }

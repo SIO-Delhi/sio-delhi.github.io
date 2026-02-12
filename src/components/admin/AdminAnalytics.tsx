@@ -68,8 +68,9 @@ export function AdminAnalytics() {
         heatmap?: { dow: number; hour: number; count: number }[];
         landing_pages?: { page: string; count: number }[];
         page_flows?: { from_page: string; to_page: string; count: number }[];
+        events?: { event_name: string; event_label: string; total_count: number; unique_users: number }[];
         loading: boolean;
-    }>({ totals: null, pages: [], trend: [], loading: true })
+    }>({ totals: null, pages: [], trend: [], events: [], loading: true })
     const [locations, setLocations] = useState<{
         locations: { city: string; region: string; country: string; lat: number; lon: number; visit_count: number; unique_visitors: number }[];
         countries: { country: string; visit_count: number; unique_visitors: number }[];
@@ -137,6 +138,11 @@ export function AdminAnalytics() {
             .then(res => res.json())
             .then(data => setLocations({ locations: data.locations || [], countries: data.countries || [], loading: false }))
             .catch(() => setLocations(prev => ({ ...prev, loading: false })))
+
+        authFetch(`${API_BASE}/analytics/events`)
+            .then(res => res.json())
+            .then(data => setAnalytics(prev => ({ ...prev, events: data.events || [] })))
+            .catch(() => { })
     }, [buildQueryString, dateRange])
 
     useEffect(() => {
@@ -1542,6 +1548,61 @@ export function AdminAnalytics() {
                                     />
                                 </div>
                             )}
+                        </div>
+
+                        {/* External Link Visits */}
+                        <div style={{
+                            marginTop: '24px',
+                            borderRadius: '14px',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            overflow: 'hidden'
+                        }}>
+                            <div style={{
+                                padding: '16px 20px',
+                                background: 'rgba(255,255,255,0.03)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                            }}>
+                                <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <ArrowUpRight size={16} color="#ddd" />
+                                </div>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ddd' }}>External Link Visits</h3>
+                            </div>
+
+                            <div style={{ padding: '0' }}>
+                                {analytics.events && analytics.events.length > 0 ? (
+                                    analytics.events.map((evt, i) => (
+                                        <div key={i} style={{
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                            padding: '12px 20px',
+                                            borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.04)',
+                                            background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)'
+                                        }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span style={{ color: '#eee', fontWeight: 500, fontSize: '0.9rem' }}>
+                                                    {evt.event_label === 'adnan_footer' ? 'Developer Credit (Footer)' : evt.event_name}
+                                                </span>
+                                                <span style={{ fontSize: '0.75rem', color: '#888' }}>
+                                                    {evt.event_name} — {evt.event_label}
+                                                </span>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.9rem', display: 'block' }}>
+                                                    {evt.total_count} clicks
+                                                </span>
+                                                <span style={{ fontSize: '0.75rem', color: '#666' }}>
+                                                    {evt.unique_users} unique
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ padding: '24px', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>
+                                        No external link clicks recorded yet.
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {analytics.pages.length === 0 && (

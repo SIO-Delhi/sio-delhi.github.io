@@ -74,6 +74,7 @@ $publicRoutes = [
     'POST /analytics/track',
     'POST /analytics/duration',
     'POST /analytics/heartbeat',
+    'POST /analytics/event',
     'POST /forms/([^/]+)/submit',
 ];
 
@@ -236,6 +237,8 @@ $routes = [
     'GET /analytics/live' => 'routes/analytics.php@getLiveVisitors',
     'GET /analytics/stats' => 'routes/analytics.php@getVisitStats',
     'GET /analytics/locations' => 'routes/analytics.php@getVisitorLocations',
+    'POST /analytics/event' => 'routes/analytics.php@trackEvent',
+    'GET /analytics/events' => 'routes/analytics.php@getEventStats',
 ];
 
 // Find matching route

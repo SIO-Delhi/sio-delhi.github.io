@@ -95,3 +95,20 @@ export function usePageTracker() {
         return () => clearInterval(interval)
     }, [])
 }
+
+export function trackEvent(eventName: string, eventLabel?: string) {
+    if (import.meta.env.DEV) return
+    const visitorId = getVisitorId()
+    const page = window.location.pathname
+
+    fetch(`${API_BASE}/analytics/event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            event_name: eventName,
+            event_label: eventLabel,
+            visitor_id: visitorId,
+            page
+        })
+    }).catch(() => { })
+}
