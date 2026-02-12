@@ -17,7 +17,12 @@ export function SplashScreen() {
     // Check if we start with a deep link (hash) OR strictly if the page is already scrolled (browser text fragment)
     useEffect(() => {
         const checkScrollAndHash = () => {
-            if (location.hash || window.scrollY > 10) {
+            // Check for hash, scroll, OR Google Text Fragments (#:~:text=)
+            if (
+                location.hash ||
+                window.scrollY > 10 ||
+                window.location.href.includes('#:~:text=')
+            ) {
                 setIsCollapsed(true)
                 sessionStorage.setItem('sio_splash_seen', 'true')
             }
