@@ -13,6 +13,7 @@ declare global {
     }
 }
 
+
 export function PDFPreviewCard({ url, onClick, coverImage }: PDFPreviewCardProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [loading, setLoading] = useState(true)

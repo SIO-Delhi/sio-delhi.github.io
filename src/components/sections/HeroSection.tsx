@@ -20,7 +20,7 @@ export function HeroSection() {
 
     useEffect(() => {
         const ctx = gsap.context(() => {
-            // Text Entry
+            // Text Entry           
             gsap.fromTo(
                 '.drop-in-1, .drop-in-2, .drop-in-3',
                 { y: 100, opacity: 0 },

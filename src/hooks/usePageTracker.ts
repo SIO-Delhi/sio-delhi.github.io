@@ -14,15 +14,13 @@ function getVisitorId(): string {
 }
 
 export function usePageTracker() {
-    // Skip analytics in development
-    if (import.meta.env.DEV) return
-
     const location = useLocation()
     const lastTracked = useRef('')
     const pageEnteredAt = useRef<number>(0)
     const currentPage = useRef('')
 
     const sendDuration = useCallback(() => {
+        if (import.meta.env.DEV) return
         if (!currentPage.current || !pageEnteredAt.current) return
         const seconds = Math.round((Date.now() - pageEnteredAt.current) / 1000)
         if (seconds < 1 || seconds > 3600) return // ignore <1s or >1hr (likely stale tab)
@@ -47,6 +45,7 @@ export function usePageTracker() {
     }, [])
 
     useEffect(() => {
+        if (import.meta.env.DEV) return
         const path = location.pathname
         // Skip admin pages and duplicate tracking
         if (path.startsWith('/admin') || path === lastTracked.current) return
@@ -68,6 +67,7 @@ export function usePageTracker() {
 
     // Send duration when user leaves the site entirely
     useEffect(() => {
+        if (import.meta.env.DEV) return
         const handleUnload = () => sendDuration()
         const handleVisibility = () => {
             if (document.visibilityState === 'hidden') sendDuration()
@@ -82,6 +82,7 @@ export function usePageTracker() {
 
     // Heartbeat: ping every 30s so the visitor stays "live" in the dashboard
     useEffect(() => {
+        if (import.meta.env.DEV) return
         const sendHeartbeat = () => {
             if (!currentPage.current) return
             fetch(`${API_BASE}/analytics/heartbeat`, {

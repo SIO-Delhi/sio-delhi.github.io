@@ -1,13 +1,8 @@
 import React, { useState } from 'react'
+import { EDITOR_EXTENSIONS } from '../../lib/tiptap'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
-import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
-import TextAlign from '@tiptap/extension-text-align'
-import { Color } from '@tiptap/extension-color'
-import { TextStyle } from '@tiptap/extension-text-style'
-import { Extension } from '@tiptap/core'
-import Link from '@tiptap/extension-link'
+
 // Imports removed as they are no longer used here
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { ImageCropper } from './ImageCropper'
@@ -41,79 +36,8 @@ export interface EditorBlock {
 // Re-export for verbatimModuleSyntax compatibility
 export type { EditorBlock as EditorBlockInterface }
 
-// --- Custom Text Direction Extension ---
-export const TextDirection = Extension.create({
-    name: 'textDirection',
-    addOptions() {
-        return {
-            types: ['heading', 'paragraph'],
-        }
-    },
-    addGlobalAttributes() {
-        return [
-            {
-                types: this.options.types,
-                attributes: {
-                    dir: {
-                        default: null,
-                        parseHTML: element => element.getAttribute('dir'),
-                        renderHTML: attributes => {
-                            if (!attributes.dir) {
-                                return {}
-                            }
-                            return {
-                                dir: attributes.dir,
-                            }
-                        },
-                    },
-                },
-            },
-        ]
-    },
-    addCommands() {
-        return {
-            setTextDirection: (direction: 'ltr' | 'rtl' | 'auto') => ({ commands }: any) => {
-                return this.options.types.every((type: string) => commands.updateAttributes(type, { dir: direction }))
-            },
-            unsetTextDirection: () => ({ commands }: any) => {
-                return this.options.types.every((type: string) => commands.resetAttributes(type, 'dir'))
-            },
-        }
-    },
-})
+// Extensions removed in favor of shared imports
 
-// FontSize Extension
-export const FontSize = Extension.create({
-    name: 'fontSize',
-    addOptions() {
-        return { types: ['textStyle'] }
-    },
-    addGlobalAttributes() {
-        return [{
-            types: this.options.types,
-            attributes: {
-                fontSize: {
-                    default: null,
-                    parseHTML: element => element.style.fontSize.replace(/['"]+/g, ''),
-                    renderHTML: attributes => {
-                        if (!attributes.fontSize) return {}
-                        return { style: `font-size: ${attributes.fontSize}` }
-                    },
-                },
-            },
-        }]
-    },
-    addCommands() {
-        return {
-            setFontSize: (fontSize: string) => ({ chain }: any) => {
-                return chain().setMark('textStyle', { fontSize }).run()
-            },
-            unsetFontSize: () => ({ chain }: any) => {
-                return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run()
-            },
-        }
-    },
-})
 
 // --- Floating Bubble Toolbar ---
 const BubbleToolbarButton = ({ icon: Icon, isActive, action, title }: {
@@ -151,7 +75,7 @@ const BubbleToolbar = ({ editor }: { editor: any }) => {
                 duration: 150,
                 placement: 'top',
                 interactive: true,
-                appendTo: () => document.body,
+                appendTo: document.body,
             }}
             shouldShow={({ state }: { state: any }) => {
                 const { from, to } = state.selection
@@ -259,7 +183,7 @@ const TextBlockEditor = ({ initialContent, onChange, subtitle, onSubtitleChange 
     onSubtitleChange?: (subtitle: string) => void
 }) => {
     const editor = useEditor({
-        extensions: [StarterKit, Underline, TextAlign.configure({ types: ['heading', 'paragraph'] }), TextStyle, Color, FontSize, TextDirection, Link.configure({ openOnClick: false })],
+        extensions: EDITOR_EXTENSIONS,
         content: initialContent,
         onUpdate: ({ editor }) => onChange(editor.getHTML()),
         editorProps: { attributes: { class: 'prose prose-invert max-w-none focus:outline-none min-h-[100px]' } },
@@ -606,16 +530,7 @@ const CompositeBlockEditor = ({
     const images = carouselImages && carouselImages.length > 0 ? carouselImages : (imageUrl ? [imageUrl] : [])
 
     const editor = useEditor({
-        extensions: [
-            StarterKit,
-            Underline,
-            TextAlign.configure({ types: ['heading', 'paragraph'] }),
-            TextStyle,
-            Color,
-            FontSize,
-            TextDirection,
-            Link.configure({ openOnClick: false })
-        ],
+        extensions: EDITOR_EXTENSIONS,
         content: textContent || '<p>Add your text here...</p>',
         onUpdate: ({ editor }) => {
             onTextChange?.(editor.getHTML())

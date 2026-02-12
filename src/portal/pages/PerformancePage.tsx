@@ -123,7 +123,7 @@ export function PerformancePage() {
                       <FileText size={14} /> Preview
                     </Link>
                     {canCreate && (
-                      <button onClick={() => setDeleteTarget(form)} className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red">
+                      <button onClick={() => setDeleteTarget(form)} className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red" aria-label="Delete form">
                         <Trash2 size={14} />
                       </button>
                     )}

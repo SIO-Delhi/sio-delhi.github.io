@@ -28,37 +28,45 @@ export function HomePage() {
     useEffect(() => {
         if (loading) return
 
+        let poll: NodeJS.Timeout | null = null
+
         const performScroll = (targetId: string) => {
             let attempts = 0
             const maxAttempts = 20 // 2 seconds
 
-            const poll = setInterval(() => {
+            poll = setInterval(() => {
                 const element = document.querySelector(targetId)
                 if (element) {
-                    clearInterval(poll)
+                    if (poll) clearInterval(poll)
                     // Small delay to ensure layout stability
                     setTimeout(() => {
-                        const lenis = (window as any).lenis
+                        const customWindow = window as unknown as { lenis?: { scrollTo: (target: HTMLElement, options?: { offset: number }) => void } }
+                        const lenis = customWindow.lenis
                         if (lenis) {
-                            lenis.scrollTo(element, { offset: -50 }) // Add some offset
+                            lenis.scrollTo(element as HTMLElement, { offset: -50 }) // Add some offset
                         } else {
                             element.scrollIntoView({ behavior: 'smooth' })
                         }
                     }, 100)
                 } else {
                     attempts++
-                    if (attempts >= maxAttempts) clearInterval(poll)
+                    if (attempts >= maxAttempts && poll) clearInterval(poll)
                 }
             }, 100)
         }
 
-        if (location.state && (location.state as any).scrollTo) {
-            const targetId = (location.state as any).scrollTo
+        const state = location.state as Record<string, unknown> | null
+        if (state && typeof state === 'object' && 'scrollTo' in state && typeof state.scrollTo === 'string') {
+            const targetId = state.scrollTo
             performScroll(targetId)
             // Clear state to avoid scrolling on subsequent updates
             window.history.replaceState({}, document.title)
         } else if (location.hash) {
             performScroll(location.hash)
+        }
+
+        return () => {
+            if (poll) clearInterval(poll)
         }
     }, [location, loading])
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, Save } from 'lucide-react'
 import { ALL_PERMISSIONS, PERMISSION_LABELS } from '../constants'
 import { DateInput } from './DateInput'
+import { useDialogA11y } from '../hooks/useDialogA11y'
 import type { EditField } from '../types'
 
 interface EditDialogProps {
@@ -17,6 +18,7 @@ export function EditDialog({ open, title, fields, initialValues, onSave, onCance
   const [values, setValues] = useState<Record<string, string>>(initialValues)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const dialogRef = useDialogA11y(open, onCancel)
 
   useEffect(() => { if (open) { setValues(initialValues); setError(null) } }, [open, initialValues])
 
@@ -49,7 +51,7 @@ export function EditDialog({ open, title, fields, initialValues, onSave, onCance
   const isWide = regularFields.length > 4
 
   return (
-    <div className="portal-overlay">
+    <div className="portal-overlay" role="dialog" aria-modal="true" aria-label={title} ref={dialogRef}>
       <div className="portal-overlay-bg" onClick={onCancel} />
       <div className={`portal-dialog ${isWide ? 'portal-dialog-xl' : 'portal-dialog-md'} portal-card-body`}>
         <div className="portal-edit-header">
@@ -60,7 +62,7 @@ export function EditDialog({ open, title, fields, initialValues, onSave, onCance
           <button onClick={onCancel} className="portal-dialog-close" aria-label="Close"><X size={18} /></button>
         </div>
 
-        {error && <div className="portal-alert portal-alert-error portal-mb-4"><span>{error}</span></div>}
+        {error && <div className="portal-alert portal-alert-error portal-mb-4" role="alert"><span>{error}</span></div>}
 
         <form onSubmit={handleSubmit}>
           <div className={`portal-edit-grid ${isWide ? 'portal-edit-grid-2col' : ''}`}>

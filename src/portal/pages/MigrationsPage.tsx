@@ -114,8 +114,8 @@ export function MigrationsPage() {
         if (row.status !== 'pending') return null
         return (
           <div className="portal-action-row">
-            <button onClick={e => { e.stopPropagation(); setActionRow({ migration: row as unknown as MigrationRequest, action: 'approved' }) }} className="portal-action-approve" title="Approve"><CheckCircle size={16} /></button>
-            <button onClick={e => { e.stopPropagation(); setActionRow({ migration: row as unknown as MigrationRequest, action: 'rejected' }) }} className="portal-action-reject" title="Reject"><XCircle size={16} /></button>
+            <button onClick={e => { e.stopPropagation(); setActionRow({ migration: row as unknown as MigrationRequest, action: 'approved' }) }} className="portal-action-approve" title="Approve" aria-label="Approve migration"><CheckCircle size={16} /></button>
+            <button onClick={e => { e.stopPropagation(); setActionRow({ migration: row as unknown as MigrationRequest, action: 'rejected' }) }} className="portal-action-reject" title="Reject" aria-label="Reject migration"><XCircle size={16} /></button>
           </div>
         )
       },

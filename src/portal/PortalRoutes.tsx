@@ -1,34 +1,44 @@
 import './portal.css'
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { PortalAuthProvider, usePortalAuth } from './context/PortalAuthContext'
 import { PortalLayout } from './components/PortalLayout'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { ROLE_DASHBOARD_PATHS } from './constants'
 import type { PortalRole } from './types'
 
-// Pages
-import { LoginPage } from './pages/LoginPage'
-import { DashboardPage } from './pages/DashboardPage'
-import { ManagePage } from './pages/ManagePage'
-import { BulkAddPage } from './pages/BulkAddPage'
-import { TitlesPage } from './pages/TitlesPage'
-import { MessagesComposePage } from './pages/MessagesComposePage'
-import { MessagesInboxPage } from './pages/MessagesInboxPage'
-import { PerformancePage } from './pages/PerformancePage'
-import { PerfFormBuilderPage } from './pages/PerfFormBuilderPage'
-import { PerfFormFillPage } from './pages/PerfFormFillPage'
-import { PerfResponsesPage } from './pages/PerfResponsesPage'
-import { MigrationsPage } from './pages/MigrationsPage'
-import { MemberProfilePage } from './pages/MemberProfilePage'
-import { ViewMemberPage } from './pages/ViewMemberPage'
-import { ViewUnitPage } from './pages/ViewUnitPage'
-import { ViewCirclePage } from './pages/ViewCirclePage'
-import { ViewCampusPage } from './pages/ViewCampusPage'
-import { UnitsWithoutPresidentPage } from './pages/UnitsWithoutPresidentPage'
-import { RegionsPage } from './pages/RegionsPage'
-import { MemberAccountPage } from './pages/MemberAccountPage'
-import { EditRequestsPage } from './pages/EditRequestsPage'
-import { PortalLogoutPage } from './pages/PortalLogoutPage'
+// Lazy-loaded portal pages
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })))
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })))
+const ManagePage = lazy(() => import('./pages/ManagePage').then(m => ({ default: m.ManagePage })))
+const BulkAddPage = lazy(() => import('./pages/BulkAddPage').then(m => ({ default: m.BulkAddPage })))
+const TitlesPage = lazy(() => import('./pages/TitlesPage').then(m => ({ default: m.TitlesPage })))
+const MessagesComposePage = lazy(() => import('./pages/MessagesComposePage').then(m => ({ default: m.MessagesComposePage })))
+const MessagesInboxPage = lazy(() => import('./pages/MessagesInboxPage').then(m => ({ default: m.MessagesInboxPage })))
+const PerformancePage = lazy(() => import('./pages/PerformancePage').then(m => ({ default: m.PerformancePage })))
+const PerfFormBuilderPage = lazy(() => import('./pages/PerfFormBuilderPage').then(m => ({ default: m.PerfFormBuilderPage })))
+const PerfFormFillPage = lazy(() => import('./pages/PerfFormFillPage').then(m => ({ default: m.PerfFormFillPage })))
+const PerfResponsesPage = lazy(() => import('./pages/PerfResponsesPage').then(m => ({ default: m.PerfResponsesPage })))
+const MigrationsPage = lazy(() => import('./pages/MigrationsPage').then(m => ({ default: m.MigrationsPage })))
+const MemberProfilePage = lazy(() => import('./pages/MemberProfilePage').then(m => ({ default: m.MemberProfilePage })))
+const ViewMemberPage = lazy(() => import('./pages/ViewMemberPage').then(m => ({ default: m.ViewMemberPage })))
+const ViewUnitPage = lazy(() => import('./pages/ViewUnitPage').then(m => ({ default: m.ViewUnitPage })))
+const ViewCirclePage = lazy(() => import('./pages/ViewCirclePage').then(m => ({ default: m.ViewCirclePage })))
+const ViewCampusPage = lazy(() => import('./pages/ViewCampusPage').then(m => ({ default: m.ViewCampusPage })))
+const UnitsWithoutPresidentPage = lazy(() => import('./pages/UnitsWithoutPresidentPage').then(m => ({ default: m.UnitsWithoutPresidentPage })))
+const RegionsPage = lazy(() => import('./pages/RegionsPage').then(m => ({ default: m.RegionsPage })))
+const MemberAccountPage = lazy(() => import('./pages/MemberAccountPage').then(m => ({ default: m.MemberAccountPage })))
+const EditRequestsPage = lazy(() => import('./pages/EditRequestsPage').then(m => ({ default: m.EditRequestsPage })))
+const PortalLogoutPage = lazy(() => import('./pages/PortalLogoutPage').then(m => ({ default: m.PortalLogoutPage })))
+
+function PortalLoadingFallback() {
+  return (
+    <div className="portal-app portal-fullscreen portal-fullscreen-col">
+      <div className="portal-spinner" />
+    </div>
+  )
+}
 
 /* ── Clerk auth guard ── */
 
@@ -120,7 +130,9 @@ function PortalIndex() {
 
 export function PortalRoutes() {
   return (
+    <ErrorBoundary>
     <PortalAuthProvider>
+      <Suspense fallback={<PortalLoadingFallback />}>
       <Routes>
         <Route index element={<PortalIndex />} />
         <Route path="login" element={<LoginPage />} />
@@ -246,6 +258,8 @@ export function PortalRoutes() {
 
         <Route path="*" element={<Navigate to="/portal/login" replace />} />
       </Routes>
+      </Suspense>
     </PortalAuthProvider>
+    </ErrorBoundary>
   )
 }

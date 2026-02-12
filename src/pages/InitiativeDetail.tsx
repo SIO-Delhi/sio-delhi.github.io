@@ -3,6 +3,7 @@ import { API_BASE } from '../lib/api'
 import { initiatives } from '../data/initiatives'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
+import { sanitizeHtml } from '../lib/sanitize'
 import { ArrowLeft } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
@@ -168,7 +169,7 @@ export function InitiativeDetail() {
                             fontSize: '1.1rem',
                             lineHeight: 1.8
                         }}
-                        dangerouslySetInnerHTML={{ __html: initiative.content }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(initiative.content) }}
                     />
                 )}
 

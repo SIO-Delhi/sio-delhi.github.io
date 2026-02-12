@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
 
 // Styles matching AdminSections.tsx modal
@@ -74,11 +74,13 @@ export function DeleteConfirmationModal({
 }: DeleteConfirmationModalProps) {
     const [inputValue, setInputValue] = useState('')
 
-    useEffect(() => {
-        if (isOpen) {
-            setInputValue('')
-        }
-    }, [isOpen])
+    const [prevIsOpen, setPrevIsOpen] = useState(isOpen)
+    if (isOpen && !prevIsOpen) {
+        setPrevIsOpen(true)
+        setInputValue('')
+    } else if (!isOpen && prevIsOpen) {
+        setPrevIsOpen(false)
+    }
 
     if (!isOpen) return null
 

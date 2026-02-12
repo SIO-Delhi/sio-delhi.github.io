@@ -1,103 +1,13 @@
 
 import React from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
+import { EDITOR_EXTENSIONS } from '../../lib/tiptap'
 
-import TextAlign from '@tiptap/extension-text-align'
-import { Color } from '@tiptap/extension-color'
-import { TextStyle } from '@tiptap/extension-text-style'
-import Highlight from '@tiptap/extension-highlight'
-import { Extension } from '@tiptap/core'
-import Link from '@tiptap/extension-link'
 import { Bold, Italic, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify, Heading1, Heading2, List, Highlighter, PilcrowLeft, PilcrowRight, Link as LinkIcon } from 'lucide-react'
 
-// --- Custom Text Direction Extension ---
-export const TextDirection = Extension.create({
-    name: 'textDirection',
-    addOptions() {
-        return {
-            types: ['heading', 'paragraph'],
-        }
-    },
-    addGlobalAttributes() {
-        return [
-            {
-                types: this.options.types,
-                attributes: {
-                    dir: {
-                        default: null,
-                        parseHTML: element => element.getAttribute('dir'),
-                        renderHTML: attributes => {
-                            if (!attributes.dir) {
-                                return {}
-                            }
-                            return {
-                                dir: attributes.dir,
-                            }
-                        },
-                    },
-                },
-            },
-        ]
-    },
-    addCommands() {
-        return {
-            setTextDirection: (direction: 'ltr' | 'rtl' | 'auto') => ({ commands }: any) => {
-                return this.options.types.every((type: string) => commands.updateAttributes(type, { dir: direction }))
-            },
-            unsetTextDirection: () => ({ commands }: any) => {
-                return this.options.types.every((type: string) => commands.resetAttributes(type, 'dir'))
-            },
-        }
-    },
-})
+// TextDirection and FontSize removed in favor of shared imports
+import Highlight from '@tiptap/extension-highlight'
 
-
-// --- Custom Font Size Extension ---
-export const FontSize = Extension.create({
-    name: 'fontSize',
-    addOptions() {
-        return {
-            types: ['textStyle'],
-        }
-    },
-    addGlobalAttributes() {
-        return [
-            {
-                types: this.options.types,
-                attributes: {
-                    fontSize: {
-                        default: null,
-                        parseHTML: element => element.style.fontSize.replace(/['"]+/g, ''),
-                        renderHTML: attributes => {
-                            if (!attributes.fontSize) {
-                                return {}
-                            }
-                            return {
-                                style: `font-size: ${attributes.fontSize}`,
-                            }
-                        },
-                    },
-                },
-            },
-        ]
-    },
-    addCommands() {
-        return {
-            setFontSize: (fontSize: string) => ({ chain }) => {
-                return chain()
-                    .setMark('textStyle', { fontSize })
-                    .run()
-            },
-            unsetFontSize: () => ({ chain }) => {
-                return chain()
-                    .setMark('textStyle', { fontSize: null })
-                    .removeEmptyTextStyle()
-                    .run()
-            },
-        }
-    },
-})
 
 const EditorToolbar = ({ editor }: { editor: any }) => {
     if (!editor) return null
@@ -259,17 +169,10 @@ interface RichTextEditorProps {
 export function RichTextEditor({ value, onChange, placeholder, minHeight = '150px' }: RichTextEditorProps) {
     const editor = useEditor({
         extensions: [
-            StarterKit,
-            // Underline, // Warning: Duplicate extension. Check if StarterKit includes it or if handled elsewhere
-            TextAlign.configure({ types: ['heading', 'paragraph'] }),
-            TextStyle,
-            Color,
+            ...EDITOR_EXTENSIONS,
             Highlight.configure({
                 multicolor: true,
             }),
-            FontSize,
-            TextDirection,
-            Link.configure({ openOnClick: false })
         ],
         content: value,
         onUpdate: ({ editor }) => {

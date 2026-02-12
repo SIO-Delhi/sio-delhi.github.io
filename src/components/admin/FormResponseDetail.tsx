@@ -24,12 +24,6 @@ export function FormResponseDetail() {
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
 
-    useEffect(() => {
-        if (formId && responseId) {
-            loadData()
-        }
-    }, [formId, responseId])
-
     const loadData = async () => {
         setLoading(true)
         const [formResult, responseResult] = await Promise.all([
@@ -51,6 +45,12 @@ export function FormResponseDetail() {
 
         setLoading(false)
     }
+
+    useEffect(() => {
+        if (formId && responseId) {
+            loadData()
+        }
+    }, [formId, responseId])
 
     const handleFieldChange = (fieldId: string, value: unknown) => {
         setEditedData(prev => ({ ...prev, [fieldId]: value }))

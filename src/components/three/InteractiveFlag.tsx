@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, Suspense } from 'react'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import * as THREE from 'three'
 import flagImg from '../../assets/flag.png'
@@ -9,7 +9,6 @@ import Wind from '../../../flagwaver/src/assets/js/flagwaver/subjects/Wind'
 import applyWindForceToCloth from '../../../flagwaver/src/assets/js/flagwaver/interactions/applyWindForceToCloth'
 import applyGravityToCloth from '../../../flagwaver/src/assets/js/flagwaver/interactions/applyGravityToCloth'
 
-// ... (imports remain)
 
 function FlagScene({ isMobile }: { isMobile: boolean }) {
     // Load Texture
@@ -42,7 +41,7 @@ function FlagScene({ isMobile }: { isMobile: boolean }) {
         }
 
         return { flag, wind }
-    }, [flagTexture])
+    }, [flagTexture, isMobile])
 
     // Physics state
     const physicsState = useRef({
@@ -121,11 +120,31 @@ function FlagScene({ isMobile }: { isMobile: boolean }) {
 export function InteractiveFlag({ isMobile }: { isMobile: boolean }) {
     return (
         <div style={{ width: '100%', height: '100%' }}>
-            <Canvas camera={{ position: [0, 0, 8], fov: 45 }} dpr={[1, 2]}>
+            <Canvas
+                camera={{ position: [0, 0, 8], fov: 45 }}
+                dpr={[1, 2]} // Allow higher DPR but handle it safely
+                gl={{
+                    antialias: true,
+                    stencil: false,
+                    depth: true,
+                    powerPreference: 'high-performance', // Request high perf
+                    preserveDrawingBuffer: false,
+                    failIfMajorPerformanceCaveat: false
+                }}
+                onCreated={({ gl }) => {
+                    // Monitor for context loss
+                    gl.domElement.addEventListener('webglcontextlost', (event) => {
+                        event.preventDefault();
+                        console.warn('WebGL Context Lost - Attempting to recover...');
+                    }, false);
+                }}
+            >
                 <ambientLight intensity={0.6} />
                 <directionalLight position={[10, 10, 10]} intensity={2.0} />
                 <pointLight position={[-5, 5, 2]} intensity={1.5} color="#ff3b3b" />
-                <FlagScene isMobile={isMobile} />
+                <Suspense fallback={null}>
+                    <FlagScene isMobile={isMobile} />
+                </Suspense>
             </Canvas>
         </div>
     )

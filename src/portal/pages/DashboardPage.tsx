@@ -294,11 +294,11 @@ export function DashboardPage() {
                     </div>
                     {(user.role === 'admin' || user.role === 'zonal_secretary' || user.role === 'regional_president' || user.role === 'unit_president') && (
                       <div className="portal-retiring-actions">
-                        <button onClick={() => setLockTarget(member)} className="portal-btn portal-btn-ghost portal-btn-sm" title={member.status === 'active' ? 'Set inactive' : 'Set active'}>
+                        <button onClick={() => setLockTarget(member)} className="portal-btn portal-btn-ghost portal-btn-sm" title={member.status === 'active' ? 'Set inactive' : 'Set active'} aria-label={member.status === 'active' ? 'Set inactive' : 'Set active'}>
                           {member.status === 'active' ? <Lock size={14} /> : <Unlock size={14} />}
                         </button>
                         {user.role === 'admin' && (
-                          <button onClick={() => setDeleteTarget(member)} className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red" title="Delete member">
+                          <button onClick={() => setDeleteTarget(member)} className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red" title="Delete member" aria-label="Delete member">
                             <Trash2 size={14} />
                           </button>
                         )}

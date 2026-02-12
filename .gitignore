@@ -26,5 +26,7 @@ dist-ssr
 
 # API secrets
 .env
+.env.local
 api/.env
 api/.clerk_jwks_cache.json
+api/logs/

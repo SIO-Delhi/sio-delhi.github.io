@@ -1,0 +1,50 @@
+
+/home/adnan/Documents/siodel/src/components/ui/PDFFlipbook.tsx
+   45:17  warning  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/adnan/Documents/siodel/src/components/ui/PDFFlipbook.tsx:45:17
+  43 |                     canvasRef.current.height = 0
+  44 |                 }
+> 45 |                 setPageLoaded(false)
+     |                 ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  46 |             }
+  47 |             return
+  48 |         }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      react-hooks/set-state-in-effect
+  292:41  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `isPanning`, but the source dependencies were [zoom]. Inferred different dependency than source.
+
+/home/adnan/Documents/siodel/src/components/ui/PDFFlipbook.tsx:292:41
+  290 |     }, [zoom, panOffset])
+  291 |
+> 292 |     const handleMouseMove = useCallback((e: React.MouseEvent) => {
+      |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 293 |         if (!isPanning || zoom <= 1) return
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 294 |         const dx = e.clientX - panStartRef.current.x
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 295 |         const dy = e.clientY - panStartRef.current.y
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 296 |         setPanOffset({
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 297 |             x: lastPanOffset.current.x + dx,
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 298 |             y: lastPanOffset.current.y + dy
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 299 |         })
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 300 |     }, [zoom])
+      | ^^^^^^ Could not preserve existing manual memoization
+  301 |
+  302 |     const handleMouseUp = useCallback(() => {
+  303 |         setIsPanning(false)  react-hooks/preserve-manual-memoization
+  300:8   warning  React Hook useCallback has a missing dependency: 'isPanning'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    react-hooks/exhaustive-deps
+
+✖ 3 problems (1 error, 2 warnings)
+

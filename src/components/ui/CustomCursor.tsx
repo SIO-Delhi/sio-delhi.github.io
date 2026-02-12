@@ -20,10 +20,11 @@ export function CustomCursor() {
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
 
-    // Reset cursor state on route change
-    useEffect(() => {
+    const [prevLocationKey, setPrevLocationKey] = useState(location.key)
+    if (location.key !== prevLocationKey) {
+        setPrevLocationKey(location.key)
         setIsView(false)
-    }, [location])
+    }
 
 
 

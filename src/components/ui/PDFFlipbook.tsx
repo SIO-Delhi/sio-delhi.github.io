@@ -13,6 +13,7 @@ declare global {
     }
 }
 
+
 interface PageProps {
     number: number
     pdf: any
@@ -27,7 +28,7 @@ interface PageProps {
 const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, shouldRender, width, height, isSinglePage = false }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [pageLoaded, setPageLoaded] = useState(false)
-    const renderTaskRef = useRef<any>(null)
+    const renderTaskRef = useRef<{ cancel: () => void; promise: Promise<void> } | null>(null)
 
     useEffect(() => {
         // Unload if shouldn't render
@@ -89,8 +90,8 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, 
                 if (!isCancelled) {
                     setPageLoaded(true)
                 }
-            } catch (error: any) {
-                if (error.name !== 'RenderingCancelledException' && !isCancelled) {
+            } catch (error: unknown) {
+                if ((error as Error).name !== 'RenderingCancelledException' && !isCancelled) {
                     console.error(`Error rendering page ${number}:`, error)
                 }
             }
@@ -157,7 +158,7 @@ const Page = forwardRef<HTMLDivElement, PageProps>(({ number, pdf, scale = 1.0, 
 Page.displayName = 'Page'
 
 export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
-    const [pdf, setPdf] = useState<any>(null)
+    const [pdf, setPdf] = useState<unknown>(null)
     const [numPages, setNumPages] = useState(0)
     const [isLoading, setIsLoading] = useState(true)
     const [containerSize, setContainerSize] = useState(() => {
@@ -169,13 +170,13 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
         }
         return { width: 800, height: 600 }
     })
-    const flipBookRef = useRef<any>(null)
+    const flipBookRef = useRef<{ pageFlip: () => { flipNext: () => void; flipPrev: () => void; flip: (page: number) => void } } | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const zoomWrapperRef = useRef<HTMLDivElement>(null)
 
     // Track current page index (0-based) from flipbook events
     const [currentPageIndex, setCurrentPageIndex] = useState(0)
-    const savedPageRef = useRef(0)
+    const [savedPage, setSavedPage] = useState(0)
 
     // Layout State
     const [usePortrait, setUsePortrait] = useState(false)
@@ -183,7 +184,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
     // Zoom state
     const [zoom, setZoom] = useState(1)
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
-    const isPanningRef = useRef(false)
+    const [isPanning, setIsPanning] = useState(false)
     const panStartRef = useRef({ x: 0, y: 0 })
     const lastPanOffset = useRef({ x: 0, y: 0 })
 
@@ -283,14 +284,14 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
     // Pan when zoomed (mouse drag)
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (zoom <= 1) return
-        isPanningRef.current = true
+        setIsPanning(true)
         panStartRef.current = { x: e.clientX, y: e.clientY }
         lastPanOffset.current = { ...panOffset }
         e.preventDefault()
     }, [zoom, panOffset])
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
-        if (!isPanningRef.current || zoom <= 1) return
+        if (!isPanning || zoom <= 1) return
         const dx = e.clientX - panStartRef.current.x
         const dy = e.clientY - panStartRef.current.y
         setPanOffset({
@@ -300,7 +301,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
     }, [zoom])
 
     const handleMouseUp = useCallback(() => {
-        isPanningRef.current = false
+        setIsPanning(false)
     }, [])
 
     // Controls logic
@@ -308,7 +309,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
 
     const toggleFullscreen = useCallback(() => {
         // Save current page before toggling
-        savedPageRef.current = currentPageIndex
+        setSavedPage(currentPageIndex)
         if (!document.fullscreenElement && containerRef.current) {
             containerRef.current.requestFullscreen().catch(err => console.error(err))
         } else {
@@ -326,13 +327,13 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
 
     // Restore page after fullscreen toggle causes remount
     useEffect(() => {
-        if (flipBookRef.current && savedPageRef.current > 0) {
+        if (flipBookRef.current && savedPage > 0) {
             // The HTMLFlipBook remounts due to key change, so we use startPage via key
             // But we also try to flip to the saved page after a short delay
             const timer = setTimeout(() => {
                 if (flipBookRef.current) {
                     try {
-                        flipBookRef.current.pageFlip().flip(savedPageRef.current)
+                        flipBookRef.current.pageFlip().flip(savedPage)
                     } catch {
                         // flip method might not exist on all versions
                     }
@@ -340,7 +341,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
             }, 100)
             return () => clearTimeout(timer)
         }
-    }, [isFullscreen, usePortrait])
+    }, [isFullscreen, usePortrait, savedPage])
 
     // Load PDF
     useEffect(() => {
@@ -427,11 +428,11 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
 
     const flipRafRef = useRef<number | null>(null)
 
-    const onFlip = useCallback((e: any) => {
+    const onFlip = useCallback((e: { data: number }) => {
         if (flipRafRef.current) cancelAnimationFrame(flipRafRef.current)
         flipRafRef.current = requestAnimationFrame(() => {
             setCurrentPageIndex(e.data)
-            savedPageRef.current = e.data
+            setSavedPage(e.data)
             flipRafRef.current = null
         })
     }, [])
@@ -545,7 +546,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
             )}
 
             {/* FlipBook with zoom wrapper */}
-            {!isLoading && pdf && containerSize.width > 0 && (
+            {!isLoading && !!pdf && containerSize.width > 0 && (
                 <div
                     ref={zoomWrapperRef}
                     style={{
@@ -568,9 +569,8 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                         transform: `scale(${zoom}) translate(${panOffset.x / zoom}px, ${panOffset.y / zoom}px)` +
                             (!usePortrait && currentPageIndex === 0 ? ' translateX(-25%)' : ''),
                         transformOrigin: 'center center',
-                        transition: isPanningRef.current ? 'none' : 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
+                        transition: isPanning ? 'none' : 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
                     }}>
-                        {/* @ts-ignore */}
                         <HTMLFlipBook
                             key={`${usePortrait}-${isFullscreen}`}
                             width={pageWidth}
@@ -584,7 +584,7 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                             showCover={true}
                             mobileScrollSupport={zoom <= 1}
                             usePortrait={usePortrait}
-                            startPage={savedPageRef.current}
+                            startPage={savedPage}
                             className="demo-book"
                             style={{ margin: '0 auto' }}
                             ref={flipBookRef}
@@ -592,6 +592,12 @@ export function PDFFlipbook({ url, coverImage }: PDFFlipbookProps) {
                             useMouseEvents={zoom <= 1}
                             swipeDistance={30}
                             onFlip={onFlip}
+                            drawShadow={true}
+                            startZIndex={0}
+                            autoSize={true}
+                            clickEventForward={true}
+                            showPageCorners={true}
+                            disableFlipByClick={false}
                         >
                             {pages.map((pageNum, index) => (
                                 <Page

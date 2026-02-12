@@ -48,6 +48,18 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
+// Global unhandled error/rejection handlers — log to console in dev,
+// prevent silent swallowed errors in production.
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error('[Unhandled Promise Rejection]', event.reason)
+  })
+
+  window.addEventListener('error', (event) => {
+    console.error('[Unhandled Error]', event.error ?? event.message)
+  })
+}
+
 // Enable shiny animations after the full window load to avoid a bright
 // initial animation frame (reduces the flash-of-brightness on buttons).
 if (typeof window !== 'undefined') {

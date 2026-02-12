@@ -36,7 +36,7 @@ export function SubsectionEditor() {
         cancelDelete,
         deleteState,
         pendingItem
-    } = useUndoableDelete<any>({
+    } = useUndoableDelete<string>({
         performDelete: async (postId) => {
             await deletePost(postId)
         }
@@ -60,6 +60,9 @@ export function SubsectionEditor() {
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isGalleryUploading, setIsGalleryUploading] = useState(false)
+    // External Link State
+    const [externalLink, setExternalLink] = useState('')
+    const [openInNewTab, setOpenInNewTab] = useState(false)
 
     // Crop State
     const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
@@ -83,6 +86,8 @@ export function SubsectionEditor() {
                 if (post.createdAt) {
                     setDate(new Date(post.createdAt).toISOString().split('T')[0])
                 }
+                setExternalLink(post.externalLink || '')
+                setOpenInNewTab(post.openInNewTab || false)
             }
         }
     }, [isEditMode, id, getPostById])
@@ -203,6 +208,8 @@ export function SubsectionEditor() {
                 layout: 'custom',
                 isSubsection: true,
                 galleryImages: processedGalleryImages,
+                externalLink,
+                openInNewTab,
                 createdAt: date ? new Date(date).getTime() : undefined,
             }
 
@@ -512,6 +519,35 @@ export function SubsectionEditor() {
                             onFocus={e => e.currentTarget.style.borderColor = '#444'}
                             onBlur={e => e.currentTarget.style.borderColor = '#222'}
                         />
+                    </div>
+
+                    {/* External Link */}
+                    <div style={{ background: '#1a1a1a', padding: '16px', borderRadius: '12px', border: '1px solid #333' }}>
+                        <label style={{ display: 'block', color: '#888', fontSize: '0.75rem', fontWeight: 600, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            External Link Action
+                        </label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <input
+                                type="text"
+                                value={externalLink}
+                                onChange={(e) => setExternalLink(e.target.value)}
+                                placeholder="https://example.com (Overrides detail page)"
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '8px',
+                                    background: '#111', border: '1px solid #333', color: 'white',
+                                    fontSize: '0.9rem', outline: 'none'
+                                }}
+                            />
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#ccc', fontSize: '0.9rem' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={openInNewTab}
+                                    onChange={(e) => setOpenInNewTab(e.target.checked)}
+                                    style={{ accentColor: '#ff3b3b', width: '16px', height: '16px' }}
+                                />
+                                Open in new tab
+                            </label>
+                        </div>
                     </div>
 
                     {/* Gallery Images */}

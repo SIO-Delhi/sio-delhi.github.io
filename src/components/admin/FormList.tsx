@@ -20,10 +20,6 @@ export function FormList() {
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
 
-    useEffect(() => {
-        loadForms()
-    }, [])
-
     const loadForms = async () => {
         setLoading(true)
         const result = await api.forms.getAll()
@@ -32,6 +28,10 @@ export function FormList() {
         }
         setLoading(false)
     }
+
+    useEffect(() => {
+        loadForms()
+    }, [])
 
     const handleTogglePublish = async (form: FormDTO) => {
         const result = await api.forms.update(form.id, { isPublished: !form.isPublished })

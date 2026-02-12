@@ -3,20 +3,19 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage, uploadPdf } from '../../lib/storage'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
-import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
-import TextAlign from '@tiptap/extension-text-align'
-import { Color } from '@tiptap/extension-color'
-import { TextStyle } from '@tiptap/extension-text-style'
 
-import { ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Facebook, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link as LinkIcon, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, PilcrowLeft, PilcrowRight } from 'lucide-react'
+import { EditorState, NodeSelection } from '@tiptap/pm/state'
+// Unused imports removed
+
+import { type LucideIcon, ArrowLeft, Save, X, Plus, ImageIcon, FileText, AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, Mail, Instagram, Facebook, Loader2, ChevronLeft, ChevronRight, Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, List, Volume2, MoveUp, MoveDown, Images, GripVertical, Palette, Link as LinkIcon, Download, ExternalLink, File as FileIcon, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, PilcrowLeft, PilcrowRight } from 'lucide-react'
 
 import { ImageCropper } from './ImageCropper'
 import gsap from 'gsap'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
-import Link from '@tiptap/extension-link'
+// Unused import removed
+import { EDITOR_EXTENSIONS } from '../../lib/tiptap'
 
 
 // --- Block Types & Interfaces ---
@@ -40,7 +39,7 @@ interface EditorBlock {
 
 // --- Helper Components ---
 
-import { Extension } from '@tiptap/core'
+// Unused imports removed
 
 const ICON_OPTIONS = [
     { name: 'FileText', icon: FileText },
@@ -91,7 +90,7 @@ const ICON_OPTIONS = [
 
 // --- Floating Bubble Toolbar ---
 const BubbleToolbarButton = ({ icon: Icon, isActive, action, title }: {
-    icon: any, isActive: boolean, action: () => void, title: string
+    icon: LucideIcon, isActive: boolean, action: () => void, title: string
 }) => (
     <button
         type="button"
@@ -114,21 +113,16 @@ const BubbleDivider = () => (
     <div style={{ width: '1px', height: '18px', background: '#333', margin: '0 4px' }} />
 )
 
-const EditorToolbar = ({ editor }: { editor: any }) => {
+const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
     if (!editor) return null
 
     return (
         <BubbleMenu
             editor={editor}
-            tippyOptions={{
-                duration: 150,
-                placement: 'top',
-                interactive: true,
-                appendTo: document.body,
-            }}
-            shouldShow={({ state }: { state: any }) => {
+            appendTo={document.body}
+            shouldShow={({ state }: { state: EditorState }) => {
                 const { from, to } = state.selection
-                return from !== to && !(state.selection as any).node
+                return from !== to && !(state.selection as NodeSelection).node
             }}
         >
             <div style={{
@@ -407,8 +401,8 @@ const ImageBlockEditor = ({
         // Validate all files first
         try {
             Array.from(files).forEach(validateImage)
-        } catch (err: any) {
-            alert(err.message)
+        } catch (err: unknown) {
+            alert((err as Error).message)
             e.target.value = ''
             return
         }
@@ -454,9 +448,9 @@ const ImageBlockEditor = ({
                 onAssetsChange?.([{ url: blobUrl, file: compressed }])
                 onChange(blobUrl)
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err)
-            alert(err.message || 'Processing failed')
+            alert((err as Error).message || 'Processing failed')
         } finally {
             setIsUploading(false)
         }
@@ -479,7 +473,7 @@ const ImageBlockEditor = ({
                 onAssetsChange?.([{ url: blobUrl, file: compressed }])
                 onChange(blobUrl)
             }
-        } catch (err: any) { console.error(err); alert(err.message || 'Processing failed') }
+        } catch (err: unknown) { console.error(err); alert((err as Error).message || 'Processing failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
 
@@ -488,7 +482,6 @@ const ImageBlockEditor = ({
         setIsUploading(true)
         try {
             // Blob is WebP
-            // @ts-ignore
             const file = new File([blob], `cropped-block-${Date.now()}.webp`, { type: "image/webp" })
             const blobUrl = URL.createObjectURL(file)
 
@@ -999,16 +992,7 @@ const CompositeBlockEditor = ({
     const images = carouselImages && carouselImages.length > 0 ? carouselImages : (imageUrl ? [imageUrl] : [])
 
     const editor = useEditor({
-        extensions: [
-            StarterKit,
-            Underline,
-            TextAlign.configure({ types: ['heading', 'paragraph'] }),
-            TextStyle,
-            Color,
-            FontSize,
-            TextDirection,
-            Link.configure({ openOnClick: false })
-        ],
+        extensions: EDITOR_EXTENSIONS,
         content: textContent || '<p>Add your text here...</p>',
         onUpdate: ({ editor }) => {
             onTextChange?.(editor.getHTML())
@@ -1028,8 +1012,8 @@ const CompositeBlockEditor = ({
 
         try {
             validateImage(file)
-        } catch (err: any) {
-            alert(err.message)
+        } catch (err: unknown) {
+            alert((err as Error).message)
             e.target.value = ''
             return
         }
@@ -1053,7 +1037,7 @@ const CompositeBlockEditor = ({
             const newImages = [...images, blobUrl]
             onImagesChange?.(newImages)
             if (newImages.length === 1) onImageChange?.(blobUrl)
-        } catch (err: any) { console.error(err); alert(err.message || 'Processing failed') }
+        } catch (err: unknown) { console.error(err); alert((err as Error).message || 'Processing failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
 
@@ -1062,7 +1046,6 @@ const CompositeBlockEditor = ({
         setIsUploading(true)
         try {
             // Blob is already WebP
-            // @ts-ignore
             const file = new File([blob], `cropped-composite-${Date.now()}.webp`, { type: "image/webp" })
             const blobUrl = URL.createObjectURL(file)
 
@@ -1248,14 +1231,14 @@ const CompositeBlockEditor = ({
                     </div>
 
                     {editor && <EditorToolbar editor={editor} />}
-                    <div style={{ textAlign: (alignment as any) || 'left' }}>
+                    <div style={{ textAlign: (alignment as 'left' | 'center' | 'right' | 'justify') || 'left' }}>
                         <EditorContent
                             editor={editor}
                             style={{
                                 background: '#111', borderRadius: '8px', padding: '12px',
                                 color: '#ddd', fontSize: '0.95rem', lineHeight: 1.6,
                                 minHeight: '100px',
-                                textAlign: (alignment as any) || 'left'
+                                textAlign: (alignment as 'left' | 'center' | 'right' | 'justify') || 'left'
                             }}
                         />
                     </div>
@@ -1418,11 +1401,11 @@ export function PostEditor() {
 
                         if (type === 'composite') {
                             enhancedFields = {
-                                layout: (el.getAttribute('data-layout') as any) || 'image-left',
+                                layout: (el.getAttribute('data-layout') as 'image-left' | 'image-right' | 'image-top' | 'stacked') || 'image-left',
                                 imageUrl: decodeURIComponent(el.getAttribute('data-image-url') || ''),
                                 textContent: decodeURIComponent(el.getAttribute('data-text-content') || ''),
                                 subtitle: decodeURIComponent(el.getAttribute('data-subtitle') || ''),
-                                alignment: (el.getAttribute('data-align') as any) || 'left',
+                                alignment: (el.getAttribute('data-align') as 'left' | 'center' | 'right' | 'justify') || 'left',
                                 subtitleColor, // Add subtitleColor to enhancedFields
                                 isCarousel: false,
                                 carouselImages: []
@@ -1442,7 +1425,7 @@ export function PostEditor() {
                             content = el.querySelector('img')?.src || ''
                             enhancedFields = {
                                 caption: decodeURIComponent(el.getAttribute('data-caption') || ''),
-                                alignment: (el.getAttribute('data-align') as any) || 'center',
+                                alignment: (el.getAttribute('data-align') as 'left' | 'center' | 'right' | 'justify') || 'center',
                                 isCarousel: el.getAttribute('data-carousel') === 'true',
                                 carouselImages: el.getAttribute('data-images') ? JSON.parse(decodeURIComponent(el.getAttribute('data-images')!)) : []
                             }
@@ -1469,7 +1452,7 @@ export function PostEditor() {
                             content = el.innerHTML
                             enhancedFields = {
                                 subtitle: decodeURIComponent(el.getAttribute('data-subtitle') || ''),
-                                alignment: (el.getAttribute('data-align') as any) || 'left',
+                                alignment: (el.getAttribute('data-align') as 'left' | 'center' | 'right' | 'justify') || 'left',
                                 subtitleColor // Add subtitleColor
                             }
                         }
@@ -1482,7 +1465,7 @@ export function PostEditor() {
                 }
             }
         }
-    }, [isEditMode, id, sections])
+    }, [isEditMode, id, sections, getPostById])
 
     // Handlers
     const addBlock = (type: 'text' | 'image' | 'pdf' | 'composite' | 'video', index?: number) => {
@@ -1513,8 +1496,8 @@ export function PostEditor() {
         setBlocks(prev => prev.map(b => b.id === id ? { ...b, content } : b))
     }
 
-    const updateBlockField = (id: string, field: keyof EditorBlock, value: any) => {
-        setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b))
+    const updateBlockField = (id: string, field: keyof EditorBlock, value: unknown) => {
+        setBlocks(prev => prev.map(b => b.id === id ? { ...b, [field]: value as EditorBlock[keyof EditorBlock] } : b))
     }
 
     const moveBlock = (index: number, direction: 'up' | 'down') => {
@@ -1583,8 +1566,8 @@ export function PostEditor() {
 
         try {
             validateImage(file)
-        } catch (err: any) {
-            alert(err.message)
+        } catch (err: unknown) {
+            alert((err as Error).message)
             return
         }
 
@@ -1609,7 +1592,7 @@ export function PostEditor() {
 
             // If first image, reset index
             if (images.length === 0) setCurrentCoverIndex(0)
-        } catch (err: any) { console.error(err); alert(err.message || 'Processing failed') }
+        } catch (err: unknown) { console.error(err); alert((err as Error).message || 'Processing failed') }
         finally { setIsUploading(false); setPendingFile(null) }
     }
 
@@ -1618,7 +1601,6 @@ export function PostEditor() {
         setIsUploading(true)
         try {
             // Blob is WebP
-            // @ts-ignore
             const file = new File([blob], `cropped-cover-${Date.now()}.webp`, { type: "image/webp" })
             const blobUrl = URL.createObjectURL(file)
 
@@ -1641,9 +1623,9 @@ export function PostEditor() {
             const blobUrl = URL.createObjectURL(compressed)
             setPendingIconFile({ url: blobUrl, file: compressed })
             setIcon(blobUrl)
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err)
-            alert(err.message || 'Processing failed')
+            alert((err as Error).message || 'Processing failed')
         } finally {
             setIsUploading(false)
             e.target.value = ''
@@ -2263,8 +2245,8 @@ export function PostEditor() {
                                         }
                                         setPendingGalleryFiles(prev => ({ ...prev, ...newPending }))
                                         setGalleryImages(prev => [...prev, ...newUrls])
-                                    } catch (err: any) {
-                                        alert(err.message || 'Processing failed')
+                                    } catch (err: unknown) {
+                                        alert((err as Error).message || 'Processing failed')
                                     } finally {
                                         setIsUploading(false)
                                         e.target.value = ''

@@ -2,11 +2,34 @@ name: CI
 
 on:
   push:
-    branches: [main, master, pop-up]
+    branches: [main, master]
   pull_request:
     branches: [main, master]
 
 jobs:
+  lint:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -33,26 +56,6 @@ jobs:
       - name: Run critical tests
         run: npm run test:run -- --reporter=verbose src/test/critical
 
-  # lint:
-  #   name: Lint
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         cache: 'npm'
-
-  #     - name: Install dependencies
-  #       run: npm ci
-
-  #     - name: Run ESLint
-  #       run: npm run lint
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -78,3 +81,19 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+
+      - name: Check bundle size
+        run: |
+          MAX_SIZE_KB=1500
+          MAIN_JS=$(find dist/assets -name 'index-*.js' -not -name 'index.es-*' | head -1)
+          if [ -z "$MAIN_JS" ]; then
+            echo "Warning: Could not find main JS bundle"
+            exit 0
+          fi
+          SIZE_KB=$(du -k "$MAIN_JS" | cut -f1)
+          echo "Main bundle: ${SIZE_KB}KB (limit: ${MAX_SIZE_KB}KB)"
+          if [ "$SIZE_KB" -gt "$MAX_SIZE_KB" ]; then
+            echo "::error::Main bundle size ${SIZE_KB}KB exceeds limit of ${MAX_SIZE_KB}KB"
+            exit 1
+          fi
+          echo "Bundle size OK"

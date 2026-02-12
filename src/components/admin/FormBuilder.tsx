@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { RichTextEditor } from './RichTextEditor'
 import { FormFooter } from '../ui/FormFooter'
+import { sanitizeHtml } from '../../lib/sanitize'
 
 const FIELD_TYPES: { type: FormFieldType; label: string; icon: React.ReactNode }[] = [
     { type: 'text', label: 'Short Text', icon: <Type size={18} /> },
@@ -940,13 +941,13 @@ export function FormBuilder() {
                                 }}
                                 onClick={() => setActiveTab('settings')}
                                 title="Click to edit in Settings"
-                                dangerouslySetInnerHTML={{ __html: form.title || 'Untitled Form' }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.title || 'Untitled Form') }}
                                 className="prose prose-invert prose-lg max-w-none prose-headings:m-0 prose-p:m-0"
                             />
                             {form.description && (
                                 <div
                                     style={{ color: '#71717a', marginTop: '8px', fontSize: '1rem' }}
-                                    dangerouslySetInnerHTML={{ __html: form.description }}
+                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.description) }}
                                     className="prose prose-invert prose-sm max-w-none"
                                 />
                             )}

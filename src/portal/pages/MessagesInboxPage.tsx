@@ -21,9 +21,16 @@ export function MessagesInboxPage() {
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<PortalMessage | null>(null)
 
+  const [prevTab, setPrevTab] = useState(tab)
+  if (tab !== prevTab) {
+    setPrevTab(tab)
+    setLoading(true)
+    setError(null)
+  }
+
   useEffect(() => {
     if (!user) return
-    let cancelled = false; setLoading(true); setError(null)
+    let cancelled = false
     api.fetchMessages(user.id, tab)
       .then(data => { if (!cancelled) setMessages(data) })
       .catch(err => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load messages.') })
@@ -58,7 +65,7 @@ export function MessagesInboxPage() {
 
   function isBroadcast(msg: PortalMessage): boolean {
     // PHP/MySQL may return TINYINT as string "0"/"1", number 0/1, or boolean
-    return msg.is_broadcast === true || msg.is_broadcast === (1 as any) || msg.is_broadcast === ('1' as any)
+    return msg.is_broadcast === true || msg.is_broadcast === (1 as unknown) || msg.is_broadcast === ('1' as unknown)
   }
 
   function getMessageType(msg: PortalMessage): { label: string; icon: React.ReactNode; className: string } {

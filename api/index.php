@@ -4,9 +4,62 @@
  * Handles all incoming requests and routes them to appropriate handlers
  */
 
+// Handle CORS immediately
+// Allow multiple origins (localhost for dev, production domains)
+$allowedOrigins = [
+    'https://siodelhi.org',
+    'https://www.siodelhi.org',
+    'https://sio-delhi.github.io',
+    'https://local.siodelhi.org',
+];
+
+// Disable error display in production to prevent JSON corruption
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_reporting(E_ALL);
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+// Check if origin matches allowed list OR is localhost/127.0.0.1
+$isAllowed = in_array($origin, $allowedOrigins) ||
+    preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin);
+
+if ($isAllowed) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Vary: Origin');
+} else {
+    // If not in allowed list, use the primary allowed origin (siodelhi.org)
+    // or fallback to the config value if available later. 
+    // Since we haven't loaded config yet, we'll hardcode the main one or just not send it if strict.
+    // For now, let's try to be permissive for the main domain if allowedOrigins check failed for some reason (e.g. strict type).
+    if (!empty($origin) && strpos($origin, 'siodelhi.org') !== false) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Vary: Origin');
+    } else {
+        // Fallback to a default safe origin if possible, or just don't set it (which causes the error).
+        // Let's set it to the main site to be safe.
+        header('Access-Control-Allow-Origin: https://siodelhi.org');
+    }
+}
+
+// Set headers
+header('Content-Type: application/json');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Credentials: true');
+
+// Handle preflight requests
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/rate-limit.php';
+require_once __DIR__ . '/validate.php';
+require_once __DIR__ . '/logger.php';
 
 // Routes that do NOT require authentication
 $publicRoutes = [
@@ -24,39 +77,6 @@ $publicRoutes = [
     'POST /forms/([^/]+)/submit',
 ];
 
-// Handle CORS - allow multiple origins (localhost for dev, production domains)
-$allowedOrigins = [
-    'https://siodelhi.org',
-    'https://www.siodelhi.org',
-    'https://sio-delhi.github.io',
-    'https://local.siodelhi.org',  // local dev with hosts entry for Clerk production keys
-];
-
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-
-// Check if origin matches allowed list OR is localhost/127.0.0.1
-$isAllowed = in_array($origin, $allowedOrigins) ||
-    preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin);
-
-if ($isAllowed) {
-    header('Access-Control-Allow-Origin: ' . $origin);
-    header('Vary: Origin');
-} else {
-    header('Access-Control-Allow-Origin: ' . CORS_ORIGIN);
-}
-
-// Set headers
-header('Content-Type: application/json');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Access-Control-Allow-Credentials: true');
-
-// Handle preflight requests
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
 // Get request method and URI
 $method = $_SERVER['REQUEST_METHOD'];
 $uri = $_SERVER['REQUEST_URI'];
@@ -70,7 +90,15 @@ $uri = rtrim($uri, '/');
 $routes = [
     // Health check
     'GET /health' => function () {
-        return ['status' => 'ok', 'message' => 'API is running'];
+        $result = ['status' => 'ok', 'message' => 'API is running'];
+        try {
+            $pdo = getDB();
+            $pdo->query('SELECT 1');
+            $result['db'] = 'connected';
+        } catch (Throwable $e) {
+            $result['db'] = 'error';
+        }
+        return $result;
     },
 
     // Sections
@@ -223,12 +251,27 @@ foreach ($routes as $pattern => $handler) {
         $matched = true;
         array_shift($matches); // Remove full match
 
+        // Rate limiting on login endpoint
+        if ($pattern === 'POST /portal/auth/me') {
+            enforceRateLimit('login', 10, 60); // 10 attempts per minute
+        }
+
+        // General API rate limit (60 req/min per IP for write operations)
+        if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
+            enforceRateLimit('api_write', 60, 60);
+        }
+
         // Auth check: require authentication for non-public routes
         $isPublic = in_array($pattern, $publicRoutes);
 
         // Allow unauthenticated uploads when formId is present (public form submissions)
         if (!$isPublic && strpos($pattern, 'POST /upload/') === 0 && !empty($_POST['formId'])) {
             $isPublic = true;
+        }
+
+        // Enforce body size limit on POST/PUT (1MB, except uploads which have their own limits)
+        if (in_array($method, ['POST', 'PUT']) && strpos($pattern, 'upload') === false && strpos($pattern, 'avatar') === false) {
+            enforceBodyLimit(1048576); // 1MB
         }
 
         if (!$isPublic) {
@@ -249,8 +292,33 @@ foreach ($routes as $pattern => $handler) {
 
             echo json_encode($result);
         } catch (Throwable $e) {
+            // Ensure CORS headers are present even on error
+            if (!headers_sent()) {
+                if (isset($isAllowed) && $isAllowed) {
+                    header('Access-Control-Allow-Origin: ' . ($origin ?? 'https://siodelhi.org'));
+                } else {
+                    header('Access-Control-Allow-Origin: https://siodelhi.org');
+                }
+                header('Access-Control-Allow-Credentials: true');
+            }
+
             http_response_code(500);
-            echo json_encode(['error' => $e->getMessage(), 'file' => basename($e->getFile()), 'line' => $e->getLine()]);
+
+            // Try to log
+            if (function_exists('logError')) {
+                logError($e->getMessage(), [
+                    'file' => basename($e->getFile()),
+                    'line' => $e->getLine(),
+                    'route' => $pattern,
+                ]);
+            }
+
+            echo json_encode([
+                'error' => 'Internal server error.',
+                'debug_message' => $e->getMessage(), // Temporary for debugging
+                'file' => basename($e->getFile()),
+                'line' => $e->getLine()
+            ]);
         }
         break;
     }

@@ -7,6 +7,7 @@ import { uploadPdf, uploadImage } from '../lib/storage'
 import { MAX_FILE_SIZE_BYTES } from '../lib/imageProcessing'
 import sioLogo from '../assets/siodel_logo.png'
 import { FormFooter } from '../components/ui/FormFooter'
+import { sanitizeHtml } from '../lib/sanitize'
 
 export function PublicForm() {
     const { formId } = useParams()
@@ -629,13 +630,13 @@ export function PublicForm() {
                     <h1
                         style={{ fontSize: '2rem', fontWeight: 700, color: '#1a1a1a', margin: '0 0 8px' }}
                         className="prose prose-lg max-w-none prose-headings:m-0 prose-p:m-0"
-                        dangerouslySetInnerHTML={{ __html: form?.title || '' }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(form?.title || '') }}
                     />
                     {form?.description && (
                         <div
                             style={{ color: '#6b7280', margin: 0, lineHeight: 1.6 }}
                             className="prose prose-sm max-w-none prose-p:my-2 prose-headings:my-3 prose-ul:my-2"
-                            dangerouslySetInnerHTML={{ __html: form.description }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.description) }}
                         />
                     )}
                 </div>

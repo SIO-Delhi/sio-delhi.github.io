@@ -176,6 +176,7 @@ export function Sidebar() {
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="portal-sidebar-collapse-toggle"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <ChevronLeft
               size={18}

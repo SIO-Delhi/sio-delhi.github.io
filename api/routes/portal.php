@@ -263,7 +263,8 @@ function portalSetup()
         // Allow last_name to be NULL (single-name people)
         try {
             $db->exec("ALTER TABLE portal_users MODIFY COLUMN last_name VARCHAR(128) NULL");
-        } catch (Exception $e) { /* ignore */ }
+        } catch (Exception $e) { /* ignore */
+        }
         $rows = $db->query("SELECT id, full_name FROM portal_users WHERE first_name IS NULL OR first_name = ''")->fetchAll();
         foreach ($rows as $r) {
             $parts = preg_split('/\s+/', trim($r['full_name']), -1, PREG_SPLIT_NO_EMPTY);
@@ -367,27 +368,34 @@ function portalSetup()
     // Add inactive tracking columns
     try {
         $db->exec("ALTER TABLE portal_users ADD COLUMN inactivated_by VARCHAR(36) NULL AFTER status");
-    } catch (Exception $e) { /* Column already exists */ }
+    } catch (Exception $e) { /* Column already exists */
+    }
     try {
         $db->exec("ALTER TABLE portal_users ADD COLUMN inactive_reason JSON NULL AFTER inactivated_by");
-    } catch (Exception $e) { /* Column already exists */ }
+    } catch (Exception $e) { /* Column already exists */
+    }
     try {
         $db->exec("ALTER TABLE portal_users ADD COLUMN inactivated_at TIMESTAMP NULL AFTER inactive_reason");
-    } catch (Exception $e) { /* Column already exists */ }
+    } catch (Exception $e) { /* Column already exists */
+    }
     // Add revoke tracking columns
     try {
         $db->exec("ALTER TABLE portal_users ADD COLUMN revoked_by VARCHAR(36) NULL AFTER inactivated_at");
-    } catch (Exception $e) { /* Column already exists */ }
+    } catch (Exception $e) { /* Column already exists */
+    }
     try {
         $db->exec("ALTER TABLE portal_users ADD COLUMN revoke_reason TEXT NULL AFTER revoked_by");
-    } catch (Exception $e) { /* Column already exists */ }
+    } catch (Exception $e) { /* Column already exists */
+    }
     try {
         $db->exec("ALTER TABLE portal_users ADD COLUMN revoked_at TIMESTAMP NULL AFTER revoke_reason");
-    } catch (Exception $e) { /* Column already exists */ }
+    } catch (Exception $e) { /* Column already exists */
+    }
     // Add 'revoked' to status ENUM if not present
     try {
         $db->exec("ALTER TABLE portal_users MODIFY COLUMN status ENUM('active','inactive','migrated','revoked') DEFAULT 'active'");
-    } catch (Exception $e) { /* Already updated */ }
+    } catch (Exception $e) { /* Already updated */
+    }
     // Backfill from portal_region_units: one region per RP, set users.region_id and units.region_id
     $regionCount = (int) $db->query("SELECT COUNT(*) FROM portal_regions")->fetchColumn();
     if ($regionCount === 0) {
@@ -795,8 +803,18 @@ function portalAuthMe()
     $campusJoin = '';
     $circleSelect = '';
     $campusSelect = '';
-    try { $db->query("SELECT 1 FROM portal_circles LIMIT 0"); $circleJoin = 'LEFT JOIN portal_circles pc ON u.circle_id = pc.id'; $circleSelect = ', pc.name AS circle_name'; } catch (Exception $e) {}
-    try { $db->query("SELECT 1 FROM portal_campuses LIMIT 0"); $campusJoin = 'LEFT JOIN portal_campuses pca ON u.campus_id = pca.id'; $campusSelect = ', pca.name AS campus_name'; } catch (Exception $e) {}
+    try {
+        $db->query("SELECT 1 FROM portal_circles LIMIT 0");
+        $circleJoin = 'LEFT JOIN portal_circles pc ON u.circle_id = pc.id';
+        $circleSelect = ', pc.name AS circle_name';
+    } catch (Exception $e) {
+    }
+    try {
+        $db->query("SELECT 1 FROM portal_campuses LIMIT 0");
+        $campusJoin = 'LEFT JOIN portal_campuses pca ON u.campus_id = pca.id';
+        $campusSelect = ', pca.name AS campus_name';
+    } catch (Exception $e) {
+    }
 
     try {
         if ($username !== null && $username !== '') {
@@ -906,13 +924,13 @@ function portalCreateUnits()
         $db = getDB();
         $regionCols = hasRegionColumns($db);
         if ($regionCols['units']) {
-            $stmt = $db->prepare("INSERT INTO portal_units (id, name, region_id) VALUES (?, ?, ?)");
+            $stmt = $db->prepare("INSERT IGNORE INTO portal_units (id, name, region_id) VALUES (?, ?, ?)");
             foreach ($units as $u) {
                 $regionId = !empty($u['region_id']) ? $u['region_id'] : null;
                 $stmt->execute([uuid(), $u['name'], $regionId]);
             }
         } else {
-            $stmt = $db->prepare("INSERT INTO portal_units (id, name) VALUES (?, ?)");
+            $stmt = $db->prepare("INSERT IGNORE INTO portal_units (id, name) VALUES (?, ?)");
             foreach ($units as $u) {
                 $stmt->execute([uuid(), $u['name']]);
             }
@@ -1056,7 +1074,7 @@ function portalCreateCircles()
     $body = jsonBody();
     $circles = $body['circles'] ?? [];
     $db = getDB();
-    $stmt = $db->prepare("INSERT INTO portal_circles (id, name) VALUES (?, ?)");
+    $stmt = $db->prepare("INSERT IGNORE INTO portal_circles (id, name) VALUES (?, ?)");
     foreach ($circles as $c) {
         $stmt->execute([uuid(), $c['name']]);
     }
@@ -1132,7 +1150,7 @@ function portalCreateCampuses()
     $body = jsonBody();
     $campuses = $body['campuses'] ?? [];
     $db = getDB();
-    $stmt = $db->prepare("INSERT INTO portal_campuses (id, name) VALUES (?, ?)");
+    $stmt = $db->prepare("INSERT IGNORE INTO portal_campuses (id, name) VALUES (?, ?)");
     foreach ($campuses as $c) {
         $stmt->execute([uuid(), $c['name']]);
     }
@@ -1301,11 +1319,15 @@ function portalCreateUsers()
 
     // Build dynamic INSERT columns
     $insertCols = ['id', 'first_name', 'middle_name', 'last_name', 'username', 'phone'];
-    if ($hasAltPhone) $insertCols[] = 'alt_phone';
+    if ($hasAltPhone)
+        $insertCols[] = 'alt_phone';
     $insertCols = array_merge($insertCols, ['password', 'date_of_birth', 'role', 'unit_id']);
-    if ($hasMembershipType) $insertCols[] = 'membership_type';
-    if ($hasMembershipId) $insertCols[] = 'membership_id';
-    if ($hasRegion) $insertCols[] = 'region_id';
+    if ($hasMembershipType)
+        $insertCols[] = 'membership_type';
+    if ($hasMembershipId)
+        $insertCols[] = 'membership_id';
+    if ($hasRegion)
+        $insertCols[] = 'region_id';
 
     $placeholders = implode(',', array_fill(0, count($insertCols), '?'));
     $colList = implode(', ', $insertCols);
@@ -1315,7 +1337,8 @@ function portalCreateUsers()
         $first = trim($u['first_name'] ?? '');
         $middle = isset($u['middle_name']) ? trim($u['middle_name']) : null;
         $last = trim($u['last_name'] ?? '');
-        if ($last === '') $last = null;
+        if ($last === '')
+            $last = null;
         if ($first === '') {
             continue; // first name is required
         }
@@ -1331,11 +1354,15 @@ function portalCreateUsers()
         }
 
         $params = [uuid(), $first, $middle, $last, $username, $u['phone']];
-        if ($hasAltPhone) $params[] = $u['alt_phone'] ?? null;
+        if ($hasAltPhone)
+            $params[] = $u['alt_phone'] ?? null;
         $params = array_merge($params, [$password, $dob, $u['role'], $u['unit_id'] ?? null]);
-        if ($hasMembershipType) $params[] = $u['membership_type'] ?? ($u['unit_id'] ? 'unit' : null);
-        if ($hasMembershipId) $params[] = $u['membership_id'] ?? $u['unit_id'] ?? null;
-        if ($hasRegion) $params[] = $u['region_id'] ?? null;
+        if ($hasMembershipType)
+            $params[] = $u['membership_type'] ?? ($u['unit_id'] ? 'unit' : null);
+        if ($hasMembershipId)
+            $params[] = $u['membership_id'] ?? $u['unit_id'] ?? null;
+        if ($hasRegion)
+            $params[] = $u['region_id'] ?? null;
 
         $stmt->execute($params);
 
@@ -1462,7 +1489,8 @@ function portalDeleteUser($id)
     }
 
     $result = ['success' => true];
-    if ($clerkError) $result['warning'] = $clerkError;
+    if ($clerkError)
+        $result['warning'] = $clerkError;
     return $result;
 }
 
@@ -1650,7 +1678,8 @@ Regions (region entity; has name and a regional president assigned; units belong
 function portalGetRegions()
 {
     $db = getDB();
-    if (!tableExists($db, 'portal_regions')) return [];
+    if (!tableExists($db, 'portal_regions'))
+        return [];
     $regionCols = hasRegionColumns($db);
     $regions = $db->query("SELECT id, name, created_at FROM portal_regions ORDER BY name")->fetchAll();
     $out = [];
@@ -1701,7 +1730,8 @@ function portalCreateRegions()
         $stmt = $db->prepare("INSERT INTO portal_regions (id, name) VALUES (?, ?)");
         foreach ($regions as $r) {
             $name = is_array($r) ? ($r['name'] ?? '') : $r;
-            if (!$name) continue;
+            if (!$name)
+                continue;
             $stmt->execute([uuid(), trim($name)]);
         }
         return ['success' => true, 'count' => count($regions)];
@@ -2005,8 +2035,10 @@ function portalGetMembersWithIncompleteDetails()
     $out = [];
     foreach ($rows as $row) {
         $missing = [];
-        if (trim($row['phone'] ?? '') === '') $missing[] = 'phone';
-        if (trim($row['date_of_birth'] ?? '') === '') $missing[] = 'date_of_birth';
+        if (trim($row['phone'] ?? '') === '')
+            $missing[] = 'phone';
+        if (trim($row['date_of_birth'] ?? '') === '')
+            $missing[] = 'date_of_birth';
         $fullName = trim(implode(' ', array_filter([$row['first_name'] ?? '', $row['middle_name'] ?? '', $row['last_name'] ?? '']))) ?: '—';
         $unitName = isset($row['unit_name']) && trim($row['unit_name']) !== '' ? $row['unit_name'] : null;
         $circleName = isset($row['circle_name']) && trim($row['circle_name']) !== '' ? $row['circle_name'] : null;
@@ -2100,7 +2132,8 @@ function portalNotificationCounts()
         $out['unreadMessages'] = (int) $stmt->fetchColumn();
     }
 
-    if (!tableExists($db, 'portal_migration_requests')) return $out;
+    if (!tableExists($db, 'portal_migration_requests'))
+        return $out;
 
     $migSql = "SELECT COUNT(*) FROM portal_migration_requests WHERE status = 'pending'";
     $migParams = [];
@@ -2128,7 +2161,8 @@ function portalNotificationCounts()
         }
     }
 
-    if (!tableExists($db, 'portal_perf_forms')) return $out;
+    if (!tableExists($db, 'portal_perf_forms'))
+        return $out;
 
     if ($role === 'member' && $userId && $unitId) {
         $stmt = $db->prepare("

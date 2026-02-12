@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { useDialogA11y } from '../hooks/useDialogA11y'
 
 const INACTIVE_REASONS = [
   'Not attending programs regularly',
@@ -21,6 +22,14 @@ export function InactiveChecklistDialog({ open, memberName, onConfirm, onCancel 
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [customReason, setCustomReason] = useState('')
 
+  function handleCancel() {
+    setSelected(new Set())
+    setCustomReason('')
+    onCancel()
+  }
+
+  const dialogRef = useDialogA11y(open, handleCancel)
+
   if (!open) return null
 
   function toggleReason(reason: string) {
@@ -41,16 +50,10 @@ export function InactiveChecklistDialog({ open, memberName, onConfirm, onCancel 
     setCustomReason('')
   }
 
-  function handleCancel() {
-    setSelected(new Set())
-    setCustomReason('')
-    onCancel()
-  }
-
   const hasSelection = selected.size > 0 || customReason.trim().length > 0
 
   return (
-    <div className="portal-dialog-overlay" onClick={handleCancel}>
+    <div className="portal-dialog-overlay" onClick={handleCancel} role="dialog" aria-modal="true" aria-label="Set Member Inactive" ref={dialogRef}>
       <div className="portal-dialog" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
         <div className="portal-dialog-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--p-amber)' }}>

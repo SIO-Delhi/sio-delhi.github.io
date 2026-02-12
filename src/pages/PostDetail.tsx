@@ -12,6 +12,8 @@ import { EmbeddableGallery } from '../components/ui/EmbeddableGallery'
 import { PDFPreviewCard } from '../components/ui/PDFPreviewCard'
 import { PDFModal } from '../components/ui/PDFModal'
 import { slugify } from '../utils/slugify'
+import { sanitizeHtml } from '../lib/sanitize'
+import type { Post } from '../types/content'
 
 // --- Helper: Detect RTL Text (Urdu/Arabic) ---
 const isRtl = (text: string) => {
@@ -64,9 +66,7 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
                 document.body.appendChild(script)
             } else {
                 // Re-process embeds if script already exists
-                // @ts-ignore
                 if (window.instgrm?.Embeds?.process) {
-                    // @ts-ignore
                     window.instgrm.Embeds.process()
                 }
             }
@@ -83,9 +83,7 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
                 document.body.appendChild(script)
             } else {
                 // Re-parse FB embeds
-                // @ts-ignore
                 if (window.FB?.XFBML?.parse) {
-                    // @ts-ignore
                     window.FB.XFBML.parse()
                 }
             }
@@ -215,7 +213,7 @@ const VideoBlock = React.memo(({ src, subtitle, subtitleColor, text, isDark }: {
 
 
 // Self-contained Carousel Component via props
-const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { images: string[], containerStyle?: any, imageStyle?: any }) => {
+const CarouselBlock = React.memo(({ images, containerStyle, imageStyle }: { images: string[], containerStyle?: React.CSSProperties, imageStyle?: React.CSSProperties }) => {
     const [currentIndex, setCurrentIndex] = useState(0)
 
     useEffect(() => {
@@ -447,7 +445,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                     lineHeight: 1.8,
                                     color: isDark ? '#eee' : '#333'
                                 }}
-                                dangerouslySetInnerHTML={{ __html: block.content }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }}
                             />
                         </div>
                     )
@@ -618,7 +616,7 @@ function ContentBlockRenderer({ content, isDark }: { content: string; isDark: bo
                                         lineHeight: 1.6,
                                         textAlign: (block.alignment as 'left' | 'center' | 'right') || (layout === 'image-top' ? 'center' : 'left')
                                     }}
-                                    dangerouslySetInnerHTML={{ __html: block.textContent || '' }}
+                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.textContent || '') }}
                                 />
                             </div>
                         </div>
@@ -669,9 +667,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     // Scroll to top on mount and ID change
     useEffect(() => {
         // Handle Lenis smooth scroll if active
-        // @ts-ignore
         if (window.lenis) {
-            // @ts-ignore
             window.lenis.scrollTo(0, { immediate: true })
         } else {
             window.scrollTo(0, 0)
@@ -795,7 +791,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
 }
 
 // --- Hero Carousel Component ---
-function HeroCarousel({ post }: { post: any }) {
+function HeroCarousel({ post }: { post: Post }) {
     const [heroIndex, setHeroIndex] = useState(0)
 
     // Parse images
@@ -899,17 +895,7 @@ function HeroCarousel({ post }: { post: any }) {
 }
 
 // --- Read Article Button (ResponsiveVoice TTS) ---
-declare global {
-    interface Window {
-        responsiveVoice: {
-            speak: (text: string, voice?: string, options?: any) => void;
-            cancel: () => void;
-            isPlaying: () => boolean;
-        };
-    }
-}
-
-function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
+function ReadArticleButton({ post, isDark }: { post: Post; isDark: boolean }) {
     const [isPlaying, setIsPlaying] = useState(false)
 
     const extractTextFromPost = () => {
@@ -1102,7 +1088,7 @@ function ReadArticleButton({ post, isDark }: { post: any; isDark: boolean }) {
 }
 
 // Default layout for About and Initiatives
-function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { post: any; isDark: boolean; sectionLabel?: string; posts?: any[], galleryUrl?: string, hasGallery?: boolean }) {
+function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { post: Post; isDark: boolean; sectionLabel?: string; posts?: Post[], galleryUrl?: string, hasGallery?: boolean }) {
 
     // Check if this post IS a subsection (parent with children) — takes priority over being a child
     const isSubsection = !!post.isSubsection
@@ -1415,7 +1401,7 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
 }
 
 // Leadership-specific layout (profile style)
-function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDark: boolean, galleryUrl?: string, hasGallery?: boolean }) {
+function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: Post; isDark: boolean, galleryUrl?: string, hasGallery?: boolean }) {
     return (
         <div
             className="leadership-card"
@@ -1556,7 +1542,7 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any;
                             Given the user wants a single card, forcing ContentBlockRenderer (which has its own cards) is bad.
                             I'll basically unwind the renderer for this specific view to just be the content.
                          */}
-                            <div dangerouslySetInnerHTML={{ __html: post.content }} />
+                            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }} />
                         </div>
                     )
                 }
@@ -1600,7 +1586,7 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: any;
 }
 
 // Media/News-specific layout
-function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: any; isDark: boolean, galleryUrl?: string, hasGallery?: boolean }) {
+function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: Post; isDark: boolean, galleryUrl?: string, hasGallery?: boolean }) {
     const formattedDate = new Date(post.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',

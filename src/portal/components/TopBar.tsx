@@ -31,6 +31,15 @@ export function TopBar({ title }: { title?: string }) {
   const searchRef = useRef<HTMLDivElement>(null)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery)
+  if (searchQuery !== prevSearchQuery) {
+    setPrevSearchQuery(searchQuery)
+    if (!searchQuery.trim()) {
+      setSearchResults(null)
+      setSearchOpen(false)
+    }
+  }
+
   const showSearch = !!user
 
   const runSearch = useCallback(async (q: string) => {
@@ -45,11 +54,7 @@ export function TopBar({ title }: { title?: string }) {
   }, [])
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults(null)
-      setSearchOpen(false)
-      return
-    }
+    if (!searchQuery.trim()) return
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
     searchDebounceRef.current = setTimeout(() => runSearch(searchQuery), 250)
     return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current) }

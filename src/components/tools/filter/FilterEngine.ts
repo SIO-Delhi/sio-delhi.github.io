@@ -50,11 +50,29 @@ export class FilterEngine {
     // Uniform locations
     private uniforms: Record<string, WebGLUniformLocation | null> = {}
 
+    private isContextLost: boolean = false
+
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas
+
+        // Handle context loss
+        canvas.addEventListener('webglcontextlost', (e) => {
+            e.preventDefault()
+            this.isContextLost = true
+            console.error('FilterEngine: WebGL context lost')
+        }, false)
+
+        canvas.addEventListener('webglcontextrestored', () => {
+            this.isContextLost = false
+            console.log('FilterEngine: WebGL context restored')
+            // Note: Recovery would require re-initialization of shaders/buffers/textures
+            // For now we just log it.
+        }, false)
+
         const gl = canvas.getContext('webgl', {
             premultipliedAlpha: false,
-            preserveDrawingBuffer: true
+            preserveDrawingBuffer: true,
+            failIfMajorPerformanceCaveat: false
         })
 
         if (!gl) {
@@ -155,6 +173,7 @@ export class FilterEngine {
      * Load an image as the source texture
      */
     loadImage(image: HTMLImageElement): void {
+        if (this.isContextLost) return
         const gl = this.gl
 
         // Resize canvas to match image
@@ -187,6 +206,7 @@ export class FilterEngine {
      * Load a LUT for color grading
      */
     loadLUT(lut: LUTData): void {
+        if (this.isContextLost) return
         const gl = this.gl
         const textureData = lutToTextureData(lut)
 
@@ -230,6 +250,7 @@ export class FilterEngine {
      * Render with the given filter configuration
      */
     render(config: FilterConfig): void {
+        if (this.isContextLost) return
         const gl = this.gl
 
         if (!this.imageTexture) return

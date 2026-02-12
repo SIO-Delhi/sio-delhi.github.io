@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { useDialogA11y } from '../hooks/useDialogA11y'
 
 interface RevokeDialogProps {
   open: boolean
@@ -11,6 +12,13 @@ interface RevokeDialogProps {
 export function RevokeDialog({ open, memberName, onConfirm, onCancel }: RevokeDialogProps) {
   const [reason, setReason] = useState('')
 
+  function handleCancel() {
+    setReason('')
+    onCancel()
+  }
+
+  const dialogRef = useDialogA11y(open, handleCancel)
+
   if (!open) return null
 
   function handleConfirm() {
@@ -19,15 +27,10 @@ export function RevokeDialog({ open, memberName, onConfirm, onCancel }: RevokeDi
     setReason('')
   }
 
-  function handleCancel() {
-    setReason('')
-    onCancel()
-  }
-
   const hasReason = reason.trim().length > 0
 
   return (
-    <div className="portal-dialog-overlay" onClick={handleCancel}>
+    <div className="portal-dialog-overlay" onClick={handleCancel} role="dialog" aria-modal="true" aria-label="Revoke Membership" ref={dialogRef}>
       <div className="portal-dialog" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
         <div className="portal-dialog-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444' }}>

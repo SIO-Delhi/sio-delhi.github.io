@@ -28,6 +28,9 @@ export function GalleryEditor() {
     const [title, setTitle] = useState('')
     const [content, setContent] = useState('')
     const [coverImage, setCoverImage] = useState('')
+    // External Link State
+    const [externalLink, setExternalLink] = useState('')
+    const [openInNewTab, setOpenInNewTab] = useState(false)
 
     // Gallery Data
     const [sections, setSections] = useState<GallerySection[]>([])
@@ -65,6 +68,8 @@ export function GalleryEditor() {
                 setTitle(post.title)
                 setContent(post.content || '')
                 setCoverImage(post.image || '')
+                setExternalLink(post.externalLink || '')
+                setOpenInNewTab(post.openInNewTab || false)
 
                 // Parse gallery images
                 // It might be string[] (old) or GallerySection[] (new)
@@ -133,6 +138,8 @@ export function GalleryEditor() {
                 layout: 'gallery',
                 galleryImages: processedSections as any,
                 sectionId: sectionId,
+                externalLink,
+                openInNewTab,
                 isPublished: true
             }
 
@@ -435,6 +442,35 @@ export function GalleryEditor() {
                                 </label>
                             )}
                         </div>
+                    </div>
+                </div>
+
+                {/* External Link */}
+                <div style={{ background: '#18181b', padding: '16px', borderRadius: '12px', border: '1px solid #27272a' }}>
+                    <label style={{ display: 'block', color: '#a1a1aa', fontSize: '0.85rem', fontWeight: 600, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        External Link Action
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <input
+                            type="text"
+                            value={externalLink}
+                            onChange={(e) => setExternalLink(e.target.value)}
+                            placeholder="https://example.com (Overrides detail page)"
+                            style={{
+                                width: '100%', padding: '12px', borderRadius: '8px',
+                                background: '#09090b', border: '1px solid #27272a', color: 'white',
+                                fontSize: '0.9rem', outline: 'none'
+                            }}
+                        />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#ccc', fontSize: '0.9rem' }}>
+                            <input
+                                type="checkbox"
+                                checked={openInNewTab}
+                                onChange={(e) => setOpenInNewTab(e.target.checked)}
+                                style={{ accentColor: '#ff3b3b', width: '16px', height: '16px' }}
+                            />
+                            Open in new tab
+                        </label>
                     </div>
                 </div>
 

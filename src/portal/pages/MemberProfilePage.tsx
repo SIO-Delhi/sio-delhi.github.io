@@ -26,12 +26,12 @@ export function MemberProfilePage() {
   const [success, setSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [pendingVerification, setPendingVerification] = useState(false)
   if (!user) return null
 
   const displayName = user.full_name || [firstName, middleName, lastName].filter(Boolean).join(' ').trim()
   const isMember = user.role === 'member'
   const canEditProfileDetails = true
-  const [pendingVerification, setPendingVerification] = useState(false)
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault(); if (!user || !canEditProfileDetails) return; setError(null); setSuccess(false); setPendingVerification(false)
