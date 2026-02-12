@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { type LucideIcon, FileText, Link, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Mail, Award, Briefcase, Calendar, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Layout, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info } from 'lucide-react'
+import { trackEvent } from '../../hooks/usePageTracker'
 
 // Icon map for Resource card
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -59,6 +60,8 @@ export function SectionCard({
 
     const handleClick = () => {
         if (externalLink) {
+            trackEvent('external_link_click', `post_redirect: ${externalLink}`)
+
             if (openInNewTab) {
                 window.open(externalLink, '_blank', 'noopener,noreferrer')
             } else {

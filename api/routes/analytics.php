@@ -351,6 +351,7 @@ function getVisitStats()
             ROUND(AVG(CASE WHEN duration_seconds > 0 THEN duration_seconds ELSE NULL END)) as avg_duration
         FROM page_visits
         WHERE 1=1 $dateFilter
+        AND page NOT LIKE '/portal%'
         GROUP BY page
         ORDER BY total_visits DESC
     ");
@@ -458,6 +459,7 @@ function getVisitStats()
             WHERE 1=1 $dateFilter
             GROUP BY vid, visit_date
         ) sub
+        WHERE page NOT LIKE '/portal%'
         GROUP BY page ORDER BY count DESC LIMIT 10
     ");
     $landingStmt->execute($dateParams);

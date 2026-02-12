@@ -101,14 +101,24 @@ export function trackEvent(eventName: string, eventLabel?: string) {
     const visitorId = getVisitorId()
     const page = window.location.pathname
 
-    fetch(`${API_BASE}/analytics/event`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            event_name: eventName,
-            event_label: eventLabel,
-            visitor_id: visitorId,
-            page
-        })
-    }).catch(() => { })
+    const payload = JSON.stringify({
+        event_name: eventName,
+        event_label: eventLabel,
+        visitor_id: visitorId,
+        page
+    })
+
+    if (navigator.sendBeacon) {
+        // Send as Blob to ensure Content-Type is application/json (optional, but good practice if backend expects it)
+        // Note: sendBeacon sends POST. PHP receives this in php://input
+        const blob = new Blob([payload], { type: 'application/json' })
+        navigator.sendBeacon(`${API_BASE}/analytics/event`, blob)
+    } else {
+        fetch(`${API_BASE}/analytics/event`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+            keepalive: true
+        }).catch(() => { })
+    }
 }

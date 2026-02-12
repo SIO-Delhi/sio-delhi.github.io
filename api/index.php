@@ -47,6 +47,9 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('Access-Control-Allow-Credentials: true');
+// Cache for 60 seconds to balance freshness and performance
+header("Cache-Control: public, max-age=60, must-revalidate");
+
 
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

@@ -6,6 +6,9 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 export default defineConfig({
     plugins: [react(), basicSsl()],
     base: '/',
+    esbuild: {
+        drop: ['console', 'debugger'],
+    },
     build: {
         rollupOptions: {
             output: {
