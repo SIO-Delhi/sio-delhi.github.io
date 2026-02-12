@@ -66,6 +66,14 @@
 
 /* Event Poster Fonts */
 @font-face {
+    font-family: 'DMSerifDisplay';
+    src: url('../../../fonts/DM_Serif_Display/DMSerifDisplay-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
     font-family: 'BodoniModa28pt';
     src: url('../../../fonts/Bodoni_Moda/static/BodoniModa_28pt-Regular.ttf') format('truetype');
     font-weight: 400;

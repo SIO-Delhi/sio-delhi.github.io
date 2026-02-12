@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Briefcase, Download, Upload, Calendar, User, Palette, Edit3, RefreshCcw, Eye } from 'lucide-react'
+import { Briefcase, Download, Upload, Calendar, User, Palette, Edit3, RefreshCcw, Eye, Instagram, Link as LinkIcon, Check } from 'lucide-react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { useHistory } from '../../../hooks/useHistory'
 import posterSvgUrl from '../../../assets/poster.svg'
 import './poster.css'
@@ -8,12 +9,18 @@ import flamanteSerifBoldUrl from '../../../fonts/flamante-serif/Flamante Serif -
 import ascendantSerifUrl from '../../../fonts/ascendant_serif/AscendantSerif-PersonalUse-Regular.otf'
 import ascenderSerifBoldUrl from '../../../fonts/Ascender-Serif-W02-Bold/Ascender Serif W02 Bold.ttf'
 import openSansBoldUrl from '../../../fonts/open-sans/OpenSans-Bold.ttf'
+import dmSerifDisplayUrl from '../../../fonts/DM_Serif_Display/DMSerifDisplay-Regular.ttf'
+import dmSansLightUrl from '../../../fonts/DM_Sans/static/DMSans-Light.ttf'
+import dmSerifTextUrl from '../../../fonts/DM_Serif_Text/DMSerifText-Regular.ttf'
 
 const fontDefs = [
     { family: 'FlamanteSerifBold', url: flamanteSerifBoldUrl, format: 'truetype' },
     { family: 'AscendantSerif', url: ascendantSerifUrl, format: 'opentype' },
     { family: 'AscenderSerifBold', url: ascenderSerifBoldUrl, format: 'truetype' },
     { family: 'OpenSansBold', url: openSansBoldUrl, format: 'truetype' },
+    { family: 'DMSerifDisplay', url: dmSerifDisplayUrl, format: 'truetype' },
+    { family: 'DMSansLight', url: dmSansLightUrl, format: 'truetype' },
+    { family: 'DMSerifText', url: dmSerifTextUrl, format: 'truetype' },
 ]
 
 async function buildEmbeddedFontStyles(): Promise<string> {
@@ -48,6 +55,9 @@ interface PosterState {
     hue: number
     image: string | null
     logoText: string
+    websiteText: string
+    showLinkIcon: boolean
+    showSocialIcons: boolean
 }
 
 const INITIAL_STATE: PosterState = {
@@ -62,7 +72,10 @@ const INITIAL_STATE: PosterState = {
     date: 'DD Mon YYYY',
     hue: 0,
     image: null,
-    logoText: 'DELHI'
+    logoText: 'DELHI',
+    websiteText: 'siodelhi.org',
+    showLinkIcon: true,
+    showSocialIcons: true
 }
 
 
@@ -397,6 +410,8 @@ export function PosterTool() {
     </foreignObject>
     `
 
+
+
         // Logo Text Replacement (Bottom Right)
         if (state.logoText) {
             const len = state.logoText.length
@@ -415,9 +430,113 @@ export function PosterTool() {
             processed = processed.slice(0, lastSvgIdx1) + logoTextElement + processed.slice(lastSvgIdx1)
         }
 
+
+        // 5. Website / Social Media Logic
+        // Hide original website group pattern
+        const websiteGroupPattern = /(<g>\s*<text\s+class="st3"\s+transform="translate\(278\.07\s+2310\.63\)">[\s\S]*?<\/g>)/;
+        processed = processed.replace(websiteGroupPattern, '<g style="display:none">$1</g>');
+
+        // Decorative Line Replacement logic
+        // Original line: <rect class="st4" x="674.5" y="2278.53" width="651" height="4.99"/>
+        // We hide it if BOTH social icons AND website text are hidden/empty
+        if (!state.showSocialIcons && !state.websiteText.trim()) {
+            processed = processed.replace(
+                /<rect class="st4" x="674\.5" y="2278\.53" width="651" height="4\.99"\/>/,
+                '<rect class="st4" x="674.5" y="2278.53" width="651" height="4.99" style="display:none"/>'
+            );
+        }
+
+        // Generate Icons SVG using renderToStaticMarkup
+        // const iconSize = 34; // Removed, using 32 in renders
+        const circleSize = 54;
+        const iconColor = '#82400f';
+        const circleStroke = '#82400f';
+
+        // Custom Icons
+        const XIcon = ({ size, color }: { size: number, color: string }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={color}>
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231h.001zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z" />
+            </svg>
+        );
+
+        const FacebookFilledIcon = ({ size, color }: { size: number, color: string }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={color}>
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+            </svg>
+        );
+
+        const YouTubeFilledIcon = ({ size, color }: { size: number, color: string }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={color}>
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+            </svg>
+        );
+
+        const WhatsAppFilledIcon = ({ size, color }: { size: number, color: string }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={color}>
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+            </svg>
+        );
+
+        const SocialIcon = ({ Icon }: { Icon: any }) => (
+            <div style={{
+                width: circleSize, height: circleSize,
+                borderRadius: '50%', border: `1.5px solid ${circleStroke}`, // Thin border
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'transparent'
+            }}>
+                <Icon size={28} color={iconColor} /> {/* Slightly larger icon (was 26) */}
+            </div>
+        );
+
+        let combinedRowSvg = '';
+        const hasSocials = state.showSocialIcons;
+        const hasWebsite = !!state.websiteText.trim();
+
+        if (hasSocials || hasWebsite) {
+            // Order: Instagram (Lucide), Facebook (Filled), X (Custom), YouTube (Filled), WhatsApp (Filled)
+            const icons = [Instagram, FacebookFilledIcon, XIcon, YouTubeFilledIcon, WhatsAppFilledIcon];
+
+            const socialIconsHtml = hasSocials ? `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    ${icons.map(Icon => renderToStaticMarkup(<SocialIcon Icon={Icon} />)).join('')}
+                </div>
+            ` : '';
+
+            const linkIconHtml = (hasWebsite && state.showLinkIcon) ? renderToStaticMarkup(
+                <div style={{
+                    width: circleSize, height: circleSize,
+                    borderRadius: '50%', border: `1.5px solid ${circleStroke}`, // Thin border
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginRight: '12px'
+                }}>
+                    <LinkIcon size={26} color={iconColor} strokeWidth={2} />
+                </div>
+            ) : '';
+
+            const websiteHtml = hasWebsite ? `
+                <div style="display: flex; align-items: center; margin-top: ${hasSocials ? '6px' : '0'};">
+                    ${linkIconHtml}
+                    <div style="color: #82400f; font-family: DMSerifText, serif; font-size: 40px; letter-spacing: 0.02em; font-weight: normal; margin-top: -4px;">
+                        ${escapeXml(state.websiteText)}
+                    </div>
+                </div>
+            ` : '';
+
+            // Unified container
+            combinedRowSvg = `
+    <foreignObject x="175" y="2235" width="800" height="200">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: ${hasSocials ? 'flex-start' : 'flex-start'}; gap: 0; padding-left: 20px;">
+             <div style="display: flex; flex-direction: column; align-items: center;">
+                ${socialIconsHtml}
+                ${websiteHtml}
+             </div>
+        </div>
+    </foreignObject>`;
+        }
+
         // Append foreignObject overlays before the last closing </svg>
         const lastSvgIdx2 = processed.lastIndexOf('</svg>')
-        processed = processed.slice(0, lastSvgIdx2) + namePositionOverlay + foreignObjectOverlay + processed.slice(lastSvgIdx2)
+        processed = processed.slice(0, lastSvgIdx2) + namePositionOverlay + foreignObjectOverlay + combinedRowSvg + processed.slice(lastSvgIdx2)
 
         return processed
     }
@@ -502,6 +621,95 @@ export function PosterTool() {
                                 onChange={e => setState({ ...state, logoText: e.target.value })}
                                 className="pt-input"
                                 placeholder="DELHI"
+                            />
+                        </div>
+
+                        <div className="pt-input-group">
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="pt-label m-0">Website / Social</label>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <button
+                                        onClick={() => setState({ ...state, showSocialIcons: !state.showSocialIcons })}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '6px 12px',
+                                            borderRadius: '6px',
+                                            fontSize: '11px',
+                                            fontWeight: '600',
+                                            letterSpacing: '0.02em',
+                                            textTransform: 'uppercase',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            backgroundColor: state.showSocialIcons ? '#d97706' : 'transparent',
+                                            color: state.showSocialIcons ? 'white' : '#71717a', // zinc-500
+                                            border: `1px solid ${state.showSocialIcons ? '#d97706' : '#d4d4d8'}`, // amber-600 : zinc-300
+                                            outline: 'none',
+                                            minWidth: '90px',
+                                            justifyContent: 'center'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!state.showSocialIcons) {
+                                                e.currentTarget.style.backgroundColor = '#f4f4f5'; // zinc-100
+                                                e.currentTarget.style.borderColor = '#a1a1aa'; // zinc-400
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!state.showSocialIcons) {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                e.currentTarget.style.borderColor = '#d4d4d8';
+                                            }
+                                        }}
+                                    >
+                                        {state.showSocialIcons ? <Check size={12} strokeWidth={3} /> : <div style={{ width: 12 }} />}
+                                        Socials
+                                    </button>
+                                    <button
+                                        onClick={() => setState({ ...state, showLinkIcon: !state.showLinkIcon })}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '6px 12px',
+                                            borderRadius: '6px',
+                                            fontSize: '11px',
+                                            fontWeight: '600',
+                                            letterSpacing: '0.02em',
+                                            textTransform: 'uppercase',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            backgroundColor: state.showLinkIcon ? '#d97706' : 'transparent',
+                                            color: state.showLinkIcon ? 'white' : '#71717a',
+                                            border: `1px solid ${state.showLinkIcon ? '#d97706' : '#d4d4d8'}`,
+                                            outline: 'none',
+                                            minWidth: '100px',
+                                            justifyContent: 'center'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!state.showLinkIcon) {
+                                                e.currentTarget.style.backgroundColor = '#f4f4f5';
+                                                e.currentTarget.style.borderColor = '#a1a1aa';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!state.showLinkIcon) {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                e.currentTarget.style.borderColor = '#d4d4d8';
+                                            }
+                                        }}
+                                    >
+                                        {state.showLinkIcon ? <Check size={12} strokeWidth={3} /> : <div style={{ width: 12 }} />}
+                                        Link Icon
+                                    </button>
+                                </div>
+                            </div>
+                            <input
+                                type="text"
+                                value={state.websiteText}
+                                onChange={e => setState({ ...state, websiteText: e.target.value })}
+                                className="pt-input"
+                                placeholder="siodelhi.org or @handle"
                             />
                         </div>
                     </div>
