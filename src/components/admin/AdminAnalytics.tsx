@@ -1,6 +1,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { BarChart3, Eye, Users, TrendingUp, MapPin, Loader2, Clock, LogOut, UserPlus, UserCheck, Smartphone, Download, ArrowUpRight, ArrowDownRight, Radio, Navigation, Info, FileText, FileSpreadsheet, ChevronDown } from 'lucide-react'
+import { BarChart3, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, FileSpreadsheet, FileText, LogOut, MapPin, Navigation, Radio, Smartphone, Download, ArrowUpRight, ArrowDownRight, Info, TrendingUp, Loader2, UserPlus, UserCheck, Users } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -82,6 +82,10 @@ export function AdminAnalytics() {
     const [page, setPage] = useState(1)
     const [isAudienceExpanded, setIsAudienceExpanded] = useState(true)
     const [isHeatmapExpanded, setIsHeatmapExpanded] = useState(false)
+    const [heatmapMode, setHeatmapMode] = useState<'aggregate' | 'weekly'>('aggregate')
+    const [heatmapDate, setHeatmapDate] = useState(new Date())
+    const [weeklyData, setWeeklyData] = useState<any[]>([])
+    const [weeklyLoading, setWeeklyLoading] = useState(false)
     const [isLandingExpanded, setIsLandingExpanded] = useState(false)
     const [isFlowExpanded, setIsFlowExpanded] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
@@ -145,8 +149,33 @@ export function AdminAnalytics() {
             .catch(() => { })
     }, [buildQueryString, dateRange])
 
+    const fetchWeeklyHeatmap = useCallback((date: Date) => {
+        setWeeklyLoading(true)
+        const start = new Date(date)
+        start.setDate(start.getDate() - start.getDay()) // Sunday
+        const end = new Date(start)
+        end.setDate(end.getDate() + 6) // Saturday
+
+        const from = start.toISOString().split('T')[0]
+        const to = end.toISOString().split('T')[0]
+
+        authFetch(`${API_BASE}/analytics/heatmap?from=${from}&to=${to}`)
+            .then(res => res.json())
+            .then(data => setWeeklyData(data.heatmap || []))
+            .catch(() => setWeeklyData([]))
+            .finally(() => setWeeklyLoading(false))
+    }, [])
+
+    useEffect(() => {
+        if (isHeatmapExpanded && heatmapMode === 'weekly') {
+            fetchWeeklyHeatmap(heatmapDate)
+        }
+    }, [isHeatmapExpanded, heatmapMode, heatmapDate, fetchWeeklyHeatmap])
+
     useEffect(() => {
         fetchData()
+        const interval = setInterval(fetchData, 60000)
+        return () => clearInterval(interval)
     }, [fetchData])
 
     // Live visitors polling
@@ -1142,66 +1171,129 @@ export function AdminAnalytics() {
                                 'Hourly Traffic Heatmap',
                                 isHeatmapExpanded,
                                 () => setIsHeatmapExpanded(!isHeatmapExpanded),
-                                undefined,
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '12px' }} onClick={e => e.stopPropagation()}>
+                                    <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '2px' }}>
+                                        <button
+                                            onClick={() => setHeatmapMode('aggregate')}
+                                            style={{
+                                                padding: '4px 8px', borderRadius: '4px', border: 'none',
+                                                background: heatmapMode === 'aggregate' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                                color: heatmapMode === 'aggregate' ? '#eee' : '#888',
+                                                fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer'
+                                            }}
+                                        >
+                                            Aggregate
+                                        </button>
+                                        <button
+                                            onClick={() => setHeatmapMode('weekly')}
+                                            style={{
+                                                padding: '4px 8px', borderRadius: '4px', border: 'none',
+                                                background: heatmapMode === 'weekly' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                                color: heatmapMode === 'weekly' ? '#eee' : '#888',
+                                                fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer'
+                                            }}
+                                        >
+                                            Weekly
+                                        </button>
+                                    </div>
+                                    {heatmapMode === 'weekly' && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <button
+                                                onClick={() => setHeatmapDate(d => { const n = new Date(d); n.setDate(n.getDate() - 7); return n })}
+                                                style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: '4px' }}
+                                                title="Previous Week"
+                                            >
+                                                <ChevronLeft size={14} />
+                                            </button>
+                                            <span style={{ fontSize: '0.7rem', color: '#aaa', minWidth: '80px', textAlign: 'center' }}>
+                                                {(() => {
+                                                    const s = new Date(heatmapDate); s.setDate(s.getDate() - s.getDay());
+                                                    const e = new Date(s); e.setDate(e.getDate() + 6);
+                                                    return `${s.getMonth() + 1}/${s.getDate()} - ${e.getMonth() + 1}/${e.getDate()}`
+                                                })()}
+                                            </span>
+                                            <button
+                                                onClick={() => setHeatmapDate(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n })}
+                                                style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: '4px' }}
+                                                title="Next Week"
+                                            >
+                                                <ChevronRight size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>,
                                 'Shows when visitors are most active. Rows are days of the week, columns are hours (0-23). Brighter cells mean more traffic.'
                             )}
-                            {isHeatmapExpanded && analytics.heatmap && analytics.heatmap.length > 0 && (
+                            {isHeatmapExpanded && (
                                 <div style={{ padding: '16px', overflowX: 'auto' }}>
-                                    <div style={{ minWidth: isMobile ? '600px' : 'auto' }}>
-                                        {/* Hour labels */}
-                                        <div style={{ display: 'flex', marginLeft: '40px', marginBottom: '4px' }}>
-                                            {Array.from({ length: 24 }, (_, h) => (
-                                                <div key={h} style={{
-                                                    flex: 1, textAlign: 'center', fontSize: '0.6rem', color: '#666'
-                                                }}>
-                                                    {h % 3 === 0 ? (h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`) : ''}
-                                                </div>
-                                            ))}
+                                    {weeklyLoading ? (
+                                        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+                                            <Loader2 size={20} style={{ animation: 'spin 1s linear infinite', opacity: 0.5 }} />
                                         </div>
-                                        {/* Grid rows */}
-                                        {dayLabels.map((dayLabel, dayIdx) => {
-                                            const dow = dayIdx + 1 // DAYOFWEEK: 1=Sun
+                                    ) : (
+                                        (() => {
+                                            const dataToRender = heatmapMode === 'weekly' ? weeklyData : (analytics.heatmap || [])
+
+                                            if (!dataToRender || dataToRender.length === 0) {
+                                                return <div style={{ padding: '24px', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>No heatmap data available for this period.</div>
+                                            }
+
                                             return (
-                                                <div key={dayIdx} style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
-                                                    <span style={{ width: '36px', fontSize: '0.7rem', color: '#888', flexShrink: 0 }}>{dayLabel}</span>
-                                                    <div style={{ display: 'flex', flex: 1, gap: '2px' }}>
-                                                        {Array.from({ length: 24 }, (_, h) => {
-                                                            const entry = analytics.heatmap!.find(e => Number(e.dow) === dow && Number(e.hour) === h)
-                                                            const count = Number(entry?.count) || 0
-                                                            const maxCount = Math.max(...analytics.heatmap!.map(e => Number(e.count)), 1)
-                                                            const intensity = count === 0 ? 0 : Math.max(count / maxCount, 0.25)
-                                                            return (
-                                                                <div
-                                                                    key={h}
-                                                                    title={`${dayLabel} ${h === 0 ? '12' : h > 12 ? h - 12 : h}${h < 12 ? 'am' : 'pm'} – ${(h + 1) === 24 ? '12' : (h + 1) > 12 ? (h + 1) - 12 : h + 1}${(h + 1) < 12 ? 'am' : 'pm'} — ${count} visits`}
-                                                                    style={{
-                                                                        flex: 1,
-                                                                        aspectRatio: '1',
-                                                                        borderRadius: '3px',
-                                                                        background: count === 0
-                                                                            ? 'rgba(255,255,255,0.03)'
-                                                                            : intensity < 0.25
-                                                                                ? '#78350f'
-                                                                                : intensity < 0.5
-                                                                                    ? '#b45309'
-                                                                                    : intensity < 0.75
-                                                                                        ? '#d97706'
-                                                                                        : '#f59e0b',
-                                                                        cursor: 'default',
-                                                                        minHeight: '16px'
-                                                                    }}
-                                                                />
-                                                            )
-                                                        })}
+                                                <div style={{ minWidth: isMobile ? '600px' : 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    {/* Hour labels */}
+                                                    <div style={{ display: 'flex', marginLeft: '40px', marginBottom: '4px' }}>
+                                                        {Array.from({ length: 24 }, (_, h) => (
+                                                            <div key={h} style={{
+                                                                flex: 1, textAlign: 'center', fontSize: '0.6rem', color: '#666'
+                                                            }}>
+                                                                {h % 3 === 0 ? (h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`) : ''}
+                                                            </div>
+                                                        ))}
                                                     </div>
+                                                    {/* Grid rows */}
+                                                    {dayLabels.map((dayLabel, dayIdx) => {
+                                                        const dow = dayIdx + 1 // DAYOFWEEK: 1=Sun
+                                                        return (
+                                                            <div key={dayIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <span style={{ width: '36px', fontSize: '0.7rem', color: '#888', flexShrink: 0 }}>{dayLabel}</span>
+                                                                <div style={{ display: 'flex', flex: 1, gap: '4px' }}>
+                                                                    {Array.from({ length: 24 }, (_, h) => {
+                                                                        const entry = dataToRender.find(e => Number(e.dow) === dow && Number(e.hour) === h)
+                                                                        const count = Number(entry?.count) || 0
+                                                                        const maxCount = Math.max(...dataToRender.map(e => Number(e.count)), 1)
+                                                                        const intensity = count === 0 ? 0 : Math.max(count / maxCount, 0.25)
+                                                                        return (
+                                                                            <div
+                                                                                key={h}
+                                                                                title={`${dayLabel} ${h === 0 ? '12' : h > 12 ? h - 12 : h}${h < 12 ? 'am' : 'pm'} – ${(h + 1) === 24 ? '12' : (h + 1) > 12 ? (h + 1) - 12 : h + 1}${(h + 1) < 12 ? 'am' : 'pm'} — ${count} visits`}
+                                                                                style={{
+                                                                                    flex: 1,
+                                                                                    aspectRatio: '1',
+                                                                                    borderRadius: '3px',
+                                                                                    background: count === 0
+                                                                                        ? 'rgba(255,255,255,0.03)'
+                                                                                        : intensity < 0.25
+                                                                                            ? '#78350f'
+                                                                                            : intensity < 0.5
+                                                                                                ? '#b45309'
+                                                                                                : intensity < 0.75
+                                                                                                    ? '#d97706'
+                                                                                                    : '#f59e0b',
+                                                                                    cursor: 'default',
+                                                                                    minHeight: '16px'
+                                                                                }}
+                                                                            />
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
                                                 </div>
                                             )
-                                        })}
-                                    </div>
+                                        })()
+                                    )}
                                 </div>
-                            )}
-                            {isHeatmapExpanded && (!analytics.heatmap || analytics.heatmap.length === 0) && (
-                                <div style={{ padding: '24px', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>No heatmap data available.</div>
                             )}
                         </div>
 

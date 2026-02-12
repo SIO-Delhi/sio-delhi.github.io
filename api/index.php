@@ -239,6 +239,7 @@ $routes = [
     'GET /analytics/locations' => 'routes/analytics.php@getVisitorLocations',
     'POST /analytics/event' => 'routes/analytics.php@trackEvent',
     'GET /analytics/events' => 'routes/analytics.php@getEventStats',
+    'GET /analytics/heatmap' => 'routes/analytics.php@getHourlyHeatmap',
 ];
 
 // Find matching route

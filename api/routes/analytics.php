@@ -745,3 +745,34 @@ function getEventStats()
 
     return ['events' => $stmt->fetchAll()];
 }
+
+/**
+ * GET /analytics/heatmap
+ * Get hourly heatmap for a specific date range
+ */
+function getHourlyHeatmap()
+{
+    ensureAnalyticsTable();
+    $db = getDB();
+
+    $from = $_GET['from'] ?? null;
+    $to = $_GET['to'] ?? null;
+
+    $dateFilter = '';
+    $dateParams = [];
+    if ($from && $to) {
+        $dateFilter = ' AND visit_date BETWEEN :from AND :to';
+        $dateParams = [':from' => $from, ':to' => $to];
+    }
+
+    // Hourly heatmap (convert to IST: UTC+5:30)
+    $heatmapStmt = $db->prepare("
+        SELECT DAYOFWEEK(CONVERT_TZ(visited_at, '+00:00', '+05:30')) as dow, HOUR(CONVERT_TZ(visited_at, '+00:00', '+05:30')) as hour, COUNT(*) as count
+        FROM page_visits
+        WHERE 1=1 $dateFilter
+        GROUP BY dow, hour
+    ");
+    $heatmapStmt->execute($dateParams);
+
+    return ['heatmap' => $heatmapStmt->fetchAll()];
+}
