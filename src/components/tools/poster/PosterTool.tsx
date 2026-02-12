@@ -690,7 +690,7 @@ export function PosterTool() {
             {window.innerWidth < 1024 && (
                 <div style={{ order: 3, flexShrink: 0, width: '100%' }}>
                     {activeTab === 'preview' && (
-                        <div style={{ padding: '12px 22px 12px', background: 'var(--pt-bg-main)', display: 'flex', flexDirection: 'column', gap: '36px' }}>
+                        <div className="pt-mobile-download-section">
                             {hueSlider}
                             <button
                                 onClick={downloadPoster}
