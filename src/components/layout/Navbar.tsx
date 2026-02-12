@@ -361,7 +361,7 @@ export function Navbar() {
                         <div className="mobile-menu-content">
                             <ul className="mobile-links">
                                 {navLinks.map((link, index) => (
-                                    <div key={link.href} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '6px 0' }}>
+                                    <div key={link.href} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0' }}>
                                         <a
                                             href={link.href}
                                             className={isActive(link.href) ? 'active' : ''}
@@ -395,7 +395,7 @@ export function Navbar() {
                                         )}
                                     </div>
                                 ))}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', padding: '0 12px', margin: '60px auto 0' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '100%', padding: '0 12px', margin: '25px auto 0' }}>
                                     {/* Sign In Button */}
                                     <ShinyButton
                                         href="/portal"
@@ -404,8 +404,20 @@ export function Navbar() {
                                             navigate('/portal')
                                             setIsOpen(false)
                                         }}
-                                        style={{ color: '#efc676', padding: '11px 48px' }}
-                                        containerClassName="w-full"
+                                        style={{
+                                            color: '#efc676',
+                                            padding: '12px 24px',
+                                            background: isDark
+                                                ? 'rgba(30, 30, 32, 0.5)'
+                                                : 'rgba(255, 255, 255, 0.25)',
+                                            backdropFilter: 'blur(40px) saturate(1.5)',
+                                            WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
+                                            boxShadow: isDark
+                                                ? '0 4px 20px rgba(0, 0, 0, 0.3)'
+                                                : '0 4px 30px rgba(0, 0, 0, 0.1)',
+                                        }}
+                                        containerClassName="w-auto"
+                                        containerStyle={{ width: '85%', maxWidth: '300px' }}
                                     >
                                         Sign In
                                     </ShinyButton>
@@ -416,91 +428,105 @@ export function Navbar() {
                                             setIsOpen(false)
                                             setShowDonation(true)
                                         }}
-                                        style={{ color: '#ff3b3b', padding: '11px 48px' }}
-                                        containerClassName="w-full"
+                                        style={{
+                                            color: '#ff3b3b',
+                                            padding: '12px 24px',
+                                            background: isDark
+                                                ? 'rgba(30, 30, 32, 0.5)'
+                                                : 'rgba(255, 255, 255, 0.25)',
+                                            backdropFilter: 'blur(40px) saturate(1.5)',
+                                            WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
+                                            boxShadow: isDark
+                                                ? '0 4px 20px rgba(0, 0, 0, 0.3)'
+                                                : '0 4px 30px rgba(0, 0, 0, 0.1)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px'
+                                        }}
+                                        containerClassName="w-auto"
+                                        containerStyle={{ width: '85%', maxWidth: '300px' }}
                                     >
+                                        <Heart size={18} className={showDonation ? "fill-current" : ""} />
                                         Support Us
                                     </ShinyButton>
 
                                 </div>
                             </ul>
                         </div>
-                    </div>
-                )}
-            </nav>
+                    </div >
+                )
+                }
+            </nav >
 
-            {/* Donation Overlay */}
-            {showDonation && (
-                <div style={{
-                    position: 'fixed',
-                    inset: 0,
-                    zIndex: 9999,
-                    background: 'rgba(10, 10, 10, 0.8)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    animation: 'fadeIn 0.5s ease-out'
+            {/* Donation Overlay - Eager Loaded */}
+            <div style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 9999,
+                background: 'rgba(10, 10, 10, 0.8)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: showDonation ? 1 : 0,
+                pointerEvents: showDonation ? 'all' : 'none',
+                visibility: showDonation ? 'visible' : 'hidden',
+                transition: 'opacity 0.3s ease, visibility 0.3s ease'
+            }}
+                onClick={(e) => {
+                    // Close on click outside
+                    if (e.target === e.currentTarget) setShowDonation(false)
                 }}
-                    onClick={(e) => {
-                        // Close on click outside
-                        if (e.target === e.currentTarget) setShowDonation(false)
+            >
+                <button
+                    onClick={() => setShowDonation(false)}
+                    style={{
+                        position: 'absolute',
+                        top: '32px',
+                        right: '32px',
+                        background: 'rgba(255,255,255,0.1)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '40px',
+                        height: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: 'white',
+                        transition: 'background 0.2s',
+                        zIndex: 10
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
                 >
-                    <button
-                        onClick={() => setShowDonation(false)}
-                        style={{
-                            position: 'absolute',
-                            top: '32px',
-                            right: '32px',
-                            background: 'rgba(255,255,255,0.1)',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '40px',
-                            height: '40px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            color: 'white',
-                            transition: 'background 0.2s',
-                            zIndex: 10
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                    >
-                        <X size={20} />
-                    </button>
+                    <X size={20} />
+                </button>
 
-                    <div style={{
-                        maxWidth: '90%', width: '500px',
-                        // background: '#1a1a1a', // Removed
-                        // borderRadius: '24px', // Removed
-                        // border: '1px solid #333', // Removed
-                        padding: '40px',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px',
-                        // boxShadow: '0 20px 50px rgba(0,0,0,0.5)', // Removed
-                        position: 'relative',
-                        maxHeight: '90vh',
-                        overflowY: 'auto'
-                    }}>
+                <div style={{
+                    maxWidth: '90%', width: '500px',
+                    // background: '#1a1a1a', // Removed
+                    // borderRadius: '24px', // Removed
+                    // border: '1px solid #333', // Removed
+                    padding: '40px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px',
+                    // boxShadow: '0 20px 50px rgba(0,0,0,0.5)', // Removed
+                    position: 'relative',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    transform: showDonation ? 'scale(1)' : 'scale(0.95)',
+                    transition: 'transform 0.3s ease'
+                }}>
 
 
 
-                        <DonationContent />
+                    <DonationContent />
 
-                    </div>
-
-                    <style>{`
-                        @keyframes fadeIn {
-                            from { opacity: 0; transform: translateY(20px); }
-                            to { opacity: 1; transform: translateY(0); }
-                        }
-                    `}</style>
                 </div>
-            )}
+            </div>
         </>
     )
 }

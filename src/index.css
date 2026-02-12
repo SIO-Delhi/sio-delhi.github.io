@@ -696,17 +696,26 @@ section {
   position: fixed;
   inset: 0;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   background-color: rgba(10, 10, 12, 0.95);
   z-index: 1001;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.4s ease;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  /* Hide for Firefox */
+  -ms-overflow-style: none;
+  /* Hide for IE/Edge */
+}
+
+.mobile-menu-overlay::-webkit-scrollbar {
+  display: none;
+  /* Hide for Chrome/Safari */
 }
 
 [data-theme="light"] .mobile-menu-overlay {
@@ -722,10 +731,12 @@ section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  /* reduced gap so items sit closer vertically */
-  padding-top: 24px;
-  /* bring items closer to the top */
+  justify-content: center;
+  min-height: 100%;
+  gap: 10px;
+  /* compact gap */
+  padding: 60px 20px 40px;
+  /* Further reduced for compact fit */
   opacity: 0;
   transform: translateY(20px);
   transition: all 0.4s ease 0.1s;
@@ -745,6 +756,7 @@ section {
   gap: 12px;
   /* tightened spacing between link blocks */
   padding: 0;
+  width: 100%;
 }
 
 .mobile-links a {

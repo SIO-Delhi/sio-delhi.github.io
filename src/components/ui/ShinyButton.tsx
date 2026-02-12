@@ -5,6 +5,7 @@ interface ShinyButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
     children: React.ReactNode
     className?: string // For the inner button/link
     containerClassName?: string // For the outer container
+    containerStyle?: React.CSSProperties
     onClick?: (e: React.MouseEvent) => void
 }
 
@@ -13,6 +14,7 @@ export const ShinyButton: React.FC<ShinyButtonProps> = ({
     children,
     className = '',
     containerClassName = '',
+    containerStyle,
     onClick,
     style,
     ...props
@@ -39,7 +41,7 @@ export const ShinyButton: React.FC<ShinyButtonProps> = ({
 
     if (href) {
         return (
-            <div className={`shiny-button-container ${containerClassName}`}>
+            <div className={`shiny-button-container ${containerClassName}`} style={containerStyle}>
                 <a
                     href={href}
                     className={`shiny-button ${className}`}
@@ -55,7 +57,7 @@ export const ShinyButton: React.FC<ShinyButtonProps> = ({
     }
 
     return (
-        <div className={`shiny-button-container ${containerClassName}`}>
+        <div className={`shiny-button-container ${containerClassName}`} style={containerStyle}>
             <button
                 className={`shiny-button ${className}`}
                 style={internalStyle}
