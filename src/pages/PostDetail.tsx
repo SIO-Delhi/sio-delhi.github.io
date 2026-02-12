@@ -665,6 +665,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
 
     // Scroll to top on mount
     // Scroll to top on mount and ID change
+    // Scroll to top on mount and ID change
     useEffect(() => {
         // Handle Lenis smooth scroll if active
         if (window.lenis) {
@@ -673,6 +674,13 @@ export function PostDetail({ sectionType }: PostDetailProps) {
             window.scrollTo(0, 0)
         }
     }, [id])
+
+    // Update Page Title for SEO
+    useEffect(() => {
+        if (post?.title) {
+            document.title = `${post.title} - SIO Delhi`
+        }
+    }, [post?.title])
 
     // Early returns MUST come after all hooks are called
     if (loading && !post) {

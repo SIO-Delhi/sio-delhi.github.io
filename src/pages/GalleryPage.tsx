@@ -301,6 +301,13 @@ export function GalleryPage() {
     const post = resolvedSlug ? getPostBySlug(resolvedSlug) : undefined
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
+    // Update Page Title for SEO
+    useEffect(() => {
+        if (post?.title) {
+            document.title = `${post.title} Gallery - SIO Delhi`
+        }
+    }, [post?.title])
+
     const imagesRaw = post?.galleryImages || []
 
     // Normalize to sections

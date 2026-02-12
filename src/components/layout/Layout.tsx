@@ -23,13 +23,16 @@ export function Layout({ children }: LayoutProps) {
         let title = 'SIO Delhi'
         const path = location.pathname
 
-        if (path.startsWith('/about-us')) title += ' | About Us'
-        else if (path.startsWith('/initiative')) title += ' | Initiatives'
-        else if (path.startsWith('/media')) title += ' | Press & Media'
-        else if (path.startsWith('/leader')) title += ' | Leadership'
-        else if (path.startsWith('/subsection')) title += ' | Collection'
+        if (path.startsWith('/about-us')) title += ' - About Us'
+        else if (path.startsWith('/initiative')) title += ' - Initiatives'
+        else if (path.startsWith('/media')) title += ' - Press & Media'
+        else if (path.startsWith('/leader')) title += ' - Leadership'
+        else if (path.startsWith('/subsection')) title += ' - Collection'
 
-        document.title = title
+        // Only set if not already set by child (basic check, though children run effects later usually)
+        if (document.title === 'SIO Delhi' || document.title.startsWith('SIO Delhi -')) {
+            document.title = title
+        }
     }, [location])
 
     // Initialize Lenis smooth scrolling

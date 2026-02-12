@@ -241,7 +241,9 @@ export function SplashScreen() {
                                 opacity: 0, // Hidden initially for animation
                             }}
                         >
-                            The mission of the <span style={{ color: '#ff6b6b', fontWeight: 500 }}>Students Islamic Organisation of India (SIO)</span> is to{' '}
+                            The mission of the <span style={{ color: '#ff6b6b', fontWeight: 500 }}>
+                                <span>Students</span> <span>Islamic</span> <span>Organisation</span> <span>of</span> <span>India</span> (SIO)
+                            </span> is to{' '}
                             "<span style={{ color: '#fdedcb', fontWeight: 400 }}>prepare the students and youth</span> for the{' '}
                             <span style={{ color: '#ff6b6b', fontWeight: 500 }}>reconstruction of the society</span> in the light of{' '}
                             <span style={{ color: '#fdedcb', fontWeight: 400 }}>Divine Guidance</span>."
