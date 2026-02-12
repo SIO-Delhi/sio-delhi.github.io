@@ -196,6 +196,8 @@ function geolocateIp($ip)
  */
 function trackVisit()
 {
+    ignore_user_abort(true);
+    set_time_limit(0);
     ensureAnalyticsTable();
 
     $input = json_decode(file_get_contents('php://input'), true);
@@ -273,6 +275,8 @@ function trackVisit()
  */
 function trackDuration()
 {
+    ignore_user_abort(true);
+    set_time_limit(0);
     // ensureAnalyticsTable(); // Optimization: assume table exists if tracking started
 
     $input = json_decode(file_get_contents('php://input'), true);
@@ -633,6 +637,8 @@ function getLiveVisitors()
  */
 function heartbeat()
 {
+    ignore_user_abort(true);
+    set_time_limit(0);
     // ensureAnalyticsTable(); // Optimization: minimize overhead for heartbeat
 
     $input = json_decode(file_get_contents('php://input'), true);
@@ -687,6 +693,8 @@ function ensureEventsTable()
  */
 function trackEvent()
 {
+    ignore_user_abort(true);
+    set_time_limit(0);
     ensureEventsTable();
 
     $input = json_decode(file_get_contents('php://input'), true);

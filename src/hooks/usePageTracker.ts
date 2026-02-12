@@ -97,7 +97,7 @@ export function usePageTracker() {
 }
 
 export function trackEvent(eventName: string, eventLabel?: string) {
-    if (import.meta.env.DEV) return
+    // if (import.meta.env.DEV) return
     const visitorId = getVisitorId()
     const page = window.location.pathname
 
