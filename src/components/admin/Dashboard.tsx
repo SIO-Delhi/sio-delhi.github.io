@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useContent } from '../../context/ContentContext'
 import { Link } from 'react-router-dom'
-import { Layers, Plus, HardDrive, Image, FileText, Loader2, ChevronDown, ChevronUp, Trash2, ExternalLink, Search, X, FileInput } from 'lucide-react'
+import { Layers, Plus, HardDrive, Image, FileText, Loader2, ChevronDown, ChevronUp, Trash2, ExternalLink, Search, X, FileInput, ArrowUpNarrowWide } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
@@ -40,6 +40,7 @@ export function Dashboard() {
     ])
     const [deletingFile, setDeletingFile] = useState<string | null>(null)
     const [fileSearchTerms, setFileSearchTerms] = useState<Record<string, string>>({})
+    const [bucketSorts, setBucketSorts] = useState<Record<string, 'latest' | 'oldest' | 'size_desc' | 'size_asc'>>({})
 
     // Detect screen size
     useEffect(() => {
@@ -413,7 +414,10 @@ export function Dashboard() {
                                                 top: 0,
                                                 background: 'rgba(15, 15, 20, 0.98)',
                                                 backdropFilter: 'blur(8px)',
-                                                zIndex: 1
+                                                zIndex: 1,
+                                                display: 'flex',
+                                                gap: '12px',
+                                                flexWrap: 'wrap'
                                             }}>
                                                 <div style={{
                                                     display: 'flex',
@@ -422,7 +426,8 @@ export function Dashboard() {
                                                     padding: '8px 12px',
                                                     background: 'rgba(255, 255, 255, 0.05)',
                                                     borderRadius: '8px',
-                                                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                                    flex: 1
                                                 }}>
                                                     <Search size={16} color="#666" />
                                                     <input
@@ -460,6 +465,40 @@ export function Dashboard() {
                                                         </button>
                                                     )}
                                                 </div>
+
+                                                {/* Sort Dropdown */}
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    padding: '8px 12px',
+                                                    background: 'rgba(255, 255, 255, 0.05)',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                                                }}>
+                                                    <ArrowUpNarrowWide size={16} color="#666" />
+                                                    <select
+                                                        value={bucketSorts[bucket.name] || 'latest'}
+                                                        onChange={(e) => setBucketSorts(prev => ({ ...prev, [bucket.name]: e.target.value as any }))}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        style={{
+                                                            background: 'transparent',
+                                                            border: 'none',
+                                                            outline: 'none',
+                                                            color: '#fff',
+                                                            fontSize: '0.85rem',
+                                                            fontFamily: 'inherit',
+                                                            cursor: 'pointer',
+                                                            appearance: 'none', // Remove default arrow
+                                                            paddingRight: '16px'
+                                                        }}
+                                                    >
+                                                        <option value="latest" style={{ background: '#1a1a1a', color: '#fff' }}>Latest First</option>
+                                                        <option value="oldest" style={{ background: '#1a1a1a', color: '#fff' }}>Oldest First</option>
+                                                        <option value="size_desc" style={{ background: '#1a1a1a', color: '#fff' }}>Largest First</option>
+                                                        <option value="size_asc" style={{ background: '#1a1a1a', color: '#fff' }}>Smallest First</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                         )}
                                         {bucket.files.length === 0 ? (
@@ -472,15 +511,16 @@ export function Dashboard() {
                                                 return !searchTerm || file.name.toLowerCase().includes(searchTerm)
                                             })
 
-                                            if (filteredFiles.length === 0) {
-                                                return (
-                                                    <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>
-                                                        No files matching "{fileSearchTerms[bucket.name]}"
-                                                    </div>
-                                                )
-                                            }
+                                            const sortedFiles = [...filteredFiles].sort((a, b) => {
+                                                const sort = bucketSorts[bucket.name] || 'latest'
+                                                if (sort === 'latest') return (b.modified || 0) - (a.modified || 0)
+                                                if (sort === 'oldest') return (a.modified || 0) - (b.modified || 0)
+                                                if (sort === 'size_desc') return b.size - a.size
+                                                if (sort === 'size_asc') return a.size - b.size
+                                                return 0
+                                            })
 
-                                            return filteredFiles.map((file, fileIdx) => (
+                                            return sortedFiles.map((file, fileIdx) => (
                                                 <div
                                                     key={file.name}
                                                     style={{
