@@ -1659,7 +1659,7 @@ export function AdminAnalytics() {
                                 <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <ArrowUpRight size={16} color="#ddd" />
                                 </div>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ddd' }}>External Link Visits</h3>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ddd' }}>External Events</h3>
                             </div>
 
                             <div style={{ padding: '0' }}>
@@ -1673,7 +1673,10 @@ export function AdminAnalytics() {
                                         }}>
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                 <span style={{ color: '#eee', fontWeight: 500, fontSize: '0.9rem' }}>
-                                                    {evt.event_label === 'adnan_footer' ? 'Developer Credit (Footer)' : evt.event_name}
+                                                    {evt.event_label === 'adnan_footer' ? 'Developer Credit (Footer)'
+                                                        : evt.event_label === 'weekly_poster' ? 'Weekly Poster Download'
+                                                            : evt.event_label === 'event_poster' ? 'Event Poster Download'
+                                                                : evt.event_name}
                                                 </span>
                                                 <span style={{ fontSize: '0.75rem', color: '#888' }}>
                                                     {evt.event_name} — {evt.event_label}
@@ -1681,7 +1684,7 @@ export function AdminAnalytics() {
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
                                                 <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.9rem', display: 'block' }}>
-                                                    {evt.total_count} clicks
+                                                    {evt.event_name === 'poster_download' ? `${evt.total_count} downloads` : `${evt.total_count} clicks`}
                                                 </span>
                                                 <span style={{ fontSize: '0.75rem', color: '#666' }}>
                                                     {evt.unique_users} unique

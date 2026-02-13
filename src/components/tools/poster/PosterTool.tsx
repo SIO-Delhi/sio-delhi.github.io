@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Briefcase, Download, Upload, Calendar, User, Palette, Edit3, RefreshCcw, Eye, Instagram, Link as LinkIcon, Check } from 'lucide-react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { useHistory } from '../../../hooks/useHistory'
+import { trackEvent } from '../../../hooks/usePageTracker'
 import posterSvgUrl from '../../../assets/poster.svg'
 import './poster.css'
 
@@ -117,6 +118,7 @@ export function PosterTool() {
 
     const downloadPoster = async () => {
         if (!containerRef.current) return
+        trackEvent('poster_download', 'weekly_poster')
 
         const fontStyles = await buildEmbeddedFontStyles()
         let svgData = getProcessedSvg(true)

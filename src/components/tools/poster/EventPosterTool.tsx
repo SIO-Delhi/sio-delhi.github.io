@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { Download, Upload, Calendar, User, ChevronLeft, X, Edit3, Eye, Palette, Check, Link as LinkIcon } from 'lucide-react'
 import { useHistory } from '../../../hooks/useHistory'
+import { trackEvent } from '../../../hooks/usePageTracker'
 import { EventPosterSvg, type Speaker } from './EventPosterSvg'
 import './poster.css'
 
@@ -193,6 +194,7 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
 
     const downloadPoster = async () => {
         if (!svgRef.current) return
+        trackEvent('poster_download', 'event_poster')
         setDownloading(true)
 
         try {
