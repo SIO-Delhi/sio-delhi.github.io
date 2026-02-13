@@ -1,9 +1,12 @@
 import React, { useState, useRef } from 'react'
-import { Download, Upload, Calendar, User, ChevronLeft, X, Edit3, Eye, Palette } from 'lucide-react'
+import { Download, Upload, Calendar, User, ChevronLeft, X, Edit3, Eye, Palette, Check, Link as LinkIcon } from 'lucide-react'
 import { useHistory } from '../../../hooks/useHistory'
 import { EventPosterSvg, type Speaker } from './EventPosterSvg'
 import './poster.css'
 
+import './poster.css'
+
+import dmSerifTextUrl from '../../../fonts/DM_Serif_Text/DMSerifText-Regular.ttf'
 import bodoniModa28ptUrl from '../../../fonts/Bodoni_Moda/static/BodoniModa_28pt-Regular.ttf'
 import cynthoNextBoldUrl from '../../../fonts/cyntho-next/CynthoNextBold.otf'
 import montserratUrl from '../../../fonts/Montserrat/Montserrat-VariableFont_wght.ttf'
@@ -14,6 +17,7 @@ const fontDefs = [
     { family: 'CynthoNextBold', url: cynthoNextBoldUrl, format: 'opentype' },
     { family: 'Montserrat', url: montserratUrl, format: 'truetype' },
     { family: 'MontserratItalic', url: montserratItalicUrl, format: 'truetype' },
+    { family: 'DMSerifText', url: dmSerifTextUrl, format: 'truetype' },
 ]
 
 async function buildEmbeddedFontStyles(): Promise<string> {
@@ -46,6 +50,9 @@ interface EventPosterState {
     speakers: Speaker[]
     hue: number
     unitName: string
+    websiteText: string
+    showSocialIcons: boolean
+    showLinkIcon: boolean
 }
 
 const defaultSpeaker = (): Speaker => ({
@@ -66,6 +73,9 @@ const defaultState: EventPosterState = {
     speakers: [defaultSpeaker(), defaultSpeaker(), defaultSpeaker()],
     hue: 0,
     unitName: 'DELHI',
+    websiteText: 'siodelhi.org',
+    showSocialIcons: true,
+    showLinkIcon: true,
 }
 
 interface Props {
@@ -422,6 +432,74 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
                 />
             </div>
 
+            {/* Website / Social Section */}
+            <div className="ep-section">
+                <div className="ep-section-header">
+                    <LinkIcon size={16} />
+                    <span>Website / Social</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
+                    <button
+                        onClick={() => updateField('showSocialIcons', !state.showSocialIcons)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            letterSpacing: '0.02em',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            backgroundColor: state.showSocialIcons ? '#d97706' : 'transparent',
+                            color: state.showSocialIcons ? 'white' : '#71717a',
+                            border: `1px solid ${state.showSocialIcons ? '#d97706' : '#d4d4d8'}`,
+                            outline: 'none',
+                            minWidth: '90px',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        {state.showSocialIcons ? <Check size={12} strokeWidth={3} /> : <div style={{ width: 12 }} />}
+                        Socials
+                    </button>
+                    <button
+                        onClick={() => updateField('showLinkIcon', !state.showLinkIcon)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            letterSpacing: '0.02em',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            backgroundColor: state.showLinkIcon ? '#d97706' : 'transparent',
+                            color: state.showLinkIcon ? 'white' : '#71717a',
+                            border: `1px solid ${state.showLinkIcon ? '#d97706' : '#d4d4d8'}`,
+                            outline: 'none',
+                            minWidth: '100px',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        {state.showLinkIcon ? <Check size={12} strokeWidth={3} /> : <div style={{ width: 12 }} />}
+                        Link Icon
+                    </button>
+                </div>
+
+                <label className="pt-label">Website Text</label>
+                <input
+                    className="pt-input"
+                    value={state.websiteText}
+                    onChange={(e) => updateField('websiteText', e.target.value)}
+                    placeholder="@siodelhi"
+                />
+            </div>
 
             {/* Style - Desktop Only */}
             {!isMobile && (

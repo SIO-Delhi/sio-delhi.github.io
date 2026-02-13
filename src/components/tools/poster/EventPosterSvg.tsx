@@ -1,6 +1,7 @@
 import React from 'react'
 import { FormFooter } from '../../ui/FormFooter'
 import { MoroccanCircularPattern } from './MoroccanCircularPattern'
+import { Instagram, Link as LinkIcon } from 'lucide-react'
 
 export interface Speaker {
     photo: string | null
@@ -21,11 +22,14 @@ export interface EventPosterProps {
     hue: number
     forDownload?: boolean
     unitName?: string
+    websiteText?: string
+    showSocialIcons?: boolean
+    showLinkIcon?: boolean
 }
 
 export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPosterProps>(
     function EventPosterSvg(props, ref) {
-        const { title, date, day, timeStart, timeEnd, venue, speakerCount, speakers, hue, forDownload, unitName = 'DELHI' } = props
+        const { title, date, day, timeStart, timeEnd, venue, speakerCount, speakers, hue, forDownload, unitName = 'DELHI', websiteText = 'siodelhi.org', showSocialIcons = true, showLinkIcon = true } = props
 
         const W = 2000
         const H = 2500
@@ -170,43 +174,96 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                     {/* Header Group - Transferred from Poster Footer */}
                     <g transform="translate(0, -2100)">
 
+                        {/* Socials Group - Pure SVG */}
+                        {showSocialIcons && (() => {
+                            const circleR = 30 // radius of each circle (diameter 60)
+                            const iconSize = 34 // icon size inside circle
+                            const gap = 65 // center-to-center distance
+                            // Left-aligned area matching PosterTool (foreignObject x=175, width=800)
+                            const areaCenter = 500 // center of left social area
+                            const totalSpan = 4 * gap // 260
+                            const startX = areaCenter - totalSpan / 2
+                            const cy = 2235 // y center of circles
 
-                        {/* Socials Group - Shifted Right */}
-                        <g transform="translate(100, 0)">
-                            <g>
-                                {/* siodelhi.org text */}
-                                <text
-                                    x={278}
-                                    y={2310}
-                                    style={{
-                                        fontFamily: 'BodoniModa28pt, serif',
-                                        fontSize: '34.55px',
-                                        fill: '#000000',
-                                    }}
-                                >
-                                    siodelhi.org
-                                </text>
-                                {/* Icons */}
-                                <g fill="#000000">
-                                    <path d="M396.14,2218.15c16.52-2.16,30.86,13.19,27.87,29.53-3.17,17.33-23.51,26.06-38.38,16.65-19.86-12.57-12.77-43.15,10.51-46.18ZM396.14,2220.8c-12.68,1.65-21.68,14.35-19.06,26.86,3.64,17.38,25.41,23.88,38.06,11.39,15.34-15.15,2.05-40.99-19.01-38.25Z" />
-                                    <path d="M338.41,2218.15c10.9-1.47,22.96,6.08,26.52,16.45,8.21,23.86-19.45,43.45-39.01,28.4-18.02-13.87-9.81-41.85,12.49-44.85ZM337.75,2220.8c-15.31,2.31-23.86,20.09-16.12,33.54,8.24,14.32,29.2,15.1,38.37,1.32,10.94-16.44-3.05-37.76-22.25-34.86Z" />
-                                    <path d="M474.74,2261.09c-11.41,11.28-31.98,8.41-39.64-5.75-11.88-21.97,11.66-45.68,33.67-34.33,15.06,7.77,18.03,28.16,5.97,40.08ZM453.54,2220.81c-9,1.3-17.31,9.48-18.68,18.48-3.6,23.72,26.23,35.88,40.46,17.24,12.21-15.99-2.1-38.57-21.79-35.72Z" />
-                                    <path d="M281.7,2218.17c17.23-1.4,30.55,15.76,25.59,32.23-6.7,22.24-38.57,23.66-47.15,2.4-6.53-16.16,4.36-33.23,21.56-34.63ZM279.36,2220.81c-8.06,1.34-15.8,8.41-17.88,16.29-6.09,23.13,22.78,38.57,38.7,21.12,14.48-15.86.14-40.89-20.83-37.42Z" />
-                                    <path d="M205.92,2259.09c-11.18-13.5-5.06-34.76,11.81-39.85,21.54-6.5,40.59,16.09,29.7,36-8.4,15.36-30.41,17.26-41.52,3.85ZM209.56,2259.76c8.2,8.03,22.16,8.15,30.74.62,11.89-10.43,10.22-29.44-3.69-37.13-23.12-12.77-46.27,17.68-27.05,36.51Z" />
-                                    <path d="M245.53,2275.89c16.87-1.8,29.36,14.58,22.26,30.22-8.05,17.73-34.69,15.87-40.19-3.18-3.57-12.37,5.05-25.67,17.93-27.04ZM246.87,2277.89c-23.6,1.57-23.43,36.96-.09,38.38,27.72,1.68,27.04-40.17.09-38.38Z" />
-                                    <path d="M391.85,2234.09c3.55-.38,14.74-.54,17.73.65.71.28,1.56.7,1.83,1.49.3.87.74,4.54.76,5.55.03,1.62-.19,4.65-.39,6.28-.6,5.02-5.44,3.7-9.1,3.84-3.85.15-8.73.51-12.56-.02-.68-.09-1.86-.49-2.36-.96-2.14-1.98-2.08-13.6,0-15.62.76-.74,3.01-1.1,4.1-1.21ZM396.23,2246.27c2.43-.87,4.83-1.99,6.96-3.48,0-.45-5.96-3.26-6.96-3.48v6.97Z" />
-                                    <path d="M335.35,2230.02l6.99,8.98c.42.07.67-.13.99-.34,2.64-1.74,5.17-6.62,7.46-8.13.86-.57,2.21-.92,2.97-.01l-9.56,10.55,10.89,14.83h-8.46l-7.31-9.62c-.68-.17-3.64,3.94-4.3,4.65-.83.88-4.57,4.82-5.32,4.96-.66.13-1.46-.05-2.15,0l10.16-11.45-10.17-14.43h7.8ZM350.77,2254.23c.3-.26-1.54-2.87-1.85-3.29-3.7-5.1-7.71-10.02-11.56-14.98-1.72-2.2-1.76-4.36-5.49-3.63l.32,1.17,16.1,20.73h2.49Z" />
-                                    <path d="M455.87,2229.45c18.28-2.35,20.27,24.94,2.89,26.11-3.37.23-5.53-1.56-7.28-1.61-1.42-.04-5.31,1.84-6.28,1.6l-.48-.74c.32-1.55,1.67-4.26,1.62-5.72-.03-.91-1.39-3.23-1.59-4.71-.95-6.97,4.05-14.01,11.12-14.92ZM447.99,2252.57c.13.14,2.98-1.04,3.8-.98.91.06,2.78,1.36,4.08,1.57,12.39,1.95,17.69-14.63,7.28-20.22-8.25-4.42-17.32,2.18-16.07,11.42.21,1.57,1.55,3.47,1.6,4.39.07,1.22-.84,2.54-.69,3.82Z" />
-                                    <path d="M285.42,2239.63l4.31.33c.12,3.68.57,5.11-3.77,4.69l-.5.5-.19,11.09-4.29.26c-.43-.11-.47-.4-.54-.78-.55-2.98.45-7.42-.05-10.57-.33-1.01-3.04-.38-3.94-.54v-4.65s3.84-.31,3.84-.31c.36-1.46,0-2.98.18-4.46.56-4.61,5.52-6,9.45-4.88.7.55.79,4.02-.08,4.3-4.38-.33-4.8.92-4.43,5.02Z" />
-                                    <path d="M236.87,2230.8c1.15.84,1.98,2.57,2.12,4.01.28,2.83.37,15.79-.28,18.01s-2.93,3.82-5.21,4.08c-3.73.42-12.14.35-15.94.01-2.22-.2-4.53-1.48-5.29-3.67-.88-2.54-.81-15.26-.5-18.41.25-2.45,1.91-4.85,4.47-5.15,3.59-.43,14.36-.44,17.93,0,.82.1,2.04.64,2.7,1.13ZM235.55,2253.14c.4-.46.71-1.43.78-2.05.38-3.39.4-12.57,0-15.94-.15-1.29-1.11-2.66-2.48-2.83-5.33.43-11.39-.51-16.63,0-2.25.22-2.64,1.85-2.81,3.82-.3,3.57-.38,11.12.01,14.61.23,2.03,1.01,3.23,3.15,3.49,3.4.41,11.81.34,15.29,0,.87-.08,2.11-.44,2.7-1.11Z" />
-                                    <path d="M250.48,2294.14c.82.99.43,2.63-1.01,2.49-1.15-.12-1.64-1.94-3.78-1.01-.49.21-4.17,3.81-4.58,4.38-1.87,2.61.58,5.33,3.16,4.15,1-.46,2.45-3.44,3.98-2.66l.62.75c.53,1.92-3.43,4.56-5.09,4.74-4.15.47-7.53-3.72-5.55-7.54.53-1.01,4.72-5.24,5.72-5.89,1.77-1.16,5.14-1.09,6.52.58Z" />
-                                    <path d="M252.49,2286.15c3.39-.66,7.17,3.22,6.23,6.58-.46,1.64-5.15,6.57-6.7,7.23-3.13,1.34-8.29-1.04-5.94-2.97,1.12-.92,2.59,1.55,4.83.52.37-.17,3.26-2.82,3.66-3.3,1.59-1.9,2.2-5-.91-5.42-2.46-.33-3.31,3.51-5.49,2.86-2.86-.85,2.77-5.21,4.32-5.51Z" />
-                                    <path d="M452.87,2236.37c1.31-.36,2.32,1.57,2.6,2.6.47,1.7-.82,1.62-.85,2.48-.04,1.15,3.15,3.88,4.22,4.11,1.65.35,1.45-1.4,2.29-1.56.23-.04,2.6,1.09,2.9,1.32,1.31.99-.46,2.93-1.69,3.21-4.62,1.06-12.39-5.71-10.9-10.56.15-.47.94-1.46,1.42-1.59Z" />
-                                    <path d="M223.62,2236.06c5.04-1.04,10.08,3.43,8.91,8.58-1.34,5.86-9.02,7.83-12.79,3.12-3.08-3.86-1.12-10.66,3.88-11.69ZM224.28,2238.72c-5.45,1.12-3.61,10.11,2.18,8.81,5.39-1.21,4.06-10.09-2.18-8.81Z" />
-                                    <path d="M234.25,2234.41c1.38,1.39-.53,4.3-2.43,2.93-2.23-1.61.83-4.54,2.43-2.93Z" />
+                            const iconPaths = [
+                                null, // Instagram (Lucide stroked)
+                                'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z',
+                                'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231h.001zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z',
+                                'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z',
+                                'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z',
+                            ]
+
+                            return (
+                                <g>
+                                    {iconPaths.map((path, i) => {
+                                        const cx = startX + i * gap
+                                        return (
+                                            <g key={i}>
+                                                <circle cx={cx} cy={cy} r={circleR} fill="none" stroke="#000000" strokeWidth={1.5} />
+                                                {i === 0 ? (
+                                                    <foreignObject x={cx - iconSize / 2} y={cy - iconSize / 2} width={iconSize} height={iconSize}>
+                                                        <div
+                                                            // @ts-expect-error xmlns needed
+                                                            xmlns="http://www.w3.org/1999/xhtml"
+                                                            style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                        >
+                                                            <Instagram size={iconSize} color="#000000" />
+                                                        </div>
+                                                    </foreignObject>
+                                                ) : (
+                                                    <svg x={cx - iconSize / 2} y={cy - iconSize / 2} width={iconSize} height={iconSize} viewBox="0 0 24 24">
+                                                        <path d={path!} fill="#000000" />
+                                                    </svg>
+                                                )}
+                                            </g>
+                                        )
+                                    })}
                                 </g>
-                            </g>
-                        </g>
+                            )
+                        })()}
+
+                        {/* Website Text Row - matches PosterTool logic */}
+                        {websiteText && (() => {
+                            const hasLinkCircle = showLinkIcon && !!websiteText
+                            const linkCircleR = 30
+                            const linkIconSize = 32
+                            const areaCenter = 500 // same center as social icons
+                            // Vertical: social circle bottom = 2235+30 = 2265, link circle top needs to clear that
+                            const rowY = showSocialIcons ? 2265 + linkCircleR + 10 : 2235 // 2305 when socials visible
+                            // Position link circle + text centered under icon group
+                            const linkCircleCx = hasLinkCircle ? areaCenter - 100 : 0
+                            const textX = hasLinkCircle ? linkCircleCx + linkCircleR + 12 : areaCenter
+
+                            return (
+                                <g>
+                                    {hasLinkCircle && (
+                                        <>
+                                            <circle cx={linkCircleCx} cy={rowY} r={linkCircleR} fill="none" stroke="#000000" strokeWidth={1.5} />
+                                            <foreignObject x={linkCircleCx - linkIconSize / 2} y={rowY - linkIconSize / 2} width={linkIconSize} height={linkIconSize}>
+                                                <div
+                                                    // @ts-expect-error xmlns needed
+                                                    xmlns="http://www.w3.org/1999/xhtml"
+                                                    style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                >
+                                                    <LinkIcon size={linkIconSize} color="#000000" strokeWidth={2} />
+                                                </div>
+                                            </foreignObject>
+                                        </>
+                                    )}
+                                    <text
+                                        x={textX}
+                                        y={rowY + 12}
+                                        fill="#000000"
+                                        fontFamily="DMSerifText, serif"
+                                        fontSize={36}
+                                        letterSpacing="0.02em"
+                                        textAnchor={hasLinkCircle ? 'start' : 'middle'}
+                                    >
+                                        {websiteText}
+                                    </text>
+                                </g>
+                            )
+                        })()}
 
                         {/* SIO Logo Group - Shifted Left */}
                         <g transform="translate(-100, 0)">
@@ -218,7 +275,7 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                             </g>
 
                             {/* Editable Unit Name (replacing static DELHI paths) */}
-                            <foreignObject x={1540} y={2310} width={300} height={150}>
+                            <foreignObject x={1540} y={2310} width={300} height={170}>
                                 <div
                                     style={{
                                         fontFamily: 'BodoniModa28pt, serif',
@@ -236,6 +293,7 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                                         alignItems: 'center',
                                         justifyContent: 'flex-start',
                                         wordBreak: 'break-word',
+                                        paddingTop: '4px',
                                     }}
                                 >
                                     {unitName}
