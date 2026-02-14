@@ -27,7 +27,9 @@ export function ProtectedRoute() {
     // Restrict admin access to specific username
     const username = user?.username || user?.primaryEmailAddress?.emailAddress?.split('@')[0]
     const adminUsernames = (import.meta.env.VITE_ADMIN_USERNAMES || '').split(',').map((u: string) => u.trim())
-    if (!adminUsernames.includes(username)) {
+    const adminUserIds = (import.meta.env.VITE_ADMIN_USER_IDS || '').split(',').map((u: string) => u.trim())
+
+    if (!adminUsernames.includes(username) && !adminUserIds.includes(user?.id)) {
         return <Navigate to="/portal" replace />
     }
 
