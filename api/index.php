@@ -271,7 +271,12 @@ foreach ($routes as $pattern => $handler) {
 
         // General API rate limit (60 req/min per IP for write operations)
         if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
-            enforceRateLimit('api_write', 60, 60);
+            // Higher limit for uploads and posters to allow bulk operations (e.g. gallery images)
+            if (strpos($pattern, '/upload/') !== false || strpos($pattern, '/posters/') !== false) {
+                enforceRateLimit('api_upload', 600, 60); // 600 req/min (approx 10/sec)
+            } else {
+                enforceRateLimit('api_write', 60, 60);
+            }
         }
 
         // Auth check: require authentication for non-public routes

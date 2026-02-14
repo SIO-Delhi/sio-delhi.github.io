@@ -305,19 +305,72 @@ export function PosterTool() {
             processed = processed.replace(`id = "${id}"`, `id="${id}" style="display:none;"`)
         })
 
+        // Dynamic Y-Offset Calculation for Centering
+        const topicText = state.topic || 'Topic Title Here'
+        const len = topicText.length
+
+        // Font size logic matches the foreignObject rendering below
+        const topicFontSize = len > 200 ? 70 : len > 150 ? 85 : len > 100 ? 100 : len > 60 ? 120 : 140
+        const lineHeightRatio = 0.98 // Matches CSS line-height
+
+        // Estimate visual lines
+        // 1. Explicit newlines
+        const explicitLines = (topicText.match(/\n/g) || []).length + 1
+        // 2. Wrap estimate (Container width 1600px, avg char width approx 0.5 * fontSize)
+        const charsPerLine = 1600 / (topicFontSize * 0.55) // 0.55 factor for FlamanteSerifBold
+        const wrapLines = Math.ceil(len / charsPerLine)
+        const estLines = Math.max(explicitLines, wrapLines)
+
+        const topicHeight = estLines * topicFontSize * lineHeightRatio
+        const topicStartY = 500 // The text container starts at top: 500px
+        const topicBottomY = topicStartY + topicHeight
+
+        const footerCurveY = 1650 // Approx top of the bottom wave/curve
+
+        // Available vertical space
+        // Strictly center between Topic Bottom and Footer Curve for equal margins
+        const availableTop = topicBottomY
+        const availableBottom = footerCurveY
+        const availableCenterY = (availableTop + availableBottom) / 2
+
+        // Speaker Section Dimensions
+        const speakerOriginalY = 1023.4
+        const speakerHeight = 573.33
+        const speakerOriginalCenterY = speakerOriginalY + (speakerHeight / 2)
+
+        // Calculate Offset to move Speaker Center to Available Center
+        // We cap the shift to avoid extreme movements if calculation is off, but centering is the goal.
+        let yOffset = availableCenterY - speakerOriginalCenterY
+
+        // Optional: Clamp to prevent intersecting footer if calculation says move down too much? 
+        // Usually yOffset will be negative (moving up). 
+        // If topic is HUGE, topicBottomY is large, available space is small/lower, availableCenterY is lower.
+        // We trust the calc.
+
+        const speakerImageY = 1023.4 + yOffset
+        const speakerOverlayY = 1180 + yOffset
+
+        // Vertical Separator Line (The "Stick")
+        const stickY = 1192.55 + yOffset
+
+        // Add the static stick to the hiding list (if not already hidden by ID)
+        // We do this by adding a replacement rule for it
+        const stickRectString = '<rect class="st8" x="973.85" y="1192.55" width="8.1" height="276.75"/>'
+        processed = processed.replace(stickRectString, '<rect class="st8" x="973.85" y="1192.55" width="8.1" height="276.75" style="display:none"/>')
+
         // 2. Image Replacement (Keep existing logic)
         const placeholderRect = '<rect class="st8" x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4"/>'
         if (state.image) {
             const imageTag = `
     <defs>
         <clipPath id="speaker-clip">
-            <rect x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4"/>
+            <rect x="411.99" y="${speakerImageY}" width="524.41" height="573.33" rx="68.4" ry="68.4"/>
         </clipPath>
     </defs>
-    <rect x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4" fill="#f5e6d3" stroke="#d4a574" stroke-width="2"/>
+    <rect x="411.99" y="${speakerImageY}" width="524.41" height="573.33" rx="68.4" ry="68.4" fill="#f5e6d3" stroke="#d4a574" stroke-width="2"/>
     <image
         x="411.99"
-        y="1023.4"
+        y="${speakerImageY}"
         width="524.41"
         height="573.33"
         preserveAspectRatio="xMidYMid slice"
@@ -329,10 +382,11 @@ export function PosterTool() {
         } else {
             // Show placeholder with user icon when no image uploaded
             // Using SVG primitives (not nested <svg>) to avoid breaking </svg> replacement later
+            // Adjust center Y by offset
             const cx = 674.2  // center x of the rect
-            const cy = 1280   // center of the icon area
+            const cy = 1280 + yOffset   // center of the icon area
             const placeholderTag = `
-    <rect x="411.99" y="1023.4" width="524.41" height="573.33" rx="68.4" ry="68.4" fill="#e8d5c0" stroke="#d4a574" stroke-width="2"/>
+    <rect x="411.99" y="${speakerImageY}" width="524.41" height="573.33" rx="68.4" ry="68.4" fill="#e8d5c0" stroke="#d4a574" stroke-width="2"/>
     <g transform="translate(${cx - 60}, ${cy - 70})" fill="none" stroke="#c8884d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="60" cy="40" r="30"/>
         <path d="M0 120 C0 90, 25 70, 60 70 C95 70, 120 90, 120 120"/>
@@ -359,8 +413,13 @@ export function PosterTool() {
         const posLen = Math.max(state.position.length, state.organization.length)
         const posFontSize = posLen > 25 ? 38 : posLen > 18 ? 45 : 52
 
+        // Include the vertical stick in the overlay strings (using SVG rect)
+        // We append it BEFORE the foreignObject so it sits in the SVG layer but at new position
+        const stickElement = `<rect x="973.85" y="${stickY}" width="8.1" height="276.75" fill="#68310c"/>`
+
         const namePositionOverlay = `
-    <foreignObject x="1010" y="1180" width="920" height="360">
+    ${stickElement}
+    <foreignObject x="1010" y="${speakerOverlayY}" width="920" height="360">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 8px;">
             <div style="font-family: AscendantSerif, serif; color: #d3830f; font-size: ${nameFontSize}px; line-height: 1.15; font-weight: bold;">
                 <div>${escapeXml(state.name)}</div>
