@@ -316,8 +316,17 @@ foreach ($routes as $pattern => $handler) {
                     }
                 }
 
-                $isAdmin = $usernameMatches ||
-                    ($userId === env('ADMIN_USER_ID'));
+                // Check against allowed admin user IDs
+                $adminUserIds = explode(',', env('ADMIN_USER_IDS', ''));
+                $userIdMatches = false;
+                foreach ($adminUserIds as $adminId) {
+                    if (trim($adminId) === $userId) {
+                        $userIdMatches = true;
+                        break;
+                    }
+                }
+
+                $isAdmin = $usernameMatches || $userIdMatches;
 
                 if (!$isAdmin) {
                     error_log('Admin access denied for user: ' . json_encode($payload));
