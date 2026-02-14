@@ -79,6 +79,7 @@ $publicRoutes = [
     'POST /analytics/heartbeat',
     'POST /analytics/event',
     'POST /forms/([^/]+)/submit',
+    'POST /posters/save',
 ];
 
 // Get request method and URI
@@ -243,6 +244,11 @@ $routes = [
     'POST /analytics/event' => 'routes/analytics.php@trackEvent',
     'GET /analytics/events' => 'routes/analytics.php@getEventStats',
     'GET /analytics/heatmap' => 'routes/analytics.php@getHourlyHeatmap',
+
+    // Posters
+    'POST /posters/save' => 'routes/posters.php@savePoster',
+    'GET /posters' => 'routes/posters.php@getPosters',
+    'DELETE /posters/([^/]+)' => 'routes/posters.php@deletePoster',
 ];
 
 // Find matching route
@@ -276,8 +282,8 @@ foreach ($routes as $pattern => $handler) {
             $isPublic = true;
         }
 
-        // Enforce body size limit on POST/PUT (1MB, except uploads which have their own limits)
-        if (in_array($method, ['POST', 'PUT']) && strpos($pattern, 'upload') === false && strpos($pattern, 'avatar') === false) {
+        // Enforce body size limit on POST/PUT (1MB, except uploads/posters which have their own limits)
+        if (in_array($method, ['POST', 'PUT']) && strpos($pattern, 'upload') === false && strpos($pattern, 'avatar') === false && strpos($pattern, 'posters/save') === false) {
             enforceBodyLimit(1048576); // 1MB
         }
 

@@ -5,7 +5,7 @@ import { trackEvent } from '../../../hooks/usePageTracker'
 import { EventPosterSvg, type Speaker } from './EventPosterSvg'
 import './poster.css'
 
-import './poster.css'
+const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 
 import dmSerifTextUrl from '../../../fonts/DM_Serif_Text/DMSerifText-Regular.ttf'
 import bodoniModa28ptUrl from '../../../fonts/Bodoni_Moda/static/BodoniModa_28pt-Regular.ttf'
@@ -236,6 +236,19 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
                             a.click()
                             document.body.removeChild(a)
                             URL.revokeObjectURL(blobUrl)
+
+                            // Save poster to backend (fire-and-forget)
+                            const formData = new FormData()
+                            formData.append('poster', blob, `event-poster-${Date.now()}.jpg`)
+                            formData.append('poster_type', 'event_poster')
+                            formData.append('metadata', JSON.stringify({
+                                title: state.title, date: state.date,
+                                speakers: state.speakers.map(s => s.name),
+                                venue: state.venue
+                            }))
+                            fetch(`${API_BASE}/posters/save`, {
+                                method: 'POST', body: formData
+                            }).catch(() => { })
                         }
                         setDownloading(false)
                     }, 'image/jpeg', 0.95)

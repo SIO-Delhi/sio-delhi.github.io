@@ -1,6 +1,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { BarChart3, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, FileSpreadsheet, FileText, LogOut, MapPin, Navigation, Radio, Smartphone, Download, ArrowUpRight, ArrowDownRight, Info, TrendingUp, Loader2, UserPlus, UserCheck, Users } from 'lucide-react'
+import { BarChart3, ChevronDown, ChevronLeft, ChevronRight, Clock, Eye, FileSpreadsheet, FileText, LogOut, MapPin, Navigation, Radio, Smartphone, Download, ArrowUpRight, ArrowDownRight, Info, TrendingUp, Loader2, UserPlus, UserCheck, Users, Image as ImageIcon, Trash2, X } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -93,6 +93,16 @@ export function AdminAnalytics() {
     const exportRef = useRef<HTMLDivElement>(null)
     const itemsPerPage = 7
 
+    // Poster gallery state
+    const [isPosterGalleryExpanded, setIsPosterGalleryExpanded] = useState(false)
+    const [posterFilter, setPosterFilter] = useState<'all' | 'weekly_poster' | 'event_poster'>('all')
+    const [posterPage, setPosterPage] = useState(1)
+    const [posterData, setPosterData] = useState<{
+        posters: { id: number; poster_type: string; file_url: string; metadata: any; created_at: string }[];
+        total: number; total_pages: number; loading: boolean;
+    }>({ posters: [], total: 0, total_pages: 0, loading: false })
+    const [posterLightbox, setPosterLightbox] = useState<string | null>(null)
+
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768)
         checkMobile()
@@ -109,14 +119,17 @@ export function AdminAnalytics() {
         return str ? `?${str}` : ''
     }, [dateRange, trendDays])
 
-    const fetchData = useCallback(() => {
+    const fetchData = useCallback((silent = false) => {
         const qs = buildQueryString()
-        setAnalytics(prev => ({ ...prev, loading: true }))
-        setLocations(prev => ({ ...prev, loading: true }))
+        if (!silent) {
+            setAnalytics(prev => ({ ...prev, loading: true }))
+            setLocations(prev => ({ ...prev, loading: true }))
+        }
 
         authFetch(`${API_BASE}/analytics/stats${qs}`)
             .then(res => res.json())
-            .then(data => setAnalytics({
+            .then(data => setAnalytics(prev => ({
+                ...prev,
                 totals: data.totals,
                 pages: data.pages || [],
                 trend: data.trend || [],
@@ -131,7 +144,7 @@ export function AdminAnalytics() {
                 landing_pages: data.landing_pages || [],
                 page_flows: data.page_flows || [],
                 loading: false
-            }))
+            })))
             .catch(() => setAnalytics(prev => ({ ...prev, loading: false })))
 
         const locQs = new URLSearchParams()
@@ -201,6 +214,31 @@ export function AdminAnalytics() {
         if (isExportOpen) document.addEventListener('mousedown', handleClick)
         return () => document.removeEventListener('mousedown', handleClick)
     }, [isExportOpen])
+
+    // Poster gallery data fetcher
+    const fetchPosters = useCallback((pg: number, type: string) => {
+        setPosterData(prev => ({ ...prev, loading: true }))
+        const params = new URLSearchParams({ page: String(pg), limit: '12' })
+        if (type !== 'all') params.set('type', type)
+        authFetch(`${API_BASE}/posters?${params}`)
+            .then(res => res.json())
+            .then(data => setPosterData({
+                posters: data.posters || [], total: data.total || 0,
+                total_pages: data.total_pages || 0, loading: false
+            }))
+            .catch(() => setPosterData(prev => ({ ...prev, loading: false })))
+    }, [])
+
+    useEffect(() => {
+        if (isPosterGalleryExpanded) fetchPosters(posterPage, posterFilter)
+    }, [isPosterGalleryExpanded, posterPage, posterFilter, fetchPosters])
+
+    const deletePoster = (id: number) => {
+        if (!confirm('Delete this poster?')) return
+        authFetch(`${API_BASE}/posters/${id}`, { method: 'DELETE' })
+            .then(() => fetchPosters(posterPage, posterFilter))
+            .catch(() => { })
+    }
 
     const getPageLabel = (pagePath: string) => {
         const labels: Record<string, string> = {
@@ -1699,6 +1737,133 @@ export function AdminAnalytics() {
                                 )}
                             </div>
                         </div>
+
+                        {/* Poster Gallery */}
+                        <div style={{
+                            marginTop: '24px',
+                            borderRadius: '14px',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            overflow: 'hidden'
+                        }}>
+                            {sectionHeader(
+                                <ImageIcon size={16} color="#f59e0b" />,
+                                `Poster Gallery (${posterData.total})`,
+                                isPosterGalleryExpanded,
+                                () => setIsPosterGalleryExpanded(p => !p),
+                                undefined,
+                                'Saved poster images from user downloads'
+                            )}
+                            {isPosterGalleryExpanded && (
+                                <div style={{ padding: '16px 20px' }}>
+                                    {/* Filter tabs */}
+                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                                        {([['all', 'All'], ['weekly_poster', 'Weekly'], ['event_poster', 'Event']] as const).map(([val, label]) => (
+                                            <button key={val} onClick={() => { setPosterFilter(val); setPosterPage(1) }}
+                                                style={{
+                                                    padding: '6px 16px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600,
+                                                    cursor: 'pointer', border: 'none', transition: 'all 0.2s',
+                                                    background: posterFilter === val ? '#f59e0b' : 'rgba(255,255,255,0.06)',
+                                                    color: posterFilter === val ? '#000' : '#aaa'
+                                                }}>{label}</button>
+                                        ))}
+                                    </div>
+
+                                    {posterData.loading ? (
+                                        <div style={{ textAlign: 'center', padding: '32px', color: '#888' }}>
+                                            <Loader2 size={24} className="analytics-spinner" />
+                                        </div>
+                                    ) : posterData.posters.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '32px', color: '#666', fontSize: '0.85rem' }}>
+                                            No posters saved yet. Downloads will appear here.
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                                                gap: '12px'
+                                            }}>
+                                                {posterData.posters.map(p => (
+                                                    <div key={p.id} style={{
+                                                        position: 'relative', borderRadius: '10px', overflow: 'hidden',
+                                                        border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer',
+                                                        background: 'rgba(0,0,0,0.3)', transition: 'transform 0.2s'
+                                                    }}
+                                                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.03)')}
+                                                        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                                                    >
+                                                        <img src={p.file_url} alt="Poster"
+                                                            onClick={() => setPosterLightbox(p.file_url)}
+                                                            style={{ width: '100%', aspectRatio: '4/5', objectFit: 'cover', display: 'block' }}
+                                                            loading="lazy" />
+                                                        <div style={{
+                                                            position: 'absolute', top: '6px', left: '6px',
+                                                            background: p.poster_type === 'weekly_poster' ? '#f59e0b' : '#3b82f6',
+                                                            color: '#000', fontSize: '0.6rem', fontWeight: 700,
+                                                            padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase'
+                                                        }}>
+                                                            {p.poster_type === 'weekly_poster' ? 'Weekly' : 'Event'}
+                                                        </div>
+                                                        <button onClick={(e) => { e.stopPropagation(); deletePoster(p.id) }}
+                                                            style={{
+                                                                position: 'absolute', top: '6px', right: '6px',
+                                                                background: 'rgba(220,38,38,0.85)', border: 'none',
+                                                                borderRadius: '6px', padding: '4px', cursor: 'pointer',
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                            }}>
+                                                            <Trash2 size={12} color="#fff" />
+                                                        </button>
+                                                        <div style={{
+                                                            padding: '8px 10px', background: 'rgba(0,0,0,0.6)',
+                                                            fontSize: '0.7rem', color: '#ccc', lineHeight: 1.4
+                                                        }}>
+                                                            <div style={{ fontWeight: 600, color: '#eee', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                {p.metadata?.topic || p.metadata?.title || 'Untitled'}
+                                                            </div>
+                                                            <div>{p.metadata?.date || new Date(p.created_at).toLocaleDateString()}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Pagination */}
+                                            {posterData.total_pages > 1 && (
+                                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '16px' }}>
+                                                    <button onClick={() => setPosterPage(p => Math.max(1, p - 1))} disabled={posterPage <= 1}
+                                                        style={{ background: 'none', border: 'none', color: posterPage <= 1 ? '#444' : '#aaa', cursor: posterPage <= 1 ? 'default' : 'pointer' }}>
+                                                        <ChevronLeft size={18} />
+                                                    </button>
+                                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>{posterPage} / {posterData.total_pages}</span>
+                                                    <button onClick={() => setPosterPage(p => Math.min(posterData.total_pages, p + 1))} disabled={posterPage >= posterData.total_pages}
+                                                        style={{ background: 'none', border: 'none', color: posterPage >= posterData.total_pages ? '#444' : '#aaa', cursor: posterPage >= posterData.total_pages ? 'default' : 'pointer' }}>
+                                                        <ChevronRight size={18} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Poster Lightbox */}
+                        {posterLightbox && (
+                            <div onClick={() => setPosterLightbox(null)} style={{
+                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                                background: 'rgba(0,0,0,0.85)', zIndex: 10000,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'zoom-out'
+                            }}>
+                                <button onClick={() => setPosterLightbox(null)} style={{
+                                    position: 'absolute', top: '20px', right: '20px',
+                                    background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%',
+                                    padding: '8px', cursor: 'pointer', display: 'flex'
+                                }}><X size={20} color="#fff" /></button>
+                                <img src={posterLightbox} alt="Poster preview"
+                                    style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: '12px', objectFit: 'contain' }}
+                                    onClick={e => e.stopPropagation()} />
+                            </div>
+                        )}
 
                         {analytics.pages.length === 0 && (
                             <div style={{ textAlign: 'center', padding: '32px', color: '#666', fontSize: '0.9rem' }}>

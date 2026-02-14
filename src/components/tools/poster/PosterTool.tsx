@@ -6,6 +6,8 @@ import { trackEvent } from '../../../hooks/usePageTracker'
 import posterSvgUrl from '../../../assets/poster.svg'
 import './poster.css'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
+
 import flamanteSerifBoldUrl from '../../../fonts/flamante-serif/Flamante Serif -demo versions FFP-/Flamante-Serif-Bold-FFP.ttf'
 import ascendantSerifUrl from '../../../fonts/ascendant_serif/AscendantSerif-PersonalUse-Regular.otf'
 import ascenderSerifBoldUrl from '../../../fonts/Ascender-Serif-W02-Bold/Ascender Serif W02 Bold.ttf'
@@ -150,6 +152,19 @@ export function PosterTool() {
                         a.click()
                         document.body.removeChild(a)
                         URL.revokeObjectURL(blobUrl)
+
+                        // Save poster to backend (fire-and-forget)
+                        const formData = new FormData()
+                        formData.append('poster', blob, `poster-${Date.now()}.jpg`)
+                        formData.append('poster_type', 'weekly_poster')
+                        formData.append('metadata', JSON.stringify({
+                            topic: state.topic, name: state.name,
+                            name2: state.name2, date: state.date,
+                            header: state.header
+                        }))
+                        fetch(`${API_BASE}/posters/save`, {
+                            method: 'POST', body: formData
+                        }).catch(() => { })
                     }
                 }, 'image/jpeg', 0.95)
             }
