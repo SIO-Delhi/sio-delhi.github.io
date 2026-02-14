@@ -34,6 +34,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          VITE_ADMIN_USERNAMES: ${{ secrets.VITE_ADMIN_USERNAMES }}
+          VITE_ADMIN_USER_IDS: ${{ secrets.VITE_ADMIN_USER_IDS }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
