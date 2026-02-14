@@ -290,6 +290,24 @@ foreach ($routes as $pattern => $handler) {
         if (!$isPublic) {
             $payload = requireAuth(); // Halts with 401 if invalid
             $GLOBALS['AUTH_PAYLOAD'] = $payload;
+
+            // Secure Admin Routes: If not a portal route, enforce "siodelhi" user
+            // We check if the route pattern contains "/portal/"
+            if (strpos($pattern, '/portal/') === false) {
+                $username = $payload['username'] ?? ($payload['preferred_username'] ?? '');
+                $email = $payload['email'] ?? ($payload['email_address'] ?? '');
+
+                // Check if username is "siodelhi" OR email contains "siodelhi"
+                $isAdmin = (strtolower((string) $username) === 'siodelhi') ||
+                    (strpos(strtolower((string) $email), 'siodelhi') !== false);
+
+                if (!$isAdmin) {
+                    error_log('Admin access denied for user: ' . json_encode($payload));
+                    http_response_code(403);
+                    echo json_encode(['error' => 'Admin access denied']);
+                    exit();
+                }
+            }
         }
 
         try {
