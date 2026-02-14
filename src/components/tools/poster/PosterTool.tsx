@@ -5,6 +5,7 @@ import { useHistory } from '../../../hooks/useHistory'
 import { trackEvent } from '../../../hooks/usePageTracker'
 import posterSvgUrl from '../../../assets/poster.svg'
 import './poster.css'
+import { isUrdu } from '../../../lib/utils'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://api.siodelhi.org'
 
@@ -405,13 +406,17 @@ export function PosterTool() {
             `<text class="st7" transform="translate(1012.82 1406.84)" style="display:none"></text>`
         )
 
+
+
         // Dynamic name sizing
         const nameLen = Math.max(state.name.length, state.name2.length)
         const nameFontSize = nameLen > 20 ? 55 : nameLen > 15 ? 65 : 80
+        const nameFontFamily = (isUrdu(state.name) || isUrdu(state.name2)) ? "'AlQalam Taj Nastaleeq', serif" : "AscendantSerif, serif"
 
         // Dynamic position sizing
         const posLen = Math.max(state.position.length, state.organization.length)
         const posFontSize = posLen > 25 ? 38 : posLen > 18 ? 45 : 52
+        const posFontFamily = (isUrdu(state.position) || isUrdu(state.organization)) ? "'AlQalam Taj Nastaleeq', serif" : "AscendantSerif, serif"
 
         // Include the vertical stick in the overlay strings (using SVG rect)
         // We append it BEFORE the foreignObject so it sits in the SVG layer but at new position
@@ -421,11 +426,11 @@ export function PosterTool() {
     ${stickElement}
     <foreignObject x="1010" y="${speakerOverlayY}" width="920" height="360">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 8px;">
-            <div style="font-family: AscendantSerif, serif; color: #d3830f; font-size: ${nameFontSize}px; line-height: 1.15; font-weight: bold;">
+            <div style="font-family: ${nameFontFamily}; color: #d3830f; font-size: ${nameFontSize}px; line-height: 1.15; font-weight: bold;">
                 <div>${escapeXml(state.name)}</div>
                 <div>${escapeXml(state.name2)}</div>
             </div>
-            <div style="font-family: AscendantSerif, serif; color: #a05415; font-size: ${posFontSize}px; line-height: 1.25;">
+            <div style="font-family: ${posFontFamily}; color: #a05415; font-size: ${posFontSize}px; line-height: 1.25;">
                 <div>${escapeXml(state.position)}</div>
                 <div>${escapeXml(state.organization)}</div>
             </div>
@@ -442,13 +447,16 @@ export function PosterTool() {
         // st5 (Details) -> fill: #A05415 (Brown/Gold)
         // Topic -> fill: #A05415
 
+        const headerFontFamily = isUrdu(state.header) ? "'AlQalam Taj Nastaleeq', serif" : "AscendantSerif, serif"
+        const detailsFontFamily = (isUrdu(state.date) || isUrdu(state.time) || isUrdu(state.location)) ? "'AlQalam Taj Nastaleeq', sans-serif" : "OpenSansBold, AscenderSerifBold, sans-serif"
+
         const foreignObjectOverlay = `
     <foreignObject x="0" y="0" width="2000" height="2500" style="pointer-events: none;">
         <div xmlns="http://www.w3.org/1999/xhtml" style="width: 100%; height: 100%; display: flex; flex-direction: column; position: relative;">
             <div style="position: absolute; top: 270px; width: 100%; display: flex; justify-content: center; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 0;">
                     <div style="width: 34px; height: 34px; border-radius: 50%; background: #fff2e3; flex-shrink: 0; margin-right: -17px; z-index: 1;"></div>
-                    <div style="background: #d3830f; color: white; font-size: 60px; font-family: AscendantSerif, serif; padding: 16px 60px; border-radius: 16px; white-space: nowrap;">
+                    <div style="background: #d3830f; color: white; font-size: 60px; font-family: ${headerFontFamily}; padding: 16px 60px; border-radius: 16px; white-space: nowrap;">
                         ${escapeXml(state.header)}
                     </div>
                     <div style="width: 34px; height: 34px; border-radius: 50%; background: #fff2e3; flex-shrink: 0; margin-left: -17px; z-index: 1;"></div>
@@ -459,14 +467,16 @@ export function PosterTool() {
                 const isPlaceholder = !state.topic
                 const len = topicText.length
                 const fontSize = len > 200 ? 70 : len > 150 ? 85 : len > 100 ? 100 : len > 60 ? 120 : 140
+                const topicFontFamily = isUrdu(topicText) ? "'AlQalam Taj Nastaleeq', serif" : "FlamanteSerifBold, 'Flamante Serif', serif"
+
                 return `
             <div style="position: absolute; top: 500px; width: 100%; display: flex; justify-content: center; align-items: center; padding: 0 40px; max-height: 480px;">
-                <div style="color: #a05415; font-size: ${fontSize}px; font-weight: bold; font-family: FlamanteSerifBold, 'Flamante Serif', serif; text-align: center; line-height: 0.98; letter-spacing: -0.02em; word-wrap: break-word; max-width: 1600px;${isPlaceholder ? ' opacity: 0.3;' : ''}">
+                <div style="color: #a05415; font-size: ${fontSize}px; font-weight: bold; font-family: ${topicFontFamily}; text-align: center; line-height: 0.98; letter-spacing: -0.02em; word-wrap: break-word; max-width: 1600px;${isPlaceholder ? ' opacity: 0.3;' : ''}">
                     ${escapeXml(topicText).replace(/\n/g, '<br/>')}
                 </div>
             </div>`
             })()}
-            <div style="position: absolute; top: 1720px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; color: #a05415; font-size: 62px; font-weight: bold; font-family: OpenSansBold, AscenderSerifBold, sans-serif;">
+            <div style="position: absolute; top: 1720px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; color: #a05415; font-size: 62px; font-weight: bold; font-family: ${detailsFontFamily};">
                 <div style="display: flex; align-items: center; gap: 24px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#c8884d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                     <span>${escapeXml(state.date)}</span>

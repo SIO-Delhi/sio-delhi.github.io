@@ -2,6 +2,7 @@ import React from 'react'
 import { FormFooter } from '../../ui/FormFooter'
 import { MoroccanCircularPattern } from './MoroccanCircularPattern'
 import { Instagram, Link as LinkIcon } from 'lucide-react'
+import { isUrdu } from '../../../lib/utils'
 
 export interface Speaker {
     photo: string | null
@@ -278,7 +279,7 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                             <foreignObject x={1540} y={2310} width={300} height={170}>
                                 <div
                                     style={{
-                                        fontFamily: 'BodoniModa28pt, serif',
+                                        fontFamily: isUrdu(unitName) ? "'AlQalam Taj Nastaleeq', serif" : 'BodoniModa28pt, serif',
                                         fontSize: '28px',
                                         color: '#000000',
                                         fontWeight: 'bold',
@@ -316,7 +317,7 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 textAlign: 'center',
-                                fontFamily: 'BodoniModa28pt, serif',
+                                fontFamily: isUrdu(title) ? "'AlQalam Taj Nastaleeq', serif" : 'BodoniModa28pt, serif',
                                 fontSize: `${titleSize}px`,
                                 fontWeight: 400,
                                 lineHeight: 0.9,
@@ -355,7 +356,7 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                             style={{
                                 width: '100%',
                                 textAlign: 'center',
-                                fontFamily: 'CynthoNextBold, sans-serif',
+                                fontFamily: (isUrdu(date) || isUrdu(day)) ? "'AlQalam Taj Nastaleeq', sans-serif" : 'CynthoNextBold, sans-serif',
                                 fontSize: '64px',
                                 fontWeight: 700,
                                 color: '#1a1a2e',
@@ -375,7 +376,7 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                             style={{
                                 width: '100%',
                                 textAlign: 'center',
-                                fontFamily: 'CynthoNextBold, sans-serif',
+                                fontFamily: (isUrdu(timeStart) || isUrdu(timeEnd)) ? "'AlQalam Taj Nastaleeq', sans-serif" : 'CynthoNextBold, sans-serif',
                                 fontSize: '56px',
                                 fontWeight: 700,
                                 color: '#333',
@@ -394,7 +395,7 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                             style={{
                                 width: '100%',
                                 textAlign: 'center',
-                                fontFamily: 'CynthoNextBold, sans-serif',
+                                fontFamily: isUrdu(venue) ? "'AlQalam Taj Nastaleeq', sans-serif" : 'CynthoNextBold, sans-serif',
                                 fontSize: `${venueSize}px`,
                                 fontWeight: 700,
                                 color: '#7c3aed',
@@ -504,10 +505,10 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                                     {/* Topic - Theme shift applied */}
                                     <div style={{
                                         textAlign: 'center',
-                                        fontFamily: 'MontserratItalic, sans-serif',
+                                        fontFamily: isUrdu(speaker.topic) ? "'AlQalam Taj Nastaleeq', serif" : 'MontserratItalic, sans-serif',
                                         fontSize: `${topicSize}px`,
                                         fontWeight: 700,
-                                        fontStyle: 'italic',
+                                        fontStyle: isUrdu(speaker.topic) ? 'normal' : 'italic',
                                         color: '#7c3aed',
                                         lineHeight: 1.1,
                                         whiteSpace: 'pre-wrap',
@@ -529,7 +530,7 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                                     {/* Name */}
                                     <div style={{
                                         textAlign: 'center',
-                                        fontFamily: 'Montserrat, sans-serif',
+                                        fontFamily: isUrdu(speaker.name) ? "'AlQalam Taj Nastaleeq', serif" : 'Montserrat, sans-serif',
                                         fontSize: `${nameSize}px`,
                                         fontWeight: 700,
                                         color: '#1a1a2e',
@@ -542,7 +543,7 @@ export const EventPosterSvg = React.memo(React.forwardRef<SVGSVGElement, EventPo
                                     {/* Designation */}
                                     <div style={{
                                         textAlign: 'center',
-                                        fontFamily: 'Montserrat, sans-serif',
+                                        fontFamily: isUrdu(speaker.designation) ? "'AlQalam Taj Nastaleeq', serif" : 'Montserrat, sans-serif',
                                         fontSize: `${desigSize}px`,
                                         fontWeight: 500,
                                         color: '#000000',

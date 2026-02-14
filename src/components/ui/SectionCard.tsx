@@ -188,7 +188,7 @@ export function SectionCard({
                         fontSize: '1.4rem',
                         fontWeight: 700,
                         color: '#fdedcb',
-                        fontFamily: '"DM Sans", sans-serif'
+                        fontFamily: '"DM Sans", "AlQalam Taj Nastaleeq", sans-serif'
                     }}>
                         {title}
                     </h3>
@@ -291,7 +291,7 @@ export function SectionCard({
                         fontSize: '1.5rem',
                         fontWeight: 600,
                         color: '#fdedcb',
-                        fontFamily: '"DM Sans", sans-serif',
+                        fontFamily: '"DM Sans", "AlQalam Taj Nastaleeq", sans-serif',
                         lineHeight: 1.2,
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -435,7 +435,7 @@ export function SectionCard({
                 fontSize: isMedia ? '1.75rem' : '1.5rem',
                 fontWeight: 700,
                 margin: '0 0 12px 0',
-                fontFamily: '"DM Sans", sans-serif',
+                fontFamily: '"DM Sans", "AlQalam Taj Nastaleeq", sans-serif',
                 lineHeight: 1.1,
                 color: isMedia ? '#ff3b3b' : '#fdedcb',
                 letterSpacing: '-0.02em',
@@ -488,7 +488,7 @@ export function SectionCard({
                         <p style={{
                             fontSize: '0.85rem', color: '#fdedcb', margin: '0 0 4px 0',
                             lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                            fontFamily: '"DM Sans", sans-serif',
+                            fontFamily: '"DM Sans", "AlQalam Taj Nastaleeq", sans-serif',
                             textOverflow: 'ellipsis'
                         }}>
                             {description.replace(/<[^>]+>/g, '')}
