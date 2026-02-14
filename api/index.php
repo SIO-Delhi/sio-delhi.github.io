@@ -296,10 +296,28 @@ foreach ($routes as $pattern => $handler) {
             if (strpos($pattern, '/portal/') === false) {
                 $username = $payload['username'] ?? ($payload['preferred_username'] ?? '');
                 $email = $payload['email'] ?? ($payload['email_address'] ?? '');
+                $userId = $payload['sub'] ?? '';
 
-                // Check if username is "siodelhi" OR email contains "siodelhi"
-                $isAdmin = (strtolower((string) $username) === 'siodelhi') ||
-                    (strpos(strtolower((string) $email), 'siodelhi') !== false);
+                // Check if username is "siodelhi", email contains "siodelhi", OR it's the specific admin user ID
+                // Check against allowed admin usernames
+                $adminUsernames = explode(',', env('ADMIN_USERNAMES', ''));
+                $usernameMatches = false;
+                foreach ($adminUsernames as $adminName) {
+                    $adminName = trim($adminName);
+                    if (empty($adminName))
+                        continue;
+
+                    if (
+                        (strtolower((string) $username) === strtolower($adminName)) ||
+                        (strpos(strtolower((string) $email), strtolower($adminName)) !== false)
+                    ) {
+                        $usernameMatches = true;
+                        break;
+                    }
+                }
+
+                $isAdmin = $usernameMatches ||
+                    ($userId === env('ADMIN_USER_ID'));
 
                 if (!$isAdmin) {
                     error_log('Admin access denied for user: ' . json_encode($payload));
