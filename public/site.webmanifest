@@ -3,9 +3,9 @@
     "short_name": "SIO Delhi",
     "icons": [
         {
-            "src": "/logo.svg",
-            "sizes": "any",
-            "type": "image/svg+xml"
+            "src": "/siodel-cricular.png",
+            "sizes": "192x192 512x512",
+            "type": "image/png"
         }
     ],
     "theme_color": "#ffffff",
