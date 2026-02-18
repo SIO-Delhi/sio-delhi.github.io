@@ -63,7 +63,7 @@ export function EventPopup() {
                     } catch (err) {
                         console.error('Failed to preload popup image', err)
                     }
-                }, 12000) // 12 seconds delay
+                }, 7000) // 7 seconds delay
             } else {
                 // Splash not done yet, check again in 500ms
                 setTimeout(checkSplashAndShow, 500)
