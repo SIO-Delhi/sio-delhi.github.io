@@ -1677,7 +1677,7 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: Post; isD
                 display: 'flex',
                 alignItems: 'center',
                 gap: '24px',
-                marginBottom: '32px',
+                marginBottom: '16px',
                 color: isDark ? '#fdedcb' : 'rgba(0,0,0,0.5)',
                 fontSize: '0.9rem'
             }}>
@@ -1689,6 +1689,10 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: Post; isD
                     <User size={14} />
                     SIO Delhi
                 </div>
+            </div>
+
+            {/* Share + Gallery buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '32px' }}>
                 <ShareButton
                     postId={post.id}
                     postTitle={post.title}

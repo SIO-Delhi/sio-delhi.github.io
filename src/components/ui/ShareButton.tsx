@@ -1,31 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Share2, Link2, Check, Facebook, Instagram } from 'lucide-react'
+import { Share2, Link2, X, Facebook } from 'lucide-react'
+import gsap from 'gsap'
 import { api } from '../../lib/api'
 
-// Custom SVG icons for platforms not in lucide-react
+// Custom SVG icons
 const XIcon = ({ size = 18 }: { size?: number }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
         <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
-    </svg>
-)
-
-const TelegramIcon = ({ size = 18 }: { size?: number }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42l10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l-.004.002l-.317 4.743c.466 0 .672-.214.929-.472l2.228-2.15l4.641 3.429c.854.471 1.466.226 1.677-.796l3.036-14.318c.311-1.246-.474-1.808-1.394-1.396z" />
-    </svg>
-)
-
-
-
-const WhatsAppIcon = ({ size = 18 }: { size?: number }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-    </svg>
-)
-
-const LinkedInIcon = ({ size = 18 }: { size?: number }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
     </svg>
 )
 
@@ -36,28 +17,35 @@ interface ShareButtonProps {
     isDark: boolean
 }
 
+// Height of the share widget
+const WIDGET_HEIGHT = 48
+// Width of each icon button
+const ICON_SIZE = 30
+// Gap between icons
+const ICON_GAP = 2
+// Padding around icons
+const ICONS_PADDING = 8
+// Size of the close circle
+const CLOSE_SIZE = WIDGET_HEIGHT
+// Total expanded width
+const EXPANDED_WIDTH = 168
+
 export function ShareButton({ postId, postTitle, postUrl, isDark }: ShareButtonProps) {
     const [shortUrl, setShortUrl] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
-    const [copied, setCopied] = useState(false)
-    const [showMenu, setShowMenu] = useState(false)
-    const wrapperRef = useRef<HTMLDivElement>(null)
+    const [isOpen, setIsOpen] = useState(false)
 
-    // Close menu on outside click
-    useEffect(() => {
-        if (!showMenu) return
-        const handler = (e: MouseEvent) => {
-            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-                setShowMenu(false)
-            }
-        }
-        document.addEventListener('mousedown', handler)
-        return () => document.removeEventListener('mousedown', handler)
-    }, [showMenu])
+    const containerRef = useRef<HTMLDivElement>(null)
+    const toggleRef = useRef<HTMLButtonElement>(null)
+    const btnTextRef = useRef<HTMLSpanElement>(null)
+    const closeIconRef = useRef<HTMLSpanElement>(null)
+    const iconsRef = useRef<HTMLDivElement>(null)
+    const tlRef = useRef<gsap.core.Timeline | null>(null)
+    const copyBtnRef = useRef<HTMLButtonElement>(null)
+    const toastRef = useRef<HTMLDivElement>(null)
 
     const getOrCreateShortLink = useCallback(async (): Promise<string> => {
         if (shortUrl) return shortUrl
-
         setLoading(true)
         try {
             const res = await api.shortLinks.create(postUrl, postId)
@@ -70,28 +58,109 @@ export function ShareButton({ postId, postTitle, postUrl, isDark }: ShareButtonP
         } finally {
             setLoading(false)
         }
-        // Fallback to full URL
         return postUrl
     }, [shortUrl, postUrl, postId])
 
-    const handleShare = async () => {
-        const url = await getOrCreateShortLink()
-        const shareData = { title: postTitle, text: postTitle, url }
+    // Build GSAP timeline
+    useEffect(() => {
+        const container = containerRef.current
+        const toggle = toggleRef.current
+        const btnText = btnTextRef.current
+        const closeIcon = closeIconRef.current
+        const icons = iconsRef.current
+        if (!container || !toggle || !btnText || !closeIcon || !icons) return
 
-        // Use native share on mobile (touch devices)
-        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-        if (isMobile && navigator.share) {
-            try {
-                await navigator.share(shareData)
-                return
-            } catch {
-                // User cancelled — don't fall through to menu
-                return
+        const iconItems = icons.querySelectorAll('.share-icon-item')
+
+        const tl = gsap.timeline({ paused: true, reversed: true })
+
+        tl
+            // 1. Fade out "Share" text
+            .to(btnText, {
+                opacity: 0,
+                scale: 0.5,
+                duration: 0.2,
+                ease: 'power2.in'
+            })
+            // 2. Expand container width
+            .to(container, {
+                width: EXPANDED_WIDTH,
+                duration: 0.5,
+                ease: 'power3.inOut'
+            }, '-=0.1')
+            // 3. Shrink toggle to circle on the right
+            .to(toggle, {
+                width: CLOSE_SIZE,
+                padding: 0,
+                duration: 0.5,
+                ease: 'power3.inOut'
+            }, '<')
+            // 4. Show close X
+            .to(closeIcon, {
+                opacity: 1,
+                scale: 1,
+                rotation: 0,
+                duration: 0.3,
+                ease: 'back.out(2)'
+            }, '-=0.25')
+            // 5. Make icons container visible
+            .set(icons, { visibility: 'visible' }, '-=0.35')
+            // 6. Stagger icons in
+            .fromTo(iconItems,
+                { y: 12, opacity: 0, scale: 0.5 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    scale: 1,
+                    stagger: 0.04,
+                    duration: 0.3,
+                    ease: 'back.out(1.7)'
+                }, '-=0.25'
+            )
+
+        tlRef.current = tl
+        return () => { tl.kill() }
+    }, [isDark])
+
+    // Close on outside click
+    useEffect(() => {
+        if (!isOpen) return
+        const handler = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                closeMenu()
             }
         }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [isOpen])
 
-        // Desktop: toggle share menu
-        setShowMenu(prev => !prev)
+    const closeMenu = () => {
+        if (tlRef.current && !tlRef.current.reversed()) {
+            tlRef.current.timeScale(2.5).reverse()
+            setTimeout(() => setIsOpen(false), 350)
+        }
+    }
+
+    const handleToggle = async () => {
+        // Native share on mobile
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+        if (isMobile && navigator.share) {
+            const url = await getOrCreateShortLink()
+            try {
+                await navigator.share({ title: postTitle, text: postTitle, url })
+            } catch { /* cancelled */ }
+            return
+        }
+
+        if (!tlRef.current) return
+
+        if (tlRef.current.reversed()) {
+            setIsOpen(true)
+            getOrCreateShortLink()
+            tlRef.current.timeScale(1).play()
+        } else {
+            closeMenu()
+        }
     }
 
     const handleCopyLink = async () => {
@@ -106,205 +175,219 @@ export function ShareButton({ postId, postTitle, postUrl, isDark }: ShareButtonP
             document.execCommand('copy')
             document.body.removeChild(textarea)
         }
-        setCopied(true)
+        // Update copy button visually via DOM instead of state to avoid re-render
+        const btn = copyBtnRef.current
+        const toast = toastRef.current
+        if (btn) {
+            btn.style.color = '#22c55e'
+            btn.title = 'Copied!'
+        }
+        if (toast) {
+            toast.style.opacity = '1'
+            toast.style.transform = 'translateX(-50%) translateY(0)'
+        }
         setTimeout(() => {
-            setCopied(false)
-            setShowMenu(false)
-        }, 1500)
+            if (btn) {
+                btn.style.color = isDark ? '#fdedcb' : '#555'
+                btn.title = 'Copy Link'
+            }
+            if (toast) {
+                toast.style.opacity = '0'
+                toast.style.transform = 'translateX(-50%) translateY(4px)'
+            }
+            closeMenu()
+        }, 1000)
     }
 
-    const shareOptions = [
+    const shareActions = [
         {
-            icon: <WhatsAppIcon />,
-            label: 'WhatsApp',
-            color: '#25D366',
-            action: async () => {
-                const url = await getOrCreateShortLink()
-                window.open(`https://wa.me/?text=${encodeURIComponent(postTitle + ' ' + url)}`, '_blank')
-                setShowMenu(false)
-            }
-        },
-        {
-            icon: <TelegramIcon />,
-            label: 'Telegram',
-            color: '#26A5E4',
-            action: async () => {
-                const url = await getOrCreateShortLink()
-                window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(postTitle)}`, '_blank')
-                setShowMenu(false)
-            }
-        },
-        {
-            icon: <XIcon />,
-            label: 'X / Twitter',
-            color: isDark ? '#fdedcb' : '#000',
+            icon: <XIcon size={15} />, color: isDark ? '#fff' : '#000', label: 'X',
             action: async () => {
                 const url = await getOrCreateShortLink()
                 window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(postTitle)}&url=${encodeURIComponent(url)}`, '_blank')
-                setShowMenu(false)
+                closeMenu()
             }
         },
         {
-            icon: <Facebook size={18} />,
-            label: 'Facebook',
-            color: '#1877F2',
+            icon: <Facebook size={18} />, color: '#1877F2', label: 'Facebook',
             action: async () => {
                 const url = await getOrCreateShortLink()
                 window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank')
-                setShowMenu(false)
+                closeMenu()
             }
         },
         {
-            icon: <LinkedInIcon />,
-            label: 'LinkedIn',
-            color: '#0A66C2',
-            action: async () => {
-                const url = await getOrCreateShortLink()
-                window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank')
-                setShowMenu(false)
-            }
-        },
-        {
-            icon: <Instagram size={18} />,
-            label: 'Instagram',
-            color: '#E4405F',
-            action: () => {
-                // Instagram doesn't support URL sharing — copy link instead
-                handleCopyLink()
-            }
+            icon: <Link2 size={18} />,
+            color: isDark ? '#fdedcb' : '#555',
+            label: 'Copy Link',
+            action: () => handleCopyLink(),
+            ref: copyBtnRef,
         },
     ]
 
+    // Revealed background: noticeably lighter so contrast with toggle is clear
+    const revealBg = isDark
+        ? 'linear-gradient(135deg, #3a3a40 0%, #2c2c32 100%)'
+        : 'linear-gradient(135deg, #e8e8e8 0%, #d8d8d8 100%)'
+    const toggleBg = isDark
+        ? 'linear-gradient(135deg, #1a1a1e 0%, #252528 100%)'
+        : 'linear-gradient(135deg, #222226 0%, #333338 100%)'
+
     return (
-        <div ref={wrapperRef} style={{ position: 'relative', display: 'inline-block' }}>
-            <button
-                onClick={handleShare}
-                disabled={loading}
+        <div style={{ position: 'relative', display: 'inline-flex' }}>
+        <div
+            ref={containerRef}
+            style={{
+                position: 'relative',
+                display: 'inline-flex',
+                alignItems: 'center',
+                height: WIDGET_HEIGHT,
+                background: revealBg,
+                borderRadius: '100px',
+                border: isDark
+                    ? '1px solid rgba(255,255,255,0.15)'
+                    : '1px solid rgba(0,0,0,0.12)',
+                boxShadow: isDark
+                    ? '0 4px 20px rgba(0,0,0,0.5)'
+                    : '0 4px 20px rgba(0,0,0,0.1)',
+                fontFamily: '"DM Sans", sans-serif',
+                overflow: 'hidden',
+                maxWidth: '100%',
+            }}
+        >
+            {/* Social Icons — always in DOM, hidden until GSAP reveals */}
+            <div
+                ref={iconsRef}
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 24px',
-                    borderRadius: '100px',
-                    background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                    border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                    color: isDark ? 'white' : 'black',
-                    cursor: loading ? 'wait' : 'pointer',
-                    fontSize: '0.95rem',
-                    fontWeight: 500,
-                    fontFamily: '"DM Sans", sans-serif',
-                    transition: 'all 0.2s',
+                    gap: ICON_GAP,
+                    paddingLeft: ICONS_PADDING,
+                    paddingRight: CLOSE_SIZE + ICONS_PADDING,
+                    visibility: 'hidden',
+                    whiteSpace: 'nowrap',
                 }}
             >
-                <Share2 size={16} />
-                {loading ? 'Loading...' : 'Share'}
-            </button>
+                {shareActions.map(opt => (
+                    <button
+                        key={opt.label}
+                        ref={'ref' in opt ? opt.ref as React.Ref<HTMLButtonElement> : undefined}
+                        className="share-icon-item"
+                        onClick={opt.action}
+                        title={opt.label}
+                        style={{
+                            width: ICON_SIZE,
+                            height: ICON_SIZE,
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: 'transparent',
+                            color: opt.color,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'background 0.2s, transform 0.2s',
+                            flexShrink: 0,
+                            opacity: 0,
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = isDark
+                                ? 'rgba(255,255,255,0.12)'
+                                : 'rgba(0,0,0,0.08)'
+                            e.currentTarget.style.transform = 'scale(1.2)'
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent'
+                            e.currentTarget.style.transform = 'scale(1)'
+                        }}
+                    >
+                        {opt.icon}
+                    </button>
+                ))}
+            </div>
 
-            {showMenu && (
-                <div style={{
+            {/* Toggle Button — covers everything when closed, shrinks to circle on right */}
+            <button
+                ref={toggleRef}
+                onClick={handleToggle}
+                disabled={loading}
+                style={{
                     position: 'absolute',
-                    bottom: '100%',
-                    left: '0',
-                    marginBottom: '8px',
-                    background: isDark ? '#1a1a1d' : '#fff',
-                    border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                    borderRadius: '16px',
-                    padding: '16px',
-                    minWidth: '240px',
-                    boxShadow: '0 -8px 32px rgba(0,0,0,0.3)',
-                    zIndex: 9999,
-                }}>
-                    {/* Icon grid */}
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
+                    top: 0,
+                    right: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: toggleBg,
+                    borderRadius: '100px',
+                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: loading ? 'wait' : 'pointer',
+                    zIndex: 2,
+                    color: 'white',
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                    fontFamily: '"DM Sans", sans-serif',
+                    whiteSpace: 'nowrap',
+                    padding: '0 24px',
+                    overflow: 'hidden',
+                    boxShadow: isDark
+                        ? '0 2px 8px rgba(0,0,0,0.5)'
+                        : '0 2px 8px rgba(0,0,0,0.15)',
+                }}
+            >
+                <span
+                    ref={btnTextRef}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
                         gap: '8px',
-                        marginBottom: '12px',
-                    }}>
-                        {shareOptions.map(opt => (
-                            <button
-                                key={opt.label}
-                                onClick={opt.action}
-                                title={opt.label}
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '12px 8px',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    background: 'transparent',
-                                    cursor: 'pointer',
-                                    color: opt.color,
-                                    fontSize: '0.7rem',
-                                    fontFamily: '"DM Sans", sans-serif',
-                                    transition: 'background 0.15s',
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = isDark
-                                        ? 'rgba(255,255,255,0.06)'
-                                        : 'rgba(0,0,0,0.04)'
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent'
-                                }}
-                            >
-                                <div style={{
-                                    width: '40px',
-                                    height: '40px',
-                                    borderRadius: '50%',
-                                    background: isDark
-                                        ? 'rgba(255,255,255,0.08)'
-                                        : 'rgba(0,0,0,0.06)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}>
-                                    {opt.icon}
-                                </div>
-                                <span style={{
-                                    color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)',
-                                    whiteSpace: 'nowrap',
-                                }}>
-                                    {opt.label}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
+                    }}
+                >
+                    <Share2 size={16} />
+                    {loading ? 'Loading...' : 'Share'}
+                </span>
+                <span
+                    ref={closeIconRef}
+                    style={{
+                        position: 'absolute',
+                        opacity: 0,
+                        transform: 'scale(0) rotate(-90deg)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <X size={20} />
+                </span>
+            </button>
+        </div>
 
-                    {/* Copy Link button */}
-                    <div style={{
-                        borderTop: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
-                        paddingTop: '12px',
-                    }}>
-                        <button
-                            onClick={handleCopyLink}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                                borderRadius: '10px',
-                                background: copied
-                                    ? (isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)')
-                                    : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)'),
-                                cursor: 'pointer',
-                                color: copied ? '#22c55e' : (isDark ? '#fdedcb' : '#333'),
-                                fontSize: '0.85rem',
-                                fontWeight: 500,
-                                fontFamily: '"DM Sans", sans-serif',
-                                transition: 'all 0.2s',
-                            }}
-                        >
-                            {copied ? <Check size={16} /> : <Link2 size={16} />}
-                            {copied ? 'Link Copied!' : 'Copy Link'}
-                        </button>
-                    </div>
-                </div>
-            )}
+        {/* Copied toast */}
+        <div
+            ref={toastRef}
+            style={{
+                position: 'absolute',
+                bottom: 'calc(100% + 8px)',
+                left: '50%',
+                transform: 'translateX(-50%) translateY(4px)',
+                background: '#22c55e',
+                color: 'white',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                opacity: 0,
+                transition: 'opacity 0.25s, transform 0.25s',
+                pointerEvents: 'none',
+                zIndex: 10,
+                fontFamily: '"DM Sans", sans-serif',
+            }}
+        >
+            Copied to clipboard!
+        </div>
         </div>
     )
 }

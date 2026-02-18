@@ -14,15 +14,15 @@ interface ViewGalleryButtonProps {
 
 export const ViewGalleryButton = ({ to, isDark, variant = 'default', className, style }: ViewGalleryButtonProps) => {
 
-    // Default Style (Big Round Pill - Standard Post)
+    // Default Style (Big Round Pill - Standard Post) — matches ShareButton height (48px)
     let baseStyle: React.CSSProperties = {
         display: 'inline-flex', alignItems: 'center', gap: '10px',
-        padding: '12px 24px', borderRadius: '100px',
+        padding: '0 24px', height: '48px', borderRadius: '100px',
         background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
         color: isDark ? 'white' : 'black',
         border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
         cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem',
-        transition: 'all 0.2s',
+        transition: 'all 0.2s', boxSizing: 'border-box',
         ...style
     }
 

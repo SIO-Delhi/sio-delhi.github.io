@@ -36,7 +36,7 @@ export function HomePage() {
             const maxAttempts = 20 // 2 seconds
 
             poll = setInterval(() => {
-                const element = document.querySelector(targetId)
+                const element = document.getElementById(targetId.replace(/^#/, ''))
                 if (element) {
                     if (poll) clearInterval(poll)
                     // Small delay to ensure layout stability
