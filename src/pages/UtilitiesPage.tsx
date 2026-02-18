@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Frame, Sliders, ChevronRight, PenTool } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { SEOHead } from '../components/seo/SEOHead'
 
 export function UtilitiesPage() {
     const [isMobile, setIsMobile] = useState(false)
@@ -109,6 +110,7 @@ export function UtilitiesPage() {
             color: 'white',
             fontFamily: '"DM Sans", sans-serif'
         }}>
+            <SEOHead title="Utilities" description="SIO Delhi creative tools - frame tool, filter tool, and poster tool." />
             <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
                 <div style={{ marginBottom: isMobile ? '32px' : '48px' }}>
                     <h1 style={{

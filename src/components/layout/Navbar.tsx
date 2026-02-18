@@ -30,7 +30,8 @@ export function Navbar() {
             .filter(s => s.is_published)
             .map(s => ({
                 name: s.label, // Use label (e.g., INITIATIVES) for navbar
-                href: `#${s.id}`
+                href: `/${s.id}`,
+                sectionId: s.id,
             }))
     }, [sections])
 
@@ -42,8 +43,10 @@ export function Navbar() {
         window.addEventListener('resize', checkMobile)
 
         const handleScroll = () => {
+            if (!isHomePage) return // Only track scroll on homepage
+
             // Dynamic check including home and contact
-            const sectionIds = ['home', ...navLinks.map(l => l.href.replace('#', '')), 'contact']
+            const sectionIds = ['home', ...navLinks.map(l => l.sectionId), 'contact']
 
             for (const section of sectionIds) {
                 const el = document.getElementById(section)
@@ -52,11 +55,6 @@ export function Navbar() {
                     if (rect.top <= 150 && rect.bottom >= 150) {
                         if (activeSection !== section) {
                             setActiveSection(section)
-                            // Update URL hash using replaceState to avoid history stack pollution or router triggers
-                            // Only use section ID, strip any cardId portion since user has scrolled
-                            if (window.history.replaceState) {
-                                window.history.replaceState(null, '', `#${section === 'home' ? '' : section}`)
-                            }
                         }
                         break
                     }
@@ -80,38 +78,41 @@ export function Navbar() {
     }, [])
 
     const scrollToSection = (href: string) => {
-        const sectionId = href.replace('#', '')
+        const sectionId = href.replace('/', '')
 
-        // If not on homepage, navigate to homepage with the hash
-        if (!isHomePage) {
-            navigate('/' + href)
+        // If on homepage, scroll to the section
+        if (isHomePage) {
+            const targetElement = document.getElementById(sectionId)
+            const offset = -100 // Navbar height buffer
+
+            if (targetElement) {
+                const lenis = (window as typeof window & { lenis?: { scrollTo: (target: number | Element, options?: { offset?: number, immediate?: boolean }) => void } }).lenis
+
+                if (lenis) {
+                    lenis.scrollTo(targetElement, { offset, immediate: false })
+                } else {
+                    const elementPosition = targetElement.getBoundingClientRect().top + window.pageYOffset
+                    window.scrollTo({
+                        top: elementPosition + offset,
+                        behavior: 'smooth'
+                    })
+                }
+            }
             setIsOpen(false)
             return
         }
 
-        // For sections with scroll animations, scroll to the cards/content area instead
-        const targetElement = document.getElementById(sectionId)
-        const offset = -100 // Navbar height buffer
-
-        if (targetElement) {
-            const lenis = (window as typeof window & { lenis?: { scrollTo: (target: number | Element, options?: { offset?: number, immediate?: boolean }) => void } }).lenis
-
-            if (lenis) {
-                lenis.scrollTo(targetElement, { offset, immediate: false }) // Smooth scroll
-            } else {
-                const elementPosition = targetElement.getBoundingClientRect().top + window.pageYOffset
-                window.scrollTo({
-                    top: elementPosition + offset,
-                    behavior: 'smooth'
-                })
-            }
-        }
+        // If not on homepage, navigate to section landing page
+        navigate(`/${sectionId}`)
         setIsOpen(false)
     }
 
     const isActive = (href: string) => {
-        const sectionId = href.replace('#', '')
-        return activeSection === sectionId
+        const sectionId = href.replace('/', '')
+        // On homepage, check scroll position
+        if (isHomePage) return activeSection === sectionId
+        // On section pages, check pathname
+        return location.pathname === `/${sectionId}`
     }
 
 
@@ -143,10 +144,17 @@ export function Navbar() {
                 >
                     {/* Left: SIO Logo + Organization Name Capsule */}
                     <a
-                        href="#home"
+                        href="/"
                         onClick={(e) => {
                             e.preventDefault()
-                            scrollToSection('#home')
+                            if (isHomePage) {
+                                // Scroll to top
+                                const lenis = (window as typeof window & { lenis?: { scrollTo: (target: number | Element, options?: { offset?: number, immediate?: boolean }) => void } }).lenis
+                                if (lenis) lenis.scrollTo(0, { immediate: false })
+                                else window.scrollTo({ top: 0, behavior: 'smooth' })
+                            } else {
+                                navigate('/')
+                            }
                         }}
                         style={{
                             display: 'flex',

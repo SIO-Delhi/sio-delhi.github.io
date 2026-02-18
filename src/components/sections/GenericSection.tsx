@@ -13,6 +13,19 @@ interface GenericSectionProps {
     template?: SectionTemplate
 }
 
+// Get the route prefix for post detail pages
+const getPostRoute = (sId: string, postSlug: string) => {
+    switch (sId) {
+        case 'about': return `/about-us/${postSlug}`
+        case 'initiatives': return `/initiative/${postSlug}`
+        case 'media': return `/media/${postSlug}`
+        case 'leadership': return `/leader/${postSlug}`
+        case 'resources':
+        case 'more': return `/resource/${postSlug}`
+        default: return `/section/${sId}/${postSlug}`
+    }
+}
+
 export function GenericSection({ sectionId, title, label, template }: GenericSectionProps) {
     const { isDark } = useTheme()
     const navigate = useNavigate()
@@ -64,8 +77,7 @@ export function GenericSection({ sectionId, title, label, template }: GenericSec
                         variant={template || 'default'}
                         onClick={() => {
                             const slug = slugify(card.title)
-                            window.history.replaceState(null, '', `#${sectionId}:${slug}`)
-                            navigate(`/section/${sectionId}/${slug}`, { state: { post: card } })
+                            navigate(getPostRoute(sectionId, slug), { state: { post: card } })
                         }}
                     />
                 ))

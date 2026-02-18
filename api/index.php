@@ -80,6 +80,9 @@ $publicRoutes = [
     'POST /analytics/event',
     'POST /forms/([^/]+)/submit',
     'POST /posters/save',
+    'POST /short-links',
+    'GET /short-links/resolve/([a-zA-Z0-9]+)',
+    'GET /short-links/post/([^/]+)',
 ];
 
 // Get request method and URI
@@ -249,6 +252,11 @@ $routes = [
     'POST /posters/save' => 'routes/posters.php@savePoster',
     'GET /posters' => 'routes/posters.php@getPosters',
     'DELETE /posters/([^/]+)' => 'routes/posters.php@deletePoster',
+
+    // Short Links
+    'POST /short-links' => 'routes/short-links.php@createShortLink',
+    'GET /short-links/resolve/([a-zA-Z0-9]+)' => 'routes/short-links.php@resolveShortLink',
+    'GET /short-links/post/([^/]+)' => 'routes/short-links.php@getShortLinkByPost',
 ];
 
 // Find matching route
@@ -267,6 +275,11 @@ foreach ($routes as $pattern => $handler) {
         // Rate limiting on login endpoint
         if ($pattern === 'POST /portal/auth/me') {
             enforceRateLimit('login', 10, 60); // 10 attempts per minute
+        }
+
+        // Rate limiting on short link creation
+        if ($pattern === 'POST /short-links') {
+            enforceRateLimit('short_link_create', 30, 60); // 30 per minute
         }
 
         // General API rate limit (60 req/min per IP for write operations)

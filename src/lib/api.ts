@@ -392,5 +392,25 @@ export const api = {
         getExportUrl(formId: string, format: 'csv' | 'json' = 'csv') {
             return `${API_BASE}/api/forms/${formId}/export?format=${format}`
         }
+    },
+
+    // Short Links
+    shortLinks: {
+        async create(fullUrl: string, postId?: string) {
+            return api.post<{ shortCode: string; shortUrl: string; fullUrl: string; clickCount: number }>(
+                '/api/short-links',
+                { fullUrl, postId }
+            )
+        },
+        async resolve(code: string) {
+            return api.get<{ fullUrl: string; shortCode: string; clickCount: number }>(
+                `/api/short-links/resolve/${code}`
+            )
+        },
+        async getByPost(postId: string) {
+            return api.get<{ shortCode: string; shortUrl: string; fullUrl: string; clickCount: number }>(
+                `/api/short-links/post/${postId}`
+            )
+        }
     }
 }

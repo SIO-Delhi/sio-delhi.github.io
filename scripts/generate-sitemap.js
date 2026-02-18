@@ -1,17 +1,15 @@
-
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Go up one level from 'scripts' to root
 const ROOT_DIR = path.join(__dirname, '..');
-const CSV_PATH = path.join(ROOT_DIR, 'posts.csv');
 const SITEMAP_PATH = path.join(ROOT_DIR, 'public', 'sitemap.xml');
 
 const BASE_URL = 'https://siodelhi.org';
+const API_BASE = 'https://api.siodelhi.org';
 
-// Manual static routes
+// Static routes
 const STATIC_URLS = [
     { loc: '/', priority: '1.0', changefreq: 'weekly' },
     { loc: '/utilities', priority: '0.8', changefreq: 'monthly' },
@@ -20,166 +18,81 @@ const STATIC_URLS = [
     { loc: '/utilities/frame-tool', priority: '0.8', changefreq: 'monthly' },
 ];
 
-/**
- * Parses a simple CSV line, respecting double quotes for fields with commas/newlines.
- * Returns an array of fields.
- */
-function parseCSVLine(line) {
-    const fields = [];
-    let currentField = '';
-    let insideQuote = false;
-
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-
-        if (char === '"') {
-            if (insideQuote && line[i + 1] === '"') {
-                // Escaped quote
-                currentField += '"';
-                i++;
-            } else {
-                insideQuote = !insideQuote;
-            }
-        } else if (char === ',' && !insideQuote) {
-            fields.push(currentField);
-            currentField = '';
-        } else {
-            currentField += char;
-        }
-    }
-    fields.push(currentField);
-    return fields;
-}
-
 function slugify(text) {
     if (!text) return '';
     return text
         .toString()
         .toLowerCase()
         .trim()
-        .replace(/\s+/g, '-')        // Replace spaces with -
-        .replace(/[^\w\-]+/g, '')    // Remove all non-word chars
-        .replace(/\-\-+/g, '-')      // Replace multiple - with single -
-        .replace(/^-+/, '')          // Trim - from start of text
-        .replace(/-+$/, '');         // Trim - from end of text
+        .replace(/\s+/g, '-')
+        .replace(/[^\w\-]+/g, '')
+        .replace(/\-\-+/g, '-')
+        .replace(/^-+/, '')
+        .replace(/-+$/, '');
 }
 
-function getUrlForPost(id, sectionId, title) {
-    if (!id || !sectionId) return null;
+function getUrlForPost(sectionId, title) {
     const slug = slugify(title);
-
-    // If no slug (empty title), fallback to ID? Or just skip? 
-    // Let's fallback to ID if slug is empty, but our routing prefers slugs.
-    // If slug is empty, the route /:slug might match ID if valid.
-    const param = slug || id;
+    if (!slug) return null;
 
     switch (sectionId) {
-        case 'about': return `/about-us/${param}`;
-        case 'initiatives': return `/initiative/${param}`;
-        case 'media': return `/media/${param}`;
-        case 'leadership': return `/leader/${param}`;
-        case 'resources': return `/resource/${param}`;
-        case 'more': return `/resource/${param}`; // Fixed mapping for 'more' to 'resource' route
-        default: return `/section/${sectionId}/${param}`;
+        case 'about': return `/about-us/${slug}`;
+        case 'initiatives': return `/initiative/${slug}`;
+        case 'media': return `/media/${slug}`;
+        case 'leadership': return `/leader/${slug}`;
+        case 'resources':
+        case 'more': return `/resource/${slug}`;
+        default: return `/section/${sectionId}/${slug}`;
     }
 }
 
 async function generateSitemap() {
-    console.log(`Reading CSV from ${CSV_PATH}...`);
+    console.log('Fetching posts from API...');
 
-    if (!fs.existsSync(CSV_PATH)) {
-        console.error('posts.csv not found!');
-        process.exit(1);
+    let posts = [];
+    try {
+        const res = await fetch(`${API_BASE}/api/posts?publishedOnly=true`);
+        if (!res.ok) throw new Error(`API returned ${res.status}`);
+        posts = await res.json();
+    } catch (err) {
+        console.error('Failed to fetch posts from API:', err.message);
+        console.log('Generating sitemap with static routes only.');
     }
 
-    const csvContent = fs.readFileSync(CSV_PATH, 'utf-8');
-    // Split by newlines but respect quotes? Simple split is risky if newlines in content.
-    // However, CSV usually escapes newlines inside quotes. 
-    // A robust CSV parser reads char by char.
-    // For this quick script, let's try a regex for line matching or use a library-free approach.
-    // Given the file size is small (~90KB), we can iterate the whole string.
+    console.log(`Fetched ${posts.length} published posts.`);
 
-    const rows = [];
-    let currentRow = '';
-    let insideQuote = false;
+    const urls = STATIC_URLS.map(u => ({ ...u }));
 
-    // Split file into logical rows
-    for (let i = 0; i < csvContent.length; i++) {
-        const char = csvContent[i];
+    for (const post of posts) {
+        if (!post.sectionId) continue;
 
-        if (char === '"') {
-            if (insideQuote && csvContent[i + 1] === '"') {
-                i++; // Skip escaped
-            } else {
-                insideQuote = !insideQuote;
-            }
-        }
+        const postPath = getUrlForPost(post.sectionId, post.title);
+        if (!postPath) continue;
 
-        if (char === '\n' && !insideQuote) {
-            rows.push(currentRow);
-            currentRow = '';
-        } else {
-            currentRow += char;
-        }
+        const lastmod = post.updatedAt
+            ? new Date(post.updatedAt).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0];
+
+        urls.push({
+            loc: postPath,
+            lastmod,
+            priority: '0.6',
+            changefreq: 'monthly'
+        });
     }
-    if (currentRow) rows.push(currentRow);
-
-    // Skip header
-    const dataRows = rows.slice(1);
-    console.log(`Found ${dataRows.length} rows.`);
-
-    // Columns found in posts.csv:
-    // 0: id
-    // 1: section_id
-    // 2: parent_id
-    // 3: is_subsection
-    // 4: title
-    // 5: subtitle
-    // ...
-    // 14: is_published
-    // ...
-    // 19: updated_at
-
-    const urls = [...STATIC_URLS.map(u => ({ ...u, loc: BASE_URL + u.loc }))];
-
-    dataRows.forEach((rowStr, index) => {
-        const cols = parseCSVLine(rowStr);
-        if (cols.length < 2) return;
-
-        const id = cols[0];
-        const sectionId = cols[1];
-        const title = cols[4]; // Changed from 2 to 4
-        const updatedAt = cols[19]; // Changed from 8 to 19
-        const isPublished = cols[14]; // Changed from 10 to 14
-
-        // Basic validation
-        if (!id || !sectionId) return;
-        // Check for '1' (true) or 'true' string
-        if (isPublished !== '1' && isPublished !== 'true') return;
-
-        const path = getUrlForPost(id, sectionId, title);
-        if (path) {
-            urls.push({
-                loc: BASE_URL + path,
-                lastmod: updatedAt ? new Date(updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                priority: '0.6', // Slightly lower for dynamic posts
-                changefreq: 'monthly'
-            });
-        }
-    });
 
     // Generate XML
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
-    urls.forEach(u => {
+    for (const u of urls) {
         xml += '  <url>\n';
-        xml += `    <loc>${u.loc}</loc>\n`;
+        xml += `    <loc>${BASE_URL}${u.loc}</loc>\n`;
         if (u.lastmod) xml += `    <lastmod>${u.lastmod}</lastmod>\n`;
         xml += `    <changefreq>${u.changefreq}</changefreq>\n`;
         xml += `    <priority>${u.priority}</priority>\n`;
         xml += '  </url>\n';
-    });
+    }
 
     xml += '</urlset>';
 

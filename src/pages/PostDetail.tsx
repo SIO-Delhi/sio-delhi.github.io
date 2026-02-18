@@ -13,6 +13,9 @@ import { PDFPreviewCard } from '../components/ui/PDFPreviewCard'
 import { PDFModal } from '../components/ui/PDFModal'
 import { slugify } from '../utils/slugify'
 import { sanitizeHtml } from '../lib/sanitize'
+import { SEOHead } from '../components/seo/SEOHead'
+import { ShareButton } from '../components/ui/ShareButton'
+import { extractPlainText } from '../utils/extractText'
 import type { Post } from '../types/content'
 
 // --- Helper: Detect RTL Text (Urdu/Arabic) ---
@@ -675,12 +678,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
         }
     }, [id])
 
-    // Update Page Title for SEO
-    useEffect(() => {
-        if (post?.title) {
-            document.title = `${post.title} - SIO Delhi`
-        }
-    }, [post?.title])
+    // SEO meta tags are handled by <SEOHead> in the JSX below
 
     // Early returns MUST come after all hooks are called
     if (loading && !post) {
@@ -765,6 +763,14 @@ export function PostDetail({ sectionType }: PostDetailProps) {
 
     return (
         <div style={{ paddingTop: showHero ? '0' : '100px', paddingBottom: '80px', minHeight: '100vh', background: 'transparent' }}>
+            <SEOHead
+                title={post.title}
+                description={post.subtitle || extractPlainText(post.content || '').slice(0, 160)}
+                image={post.image || undefined}
+                url={`https://siodelhi.org${window.location.pathname}`}
+                type="article"
+            />
+
             {/* Gradient Background (Global) */}
             <div
                 style={{
@@ -1130,6 +1136,16 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     {post.title}
                 </h1>
 
+                {/* Share Button */}
+                <div style={{ marginBottom: '16px' }}>
+                    <ShareButton
+                        postId={post.id}
+                        postTitle={post.title}
+                        postUrl={`https://siodelhi.org${window.location.pathname}`}
+                        isDark={isDark}
+                    />
+                </div>
+
                 {/* Audio Player - Only show if enabled */}
                 {post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
@@ -1199,6 +1215,16 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                 }}>
                     {post.title}
                 </h1>
+
+                {/* Share Button */}
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+                    <ShareButton
+                        postId={post.id}
+                        postTitle={post.title}
+                        postUrl={`https://siodelhi.org${window.location.pathname}`}
+                        isDark={isDark}
+                    />
+                </div>
 
                 {/* Gallery Description (for gallery layout) - only plain text, not block markup */}
                 {post.layout === 'gallery' && post.content && !post.content.includes('siodel-block') && (
@@ -1517,6 +1543,15 @@ function LeadershipLayout({ post, isDark, galleryUrl, hasGallery }: { post: Post
                     }
                 </div >
 
+                {/* Share Button */}
+                <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
+                    <ShareButton
+                        postId={post.id}
+                        postTitle={post.title}
+                        postUrl={`https://siodelhi.org${window.location.pathname}`}
+                        isDark={isDark}
+                    />
+                </div>
 
                 {/* Gallery Display for Leadership */}
                 {hasGallery && (
@@ -1665,6 +1700,12 @@ function MediaLayout({ post, isDark, galleryUrl, hasGallery }: { post: Post; isD
                     <User size={14} />
                     SIO Delhi
                 </div>
+                <ShareButton
+                    postId={post.id}
+                    postTitle={post.title}
+                    postUrl={`https://siodelhi.org${window.location.pathname}`}
+                    isDark={isDark}
+                />
             </div>
 
             {/* Gallery Description (for gallery layout) */}

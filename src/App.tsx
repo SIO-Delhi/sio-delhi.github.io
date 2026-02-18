@@ -9,11 +9,13 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { PostDetail } from './pages/PostDetail'
 import { GalleryPage } from './pages/GalleryPage'
+import { SectionLandingPage } from './pages/SectionLandingPage'
 
 import { AdminLayout } from './components/admin/AdminLayout'
 import { AdminLogin } from './pages/AdminLogin'
 import { ProtectedRoute } from './components/admin/ProtectedRoute'
 import { PublicForm } from './pages/PublicForm'
+import { ShortLinkRedirect } from './pages/ShortLinkRedirect'
 
 import { ToolProvider } from './context/ToolContext'
 import { usePageTracker } from './hooks/usePageTracker'
@@ -101,6 +103,9 @@ function App() {
               {/* Public Form Route - outside admin, no main layout */}
               <Route path="/f/:formId" element={<PublicForm />} />
 
+              {/* Short Link Redirect */}
+              <Route path="/s/:shortCode" element={<ShortLinkRedirect />} />
+
               {/* Filter Tool - outside Layout to hide top navbar */}
               <Route path="/utilities/filter-tool" element={<FilterToolPage />} />
               <Route path="/utilities/frame-tool" element={<FrameToolPage />} />
@@ -120,6 +125,9 @@ function App() {
 
                     {/* Dynamic Sections Route */}
                     <Route path="/section/:sectionId/:slug/*" element={<SectionRoute sectionType="dynamic" />} />
+
+                    {/* Section Landing Pages (e.g., /jac, /about, /media) */}
+                    <Route path="/:sectionId" element={<SectionLandingPage />} />
 
                     {/* Public Utilities */}
                     <Route path="/utilities" element={<UtilitiesPage />} />

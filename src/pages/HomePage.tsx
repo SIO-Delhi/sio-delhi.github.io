@@ -1,3 +1,4 @@
+import { SEOHead } from '../components/seo/SEOHead'
 import { HeroSection } from '../components/sections/HeroSection'
 import { AboutSection } from '../components/sections/AboutSection'
 import { LeadershipSection } from '../components/sections/LeadershipSection'
@@ -116,6 +117,8 @@ export function HomePage() {
 
     return (
         <>
+            <SEOHead />
+
             {/* Global Fixed Flag Background - Only on Home */}
             <div
                 ref={flagContainerRef}
