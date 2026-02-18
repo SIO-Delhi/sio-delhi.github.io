@@ -70,7 +70,7 @@ export function Navbar() {
             window.removeEventListener('scroll', handleScroll)
             window.removeEventListener('resize', checkMobile)
         }
-    }, [navLinks, activeSection]) // Added dependencies
+    }, [navLinks, activeSection, isHomePage]) // Added dependencies
 
     useEffect(() => {
         gsap.fromTo(
@@ -109,8 +109,8 @@ export function Navbar() {
             return
         }
 
-        // If not on homepage, navigate to section landing page
-        navigate(`/${sectionId}`)
+        // If not on homepage, navigate to homepage and scroll to section
+        navigate('/', { state: { scrollTo: sectionId } })
         setIsOpen(false)
     }
 

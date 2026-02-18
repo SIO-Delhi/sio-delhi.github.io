@@ -59,9 +59,10 @@ export function HomePage() {
         const state = location.state as Record<string, unknown> | null
         if (state && typeof state === 'object' && 'scrollTo' in state && typeof state.scrollTo === 'string') {
             const targetId = state.scrollTo
-            performScroll(targetId)
-            // Clear state to avoid scrolling on subsequent updates
-            window.history.replaceState({}, document.title)
+            const hashId = targetId.startsWith('#') ? targetId : `#${targetId}`
+            performScroll(hashId)
+            // Update URL to show the section hash and clear navigation state
+            window.history.replaceState({}, document.title, `/${hashId}`)
         } else if (location.hash) {
             performScroll(location.hash)
         }

@@ -1136,38 +1136,33 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     {post.title}
                 </h1>
 
-                {/* Share Button */}
-                <div style={{ marginBottom: '16px' }}>
+                {/* Share Button + View Gallery (side by side) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
                     <ShareButton
                         postId={post.id}
                         postTitle={post.title}
                         postUrl={`https://siodelhi.org${window.location.pathname}`}
                         isDark={isDark}
                     />
+                    {hasGallery && post.layout !== 'gallery' && galleryUrl && (
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="outline" />
+                    )}
                 </div>
 
                 {/* Audio Player - Only show if enabled */}
                 {post.enableAudio && <ReadArticleButton post={post} isDark={isDark} />}
 
                 {/* Custom Gallery Component for Subsections */}
-                {hasGallery && (
-                    <>
-                        {post.layout === 'gallery' ? (
-                            <div style={{
-                                width: '100vw',
-                                position: 'relative',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                padding: '0 16px'
-                            }}>
-                                <EmbeddableGallery imagesRaw={post.galleryImages} isDark={isDark} />
-                            </div>
-                        ) : galleryUrl && (
-                            <div style={{ marginBottom: '24px' }}>
-                                <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="outline" />
-                            </div>
-                        )}
-                    </>
+                {hasGallery && post.layout === 'gallery' && (
+                    <div style={{
+                        width: '100vw',
+                        position: 'relative',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        padding: '0 16px'
+                    }}>
+                        <EmbeddableGallery imagesRaw={post.galleryImages} isDark={isDark} />
+                    </div>
                 )}
 
                 {/* PDF Flipbook (main content for subsection posts) */}
@@ -1216,14 +1211,17 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                     {post.title}
                 </h1>
 
-                {/* Share Button */}
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+                {/* Share Button + View Gallery (side by side) */}
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
                     <ShareButton
                         postId={post.id}
                         postTitle={post.title}
                         postUrl={`https://siodelhi.org${window.location.pathname}`}
                         isDark={isDark}
                     />
+                    {hasGallery && post.layout !== 'gallery' && galleryUrl && (
+                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="default" />
+                    )}
                 </div>
 
                 {/* Gallery Description (for gallery layout) - only plain text, not block markup */}
@@ -1261,15 +1259,6 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                         }}>
                             {post.content}
                         </p>
-                    </div>
-                )}
-
-
-
-                {/* Non-gallery display (View Gallery button) */}
-                {hasGallery && post.layout !== 'gallery' && galleryUrl && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-                        <ViewGalleryButton to={galleryUrl} isDark={isDark} variant="default" />
                     </div>
                 )}
 
