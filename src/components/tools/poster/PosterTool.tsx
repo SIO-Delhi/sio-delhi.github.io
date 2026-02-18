@@ -16,6 +16,7 @@ import openSansBoldUrl from '../../../fonts/open-sans/OpenSans-Bold.ttf'
 import dmSerifDisplayUrl from '../../../fonts/DM_Serif_Display/DMSerifDisplay-Regular.ttf'
 import dmSansLightUrl from '../../../fonts/DM_Sans/static/DMSans-Light.ttf'
 import dmSerifTextUrl from '../../../fonts/DM_Serif_Text/DMSerifText-Regular.ttf'
+import alQalamUrl from '../../../fonts/AlQalam Taj Nastaleeq Regular.ttf'
 
 const fontDefs = [
     { family: 'FlamanteSerifBold', url: flamanteSerifBoldUrl, format: 'truetype' },
@@ -25,6 +26,7 @@ const fontDefs = [
     { family: 'DMSerifDisplay', url: dmSerifDisplayUrl, format: 'truetype' },
     { family: 'DMSansLight', url: dmSansLightUrl, format: 'truetype' },
     { family: 'DMSerifText', url: dmSerifTextUrl, format: 'truetype' },
+    { family: 'AlQalam Taj Nastaleeq', url: alQalamUrl, format: 'truetype' },
 ]
 
 async function buildEmbeddedFontStyles(): Promise<string> {
@@ -467,11 +469,12 @@ export function PosterTool() {
                 const isPlaceholder = !state.topic
                 const len = topicText.length
                 const fontSize = len > 200 ? 70 : len > 150 ? 85 : len > 100 ? 100 : len > 60 ? 120 : 140
-                const topicFontFamily = isUrdu(topicText) ? "'AlQalam Taj Nastaleeq', serif" : "FlamanteSerifBold, 'Flamante Serif', serif"
+                const isUrduTopic = isUrdu(topicText)
+                const topicFontFamily = isUrduTopic ? "'AlQalam Taj Nastaleeq', serif" : "FlamanteSerifBold, 'Flamante Serif', serif"
 
                 return `
             <div style="position: absolute; top: 500px; width: 100%; display: flex; justify-content: center; align-items: center; padding: 0 40px; max-height: 480px;">
-                <div style="color: #a05415; font-size: ${fontSize}px; font-weight: bold; font-family: ${topicFontFamily}; text-align: center; line-height: 0.98; letter-spacing: -0.02em; word-wrap: break-word; max-width: 1600px;${isPlaceholder ? ' opacity: 0.3;' : ''}">
+                <div style="color: #a05415; font-size: ${fontSize}px; font-weight: bold; font-family: ${topicFontFamily}; text-align: center; line-height: ${isUrduTopic ? '1.4' : '0.98'}; letter-spacing: ${isUrduTopic ? '0.04em' : '-0.02em'}; word-spacing: ${isUrduTopic ? '0.15em' : 'normal'}; ${isUrduTopic ? 'direction: rtl;' : ''} word-wrap: break-word; max-width: 1600px;${isPlaceholder ? ' opacity: 0.3;' : ''}">
                     ${escapeXml(topicText).replace(/\n/g, '<br/>')}
                 </div>
             </div>`
