@@ -119,6 +119,10 @@ function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/about-us/*" element={<SectionRoute sectionType="about" />} />
                     <Route path="/initiative/*" element={<SectionRoute sectionType="initiatives" />} />
+                    <Route path="/initiative/*" element={<SectionRoute sectionType="initiatives" />} />
+
+                    {/* Explicit Route for /media Section Landing Page to avoid collision with /media/* wildcard */}
+                    <Route path="/media" element={<SectionLandingPage sectionIdOverride="media" />} />
                     <Route path="/media/*" element={<SectionRoute sectionType="media" />} />
                     <Route path="/leader/*" element={<SectionRoute sectionType="leadership" />} />
                     <Route path="/resource/*" element={<SectionRoute sectionType="resources" />} />

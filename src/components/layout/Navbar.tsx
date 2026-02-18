@@ -55,6 +55,9 @@ export function Navbar() {
                     if (rect.top <= 150 && rect.bottom >= 150) {
                         if (activeSection !== section) {
                             setActiveSection(section)
+                            // Silently update URL without reload
+                            const newUrl = section === 'home' ? '/' : `/#${section}`
+                            window.history.replaceState(null, '', newUrl)
                         }
                         break
                     }
@@ -98,6 +101,10 @@ export function Navbar() {
                     })
                 }
             }
+
+            // Update URL when clicking nav link on homepage
+            window.history.pushState(null, '', `/#${sectionId}`)
+
             setIsOpen(false)
             return
         }

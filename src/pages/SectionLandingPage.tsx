@@ -10,8 +10,9 @@ import type { SectionTemplate } from '../types/content'
  * Section Landing Page - shows all posts for a given section.
  * Accessed via /:sectionId (e.g., /jac, /about, /media)
  */
-export function SectionLandingPage() {
-    const { sectionId } = useParams<{ sectionId: string }>()
+export function SectionLandingPage({ sectionIdOverride }: { sectionIdOverride?: string }) {
+    const { sectionId: paramsSectionId } = useParams<{ sectionId: string }>()
+    const sectionId = sectionIdOverride || paramsSectionId
     const { sections, getPostsBySection, loading } = useContent()
     const { isDark } = useTheme()
     const navigate = useNavigate()

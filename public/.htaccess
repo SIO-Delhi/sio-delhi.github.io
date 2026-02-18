@@ -1,0 +1,12 @@
+# Rewrite rules for Short Links
+RewriteEngine On
+RewriteBase /
+
+# Rewrite /s/{code} to s.php?code={code}
+RewriteRule ^s/([a-zA-Z0-9]+)$ s.php?code=$1 [L,QSA]
+
+# React SPA Fallback (existing likely needed for other routes if served from here)
+# If the request is not for a real file or directory, route to index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
