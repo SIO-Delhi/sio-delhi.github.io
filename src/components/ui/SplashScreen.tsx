@@ -140,6 +140,15 @@ export function SplashScreen() {
         return () => window.removeEventListener('scroll', handleScroll)
     }, [isHomePage])
 
+    // If user visits a non-home page first, mark splash as seen so it
+    // doesn't show when they later navigate to home via SPA routing
+    useEffect(() => {
+        if (!isHomePage && !sessionStorage.getItem('sio_splash_seen')) {
+            sessionStorage.setItem('sio_splash_seen', 'true')
+            setIsCollapsed(true)
+        }
+    }, [isHomePage])
+
     // Don't render on non-home pages (forms, admin, etc.)
     if (!isHomePage) {
         return null
