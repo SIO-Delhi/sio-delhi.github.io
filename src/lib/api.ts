@@ -77,6 +77,17 @@ export interface PopupDTO {
     updatedAt?: number
 }
 
+export interface DevReportDTO {
+    id: string
+    name: string
+    email: string
+    issue_type: string
+    page_url: string
+    description: string
+    browser_info: string
+    created_at: string
+}
+
 // Form types
 export type FormFieldType =
     | 'text'
@@ -411,6 +422,19 @@ export const api = {
             return api.get<{ shortCode: string; shortUrl: string; fullUrl: string; clickCount: number }>(
                 `/api/short-links/post/${postId}`
             )
+        }
+    },
+
+    // Dev Reports
+    devReports: {
+        async submit(data: { name: string; email: string; issueType: string; description: string; pageUrl: string; browserInfo: string }) {
+            return api.post<{ message: string }>('/api/dev-reports', data)
+        },
+        async getAll() {
+            return api.get<DevReportDTO[]>('/api/dev-reports')
+        },
+        async delete(id: string) {
+            return api.delete(`/api/dev-reports/${id}`)
         }
     }
 }

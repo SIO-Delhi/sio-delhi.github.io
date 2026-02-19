@@ -36,6 +36,7 @@ const FormBuilder = lazy(() => import('./components/admin/FormBuilder').then(m =
 const FormResponseViewer = lazy(() => import('./components/admin/FormResponseViewer').then(m => ({ default: m.FormResponseViewer })))
 const FormResponseDetail = lazy(() => import('./components/admin/FormResponseDetail').then(m => ({ default: m.FormResponseDetail })))
 const GarbageCollector = lazy(() => import('./components/admin/GarbageCollector').then(m => ({ default: m.GarbageCollector })))
+const AdminIssues = lazy(() => import('./components/admin/AdminIssues').then(m => ({ default: m.AdminIssues })))
 const UtilitiesPage = lazy(() => import('./pages/UtilitiesPage').then(m => ({ default: m.UtilitiesPage })))
 const FrameToolPage = lazy(() => import('./pages/FrameToolPage').then(m => ({ default: m.FrameToolPage })))
 const PosterToolPage = lazy(() => import('./pages/PosterToolPage').then(m => ({ default: m.PosterToolPage })))
@@ -97,6 +98,7 @@ function App() {
                   <Route path="forms/:formId/responses" element={<FormResponseViewer />} />
                   <Route path="forms/:formId/responses/:responseId" element={<FormResponseDetail />} />
                   <Route path="garbage" element={<GarbageCollector />} />
+                  <Route path="issues" element={<AdminIssues />} />
                 </Route>
               </Route>
 

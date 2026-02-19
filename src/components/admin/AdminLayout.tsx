@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, FileText, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, Layers, LogOut, Menu, X, Megaphone, FileText, BarChart3, MessageSquare } from 'lucide-react'
 import { useClerk } from '@clerk/clerk-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useContent } from '../../context/ContentContext'
@@ -204,6 +204,22 @@ export function AdminLayout() {
                     >
                         <FileText size={20} />
                         Form Builder
+                    </Link>
+
+                    <Link
+                        to="/admin/issues"
+                        onClick={() => isMobile && setSidebarOpen(false)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '12px', borderRadius: '8px',
+                            background: isActive('/admin/issues') ? (isDark ? '#222' : '#f0f0f0') : 'transparent',
+                            color: isActive('/admin/issues') ? '#ff3b3b' : 'inherit',
+                            textDecoration: 'none', fontWeight: 500,
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        <MessageSquare size={20} />
+                        Issues
                     </Link>
 
                     <div style={{ height: '1px', background: isDark ? '#222' : '#eee', margin: '8px 0' }} />

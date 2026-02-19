@@ -83,6 +83,7 @@ $publicRoutes = [
     'POST /short-links',
     'GET /short-links/resolve/([a-zA-Z0-9]+)',
     'GET /short-links/post/([^/]+)',
+    'POST /dev-reports',
 ];
 
 // Get request method and URI
@@ -257,6 +258,11 @@ $routes = [
     'POST /short-links' => 'routes/short-links.php@createShortLink',
     'GET /short-links/resolve/([a-zA-Z0-9]+)' => 'routes/short-links.php@resolveShortLink',
     'GET /short-links/post/([^/]+)' => 'routes/short-links.php@getShortLinkByPost',
+
+    // Dev Reports
+    'POST /dev-reports' => 'routes/dev-reports.php@submitDevReport',
+    'GET /dev-reports' => 'routes/dev-reports.php@getDevReports',
+    'DELETE /dev-reports/([^/]+)' => 'routes/dev-reports.php@deleteDevReport',
 ];
 
 // Find matching route
