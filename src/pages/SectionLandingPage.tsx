@@ -1,5 +1,5 @@
-import { useParams, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
 import { SectionCard } from '../components/ui/SectionCard'
@@ -29,7 +29,27 @@ export function SectionLandingPage({ sectionIdOverride }: { sectionIdOverride?: 
     const { sections, getPostsBySection, loading } = useContent()
     const { isDark } = useTheme()
     const navigate = useNavigate()
+    const location = useLocation()
     const [activePoster, setActivePoster] = useState<Post | null>(null)
+
+    // Scroll to poster card when returning from a shared poster link
+    useEffect(() => {
+        const state = location.state as { scrollTo?: string } | null
+        if (!state?.scrollTo) return
+        let attempts = 0
+        const poll = setInterval(() => {
+            const el = document.getElementById(state.scrollTo!)
+            if (el) {
+                clearInterval(poll)
+                setTimeout(() => {
+                    const lenis = (window as any).lenis
+                    if (lenis) lenis.scrollTo(el, { offset: -120 })
+                    else el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }, 100)
+            } else if (++attempts >= 20) clearInterval(poll)
+        }, 100)
+        return () => clearInterval(poll)
+    }, [location.state])
 
     const section = sections.find(s => s.id === sectionId)
 

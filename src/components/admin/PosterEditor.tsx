@@ -36,8 +36,12 @@ export function PosterEditor() {
     const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
-        const error = validateImage(file)
-        if (error) { alert(error); return }
+        try {
+            validateImage(file)
+        } catch (err: any) {
+            alert(err.message)
+            return
+        }
         const compressed = await compressImage(file)
         const previewUrl = URL.createObjectURL(compressed)
         setPendingFile(compressed as File)
