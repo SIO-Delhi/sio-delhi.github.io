@@ -20,15 +20,15 @@ function FlagScene({ isMobile }: { isMobile: boolean }) {
     // Initialize Flag and Wind
     const { flag, wind } = useMemo(() => {
         const wind = new Wind({
-            speed: 10, // Smoother initial speed
+            speed: isMobile ? 18: 15, // Smoother initial speed
             direction: new THREE.Vector3(1, 0, 0)
         })
 
         const flag = new Flag({
-            mass: 0.1, // Adjust mass for feel
-            restDistance: 0.1, // Grid density
+            mass: isMobile ? 0.32 : 0.2,
+            restDistance: 0.2,
             texture: flagTexture,
-            width: isMobile ? 2.8 : 3.5, // Reduced slightly from 2.9 as requested
+            width: isMobile ? 3.5 : 3.5,
             height: 2.3,
             pin: { edges: ['left'] } // Pin left edge
         })
@@ -95,7 +95,7 @@ function FlagScene({ isMobile }: { isMobile: boolean }) {
     // Desktop: Move flag left (-4.5) and slightly down (-3.8)
     // Mobile: Adjusted left (-1.2) and slightly up from bottom (-4.2)
     const position: [number, number, number] = isMobile ? [-1.2, -4.2, 0] : [-5.0, -3.8, 0]
-    const scale = isMobile ? 0.6 : 1 // Adjusted scale to fit screen while keeping aspect ratio
+    const scale = isMobile ? 0.6 : 1
 
     return (
         <group position={position} scale={scale}>
