@@ -57,7 +57,9 @@ function create()
 {
     $data = json_decode(file_get_contents('php://input'), true);
 
-    if (empty($data['title'])) {
+    // Poster layout allows an empty title (slug falls back to post ID)
+    $isPoster = ($data['layout'] ?? '') === 'poster';
+    if (empty($data['title']) && !$isPoster) {
         http_response_code(400);
         return ['error' => 'title is required'];
     }

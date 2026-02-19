@@ -22,7 +22,7 @@ interface SectionCardProps {
     image?: string
     icon?: string
     width?: string
-    variant?: 'default' | 'media' | 'leadership' | 'resource' | 'standard' // 'standard' alias for default
+    variant?: 'default' | 'media' | 'leadership' | 'resource' | 'standard' | 'poster' // 'standard' alias for default
     cardId?: string // Used for DOM ID to enable scroll restoration
 }
 
@@ -77,6 +77,7 @@ export function SectionCard({
     const isMedia = currentVariant === 'media'
     const isLeadership = currentVariant === 'leadership'
     const isResource = currentVariant === 'resource'
+    const isPoster = currentVariant === 'poster'
 
     // Parse image URL
     const imageUrl = getFirstImageUrl(image)
@@ -207,7 +208,84 @@ export function SectionCard({
         )
     }
 
-    // 2. Resource Variant
+    // 2. Poster Variant — image-only card, opens in lightbox
+    if (isPoster) {
+        return (
+            <div
+                ref={cardRef}
+                id={cardId}
+                className={`section-card-shine ${className || ''}`}
+                data-cursor="view"
+                onClick={handleClick}
+                style={{
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    width: width || '220px',
+                    aspectRatio: '2/3',
+                    flexShrink: 0,
+                    cursor: onClick ? 'pointer' : 'default',
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                    position: 'relative',
+                    zIndex: 5,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                    background: '#1a1a1a',
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)'
+                    e.currentTarget.style.boxShadow = '0 20px 48px rgba(0,0,0,0.6)'
+                    e.currentTarget.style.zIndex = '10'
+                    const img = e.currentTarget.querySelector('img') as HTMLImageElement | null
+                    if (img) img.style.transform = 'scale(1.06)'
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0) scale(1)'
+                    e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.4)'
+                    e.currentTarget.style.zIndex = '5'
+                    const img = e.currentTarget.querySelector('img') as HTMLImageElement | null
+                    if (img) img.style.transform = 'scale(1)'
+                }}
+                draggable={false}
+            >
+                {imageUrl ? (
+                    <img
+                        src={imageUrl}
+                        alt={title || 'Poster'}
+                        draggable={false}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            display: 'block',
+                            transition: 'transform 0.4s ease',
+                            userSelect: 'none',
+                        }}
+                        loading="lazy"
+                    />
+                ) : (
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'rgba(255,255,255,0.3)',
+                        fontSize: '0.85rem',
+                        flexDirection: 'column',
+                        gap: '8px',
+                    }}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21,15 16,10 5,21" />
+                        </svg>
+                        No Image
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // 3. Resource Variant
     if (isResource) {
         const IconComponent = icon && ICON_MAP[icon] ? ICON_MAP[icon] : FileText
         return (

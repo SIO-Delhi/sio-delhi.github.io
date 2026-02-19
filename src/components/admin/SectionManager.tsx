@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
-import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText, GripVertical, Link as LinkIcon, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, Mail, Images } from 'lucide-react'
+import { Plus, Edit2, Trash2, Calendar, Layout, Layers, Eye, EyeOff, FolderOpen, ChevronDown, FileText, GripVertical, Link as LinkIcon, Download, ExternalLink, File, Folder, Book, Globe, MapPin, Phone, Award, Briefcase, Clock, Lock, Unlock, Settings, ShoppingBag, ShoppingCart, User, Users, Video, Mic, Music, Grid, PieChart, BarChart, Heart, Star, Zap, Shield, Flag, Bell, Search, Home, Menu, ArrowRight, ArrowUpRight, CheckCircle, AlertTriangle, Info, Mail, Images, Image as ImageIcon } from 'lucide-react'
 import { DeleteConfirmationModal } from './DeleteConfirmationModal'
 import { UndoToast } from '../ui/UndoToast'
 import { useUndoableDelete } from '../../hooks/useUndoableDelete'
@@ -238,7 +238,7 @@ export function SectionManager() {
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '12px',
                                     padding: '14px 20px', textDecoration: 'none', color: 'white',
-                                    transition: 'background 0.2s'
+                                    borderBottom: '1px solid #333', transition: 'background 0.2s'
                                 }}
                                 onMouseEnter={e => e.currentTarget.style.background = '#222'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -247,6 +247,23 @@ export function SectionManager() {
                                 <div>
                                     <div style={{ fontWeight: 600 }}>Gallery</div>
                                     <div style={{ fontSize: '0.75rem', color: '#666' }}>Photo gallery</div>
+                                </div>
+                            </Link>
+                            <Link
+                                to={`/admin/create-poster/${section.id}`}
+                                onClick={() => setShowCreateMenu(false)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '12px',
+                                    padding: '14px 20px', textDecoration: 'none', color: 'white',
+                                    transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#222'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                                <ImageIcon size={18} color="#a855f7" />
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>Poster</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#666' }}>Image card with lightbox</div>
                                 </div>
                             </Link>
                         </div>
@@ -386,6 +403,8 @@ export function SectionManager() {
                                         onClick={() => {
                                             if (post.layout === 'gallery') {
                                                 navigate(`/admin/gallery-editor/${post.id}`)
+                                            } else if (post.layout === 'poster') {
+                                                navigate(`/admin/poster-editor/${post.id}`)
                                             } else {
                                                 navigate(post.isSubsection ? `/admin/subsection/${post.id}` : `/admin/post/${post.id}`)
                                             }

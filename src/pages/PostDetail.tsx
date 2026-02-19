@@ -1,9 +1,9 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { API_BASE } from '../lib/api'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
 import { Calendar, User, ChevronLeft, ChevronRight, Volume2, VolumeX, Mail, Instagram } from 'lucide-react'
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { PDFFlipbook } from '../components/ui/PDFFlipbook'
 import { SectionCard } from '../components/ui/SectionCard'
 import { PostSkeleton } from '../components/ui/PostSkeleton'
@@ -15,6 +15,7 @@ import { slugify } from '../utils/slugify'
 import { sanitizeHtml } from '../lib/sanitize'
 import { SEOHead } from '../components/seo/SEOHead'
 import { ShareButton } from '../components/ui/ShareButton'
+import { PosterLightbox } from '../components/ui/PosterLightbox'
 import { extractPlainText } from '../utils/extractText'
 import type { Post } from '../types/content'
 
@@ -651,6 +652,7 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     const { isDark } = useTheme()
     const { getPostBySlug, posts, loading, sections } = useContent()
     const navigate = useNavigate()
+    const location = useLocation()
 
     // Support both :slug param (legacy/dynamic) and wildcard paths for nested content
     const resolvedSlug = (() => {
@@ -666,17 +668,16 @@ export function PostDetail({ sectionType }: PostDetailProps) {
     const post = resolvedSlug ? getPostBySlug(resolvedSlug) : undefined
     const id = post?.id
 
-    // Scroll to top on mount
-    // Scroll to top on mount and ID change
-    // Scroll to top on mount and ID change
+    // Scroll to top on mount, unless returning from a poster (scrollTo state is set)
     useEffect(() => {
-        // Handle Lenis smooth scroll if active
+        const state = location.state as { scrollTo?: string } | null
+        if (state?.scrollTo) return  // DefaultLayout will handle scroll-to-card
         if (window.lenis) {
             window.lenis.scrollTo(0, { immediate: true })
         } else {
             window.scrollTo(0, 0)
         }
-    }, [id])
+    }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // SEO meta tags are handled by <SEOHead> in the JSX below
 
@@ -691,6 +692,30 @@ export function PostDetail({ sectionType }: PostDetailProps) {
                 <h1>Post Not Found</h1>
                 <button onClick={() => navigate(-1)} style={{ color: '#ff3b3b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }}>Back</button>
             </div>
+        )
+    }
+
+    // Poster layout: show as lightbox (same experience as clicking from a section page)
+    if (post.layout === 'poster') {
+        const posterUrl = window.location.pathname.replace(/\/+$/, '')
+        const parentUrl = posterUrl.replace(/\/[^/]+$/, '') || '/'
+        const posterSlug = post.title ? slugify(post.title) : post.id
+        return (
+            <>
+                <SEOHead
+                    title={post.title || 'Poster'}
+                    description={post.subtitle || 'View poster'}
+                    image={(() => { try { const p = JSON.parse(post.image || ''); return Array.isArray(p) ? p[0] : post.image } catch { return post.image } })() || undefined}
+                    url={`https://siodelhi.org${posterUrl}`}
+                    type="article"
+                />
+                <div style={{ minHeight: '100vh', background: '#09090b' }} />
+                <PosterLightbox
+                    post={post}
+                    urlPath={posterUrl}
+                    onClose={() => navigate(parentUrl, { state: { scrollTo: `card-${posterSlug}` } })}
+                />
+            </>
         )
     }
 
@@ -1102,7 +1127,44 @@ function ReadArticleButton({ post, isDark }: { post: Post; isDark: boolean }) {
 }
 
 // Default layout for About and Initiatives
+// Extract first image URL from JSON array or plain URL string
+function getPosterImageUrl(image: string | undefined): string {
+    if (!image) return ''
+    try {
+        const parsed = JSON.parse(image)
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : image
+    } catch {
+        return image
+    }
+}
+
 function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { post: Post; isDark: boolean; sectionLabel?: string; posts?: Post[], galleryUrl?: string, hasGallery?: boolean }) {
+    const [activePoster, setActivePoster] = useState<{ post: Post; urlPath: string } | null>(null)
+    // Capture the page URL once at mount — window.location.pathname changes when a lightbox opens
+    const basePathnameRef = useRef(window.location.pathname.replace(/\/+$/, ''))
+    const location = useLocation()
+
+    // Scroll to the poster card when returning from a shared poster link
+    useEffect(() => {
+        const state = location.state as { scrollTo?: string } | null
+        if (!state?.scrollTo) return
+        let attempts = 0
+        const poll = setInterval(() => {
+            const el = document.getElementById(state.scrollTo!)
+            if (el) {
+                clearInterval(poll)
+                setTimeout(() => {
+                    const lenis = (window as any).lenis
+                    if (lenis) {
+                        lenis.scrollTo(el, { offset: -120 })
+                    } else {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }
+                }, 100)
+            } else if (++attempts >= 20) clearInterval(poll)
+        }, 100)
+        return () => clearInterval(poll)
+    }, [location.state])
 
     // Check if this post IS a subsection (parent with children) — takes priority over being a child
     const isSubsection = !!post.isSubsection
@@ -1313,26 +1375,100 @@ function DefaultLayout({ post, isDark, posts = [], galleryUrl, hasGallery }: { p
                             gap: '24px',
                             /* justifyContent handled by media query now */
                         }}>
-                            {childPosts.map(child => (
-                                <SectionCard
-                                    key={child.id}
-                                    label=""
-                                    labelColor="#ff3b3b"
-                                    title={child.title}
-                                    subtitle={child.subtitle || ''}
-                                    description=""
-                                    publishedDate={child.createdAt}
-                                    image={child.image}
-
-
-                                    onClick={() => {
-                                        // Build nested URL: append child slug to current path
-                                        const currentPath = location.pathname.replace(/\/$/, '')
-                                        window.location.href = `${currentPath}/${slugify(child.title)}`
-                                    }}
-                                />
-                            ))}
+                            {childPosts.map(child => {
+                                if (child.layout === 'poster') {
+                                    const imgSrc = getPosterImageUrl(child.image)
+                                    const posterSlug = child.title ? slugify(child.title) : child.id
+                                    return (
+                                        <div
+                                            key={child.id}
+                                            id={`card-${posterSlug}`}
+                                            draggable={false}
+                                            onClick={() => setActivePoster({ post: child, urlPath: `${basePathnameRef.current}/${posterSlug}` })}
+                                            style={{
+                                                borderRadius: '16px',
+                                                width: '100%',
+                                                maxWidth: '300px',
+                                                height: '420px',
+                                                flexShrink: 0,
+                                                cursor: 'pointer',
+                                                background: 'rgba(20,20,25,0.65)',
+                                                backdropFilter: 'blur(20px)',
+                                                border: '1px solid rgba(255,255,255,0.12)',
+                                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                                                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                                                position: 'relative',
+                                                zIndex: 5,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                padding: '16px',
+                                                boxSizing: 'border-box',
+                                            }}
+                                            onMouseEnter={e => {
+                                                e.currentTarget.style.transform = 'translateY(-4px)'
+                                                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0,0,0,0.5)'
+                                                e.currentTarget.style.zIndex = '10'
+                                                const img = e.currentTarget.querySelector('img') as HTMLImageElement | null
+                                                if (img) img.style.transform = 'scale(1.04)'
+                                            }}
+                                            onMouseLeave={e => {
+                                                e.currentTarget.style.transform = 'translateY(0)'
+                                                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)'
+                                                e.currentTarget.style.zIndex = '5'
+                                                const img = e.currentTarget.querySelector('img') as HTMLImageElement | null
+                                                if (img) img.style.transform = 'scale(1)'
+                                            }}
+                                        >
+                                            {imgSrc ? (
+                                                <img
+                                                    src={imgSrc}
+                                                    alt={child.title || 'Poster'}
+                                                    draggable={false}
+                                                    loading="lazy"
+                                                    style={{
+                                                        width: '100%', height: '100%',
+                                                        objectFit: 'cover', display: 'block',
+                                                        borderRadius: '8px',
+                                                        transition: 'transform 0.4s ease',
+                                                        userSelect: 'none',
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem',
+                                                }}>No Image</div>
+                                            )}
+                                        </div>
+                                    )
+                                }
+                                return (
+                                    <SectionCard
+                                        key={child.id}
+                                        label=""
+                                        labelColor="#ff3b3b"
+                                        title={child.title}
+                                        subtitle={child.subtitle || ''}
+                                        description=""
+                                        publishedDate={child.createdAt}
+                                        image={child.image}
+                                        onClick={() => {
+                                            const currentPath = location.pathname.replace(/\/$/, '')
+                                            window.location.href = `${currentPath}/${slugify(child.title)}`
+                                        }}
+                                    />
+                                )
+                            })}
                         </div>
+
+                        {activePoster && (
+                            <PosterLightbox
+                                post={activePoster.post}
+                                urlPath={activePoster.urlPath}
+                                onClose={() => setActivePoster(null)}
+                            />
+                        )}
                     </div>
                 )
             }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useContent } from '../../context/ContentContext'
 import { uploadImage, uploadPdf } from '../../lib/storage'
-import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff, GripVertical, Images, ChevronDown, FolderOpen } from 'lucide-react'
+import { ArrowLeft, Save, Image as ImageIcon, Loader2, X, Plus, FileText, Pencil, Trash2, Calendar, Eye, EyeOff, GripVertical, Images, ChevronDown, FolderOpen, LayoutTemplate } from 'lucide-react'
 import { ImageCropper } from './ImageCropper'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { BlockEditor, blocksToHtml, htmlToBlocks } from './BlockEditor'
@@ -669,7 +669,7 @@ export function SubsectionEditor() {
                                         </div>
                                         <div
                                             onClick={() => { setShowCreateMenu(false); navigate(`/admin/create-gallery/${section?.id}?parentId=${id}`); }}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px', cursor: 'pointer', transition: 'background 0.2s' }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px', cursor: 'pointer', borderBottom: '1px solid #333', transition: 'background 0.2s' }}
                                             onMouseEnter={e => e.currentTarget.style.background = '#222'}
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
@@ -677,6 +677,18 @@ export function SubsectionEditor() {
                                             <div>
                                                 <div style={{ fontWeight: 600, color: 'white' }}>Gallery</div>
                                                 <div style={{ fontSize: '0.75rem', color: '#666' }}>Photo gallery</div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            onClick={() => { setShowCreateMenu(false); navigate(`/admin/create-poster/${section?.id}?parentId=${id}`); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px', cursor: 'pointer', transition: 'background 0.2s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#222'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <LayoutTemplate size={18} color="#a855f7" />
+                                            <div>
+                                                <div style={{ fontWeight: 600, color: 'white' }}>Poster</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#666' }}>Image card with lightbox</div>
                                             </div>
                                         </div>
                                     </div>
@@ -698,7 +710,12 @@ export function SubsectionEditor() {
                                 {visibleChildPosts.map(post => (
                                     <div
                                         key={post.id}
-                                        onClick={() => navigate(post.isSubsection ? `/admin/subsection/${post.id}` : post.layout === 'gallery' ? `/admin/gallery-editor/${post.id}` : `/admin/post/${post.id}`)}
+                                        onClick={() => navigate(
+                                            post.isSubsection ? `/admin/subsection/${post.id}` :
+                                            post.layout === 'gallery' ? `/admin/gallery-editor/${post.id}` :
+                                            post.layout === 'poster' ? `/admin/poster-editor/${post.id}` :
+                                            `/admin/post/${post.id}`
+                                        )}
                                         draggable
                                         onDragStart={(e) => handleDragStart(e, post.id)}
                                         onDragEnd={handleDragEnd}
@@ -806,7 +823,7 @@ export function SubsectionEditor() {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    navigate(post.isSubsection ? `/admin/subsection/${post.id}` : post.layout === 'gallery' ? `/admin/gallery-editor/${post.id}` : `/admin/post/${post.id}`);
+                                                    navigate(post.isSubsection ? `/admin/subsection/${post.id}` : post.layout === 'gallery' ? `/admin/gallery-editor/${post.id}` : post.layout === 'poster' ? `/admin/poster-editor/${post.id}` : `/admin/post/${post.id}`);
                                                 }}
                                                 style={{ padding: '8px', borderRadius: '6px', background: '#222', border: 'none', color: '#888', cursor: 'pointer' }}
                                                 title="Edit"

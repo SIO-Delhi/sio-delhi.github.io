@@ -1,10 +1,23 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useContent } from '../context/ContentContext'
 import { useTheme } from '../context/ThemeContext'
 import { SectionCard } from '../components/ui/SectionCard'
+import { PosterLightbox } from '../components/ui/PosterLightbox'
 import { SEOHead } from '../components/seo/SEOHead'
 import { slugify } from '../utils/slugify'
-import type { SectionTemplate } from '../types/content'
+import type { Post, SectionTemplate } from '../types/content'
+
+// Extract first image URL from JSON array or plain URL
+const getPosterImageUrl = (image: string | undefined): string => {
+    if (!image) return ''
+    try {
+        const parsed = JSON.parse(image)
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : image
+    } catch {
+        return image
+    }
+}
 
 /**
  * Section Landing Page - shows all posts for a given section.
@@ -16,6 +29,7 @@ export function SectionLandingPage({ sectionIdOverride }: { sectionIdOverride?: 
     const { sections, getPostsBySection, loading } = useContent()
     const { isDark } = useTheme()
     const navigate = useNavigate()
+    const [activePoster, setActivePoster] = useState<Post | null>(null)
 
     const section = sections.find(s => s.id === sectionId)
 
@@ -65,12 +79,17 @@ export function SectionLandingPage({ sectionIdOverride }: { sectionIdOverride?: 
     const posts = getPostsBySection(section.id).filter(p => p.isPublished)
     const template = (section.template || 'standard') as SectionTemplate
 
+    // Separate posters from regular posts
+    const posterPosts = posts.filter(p => p.layout === 'poster')
+    const regularPosts = posts.filter(p => p.layout !== 'poster')
+
     // Split title for styling
     const titleParts = section.title.split(' ')
     const firstWord = titleParts[0]
     const restWords = titleParts.slice(1).join(' ')
 
     return (
+        <>
         <div style={{
             minHeight: '100vh',
             paddingTop: '120px',
@@ -137,34 +156,7 @@ export function SectionLandingPage({ sectionIdOverride }: { sectionIdOverride?: 
                     )}
                 </div>
 
-                {/* Posts Grid */}
-                {posts.length > 0 ? (
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                        gap: '24px',
-                    }}>
-                        {posts.map(post => (
-                            <SectionCard
-                                key={post.id}
-                                cardId={`card-${slugify(post.title)}`}
-                                label={section.label}
-                                labelColor="#FF3333"
-                                title={post.title}
-                                subtitle={post.subtitle || ''}
-                                description={post.content?.replace(/<[^>]+>/g, '').substring(0, 100) || ''}
-                                publishedDate={post.createdAt}
-                                image={post.image}
-                                icon={post.icon}
-                                variant={template}
-                                onClick={() => {
-                                    const slug = slugify(post.title)
-                                    navigate(getPostRoute(section.id, slug))
-                                }}
-                            />
-                        ))}
-                    </div>
-                ) : (
+                {posts.length === 0 ? (
                     <div style={{
                         textAlign: 'center',
                         padding: '80px 20px',
@@ -173,8 +165,122 @@ export function SectionLandingPage({ sectionIdOverride }: { sectionIdOverride?: 
                     }}>
                         No content published yet
                     </div>
+                ) : (
+                    <>
+                        {/* Poster grid — image-only cards, custom rendering */}
+                        {posterPosts.length > 0 && (
+                            <div style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '20px',
+                                marginBottom: regularPosts.length > 0 ? '48px' : 0,
+                            }}>
+                                {posterPosts.map(post => {
+                                    const slug = post.title ? slugify(post.title) : post.id
+                                    const imgSrc = getPosterImageUrl(post.image)
+                                    return (
+                                        <div
+                                            key={post.id}
+                                            id={`card-${slug}`}
+                                            draggable={false}
+                                            onClick={() => setActivePoster(post)}
+                                            style={{
+                                                borderRadius: '12px',
+                                                overflow: 'hidden',
+                                                width: '200px',
+                                                aspectRatio: '2/3',
+                                                flexShrink: 0,
+                                                cursor: 'pointer',
+                                                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                                                background: '#111',
+                                                transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                                                position: 'relative',
+                                                zIndex: 5,
+                                            }}
+                                            onMouseEnter={e => {
+                                                e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)'
+                                                e.currentTarget.style.boxShadow = '0 20px 48px rgba(0,0,0,0.6)'
+                                                e.currentTarget.style.zIndex = '10'
+                                                const img = e.currentTarget.querySelector('img') as HTMLImageElement | null
+                                                if (img) img.style.transform = 'scale(1.06)'
+                                            }}
+                                            onMouseLeave={e => {
+                                                e.currentTarget.style.transform = 'translateY(0) scale(1)'
+                                                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.4)'
+                                                e.currentTarget.style.zIndex = '5'
+                                                const img = e.currentTarget.querySelector('img') as HTMLImageElement | null
+                                                if (img) img.style.transform = 'scale(1)'
+                                            }}
+                                        >
+                                            {imgSrc ? (
+                                                <img
+                                                    src={imgSrc}
+                                                    alt={post.title || 'Poster'}
+                                                    draggable={false}
+                                                    loading="lazy"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        objectFit: 'cover',
+                                                        display: 'block',
+                                                        transition: 'transform 0.4s ease',
+                                                        userSelect: 'none',
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div style={{
+                                                    width: '100%', height: '100%',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem',
+                                                }}>
+                                                    No Image
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+
+                        {/* Regular posts grid */}
+                        {regularPosts.length > 0 && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                                gap: '24px',
+                            }}>
+                                {regularPosts.map(post => {
+                                    const slug = slugify(post.title)
+                                    return (
+                                        <SectionCard
+                                            key={post.id}
+                                            cardId={`card-${slug}`}
+                                            label={section.label}
+                                            labelColor="#FF3333"
+                                            title={post.title}
+                                            subtitle={post.subtitle || ''}
+                                            description={post.content?.replace(/<[^>]+>/g, '').substring(0, 100) || ''}
+                                            publishedDate={post.createdAt}
+                                            image={post.image}
+                                            icon={post.icon}
+                                            variant={template}
+                                            onClick={() => navigate(getPostRoute(section.id, slug))}
+                                        />
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
+
+        {activePoster && (
+            <PosterLightbox
+                post={activePoster}
+                onClose={() => setActivePoster(null)}
+            />
+        )}
+        </>
     )
 }

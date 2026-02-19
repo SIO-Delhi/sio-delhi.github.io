@@ -37,6 +37,7 @@ const FormResponseViewer = lazy(() => import('./components/admin/FormResponseVie
 const FormResponseDetail = lazy(() => import('./components/admin/FormResponseDetail').then(m => ({ default: m.FormResponseDetail })))
 const GarbageCollector = lazy(() => import('./components/admin/GarbageCollector').then(m => ({ default: m.GarbageCollector })))
 const AdminIssues = lazy(() => import('./components/admin/AdminIssues').then(m => ({ default: m.AdminIssues })))
+const PosterEditor = lazy(() => import('./components/admin/PosterEditor').then(m => ({ default: m.PosterEditor })))
 const UtilitiesPage = lazy(() => import('./pages/UtilitiesPage').then(m => ({ default: m.UtilitiesPage })))
 const FrameToolPage = lazy(() => import('./pages/FrameToolPage').then(m => ({ default: m.FrameToolPage })))
 const PosterToolPage = lazy(() => import('./pages/PosterToolPage').then(m => ({ default: m.PosterToolPage })))
@@ -89,6 +90,8 @@ function App() {
                   <Route path="create-post/:sectionId" element={<PostEditor />} />
                   <Route path="create-subsection/:sectionId" element={<SubsectionEditor />} />
                   <Route path="create-gallery/:sectionId" element={<GalleryEditor />} />
+                  <Route path="create-poster/:sectionId" element={<PosterEditor />} />
+                  <Route path="poster-editor/:id" element={<PosterEditor />} />
                   <Route path="post/:id" element={<PostEditor />} />
                   <Route path="subsection/:id" element={<SubsectionEditor />} />
                   <Route path="gallery-editor/:id" element={<GalleryEditor />} />
