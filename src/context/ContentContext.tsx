@@ -364,7 +364,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         try {
             const apiUpdates: Record<string, unknown> = {}
             if (updates.title !== undefined) apiUpdates.title = updates.title
-            if (updates.subtitle !== undefined) apiUpdates.subtitle = updates.subtitle || undefined
+            if (updates.subtitle !== undefined) apiUpdates.subtitle = updates.subtitle
             if (updates.content !== undefined) apiUpdates.content = updates.content
             if (updates.image !== undefined) apiUpdates.image = updates.image || undefined
             if (updates.pdfUrl !== undefined) apiUpdates.pdfUrl = updates.pdfUrl || undefined

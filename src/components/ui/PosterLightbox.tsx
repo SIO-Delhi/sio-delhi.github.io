@@ -78,11 +78,11 @@ export function PosterLightbox({ post, onClose, urlPath }: PosterLightboxProps) 
                 }
             `}</style>
 
-            {/* Backdrop */}
+            {/* Backdrop — above navbar (9999) and footer */}
             <div
                 onClick={onClose}
                 style={{
-                    position: 'fixed', inset: 0, zIndex: 1000,
+                    position: 'fixed', inset: 0, zIndex: 10000,
                     background: 'rgba(0,0,0,0.92)',
                     animation: 'plFadeIn 0.2s ease',
                     cursor: 'pointer',
@@ -91,7 +91,7 @@ export function PosterLightbox({ post, onClose, urlPath }: PosterLightboxProps) 
 
             {/* Content panel — pointer-events: none so clicks on empty area hit backdrop */}
             <div style={{
-                position: 'fixed', inset: 0, zIndex: 1001,
+                position: 'fixed', inset: 0, zIndex: 10001,
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
                 padding: '24px 16px',

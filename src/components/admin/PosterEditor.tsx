@@ -222,24 +222,24 @@ export function PosterEditor() {
 
             {/* Show title in lightbox toggle */}
             <div style={{ marginBottom: '28px' }}>
-                <label style={{
-                    display: 'flex', alignItems: 'center', gap: '12px',
-                    cursor: 'pointer', userSelect: 'none',
-                    padding: '14px 16px', borderRadius: '10px',
-                    background: showTitleInLightbox ? 'rgba(255,59,59,0.08)' : '#111',
-                    border: `1px solid ${showTitleInLightbox ? 'rgba(255,59,59,0.3)' : '#222'}`,
-                    transition: 'all 0.2s',
-                }}>
-                    {/* Custom toggle */}
-                    <div
-                        style={{
-                            width: '40px', height: '22px', borderRadius: '11px',
-                            background: showTitleInLightbox ? '#ff3b3b' : '#333',
-                            position: 'relative', flexShrink: 0,
-                            transition: 'background 0.2s',
-                        }}
-                        onClick={() => setShowTitleInLightbox(v => !v)}
-                    >
+                <div
+                    onClick={() => setShowTitleInLightbox(v => !v)}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        cursor: 'pointer', userSelect: 'none',
+                        padding: '14px 16px', borderRadius: '10px',
+                        background: showTitleInLightbox ? 'rgba(255,59,59,0.08)' : '#111',
+                        border: `1px solid ${showTitleInLightbox ? 'rgba(255,59,59,0.3)' : '#222'}`,
+                        transition: 'all 0.2s',
+                    }}
+                >
+                    {/* Custom toggle pill */}
+                    <div style={{
+                        width: '40px', height: '22px', borderRadius: '11px',
+                        background: showTitleInLightbox ? '#ff3b3b' : '#333',
+                        position: 'relative', flexShrink: 0,
+                        transition: 'background 0.2s',
+                    }}>
                         <div style={{
                             position: 'absolute', top: '3px',
                             left: showTitleInLightbox ? '21px' : '3px',
@@ -256,13 +256,7 @@ export function PosterEditor() {
                             {showTitleInLightbox ? 'Title will appear below the poster image' : 'Image only — title stays hidden'}
                         </div>
                     </div>
-                    <input
-                        type="checkbox"
-                        checked={showTitleInLightbox}
-                        onChange={e => setShowTitleInLightbox(e.target.checked)}
-                        style={{ display: 'none' }}
-                    />
-                </label>
+                </div>
             </div>
 
             {/* Optional Description */}
