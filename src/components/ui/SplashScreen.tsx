@@ -237,32 +237,12 @@ export function SplashScreen() {
                             }}
                         />
 
-                        {/* Mission Statement */}
-                        <p
-                            style={{
-                                color: '#fdedcb',
-                                fontSize: 'clamp(0.9rem, 3.5vw, 1.2rem)',
-                                lineHeight: 1.5,
-                                fontWeight: 300,
-                                letterSpacing: '-0.02em',
-                                maxWidth: '90%',
-                                margin: 0,
-                                opacity: 0, // Hidden initially for animation
-                            }}
-                        >
-                            The mission of the <span style={{ color: '#ff6b6b', fontWeight: 500 }}>
-                                <span>Students</span> <span>Islamic</span> <span>Organisation</span> <span>of</span> <span>India</span> (SIO)
-                            </span> is to{' '}
-                            "<span style={{ color: '#fdedcb', fontWeight: 400 }}>prepare the students and youth</span> for the{' '}
-                            <span style={{ color: '#ff6b6b', fontWeight: 500 }}>reconstruction of the society</span> in the light of{' '}
-                            <span style={{ color: '#fdedcb', fontWeight: 400 }}>Divine Guidance</span>."
-                        </p>
 
                         {/* Shiny Start Exploring Button */}
                         <div
                             className="shiny-button-container"
                             style={{
-                                marginTop: 'clamp(1.5rem, 3vh, 2.5rem)',
+                                marginTop: 'clamp(1rem, 2vh, 1.5rem)',
                                 opacity: 0, // Hidden initially for animation
                             }}
                         >

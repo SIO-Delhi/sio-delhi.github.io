@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react'
 import { Layout } from './components/layout/Layout'
 import { ThemeProvider } from './context/ThemeContext'
 import { CustomCursor } from './components/ui/CustomCursor'
-import { SplashScreen } from './components/ui/SplashScreen'
 import { EventPopup } from './components/ui/EventPopup'
 import { ContentProvider } from './context/ContentContext'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
@@ -147,7 +146,6 @@ function App() {
             </Routes>
           </Suspense>
           <CustomCursor />
-          <SplashScreen />
           <EventPopup />
         </ToolProvider>
       </ContentProvider>
