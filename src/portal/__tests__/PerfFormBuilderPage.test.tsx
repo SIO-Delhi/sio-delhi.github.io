@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { PerfFieldType } from '../types'
 import { PerfFormBuilderPage } from '../pages/PerfFormBuilderPage'
 import * as api from '../api'
 
@@ -35,18 +36,25 @@ describe('PerfFormBuilderPage presets', () => {
         id: 'template-1',
         title: 'Saved Outreach Preset',
         description: 'A saved form template',
+        created_by: 'user-1',
+        scope_unit_id: null,
+        period: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
         is_template: 1,
         is_active: 1,
         fields: [
           {
             id: 'field-1',
             form_id: 'template-1',
-            type: 'short_text',
+            type: 'short_text' as PerfFieldType,
             label: 'Saved Question',
             description: '',
             options: [],
             is_required: 1,
             display_order: 1,
+            max_value: null,
+            created_at: '2025-01-01T00:00:00Z',
           },
         ],
       },

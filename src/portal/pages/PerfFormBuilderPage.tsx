@@ -146,6 +146,7 @@ function fieldToDraft(field: PerfField): FieldDraft {
 
 export function PerfFormBuilderPage() {
   const { user } = usePortalAuth()
+  if (!user) return null
   const navigate = useNavigate()
   const { formId } = useParams<{ formId?: string }>()
   const isEditMode = !!formId

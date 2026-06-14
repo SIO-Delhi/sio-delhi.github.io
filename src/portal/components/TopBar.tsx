@@ -148,10 +148,12 @@ export function TopBar({ title, theme = 'dark', onToggleTheme }: TopBarProps) {
 
   async function handleItemClick(item: typeof items[number]) {
     setOpen(false)
-    if (item.key === 'forms' && user.role !== 'member') {
-      api.markPerfResponseNotificationsSeen(user.id)
-        .then(() => decrement('pendingForms', item.count))
-        .catch(() => refresh())
+    if (item.key === 'forms' && user?.role !== 'member') {
+      if (user) {
+        api.markPerfResponseNotificationsSeen(user.id)
+          .then(() => decrement('pendingForms', item.count))
+          .catch(() => refresh())
+      }
     }
     navigate(item.path)
   }

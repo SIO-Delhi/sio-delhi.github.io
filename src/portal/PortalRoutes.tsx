@@ -8,6 +8,17 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { ROLE_DASHBOARD_PATHS } from './constants'
 import type { PortalRole } from './types'
 
+type PortalTheme = 'dark' | 'light'
+
+function getStoredPortalTheme(): PortalTheme {
+  if (typeof window === 'undefined') return 'dark'
+  return window.localStorage.getItem('portal-theme') === 'light' ? 'light' : 'dark'
+}
+
+function themedPortalShellClassName(...classes: string[]): string {
+  return ['portal-app', `portal-theme-${getStoredPortalTheme()}`, ...classes].join(' ')
+}
+
 // Lazy-loaded portal pages
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })))
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })))
@@ -34,7 +45,7 @@ const PortalLogoutPage = lazy(() => import('./pages/PortalLogoutPage').then(m =>
 
 function PortalLoadingFallback() {
   return (
-    <div className="portal-app portal-fullscreen portal-fullscreen-col">
+    <div className={themedPortalShellClassName('portal-fullscreen', 'portal-fullscreen-col')}>
       <div className="portal-spinner" />
     </div>
   )
@@ -47,7 +58,7 @@ function RequireClerkAuth() {
 
   if (!isLoaded) {
     return (
-      <div className="portal-app portal-fullscreen portal-fullscreen-col">
+      <div className={themedPortalShellClassName('portal-fullscreen', 'portal-fullscreen-col')}>
         <div className="portal-spinner" />
       </div>
     )
@@ -64,7 +75,7 @@ function RequirePortalUser() {
 
   if (loading) {
     return (
-      <div className="portal-app portal-fullscreen portal-fullscreen-col">
+      <div className={themedPortalShellClassName('portal-fullscreen', 'portal-fullscreen-col')}>
         <div className="portal-spinner" />
         <p className="portal-spinner-text">Loading portal data…</p>
       </div>
@@ -73,7 +84,7 @@ function RequirePortalUser() {
 
   if (error || !user) {
     return (
-      <div className="portal-app portal-fullscreen portal-fullscreen-col">
+      <div className={themedPortalShellClassName('portal-fullscreen', 'portal-fullscreen-col')}>
         <div className="portal-error-page">
           <p className="portal-error-title">Access Denied</p>
           <p className="portal-error-desc">
@@ -105,7 +116,7 @@ function PortalIndex() {
 
   if (loading) {
     return (
-      <div className="portal-app portal-fullscreen portal-fullscreen-col">
+      <div className={themedPortalShellClassName('portal-fullscreen', 'portal-fullscreen-col')}>
         <div className="portal-spinner" />
         <p className="portal-spinner-text">Loading…</p>
       </div>
@@ -114,7 +125,7 @@ function PortalIndex() {
   if (isAuthenticated && user) return <Navigate to={ROLE_DASHBOARD_PATHS[user.role]} replace />
   if (isSignedIn && !user) {
     return (
-      <div className="portal-app portal-fullscreen portal-fullscreen-col">
+      <div className={themedPortalShellClassName('portal-fullscreen', 'portal-fullscreen-col')}>
         <div className="portal-error-page">
           <p className="portal-error-title">Access Denied</p>
           <p className="portal-error-desc">Your account is not registered in the portal. Contact your administrator.</p>
