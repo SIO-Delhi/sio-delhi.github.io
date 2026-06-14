@@ -107,6 +107,47 @@ const PRESETS: { key: string; label: string; title: string; description: string;
       { type: 'dropdown', label: 'Preferred work area', description: '', options: ['Media', 'Ground work', 'Logistics', 'Content', 'Data'], is_required: true, max_value: 10 },
     ],
   },
+  {
+    key: 'all_widgets_demo',
+    label: 'All Widgets Demo',
+    title: 'All Widgets Demo Form',
+    description: 'A complete sample form that exercises every available field and layout widget.',
+    fields: [
+      { type: 'heading', label: 'Basic Details', description: 'This section shows identity and contact fields.', options: [''], is_required: false, max_value: 10 },
+      { type: 'paragraph', label: 'Instructions', description: 'Use this sample to preview how each widget appears on the fill page.', options: [''], is_required: false, max_value: 10 },
+      { type: 'full_name', label: 'Full name', description: '', options: [''], is_required: true, max_value: 10 },
+      { type: 'short_text', label: 'Short answer', description: 'A compact single-line response.', options: [''], is_required: true, max_value: 10 },
+      { type: 'fill_blank', label: 'Fill in the blank', description: 'Complete the statement in one line.', options: [''], is_required: true, max_value: 10 },
+      { type: 'long_text', label: 'Long answer', description: 'A larger paragraph response.', options: [''], is_required: true, max_value: 10 },
+      { type: 'subjective', label: 'Subjective response', description: 'Free-form answer for reflections or notes.', options: [''], is_required: false, max_value: 10 },
+      { type: 'email', label: 'Email address', description: '', options: [''], is_required: true, max_value: 10 },
+      { type: 'phone', label: 'Phone number', description: '', options: [''], is_required: true, max_value: 10 },
+      { type: 'address', label: 'Address', description: '', options: [''], is_required: false, max_value: 10 },
+      { type: 'divider', label: 'Survey Inputs', description: '', options: [''], is_required: false, max_value: 10 },
+      { type: 'date', label: 'Date picker', description: '', options: [''], is_required: true, max_value: 10 },
+      { type: 'time', label: 'Time picker', description: '', options: [''], is_required: false, max_value: 10 },
+      { type: 'appointment', label: 'Appointment slot', description: '', options: [''], is_required: false, max_value: 10 },
+      { type: 'number', label: 'Number input', description: 'Enter any value up to 100.', options: [''], is_required: true, max_value: 100 },
+      { type: 'spinner', label: 'Stepper input', description: 'Use plus and minus controls.', options: [''], is_required: false, max_value: 25 },
+      { type: 'checkbox', label: 'Confirmation checkbox', description: '', options: [''], is_required: false, max_value: 10 },
+      { type: 'mcq', label: 'Single choice', description: '', options: ['Yes', 'Maybe', 'No'], is_required: true, max_value: 10 },
+      { type: 'msq', label: 'Multiple choice', description: '', options: ['Study circle', 'Campus meet', 'Public program', 'Relief work'], is_required: true, max_value: 10 },
+      { type: 'dropdown', label: 'Dropdown choice', description: '', options: ['Media', 'Ground work', 'Logistics', 'Content', 'Data'], is_required: true, max_value: 10 },
+      { type: 'rating', label: 'Rating', description: 'Select a score out of 5.', options: [''], is_required: true, max_value: 5 },
+      { type: 'star_rating', label: 'Star rating', description: '', options: [''], is_required: false, max_value: 5 },
+      { type: 'scale_rating', label: 'Scale rating', description: 'Select a value from 1 to 10.', options: [''], is_required: false, max_value: 10 },
+      { type: 'section_collapse', label: 'Collapsible Notes', description: 'This is a collapsible section shown open by default.', options: [''], is_required: false, max_value: 10 },
+      { type: 'input_table', label: 'Input table', description: 'Enter rows across multiple columns.', options: ['Name', 'Role', 'Contact'], is_required: false, max_value: 10 },
+      { type: 'product_list', label: 'Product list', description: 'Enter quantities for each item.', options: ['Booklet', 'Poster', 'Registration'], is_required: false, max_value: 10 },
+      { type: 'image', label: 'Image preview', description: 'https://siodelhi.org/logo.png', options: [''], is_required: false, max_value: 10 },
+      { type: 'file_upload', label: 'File upload', description: 'Attach one or more files.', options: [''], is_required: false, max_value: 10 },
+      { type: 'signature', label: 'Signature pad', description: 'Draw a signature inside the box.', options: [''], is_required: false, max_value: 10 },
+      { type: 'captcha', label: 'Verification', description: 'Type SIO to verify.', options: [''], is_required: true, max_value: 10 },
+      { type: 'page_break', label: 'Page break', description: '', options: [''], is_required: false, max_value: 10 },
+      { type: 'section', label: 'Final Section', description: '', options: [''], is_required: false, max_value: 10 },
+      { type: 'submit', label: 'Submit marker', description: '', options: [''], is_required: false, max_value: 10 },
+    ],
+  },
 ]
 
 function isTruthyFlag(value: boolean | number | undefined | null): boolean {
@@ -152,6 +193,24 @@ function normalizePrimaryColor(color?: string | null): string {
   return !color || color.toLowerCase() === '#ff3b3b' ? '#2563eb' : color
 }
 
+function normalizeIdList(value?: string[] | string | null, fallback?: string | null): string[] {
+  let list: unknown = value
+  if (typeof value === 'string') {
+    try {
+      list = JSON.parse(value)
+    } catch {
+      list = value ? [value] : []
+    }
+  }
+  const ids = Array.isArray(list) ? list.map(item => String(item).trim()).filter(Boolean) : []
+  if (ids.length === 0 && fallback) return [fallback]
+  return Array.from(new Set(ids))
+}
+
+function selectedValues(select: HTMLSelectElement): string[] {
+  return Array.from(select.selectedOptions).map(option => option.value).filter(Boolean)
+}
+
 function FooterIdentityPreview({
   footerBgColor,
   footerTextColor,
@@ -185,8 +244,8 @@ export function PerfFormBuilderPage() {
   const [description, setDescription] = useState('')
   const [period, setPeriod] = useState('')
   const [scopeType, setScopeType] = useState<PerfScopeType>('zone')
-  const [scopeRegionId, setScopeRegionId] = useState<string>('')
-  const [scopeUnitId, setScopeUnitId] = useState<string>('')
+  const [scopeRegionIds, setScopeRegionIds] = useState<string[]>([])
+  const [scopeUnitIds, setScopeUnitIds] = useState<string[]>([])
   const [scopeCircleId, setScopeCircleId] = useState<string>('')
   const [scopeCampusId, setScopeCampusId] = useState<string>('')
   const [isTemplate, setIsTemplate] = useState(false)
@@ -249,8 +308,8 @@ export function PerfFormBuilderPage() {
         setDescription(form.description ?? '')
         setPeriod(form.period ?? '')
         setScopeType(form.scope_type ?? (form.scope_unit_id ? 'unit' : 'zone'))
-        setScopeRegionId(form.scope_region_id ?? '')
-        setScopeUnitId(form.scope_unit_id ?? '')
+        setScopeRegionIds(normalizeIdList(form.scope_region_ids, form.scope_region_id))
+        setScopeUnitIds(normalizeIdList(form.scope_unit_ids, form.scope_unit_id))
         setScopeCircleId(form.scope_circle_id ?? '')
         setScopeCampusId(form.scope_campus_id ?? '')
         setIsTemplate(typeof form.is_template === 'boolean' ? form.is_template : Number(form.is_template) === 1)
@@ -321,6 +380,8 @@ export function PerfFormBuilderPage() {
     setDescription(form.description ?? '')
     setTemplateKey(form.template_key ?? form.id)
     setBannerImage(form.banner_image ?? null)
+    setScopeRegionIds(normalizeIdList(form.scope_region_ids, form.scope_region_id))
+    setScopeUnitIds(normalizeIdList(form.scope_unit_ids, form.scope_unit_id))
     setThemePrimaryColor(normalizePrimaryColor(form.theme_primary_color))
     setFooterBgColor(form.footer_bg_color || '#6a63fe')
     setFooterTextColor(form.footer_text_color || '#fdedcb')
@@ -393,8 +454,10 @@ export function PerfFormBuilderPage() {
   async function handleSave() {
     setError(null)
     if (!title.trim()) { showSaveError('Title is required before the form can be created.', titleRef.current); return }
-    if (scopeType === 'region' && !scopeRegionId) { showSaveError('Select a region for this form.'); return }
-    if (scopeType === 'unit' && !scopeUnitId) { showSaveError('Select a unit for this form.'); return }
+    const selectedRegionIds = scopeType === 'region' ? scopeRegionIds : []
+    const selectedUnitIds = scopeType === 'unit' ? scopeUnitIds : []
+    if (scopeType === 'region' && selectedRegionIds.length === 0) { showSaveError('Select at least one region for this form.'); return }
+    if (scopeType === 'unit' && selectedUnitIds.length === 0) { showSaveError('Select at least one unit for this form.'); return }
     if (scopeType === 'circle' && !scopeCircleId) { showSaveError('Select a circle for this form.'); return }
     if (scopeType === 'campus' && !scopeCampusId) { showSaveError('Select a campus for this form.'); return }
     if (fields.length === 0) { showSaveError('Add at least one field.'); return }
@@ -412,8 +475,10 @@ export function PerfFormBuilderPage() {
           title: title.trim(),
           description: description.trim() || null,
           scope_type: scopeType,
-          scope_region_id: scopeType === 'region' ? scopeRegionId || null : null,
-          scope_unit_id: scopeType === 'unit' ? scopeUnitId || null : null,
+          scope_region_id: selectedRegionIds[0] || null,
+          scope_region_ids: selectedRegionIds,
+          scope_unit_id: selectedUnitIds[0] || null,
+          scope_unit_ids: selectedUnitIds,
           scope_circle_id: scopeType === 'circle' ? scopeCircleId || null : null,
           scope_campus_id: scopeType === 'campus' ? scopeCampusId || null : null,
           period: period.trim() || null,
@@ -434,8 +499,10 @@ export function PerfFormBuilderPage() {
           description: description.trim() || undefined,
           created_by: user!.id,
           scope_type: scopeType,
-          scope_region_id: scopeType === 'region' ? scopeRegionId || null : null,
-          scope_unit_id: scopeType === 'unit' ? scopeUnitId || null : null,
+          scope_region_id: selectedRegionIds[0] || null,
+          scope_region_ids: selectedRegionIds,
+          scope_unit_id: selectedUnitIds[0] || null,
+          scope_unit_ids: selectedUnitIds,
           scope_circle_id: scopeType === 'circle' ? scopeCircleId || null : null,
           scope_campus_id: scopeType === 'campus' ? scopeCampusId || null : null,
           period: period.trim() || undefined,
@@ -514,7 +581,17 @@ export function PerfFormBuilderPage() {
             </div>
             <div className="flex-1">
               <label className="portal-label">Hierarchy</label>
-              <select value={scopeType} onChange={e => setScopeType(e.target.value as PerfScopeType)} className="portal-input portal-select">
+              <select
+                value={scopeType}
+                onChange={e => {
+                  setScopeType(e.target.value as PerfScopeType)
+                  setScopeRegionIds([])
+                  setScopeUnitIds([])
+                  setScopeCircleId('')
+                  setScopeCampusId('')
+                }}
+                className="portal-input portal-select"
+              >
                 <option value="zone">Zone-wide</option>
                 <option value="region">Region</option>
                 <option value="unit">Unit</option>
@@ -527,16 +604,36 @@ export function PerfFormBuilderPage() {
             <div>
               <label className="portal-label">Scope Target</label>
               {scopeType === 'region' && (
-                <select value={scopeRegionId} onChange={e => setScopeRegionId(e.target.value)} className="portal-input portal-select">
-                  <option value="">Select region</option>
+                <>
+                <select
+                  multiple
+                  value={scopeRegionIds}
+                  onChange={e => {
+                    const ids = selectedValues(e.currentTarget)
+                    setScopeRegionIds(ids)
+                  }}
+                  className="portal-input portal-select portal-multi-select"
+                >
                   {regions.map(r => <option key={r.region_id} value={r.region_id}>{r.region_name}</option>)}
                 </select>
+                <p className="portal-hint portal-mt-2">Hold Ctrl or Cmd to select multiple regions.</p>
+                </>
               )}
               {scopeType === 'unit' && (
-                <select value={scopeUnitId} onChange={e => setScopeUnitId(e.target.value)} className="portal-input portal-select">
-                  <option value="">Select unit</option>
+                <>
+                <select
+                  multiple
+                  value={scopeUnitIds}
+                  onChange={e => {
+                    const ids = selectedValues(e.currentTarget)
+                    setScopeUnitIds(ids)
+                  }}
+                  className="portal-input portal-select portal-multi-select"
+                >
                   {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
+                <p className="portal-hint portal-mt-2">Hold Ctrl or Cmd to select multiple units.</p>
+                </>
               )}
               {scopeType === 'circle' && (
                 <select value={scopeCircleId} onChange={e => setScopeCircleId(e.target.value)} className="portal-input portal-select">

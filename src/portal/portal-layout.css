@@ -602,12 +602,14 @@ body {
   top: calc(100% + 8px);
   right: 0;
   width: 280px;
+  max-height: min(520px, calc(100vh - 92px));
   background: var(--p-bg-card);
   border: 1px solid var(--p-border);
   border-radius: var(--p-radius-lg);
   box-shadow: var(--p-shadow-lg);
   z-index: 100;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   animation: portal-dropdown-in 150ms ease;
 }
 

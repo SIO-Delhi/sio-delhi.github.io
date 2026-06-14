@@ -149,6 +149,10 @@ function createShortLink(): array
             $stmt->execute([$resourceType, $resourceId]);
             $existing = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($existing) {
+                if ($existing['full_url'] !== $fullUrl) {
+                    $db->prepare("UPDATE short_links SET full_url = ? WHERE id = ?")->execute([$fullUrl, $existing['id']]);
+                    $existing['full_url'] = $fullUrl;
+                }
                 return [
                     'shortCode' => $existing['short_code'],
                     'shortUrl' => 'https://siodelhi.org/s/' . $existing['short_code'],

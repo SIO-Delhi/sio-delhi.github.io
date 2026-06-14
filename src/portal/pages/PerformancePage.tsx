@@ -6,6 +6,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import * as api from '../api'
 import type { PerfForm } from '../types'
 
+const PUBLIC_SITE_ORIGIN = 'https://siodelhi.org'
+
 export function PerformancePage() {
   const { user } = usePortalAuth()
   const [forms, setForms] = useState<PerfForm[]>([])
@@ -46,8 +48,8 @@ export function PerformancePage() {
     catch (err) { setError(err instanceof Error ? err.message : 'Delete failed.') }
   }
 
-  function getCanonicalOrigin() {
-    return typeof window !== 'undefined' ? window.location.origin : 'https://siodelhi.org'
+  function getCurrentOrigin() {
+    return typeof window !== 'undefined' ? window.location.origin : PUBLIC_SITE_ORIGIN
   }
 
   function getShareTarget(form: PerfForm) {
@@ -55,7 +57,7 @@ export function PerformancePage() {
     const path = isPublic ? `/portal/public/forms/${form.id}` : `/portal/forms/${form.id}/fill`
     return {
       kind: isPublic ? 'public' as const : 'internal' as const,
-      fullUrl: `${getCanonicalOrigin()}${path}`,
+      fullUrl: `${isPublic ? PUBLIC_SITE_ORIGIN : getCurrentOrigin()}${path}`,
     }
   }
 
@@ -181,9 +183,28 @@ export function PerformancePage() {
 
 function formatScope(form: PerfForm): string {
   const type = form.scope_type ?? (form.scope_unit_id ? 'unit' : 'zone')
-  if (type === 'region') return form.scope_region_name ? `Region: ${form.scope_region_name}` : 'Region'
-  if (type === 'unit') return form.scope_unit_name ? `Unit: ${form.scope_unit_name}` : 'Unit'
+  const regionCount = countJsonIds(form.scope_region_ids)
+  const unitCount = countJsonIds(form.scope_unit_ids)
+  if (type === 'region') {
+    if (regionCount > 1) return `${regionCount} regions`
+    return form.scope_region_name ? `Region: ${form.scope_region_name}` : 'Region'
+  }
+  if (type === 'unit') {
+    if (unitCount > 1) return `${unitCount} units`
+    return form.scope_unit_name ? `Unit: ${form.scope_unit_name}` : 'Unit'
+  }
   if (type === 'circle') return form.scope_circle_name ? `Circle: ${form.scope_circle_name}` : 'Circle'
   if (type === 'campus') return form.scope_campus_name ? `Campus: ${form.scope_campus_name}` : 'Campus'
   return 'Zone-wide'
+}
+
+function countJsonIds(value?: string[] | string | null): number {
+  if (Array.isArray(value)) return value.length
+  if (!value) return 0
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed.length : 0
+  } catch {
+    return 0
+  }
 }

@@ -190,8 +190,10 @@ export interface PerfForm {
   scope_unit_id: string | null
   scope_type?: PerfScopeType | null
   scope_region_id?: string | null
+  scope_region_ids?: string[] | string | null
   scope_circle_id?: string | null
   scope_campus_id?: string | null
+  scope_unit_ids?: string[] | string | null
   scope_unit_name?: string
   scope_region_name?: string
   scope_circle_name?: string

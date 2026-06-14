@@ -10,6 +10,11 @@ import { FormFooter } from '../../components/ui/FormFooter'
 
 const NON_ANSWER_TYPES = ['heading', 'paragraph', 'image', 'submit', 'divider', 'section_collapse', 'page_break', 'section']
 
+function PerfFormShell({ publicMode, children }: { publicMode: boolean; children: ReactNode }) {
+  if (!publicMode) return <>{children}</>
+  return <div className="portal-app portal-theme-light portal-public-form-shell">{children}</div>
+}
+
 export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean }) {
   const { formId } = useParams<{ formId: string }>()
   const { user } = usePortalAuth()
@@ -21,9 +26,6 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const Shell = ({ children }: { children: ReactNode }) => (
-    publicMode ? <div className="portal-app portal-theme-light portal-public-form-shell">{children}</div> : <>{children}</>
-  )
   const answerFields = (form?.fields ?? []).filter(field => !NON_ANSWER_TYPES.includes(field.type))
   const fillWrapClass = publicMode ? 'portal-public-form-wrap' : 'portal-page portal-page-narrow portal-perf-form-wrap'
   const headerClass = publicMode ? 'portal-public-form-header' : 'portal-public-form-header portal-perf-form-header'
@@ -73,13 +75,14 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
     setError(null)
 
     // Validate required
-    for (const field of form.fields ?? []) {
+    for (const [idx, field] of (form.fields ?? []).entries()) {
+      const fieldKey = getFieldKey(field, idx)
       if (NON_ANSWER_TYPES.includes(field.type)) continue
-      if (field.type === 'captcha' && answers[field.id] !== 'SIO') {
+      if (field.type === 'captcha' && answers[fieldKey] !== 'SIO') {
         setError(`"${field.label}" verification is incorrect.`); return
       }
       if (field.is_required) {
-        const val = answers[field.id]
+        const val = answers[fieldKey]
         if (isEmptyAnswer(val)) {
           setError(`"${field.label}" is required.`); return
         }
@@ -101,29 +104,29 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
 
   if (loading) {
     return (
-      <Shell>
+      <PerfFormShell publicMode={publicMode}>
         <div className="portal-page portal-page-narrow">
           <div className="portal-loading-list">
             {Array.from({ length: 4 }).map((_, i) => <div key={i} className="portal-skeleton portal-skeleton-row" />)}
           </div>
         </div>
-      </Shell>
+      </PerfFormShell>
     )
   }
 
   if (!form) {
     return (
-      <Shell>
+      <PerfFormShell publicMode={publicMode}>
         <div className="portal-page">
           <div className="portal-alert portal-alert-error">Form not found.</div>
         </div>
-      </Shell>
+      </PerfFormShell>
     )
   }
 
   if (success) {
     return (
-      <Shell>
+      <PerfFormShell publicMode={publicMode}>
         <div className={fillWrapClass}>
           <div className={publicMode ? 'portal-card portal-card-body portal-perf-success-card' : 'portal-card portal-card-body'}>
             <div className="portal-empty">
@@ -136,12 +139,12 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
             </div>
           </div>
         </div>
-      </Shell>
+      </PerfFormShell>
     )
   }
 
   return (
-    <Shell>
+    <PerfFormShell publicMode={publicMode}>
       <div className={fillWrapClass}>
         {!publicMode && (
           <button onClick={() => navigate(-1)} className="portal-btn portal-btn-ghost portal-btn-sm portal-self-start">
@@ -171,8 +174,11 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
         {error && <div className="portal-alert portal-alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit} className={formClass}>
-          {(form.fields ?? []).map((field, idx) => (
-            <div key={field.id} className={NON_ANSWER_TYPES.includes(field.type) ? 'portal-perf-section-block' : 'portal-card portal-card-body-sm portal-perf-fill-card'}>
+          {(form.fields ?? []).map((field, idx) => {
+            const fieldKey = getFieldKey(field, idx)
+            const fieldForInput = { ...field, id: fieldKey }
+            return (
+            <div key={fieldKey} className={NON_ANSWER_TYPES.includes(field.type) ? 'portal-perf-section-block' : 'portal-card portal-card-body-sm portal-perf-fill-card'}>
               {field.type !== 'divider' && (
                 <label className={`portal-label ${field.is_required && !NON_ANSWER_TYPES.includes(field.type) ? 'portal-label-required' : ''}`}>
                   {idx + 1}. {field.label}
@@ -180,9 +186,9 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
               )}
               {field.description && <p className="portal-hint portal-mb-4">{field.description}</p>}
 
-              {renderFieldInput(field, answers[field.id], (val) => updateAnswer(field.id, val), (opt) => toggleMsq(field.id, opt))}
+              {renderFieldInput(fieldForInput, answers[fieldKey], (val) => updateAnswer(fieldKey, val), (opt) => toggleMsq(fieldKey, opt))}
             </div>
-          ))}
+          )})}
 
           <button type="submit" disabled={submitting} className="portal-btn portal-btn-primary portal-self-start" style={{ background: primaryColor }}>
             {submitting ? 'Submitting…' : 'Submit Response'}
@@ -197,12 +203,16 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
           />
         </div>
       </div>
-    </Shell>
+    </PerfFormShell>
   )
 }
 
 function normalizePrimaryColor(color?: string | null): string {
   return !color || color.toLowerCase() === '#ff3b3b' ? '#2563eb' : color
+}
+
+function getFieldKey(field: PerfField, index: number): string {
+  return field.id || `${index}-${field.type}-${field.label}`
 }
 
 function isEmptyAnswer(value: unknown): boolean {

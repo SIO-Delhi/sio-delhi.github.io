@@ -218,8 +218,10 @@ function ensurePerfFormsSchema($db)
     foreach ([
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_type VARCHAR(20) DEFAULT 'zone' AFTER created_by",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_region_id VARCHAR(36) NULL AFTER scope_type",
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_region_ids TEXT NULL AFTER scope_region_id",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_circle_id VARCHAR(36) NULL AFTER scope_unit_id",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_campus_id VARCHAR(36) NULL AFTER scope_circle_id",
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_unit_ids TEXT NULL AFTER scope_unit_id",
         "ALTER TABLE portal_perf_forms ADD COLUMN is_template TINYINT(1) DEFAULT 0 AFTER is_active",
         "ALTER TABLE portal_perf_forms ADD COLUMN template_key VARCHAR(100) NULL AFTER is_template",
         "ALTER TABLE portal_perf_forms ADD COLUMN is_public TINYINT(1) DEFAULT 0 AFTER template_key",
@@ -558,7 +560,9 @@ function portalSetup()
                 created_by VARCHAR(36) NOT NULL,
                 scope_type VARCHAR(20) DEFAULT 'zone',
                 scope_region_id VARCHAR(36) NULL,
+                scope_region_ids TEXT NULL,
                 scope_unit_id VARCHAR(36),
+                scope_unit_ids TEXT NULL,
                 scope_circle_id VARCHAR(36) NULL,
                 scope_campus_id VARCHAR(36) NULL,
                 period VARCHAR(50),
@@ -599,8 +603,10 @@ function portalSetup()
     foreach ([
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_type VARCHAR(20) DEFAULT 'zone' AFTER created_by",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_region_id VARCHAR(36) NULL AFTER scope_type",
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_region_ids TEXT NULL AFTER scope_region_id",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_circle_id VARCHAR(36) NULL AFTER scope_unit_id",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_campus_id VARCHAR(36) NULL AFTER scope_circle_id",
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_unit_ids TEXT NULL AFTER scope_unit_id",
         "ALTER TABLE portal_perf_forms ADD COLUMN is_template TINYINT(1) DEFAULT 0 AFTER is_active",
         "ALTER TABLE portal_perf_forms ADD COLUMN template_key VARCHAR(100) NULL AFTER is_template",
         "ALTER TABLE portal_perf_forms ADD COLUMN is_public TINYINT(1) DEFAULT 0 AFTER template_key",
@@ -2336,14 +2342,25 @@ function portalNotificationCounts()
                 WHERE f.is_active = 1 AND (
                     COALESCE(f.scope_type, CASE WHEN f.scope_unit_id IS NULL THEN 'zone' ELSE 'unit' END) = 'zone'
                     OR f.scope_unit_id = ?
+                    OR f.scope_unit_ids LIKE ?
                     OR (f.scope_circle_id IS NOT NULL AND f.scope_circle_id = ?)
                     OR (f.scope_campus_id IS NOT NULL AND f.scope_campus_id = ?)
                     OR (f.scope_region_id IS NOT NULL AND f.scope_region_id = ?)
+                    OR f.scope_region_ids LIKE ?
                 )
                 AND NOT EXISTS (SELECT 1 FROM portal_perf_responses r WHERE r.form_id = f.id AND r.member_id = ?)
                 AND NOT EXISTS (SELECT 1 FROM portal_perf_form_views v WHERE v.form_id = f.id AND v.member_id = ?)
             ");
-        $stmt->execute([$unitId, $member['circle_id'] ?? null, $member['campus_id'] ?? null, $member['region_id'] ?? null, $userId, $userId]);
+        $stmt->execute([
+            $unitId,
+            '%"' . $unitId . '"%',
+            $member['circle_id'] ?? null,
+            $member['campus_id'] ?? null,
+            $member['region_id'] ?? null,
+            $member['region_id'] ? '%"' . $member['region_id'] . '"%' : '__never__',
+            $userId,
+            $userId
+        ]);
         $out['pendingForms'] = (int) $stmt->fetchColumn();
     } elseif (in_array($role, ['admin', 'zonal_secretary', 'regional_president', 'unit_president'], true) && $userId) {
         ensurePerfResponseNotificationViewsTable($db);
@@ -2731,17 +2748,20 @@ function portalGetPerfForms()
                             AND pu2.unit_id IN (SELECT id FROM portal_units WHERE region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president'))
                         )
                         OR f.scope_unit_id IN (SELECT id FROM portal_units WHERE region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president'))
+                        OR f.scope_region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president')
+                        OR f.scope_region_ids LIKE CONCAT('%\"', (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president'), '\"%')
                     )
                 ";
-            $params = [$userId, $userId, $userId];
+            $params = [$userId, $userId, $userId, $userId, $userId];
         } else {
             $baseSql .= " WHERE f.created_by = ?";
             $params = [$userId];
         }
     } elseif ($role === 'unit_president' && $unitId) {
         // Unit president sees forms scoped to their unit + zone-wide forms
-        $baseSql .= " WHERE (COALESCE(f.scope_type, CASE WHEN f.scope_unit_id IS NULL THEN 'zone' ELSE 'unit' END) = 'zone' OR f.scope_unit_id = ?)";
+        $baseSql .= " WHERE (COALESCE(f.scope_type, CASE WHEN f.scope_unit_id IS NULL THEN 'zone' ELSE 'unit' END) = 'zone' OR f.scope_unit_id = ? OR f.scope_unit_ids LIKE ?)";
         $params[] = $unitId;
+        $params[] = '%"' . $unitId . '"%';
     } elseif ($role === 'member' && $unitId) {
         // Members see active forms scoped to their hierarchy + zone-wide forms.
         $member = null;
@@ -2753,14 +2773,18 @@ function portalGetPerfForms()
         $baseSql .= " WHERE f.is_active = 1 AND (
                 COALESCE(f.scope_type, CASE WHEN f.scope_unit_id IS NULL THEN 'zone' ELSE 'unit' END) = 'zone'
                 OR f.scope_unit_id = ?
+                OR f.scope_unit_ids LIKE ?
                 OR (f.scope_circle_id IS NOT NULL AND f.scope_circle_id = ?)
                 OR (f.scope_campus_id IS NOT NULL AND f.scope_campus_id = ?)
                 OR (f.scope_region_id IS NOT NULL AND f.scope_region_id = ?)
+                OR (f.scope_region_ids LIKE ?)
             )";
         $params[] = $unitId;
+        $params[] = '%"' . $unitId . '"%';
         $params[] = $member['circle_id'] ?? null;
         $params[] = $member['campus_id'] ?? null;
         $params[] = $member['region_id'] ?? null;
+        $params[] = $member['region_id'] ? '%"' . $member['region_id'] . '"%' : '__never__';
     }
     // Admin and zonal_secretary see ALL forms (no filter)
 
@@ -2843,6 +2867,23 @@ function portalGetPublicPerfForm($id)
     return $form;
 }
 
+function normalizeIdArray($value)
+{
+    if (is_string($value)) {
+        $decoded = json_decode($value, true);
+        $value = is_array($decoded) ? $decoded : [$value];
+    }
+    if (!is_array($value))
+        return [];
+    $out = [];
+    foreach ($value as $item) {
+        $id = trim((string) $item);
+        if ($id !== '' && !in_array($id, $out, true))
+            $out[] = $id;
+    }
+    return $out;
+}
+
 function portalCreatePerfForm()
 {
     $body = jsonBody();
@@ -2851,15 +2892,21 @@ function portalCreatePerfForm()
     $formId = uuid();
 
     $scopeType = $body['scope_type'] ?? (!empty($body['scope_unit_id']) ? 'unit' : 'zone');
-    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_type, scope_region_id, scope_unit_id, scope_circle_id, scope_campus_id, period, is_template, template_key, is_public, banner_image, banner_text, banner_zone_text, theme_primary_color, footer_bg_color, footer_text_color, footer_pattern_color) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    $scopeRegionIds = normalizeIdArray($body['scope_region_ids'] ?? []);
+    $scopeUnitIds = normalizeIdArray($body['scope_unit_ids'] ?? []);
+    $scopeRegionId = $body['scope_region_id'] ?? ($scopeRegionIds[0] ?? null);
+    $scopeUnitId = $body['scope_unit_id'] ?? ($scopeUnitIds[0] ?? null);
+    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_type, scope_region_id, scope_region_ids, scope_unit_id, scope_unit_ids, scope_circle_id, scope_campus_id, period, is_template, template_key, is_public, banner_image, banner_text, banner_zone_text, theme_primary_color, footer_bg_color, footer_text_color, footer_pattern_color) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         $formId,
         $body['title'],
         $body['description'] ?? null,
         $body['created_by'],
         $scopeType,
-        $body['scope_region_id'] ?? null,
-        $body['scope_unit_id'] ?? null,
+        $scopeRegionId,
+        !empty($scopeRegionIds) ? json_encode($scopeRegionIds) : null,
+        $scopeUnitId,
+        !empty($scopeUnitIds) ? json_encode($scopeUnitIds) : null,
         $body['scope_circle_id'] ?? null,
         $body['scope_campus_id'] ?? null,
         $body['period'] ?? null,
@@ -2891,9 +2938,23 @@ function portalUpdatePerfForm($id)
     $body = jsonBody();
     $db = getDB();
     ensurePerfFormsSchema($db);
+    if (array_key_exists('scope_region_ids', $body)) {
+        $regionIds = normalizeIdArray($body['scope_region_ids']);
+        $body['scope_region_ids'] = !empty($regionIds) ? json_encode($regionIds) : null;
+        if (($body['scope_type'] ?? null) === 'region' && !array_key_exists('scope_region_id', $body)) {
+            $body['scope_region_id'] = $regionIds[0] ?? null;
+        }
+    }
+    if (array_key_exists('scope_unit_ids', $body)) {
+        $unitIds = normalizeIdArray($body['scope_unit_ids']);
+        $body['scope_unit_ids'] = !empty($unitIds) ? json_encode($unitIds) : null;
+        if (($body['scope_type'] ?? null) === 'unit' && !array_key_exists('scope_unit_id', $body)) {
+            $body['scope_unit_id'] = $unitIds[0] ?? null;
+        }
+    }
 
     // Update form metadata
-    $allowed = ['title', 'description', 'scope_type', 'scope_region_id', 'scope_unit_id', 'scope_circle_id', 'scope_campus_id', 'period', 'is_active', 'is_template', 'template_key', 'is_public', 'banner_image', 'banner_text', 'banner_zone_text', 'theme_primary_color', 'footer_bg_color', 'footer_text_color', 'footer_pattern_color'];
+    $allowed = ['title', 'description', 'scope_type', 'scope_region_id', 'scope_region_ids', 'scope_unit_id', 'scope_unit_ids', 'scope_circle_id', 'scope_campus_id', 'period', 'is_active', 'is_template', 'template_key', 'is_public', 'banner_image', 'banner_text', 'banner_zone_text', 'theme_primary_color', 'footer_bg_color', 'footer_text_color', 'footer_pattern_color'];
     $sets = [];
     $params = [];
     foreach ($allowed as $key) {

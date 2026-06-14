@@ -414,7 +414,9 @@ export async function createPerfForm(data: {
   created_by: string
   scope_type?: PerfScopeType
   scope_unit_id?: string | null
+  scope_unit_ids?: string[]
   scope_region_id?: string | null
+  scope_region_ids?: string[]
   scope_circle_id?: string | null
   scope_campus_id?: string | null
   period?: string
