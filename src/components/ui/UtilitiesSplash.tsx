@@ -156,29 +156,29 @@ export function UtilitiesSplash({ onComplete }: UtilitiesSplashProps) {
             ctx.clearRect(0, 0, canvas.width, canvas.height)
 
             for (let i = 0; i < particles.length; i++) {
-                let p = particles[i]
+                const p = particles[i]
 
-                let dx = mouse.x - p.x
-                let dy = mouse.y - p.y
-                let distance = Math.sqrt(dx * dx + dy * dy)
+                const dx = mouse.x - p.x
+                const dy = mouse.y - p.y
+                const distance = Math.sqrt(dx * dx + dy * dy)
 
                 if (distance < mouse.radius) {
-                    let forceDirectionX = dx / distance
-                    let forceDirectionY = dy / distance
-                    let maxDistance = mouse.radius
-                    let force = (maxDistance - distance) / maxDistance
-                    let directionX = forceDirectionX * force * p.density
-                    let directionY = forceDirectionY * force * p.density
+                    const forceDirectionX = dx / distance
+                    const forceDirectionY = dy / distance
+                    const maxDistance = mouse.radius
+                    const force = (maxDistance - distance) / maxDistance
+                    const directionX = forceDirectionX * force * p.density
+                    const directionY = forceDirectionY * force * p.density
 
                     p.x -= directionX
                     p.y -= directionY
                 } else {
                     if (p.x !== p.baseX) {
-                        let dx = p.x - p.baseX
+                        const dx = p.x - p.baseX
                         p.x -= dx / 10
                     }
                     if (p.y !== p.baseY) {
-                        let dy = p.y - p.baseY
+                        const dy = p.y - p.baseY
                         p.y -= dy / 10
                     }
                 }

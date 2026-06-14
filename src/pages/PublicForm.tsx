@@ -314,7 +314,7 @@ export function PublicForm() {
                     </div>
                 )
 
-            case 'rating':
+            case 'rating': {
                 const ratingValue = (values[field.id] as number) || 0
                 return (
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -339,8 +339,8 @@ export function PublicForm() {
                         ))}
                     </div>
                 )
-
-            case 'file':
+            }
+            case 'file': {
                 const isUploading = uploadingFields[field.id]
                 const fileValue = values[field.id] as string
 
@@ -406,7 +406,7 @@ export function PublicForm() {
                         )}
                     </div>
                 )
-
+            }
             default:
                 return (
                     <input

@@ -160,7 +160,7 @@ export function EventPosterTool({ speakerCount, onBack }: Props) {
         try {
             const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
             if (match) {
-                let [_, h, m, p] = match
+                const [_, h, m, p] = match
                 let hour = parseInt(h)
                 if (p.toUpperCase() === 'PM' && hour < 12) hour += 12
                 if (p.toUpperCase() === 'AM' && hour === 12) hour = 0

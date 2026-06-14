@@ -73,7 +73,7 @@ export function GalleryEditor() {
 
                 // Parse gallery images
                 // It might be string[] (old) or GallerySection[] (new)
-                let galleryData = post.galleryImages || []
+                const galleryData = post.galleryImages || []
 
                 // Check format
                 if (galleryData.length > 0 && typeof galleryData[0] === 'string') {

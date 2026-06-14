@@ -146,7 +146,7 @@ function fieldToDraft(field: PerfField): FieldDraft {
 
 export function PerfFormBuilderPage() {
   const { user } = usePortalAuth()
-  if (!user) return null
+  const portalUser = user!
   const navigate = useNavigate()
   const { formId } = useParams<{ formId?: string }>()
   const isEditMode = !!formId
@@ -192,7 +192,7 @@ export function PerfFormBuilderPage() {
   useEffect(() => {
     if (isEditMode) return
     let cancelled = false
-    api.fetchPerfForms({ role: user.role, userId: user.id, unitId: user.unit_id ?? undefined })
+    api.fetchPerfForms({ role: portalUser.role, userId: portalUser.id, unitId: portalUser.unit_id ?? undefined })
       .then(forms => {
         if (cancelled) return
         setSavedPresets(forms.filter(form => isTruthyFlag(form.is_template)))
@@ -201,7 +201,7 @@ export function PerfFormBuilderPage() {
         if (!cancelled) setSavedPresets([])
       })
     return () => { cancelled = true }
-  }, [isEditMode, user.id, user.role, user.unit_id])
+  }, [isEditMode, portalUser.id, portalUser.role, portalUser.unit_id])
 
   // Load existing form data when editing
   useEffect(() => {
@@ -246,7 +246,7 @@ export function PerfFormBuilderPage() {
 
   if (!user) return null
 
-  const pathPrefix = `/portal/${user.role === 'admin' ? 'admin' : user.role === 'zonal_secretary' ? 'zonal' : user.role === 'regional_president' ? 'regional' : 'unit'}`
+  const pathPrefix = `/portal/${portalUser.role === 'admin' ? 'admin' : portalUser.role === 'zonal_secretary' ? 'zonal' : portalUser.role === 'regional_president' ? 'regional' : 'unit'}`
 
   function updateField(key: string, updates: Partial<FieldDraft>) {
     setFields(prev => prev.map(f => f.key === key ? { ...f, ...updates } : f))

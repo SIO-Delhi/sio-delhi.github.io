@@ -227,7 +227,7 @@ export function PosterTool() {
         try {
             const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
             if (match) {
-                let [_, h, m, p] = match
+                const [_, h, m, p] = match
                 let hour = parseInt(h)
                 if (p.toUpperCase() === 'PM' && hour < 12) hour += 12
                 if (p.toUpperCase() === 'AM' && hour === 12) hour = 0
@@ -343,7 +343,7 @@ export function PosterTool() {
 
         // Calculate Offset to move Speaker Center to Available Center
         // We cap the shift to avoid extreme movements if calculation is off, but centering is the goal.
-        let yOffset = availableCenterY - speakerOriginalCenterY
+        const yOffset = availableCenterY - speakerOriginalCenterY
 
         // Optional: Clamp to prevent intersecting footer if calculation says move down too much? 
         // Usually yOffset will be negative (moving up). 
