@@ -691,6 +691,51 @@ body {
   border-radius: 10px;
 }
 
+.portal-topbar-dropdown-section {
+  border-top: 1px solid var(--p-border);
+  padding: 4px 0;
+}
+
+.portal-topbar-dropdown-section-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--p-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 16px 4px;
+  margin: 0;
+}
+
+.portal-topbar-dropdown-item-detail {
+  cursor: default;
+  padding: 6px 16px;
+}
+
+.portal-topbar-dropdown-item-detail:hover {
+  background: none;
+}
+
+.portal-topbar-dropdown-detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.portal-topbar-dropdown-form-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--p-cream);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.portal-topbar-dropdown-member-name {
+  font-size: 0.6875rem;
+  color: var(--p-text-muted);
+}
+
 .portal-topbar-user {
   display: none;
   align-items: center;

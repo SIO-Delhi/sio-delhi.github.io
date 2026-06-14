@@ -130,6 +130,8 @@ export const PerfFormSchema = z.object({
   period: z.string().nullable().optional(),
   is_active: z.union([z.boolean(), z.number()]).optional(),
   banner_image: z.string().nullable().optional(),
+  banner_text: z.string().nullable().optional(),
+  banner_zone_text: z.string().nullable().optional(),
   theme_primary_color: z.string().nullable().optional(),
   footer_bg_color: z.string().nullable().optional(),
   footer_text_color: z.string().nullable().optional(),

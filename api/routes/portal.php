@@ -224,7 +224,10 @@ function ensurePerfFormsSchema($db)
         "ALTER TABLE portal_perf_forms ADD COLUMN template_key VARCHAR(100) NULL AFTER is_template",
         "ALTER TABLE portal_perf_forms ADD COLUMN is_public TINYINT(1) DEFAULT 0 AFTER template_key",
         "ALTER TABLE portal_perf_forms ADD COLUMN banner_image VARCHAR(500) NULL AFTER is_public",
-        "ALTER TABLE portal_perf_forms ADD COLUMN theme_primary_color VARCHAR(20) DEFAULT '#ff3b3b' AFTER banner_image",
+        "ALTER TABLE portal_perf_forms ADD COLUMN banner_text VARCHAR(120) NULL AFTER banner_image",
+        "ALTER TABLE portal_perf_forms ADD COLUMN banner_zone_text VARCHAR(80) NULL AFTER banner_text",
+        "ALTER TABLE portal_perf_forms ADD COLUMN theme_primary_color VARCHAR(20) DEFAULT '#2563eb' AFTER banner_zone_text",
+        "ALTER TABLE portal_perf_forms MODIFY COLUMN theme_primary_color VARCHAR(20) DEFAULT '#2563eb'",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_bg_color VARCHAR(20) NULL AFTER theme_primary_color",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_text_color VARCHAR(20) NULL AFTER footer_bg_color",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_pattern_color VARCHAR(20) NULL AFTER footer_text_color",
@@ -564,7 +567,9 @@ function portalSetup()
                 template_key VARCHAR(100) NULL,
                 is_public TINYINT(1) DEFAULT 0,
                 banner_image VARCHAR(500) NULL,
-                theme_primary_color VARCHAR(20) DEFAULT '#ff3b3b',
+                banner_text VARCHAR(120) NULL,
+                banner_zone_text VARCHAR(80) NULL,
+                theme_primary_color VARCHAR(20) DEFAULT '#2563eb',
                 footer_bg_color VARCHAR(20) NULL,
                 footer_text_color VARCHAR(20) NULL,
                 footer_pattern_color VARCHAR(20) NULL,
@@ -600,7 +605,10 @@ function portalSetup()
         "ALTER TABLE portal_perf_forms ADD COLUMN template_key VARCHAR(100) NULL AFTER is_template",
         "ALTER TABLE portal_perf_forms ADD COLUMN is_public TINYINT(1) DEFAULT 0 AFTER template_key",
         "ALTER TABLE portal_perf_forms ADD COLUMN banner_image VARCHAR(500) NULL AFTER is_public",
-        "ALTER TABLE portal_perf_forms ADD COLUMN theme_primary_color VARCHAR(20) DEFAULT '#ff3b3b' AFTER banner_image",
+        "ALTER TABLE portal_perf_forms ADD COLUMN banner_text VARCHAR(120) NULL AFTER banner_image",
+        "ALTER TABLE portal_perf_forms ADD COLUMN banner_zone_text VARCHAR(80) NULL AFTER banner_text",
+        "ALTER TABLE portal_perf_forms ADD COLUMN theme_primary_color VARCHAR(20) DEFAULT '#2563eb' AFTER banner_zone_text",
+        "ALTER TABLE portal_perf_forms MODIFY COLUMN theme_primary_color VARCHAR(20) DEFAULT '#2563eb'",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_bg_color VARCHAR(20) NULL AFTER theme_primary_color",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_text_color VARCHAR(20) NULL AFTER footer_bg_color",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_pattern_color VARCHAR(20) NULL AFTER footer_text_color",
@@ -2270,7 +2278,7 @@ function portalNotificationCounts()
     $role = $_GET['role'] ?? 'member';
     $unitId = $_GET['unitId'] ?? null;
 
-    $out = ['unreadMessages' => 0, 'pendingMigrations' => 0, 'pendingForms' => 0];
+    $out = ['unreadMessages' => 0, 'pendingMigrations' => 0, 'pendingForms' => 0, 'pendingResponseDetails' => []];
 
     // Check if region columns exist (may not be migrated yet)
     $regionCols = hasRegionColumns($db);
@@ -2339,26 +2347,39 @@ function portalNotificationCounts()
         $out['pendingForms'] = (int) $stmt->fetchColumn();
     } elseif (in_array($role, ['admin', 'zonal_secretary', 'regional_president', 'unit_president'], true) && $userId) {
         ensurePerfResponseNotificationViewsTable($db);
+        $detailBase = "SELECT r.id AS response_id, r.form_id, f.title AS form_title, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS member_name, r.submitted_at FROM portal_perf_responses r JOIN portal_perf_forms f ON r.form_id = f.id LEFT JOIN portal_users u ON r.member_id = u.id WHERE NOT EXISTS (SELECT 1 FROM portal_perf_reviews rev WHERE rev.response_id = r.id) AND NOT EXISTS (SELECT 1 FROM portal_perf_response_notification_views v WHERE v.response_id = r.id AND v.user_id = ?)";
         $base = "SELECT COUNT(*) FROM portal_perf_responses r WHERE NOT EXISTS (SELECT 1 FROM portal_perf_reviews rev WHERE rev.response_id = r.id) AND NOT EXISTS (SELECT 1 FROM portal_perf_response_notification_views v WHERE v.response_id = r.id AND v.user_id = ?)";
         $params = [$userId];
+        $detailParams = [$userId];
         if ($role === 'unit_president' && $unitId) {
-            $base .= " AND r.member_id IN (SELECT id FROM portal_users WHERE unit_id = ?)";
+            $filter = " AND r.member_id IN (SELECT id FROM portal_users WHERE unit_id = ?)";
+            $base .= $filter;
+            $detailBase .= $filter;
             $params[] = $unitId;
+            $detailParams[] = $unitId;
         } elseif ($role === 'regional_president' && $hasUserRegion && $hasUnitRegion) {
-            $base .= " AND r.member_id IN (SELECT id FROM portal_users WHERE unit_id IN (SELECT id FROM portal_units WHERE region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president')))";
+            $filter = " AND r.member_id IN (SELECT id FROM portal_users WHERE unit_id IN (SELECT id FROM portal_units WHERE region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president')))";
+            $base .= $filter;
+            $detailBase .= $filter;
             $params[] = $userId;
+            $detailParams[] = $userId;
         } elseif ($role === 'regional_president') {
-            // Fallback: no region columns, skip filtering (show 0)
             $out['pendingForms'] = 0;
+            $out['pendingResponseDetails'] = [];
             $params = null;
         }
         if ($params !== null) {
             if ($params) {
-                $stmt = $db->prepare($base);
-                $stmt->execute($params);
-                $out['pendingForms'] = (int) $stmt->fetchColumn();
+                $countStmt = $db->prepare($base);
+                $countStmt->execute($params);
+                $out['pendingForms'] = (int) $countStmt->fetchColumn();
+
+                $detailStmt = $db->prepare($detailBase . " ORDER BY r.submitted_at DESC LIMIT 50");
+                $detailStmt->execute($detailParams);
+                $out['pendingResponseDetails'] = $detailStmt->fetchAll();
             } else {
                 $out['pendingForms'] = (int) $db->query($base)->fetchColumn();
+                $out['pendingResponseDetails'] = [];
             }
         }
     }
@@ -2830,7 +2851,7 @@ function portalCreatePerfForm()
     $formId = uuid();
 
     $scopeType = $body['scope_type'] ?? (!empty($body['scope_unit_id']) ? 'unit' : 'zone');
-    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_type, scope_region_id, scope_unit_id, scope_circle_id, scope_campus_id, period, is_template, template_key, is_public, banner_image, theme_primary_color, footer_bg_color, footer_text_color, footer_pattern_color) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_type, scope_region_id, scope_unit_id, scope_circle_id, scope_campus_id, period, is_template, template_key, is_public, banner_image, banner_text, banner_zone_text, theme_primary_color, footer_bg_color, footer_text_color, footer_pattern_color) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         $formId,
         $body['title'],
@@ -2846,7 +2867,9 @@ function portalCreatePerfForm()
         $body['template_key'] ?? null,
         !empty($body['is_public']) ? 1 : 0,
         $body['banner_image'] ?? null,
-        $body['theme_primary_color'] ?? '#ff3b3b',
+        $body['banner_text'] ?? null,
+        $body['banner_zone_text'] ?? null,
+        $body['theme_primary_color'] ?? '#2563eb',
         $body['footer_bg_color'] ?? null,
         $body['footer_text_color'] ?? null,
         $body['footer_pattern_color'] ?? null,
@@ -2870,7 +2893,7 @@ function portalUpdatePerfForm($id)
     ensurePerfFormsSchema($db);
 
     // Update form metadata
-    $allowed = ['title', 'description', 'scope_type', 'scope_region_id', 'scope_unit_id', 'scope_circle_id', 'scope_campus_id', 'period', 'is_active', 'is_template', 'template_key', 'is_public', 'banner_image', 'theme_primary_color', 'footer_bg_color', 'footer_text_color', 'footer_pattern_color'];
+    $allowed = ['title', 'description', 'scope_type', 'scope_region_id', 'scope_unit_id', 'scope_circle_id', 'scope_campus_id', 'period', 'is_active', 'is_template', 'template_key', 'is_public', 'banner_image', 'banner_text', 'banner_zone_text', 'theme_primary_color', 'footer_bg_color', 'footer_text_color', 'footer_pattern_color'];
     $sets = [];
     $params = [];
     foreach ($allowed as $key) {

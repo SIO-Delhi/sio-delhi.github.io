@@ -422,6 +422,8 @@ export async function createPerfForm(data: {
   is_public?: boolean
   template_key?: string | null
   banner_image?: string | null
+  banner_text?: string | null
+  banner_zone_text?: string | null
   theme_primary_color?: string | null
   footer_bg_color?: string | null
   footer_text_color?: string | null
@@ -625,10 +627,19 @@ export async function deleteRegion(id: string): Promise<void> {
    Notification Counts (sidebar badges)
    ═══════════════════════════════════════════ */
 
+export interface PendingResponseDetail {
+  response_id: string
+  form_id: string
+  form_title: string
+  member_name: string | null
+  submitted_at: string
+}
+
 export interface NotificationCounts {
   unreadMessages: number
   pendingMigrations: number
   pendingForms: number
+  pendingResponseDetails?: PendingResponseDetail[]
 }
 
 export async function fetchNotificationCounts(filters: {

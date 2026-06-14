@@ -1,14 +1,15 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { usePortalAuth } from './PortalAuthContext'
-import { fetchNotificationCounts, type NotificationCounts } from '../api'
+import { fetchNotificationCounts, type NotificationCounts, type PendingResponseDetail } from '../api'
 import type { BadgeKey } from '../constants'
 
 const POLL_INTERVAL = 60_000 // 60 seconds
 
-const EMPTY: NotificationCounts = { unreadMessages: 0, pendingMigrations: 0, pendingForms: 0 }
+const EMPTY: NotificationCounts = { unreadMessages: 0, pendingMigrations: 0, pendingForms: 0, pendingResponseDetails: [] }
 
 interface NotificationContextValue {
   counts: NotificationCounts
+  pendingResponseDetails: PendingResponseDetail[]
   /** Immediately decrement a badge count by `amount` (default 1) without waiting for the next poll */
   decrement: (key: BadgeKey, amount?: number) => void
   /** Force a fresh fetch from the server */
@@ -17,6 +18,7 @@ interface NotificationContextValue {
 
 const NotificationCtx = createContext<NotificationContextValue>({
   counts: EMPTY,
+  pendingResponseDetails: [],
   decrement: () => {},
   refresh: () => {},
 })
@@ -24,6 +26,7 @@ const NotificationCtx = createContext<NotificationContextValue>({
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user } = usePortalAuth()
   const [counts, setCounts] = useState<NotificationCounts>(EMPTY)
+  const [pendingResponseDetails, setPendingResponseDetails] = useState<PendingResponseDetail[]>([])
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const fetchCounts = useCallback(async () => {
@@ -35,8 +38,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         unitId: user.unit_id ?? undefined,
       })
       setCounts(data)
+      setPendingResponseDetails(data.pendingResponseDetails ?? [])
     } catch {
-      // Silently ignore — don't block the sidebar
+      // Silently ignore
     }
   }, [user])
 
@@ -60,7 +64,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, [fetchCounts])
 
   return (
-    <NotificationCtx.Provider value={{ counts, decrement, refresh }}>
+    <NotificationCtx.Provider value={{ counts, pendingResponseDetails, decrement, refresh }}>
       {children}
     </NotificationCtx.Provider>
   )

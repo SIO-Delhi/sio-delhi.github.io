@@ -29,7 +29,7 @@ type TopBarProps = {
 
 export function TopBar({ title, theme = 'dark', onToggleTheme }: TopBarProps) {
   const { user } = usePortalAuth()
-  const { counts, decrement, refresh } = useNotifications()
+  const { counts, pendingResponseDetails, decrement, refresh } = useNotifications()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -151,7 +151,9 @@ export function TopBar({ title, theme = 'dark', onToggleTheme }: TopBarProps) {
     if (item.key === 'forms' && user?.role !== 'member') {
       if (user) {
         api.markPerfResponseNotificationsSeen(user.id)
-          .then(() => decrement('pendingForms', item.count))
+          .then(() => {
+            decrement('pendingForms', item.count)
+          })
           .catch(() => refresh())
       }
     }
@@ -250,21 +252,36 @@ export function TopBar({ title, theme = 'dark', onToggleTheme }: TopBarProps) {
           {open && (
             <div className="portal-topbar-dropdown">
               <p className="portal-topbar-dropdown-title">Notifications</p>
-              {total === 0 ? (
+              {total === 0 && pendingResponseDetails.length === 0 ? (
                 <p className="portal-topbar-dropdown-empty">All caught up!</p>
               ) : (
-                <div className="portal-topbar-dropdown-list">
-                  {items.filter(i => i.count > 0).map(item => {
-                    const Icon = item.icon
-                    return (
-                      <button key={item.key} className="portal-topbar-dropdown-item" onClick={() => handleItemClick(item)}>
-                        <div className="portal-topbar-dropdown-icon"><Icon size={16} /></div>
-                        <span className="portal-topbar-dropdown-label">{item.label}</span>
-                        <span className="portal-topbar-dropdown-count">{item.count}</span>
-                      </button>
-                    )
-                  })}
-                </div>
+                <>
+                  <div className="portal-topbar-dropdown-list">
+                    {items.filter(i => i.count > 0).map(item => {
+                      const Icon = item.icon
+                      return (
+                        <button key={item.key} className="portal-topbar-dropdown-item" onClick={() => handleItemClick(item)}>
+                          <div className="portal-topbar-dropdown-icon"><Icon size={16} /></div>
+                          <span className="portal-topbar-dropdown-label">{item.label}</span>
+                          <span className="portal-topbar-dropdown-count">{item.count}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {pendingResponseDetails.length > 0 && user?.role !== 'member' && (
+                    <div className="portal-topbar-dropdown-section">
+                      <p className="portal-topbar-dropdown-section-title">Latest responses</p>
+                      {pendingResponseDetails.slice(0, 10).map(d => (
+                        <div key={d.response_id} className="portal-topbar-dropdown-item portal-topbar-dropdown-item-detail">
+                          <div className="portal-topbar-dropdown-detail-info">
+                            <span className="portal-topbar-dropdown-form-title">{d.form_title}</span>
+                            <span className="portal-topbar-dropdown-member-name">{d.member_name ?? 'Anonymous'}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

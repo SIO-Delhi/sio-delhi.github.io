@@ -28,10 +28,12 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
   const fillWrapClass = publicMode ? 'portal-public-form-wrap' : 'portal-page portal-page-narrow portal-perf-form-wrap'
   const headerClass = publicMode ? 'portal-public-form-header' : 'portal-public-form-header portal-perf-form-header'
   const formClass = publicMode ? 'portal-form-stack-lg portal-perf-fill-form' : 'portal-form-stack-lg portal-perf-fill-form portal-perf-member-fill-form'
-  const primaryColor = form?.theme_primary_color || '#ff3b3b'
+  const primaryColor = normalizePrimaryColor(form?.theme_primary_color)
   const footerBgColor = form?.footer_bg_color || '#6a63fe'
   const footerTextColor = form?.footer_text_color || '#fdedcb'
   const footerPatternColor = form?.footer_pattern_color || '#6e6ef9'
+  const bannerText = defaultBannerTextForForm(form)
+  const bannerZoneText = defaultBannerZoneTextForForm(form)
 
   useEffect(() => {
     if (!formId) return
@@ -150,18 +152,19 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
         )}
 
         <div className={headerClass}>
-          <div className="portal-public-form-accent" style={{ background: `linear-gradient(90deg, ${primaryColor}, ${footerBgColor})` }} />
           {form.banner_image ? (
             <div className="portal-public-form-image-banner">
               <img src={form.banner_image} alt="" />
             </div>
           ) : (
-            <FormFooter
-              className="portal-public-form-top-banner"
-              bgColor={footerBgColor}
-              textColor={footerTextColor}
-              patternColor={footerPatternColor}
-            />
+            <div className="portal-public-form-banner-art">
+              <FormFooter
+                className="portal-public-form-top-banner"
+                bgColor={footerBgColor}
+                textColor={footerTextColor}
+                patternColor={footerPatternColor}
+              />
+            </div>
           )}
           <div className="portal-public-form-header-body">
             <span className="portal-public-form-kicker" style={{ color: primaryColor }}>SIO report form</span>
@@ -198,15 +201,59 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
           </button>
         </form>
 
-        <a href="/" className="portal-public-form-footer" aria-label="Go to home">
+        <div className="portal-form-identity-footer-art">
           <FormFooter
             bgColor={footerBgColor}
-            textColor={footerTextColor}
+            textColor={footerBgColor}
             patternColor={footerPatternColor}
           />
-        </a>
+          <BannerCustomOverlay bannerText={bannerText} zoneText={bannerZoneText} textColor={footerTextColor} />
+        </div>
       </div>
     </Shell>
+  )
+}
+
+function normalizePrimaryColor(color?: string | null): string {
+  return !color || color.toLowerCase() === '#ff3b3b' ? '#2563eb' : color
+}
+
+function defaultBannerTextForForm(form?: PerfForm | null): string {
+  return (
+    form?.banner_text?.trim() ||
+    form?.scope_campus_name?.trim() ||
+    form?.scope_unit_name?.trim() ||
+    form?.scope_circle_name?.trim() ||
+    form?.scope_region_name?.trim() ||
+    'Delhi Zone'
+  )
+}
+
+function defaultBannerZoneTextForForm(form?: PerfForm | null): string {
+  return form?.banner_zone_text?.trim() || form?.scope_region_name?.trim() || 'Delhi Zone'
+}
+
+function BannerCustomOverlay({
+  bannerText,
+  zoneText,
+  textColor,
+}: {
+  bannerText: string
+  zoneText: string
+  textColor: string
+}) {
+  const mainText = bannerText.trim() || 'Delhi Zone'
+  const normalizedMain = mainText.toLowerCase()
+  const normalizedZone = zoneText.trim().toLowerCase()
+
+  return (
+    <div className="portal-banner-custom-overlay" style={{ color: textColor }}>
+      <span className="portal-banner-brand-mark">SIO<small>DELHI</small></span>
+      <span className="portal-banner-main-text">{mainText}</span>
+      {zoneText.trim() && normalizedZone !== normalizedMain && (
+        <span className="portal-banner-zone-text">{zoneText.trim()}</span>
+      )}
+    </div>
   )
 }
 

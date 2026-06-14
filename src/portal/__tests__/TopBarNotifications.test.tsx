@@ -29,7 +29,8 @@ vi.mock('../context/PortalAuthContext', () => ({
 
 vi.mock('../context/NotificationContext', () => ({
   useNotifications: () => ({
-    counts: { unreadMessages: 0, pendingMigrations: 0, pendingForms: 1 },
+    counts: { unreadMessages: 0, pendingMigrations: 0, pendingForms: 1, pendingResponseDetails: [] },
+    pendingResponseDetails: [],
     refresh,
     decrement,
   }),

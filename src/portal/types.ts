@@ -202,6 +202,8 @@ export interface PerfForm {
   template_key?: string | null
   is_public?: boolean | number
   banner_image?: string | null
+  banner_text?: string | null
+  banner_zone_text?: string | null
   theme_primary_color?: string | null
   footer_bg_color?: string | null
   footer_text_color?: string | null
