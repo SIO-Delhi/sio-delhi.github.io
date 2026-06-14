@@ -47,7 +47,7 @@ export function PerformancePage() {
   }
 
   function getCanonicalOrigin() {
-    return 'https://siodelhi.org'
+    return typeof window !== 'undefined' ? window.location.origin : 'https://siodelhi.org'
   }
 
   function getShareTarget(form: PerfForm) {

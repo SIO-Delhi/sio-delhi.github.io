@@ -32,8 +32,6 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
   const footerBgColor = form?.footer_bg_color || '#6a63fe'
   const footerTextColor = form?.footer_text_color || '#fdedcb'
   const footerPatternColor = form?.footer_pattern_color || '#6e6ef9'
-  const bannerText = defaultBannerTextForForm(form)
-  const bannerZoneText = defaultBannerZoneTextForForm(form)
 
   useEffect(() => {
     if (!formId) return
@@ -152,22 +150,12 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
         )}
 
         <div className={headerClass}>
-          {form.banner_image ? (
+          {form.banner_image && (
             <div className="portal-public-form-image-banner">
               <img src={form.banner_image} alt="" />
             </div>
-          ) : (
-            <div className="portal-public-form-banner-art">
-              <FormFooter
-                className="portal-public-form-top-banner"
-                bgColor={footerBgColor}
-                textColor={footerTextColor}
-                patternColor={footerPatternColor}
-              />
-            </div>
           )}
           <div className="portal-public-form-header-body">
-            <span className="portal-public-form-kicker" style={{ color: primaryColor }}>SIO report form</span>
             <h1 className="portal-heading portal-public-form-title">{form.title}</h1>
             {form.description && <p className="portal-subheading portal-public-form-desc">{form.description}</p>}
             {form.period && <p className="portal-public-form-period" style={{ color: primaryColor, background: `${primaryColor}14` }}>Period: {form.period}</p>}
@@ -204,10 +192,9 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
         <div className="portal-form-identity-footer-art">
           <FormFooter
             bgColor={footerBgColor}
-            textColor={footerBgColor}
+            textColor={footerTextColor}
             patternColor={footerPatternColor}
           />
-          <BannerCustomOverlay bannerText={bannerText} zoneText={bannerZoneText} textColor={footerTextColor} />
         </div>
       </div>
     </Shell>
@@ -216,45 +203,6 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
 
 function normalizePrimaryColor(color?: string | null): string {
   return !color || color.toLowerCase() === '#ff3b3b' ? '#2563eb' : color
-}
-
-function defaultBannerTextForForm(form?: PerfForm | null): string {
-  return (
-    form?.banner_text?.trim() ||
-    form?.scope_campus_name?.trim() ||
-    form?.scope_unit_name?.trim() ||
-    form?.scope_circle_name?.trim() ||
-    form?.scope_region_name?.trim() ||
-    'Delhi Zone'
-  )
-}
-
-function defaultBannerZoneTextForForm(form?: PerfForm | null): string {
-  return form?.banner_zone_text?.trim() || form?.scope_region_name?.trim() || 'Delhi Zone'
-}
-
-function BannerCustomOverlay({
-  bannerText,
-  zoneText,
-  textColor,
-}: {
-  bannerText: string
-  zoneText: string
-  textColor: string
-}) {
-  const mainText = bannerText.trim() || 'Delhi Zone'
-  const normalizedMain = mainText.toLowerCase()
-  const normalizedZone = zoneText.trim().toLowerCase()
-
-  return (
-    <div className="portal-banner-custom-overlay" style={{ color: textColor }}>
-      <span className="portal-banner-brand-mark">SIO<small>DELHI</small></span>
-      <span className="portal-banner-main-text">{mainText}</span>
-      {zoneText.trim() && normalizedZone !== normalizedMain && (
-        <span className="portal-banner-zone-text">{zoneText.trim()}</span>
-      )}
-    </div>
-  )
 }
 
 function isEmptyAnswer(value: unknown): boolean {

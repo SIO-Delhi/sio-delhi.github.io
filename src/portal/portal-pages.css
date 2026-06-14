@@ -90,65 +90,6 @@
   margin-top: 0;
 }
 
-.portal-banner-custom-overlay {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  grid-template-columns: minmax(72px, 0.22fr) minmax(0, 1fr) minmax(74px, 0.22fr);
-  align-items: center;
-  gap: 10px;
-  padding: 8px clamp(14px, 3.5vw, 34px);
-  pointer-events: none;
-}
-
-.portal-public-form-banner-art .portal-banner-custom-overlay {
-  inset: 18px 18px 0;
-}
-
-.portal-banner-brand-mark,
-.portal-banner-main-text,
-.portal-banner-zone-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.14);
-}
-
-.portal-banner-brand-mark {
-  justify-self: start;
-  display: grid;
-  gap: 1px;
-  line-height: 0.9;
-  font-size: clamp(0.78rem, 2.1vw, 1.25rem);
-  font-weight: 900;
-  letter-spacing: 0;
-}
-
-.portal-banner-brand-mark small {
-  font-size: 0.45em;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-.portal-banner-main-text {
-  justify-self: center;
-  max-width: 100%;
-  font-size: clamp(1.3rem, 4.5vw, 2.25rem);
-  font-weight: 900;
-  line-height: 1;
-}
-
-.portal-banner-zone-text {
-  justify-self: end;
-  align-self: end;
-  max-width: 100%;
-  padding-bottom: 2px;
-  font-size: clamp(0.62rem, 1.7vw, 0.82rem);
-  font-weight: 800;
-  opacity: 0.94;
-}
-
 .portal-public-form-image-banner {
   width: calc(100% - 36px);
   aspect-ratio: 3 / 1;
@@ -167,7 +108,7 @@
 }
 
 .portal-public-form-header-body {
-  padding: 28px 30px 20px;
+  padding: 32px;
 }
 
 .portal-public-form-kicker {
@@ -183,15 +124,16 @@
 .portal-public-form-title {
   margin-bottom: 8px;
   color: #111827;
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 900;
+  font-size: 2rem;
+  font-weight: 700;
   line-height: 1.18;
 }
 
 .portal-public-form-desc {
   max-width: 60ch;
   margin-bottom: 0;
-  color: #4b5563;
+  color: #6b7280;
+  line-height: 1.6;
 }
 
 .portal-public-form-period {
@@ -1229,32 +1171,85 @@
   gap: 12px;
 }
 
-.portal-perf-banner-preview {
+.portal-perf-banner-upload-box {
   position: relative;
-  overflow: hidden;
-  border-radius: 10px;
-  border: 1px solid var(--p-border);
-  background: var(--p-bg-card);
-}
-
-.portal-perf-banner-preview img {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   aspect-ratio: 3 / 1;
+  overflow: hidden;
+  border: 2px dashed var(--p-border);
+  border-radius: 12px;
+  background: var(--p-bg-surface);
+}
+
+.portal-perf-banner-upload-box.has-image {
+  border: 0;
+  background: #18181b;
+}
+
+.portal-perf-banner-upload-box img {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+}
+
+.portal-perf-banner-upload-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  color: var(--p-text-muted);
+  cursor: pointer;
+}
+
+.portal-perf-banner-upload-empty span {
+  font-size: 0.9rem;
+  font-weight: 750;
+}
+
+.portal-perf-banner-floating-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.portal-perf-banner-overlay-btn,
+.portal-perf-banner-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.portal-perf-banner-overlay-btn {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.62);
+}
+
+.portal-perf-banner-remove-btn {
+  width: 34px;
+  background: rgba(220, 38, 38, 0.86);
 }
 
 .portal-perf-banner-art-preview {
   position: relative;
   overflow: hidden;
   border-radius: 10px;
-}
-
-.portal-perf-banner-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
 }
 
 .portal-perf-upload-hint {
@@ -1333,6 +1328,19 @@
   margin-top: 8px;
   border-radius: 6px;
   background: #eef2f7;
+}
+
+.portal-perf-appearance-submit-preview {
+  justify-self: start;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
 }
 
 /* Fill page: MCQ / MSQ option lists */
