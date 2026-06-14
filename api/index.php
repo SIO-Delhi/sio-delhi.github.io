@@ -87,6 +87,7 @@ $publicRoutes = [
     'GET /short-links/post/([^/]+)',
     'GET /short-links/form/([^/]+)',
     'POST /dev-reports',
+    'POST /portal/migrate',
 ];
 
 // Get request method and URI
@@ -172,6 +173,7 @@ $routes = [
     // Portal
     'POST /portal/setup' => 'routes/portal.php@portalSetup',
     'POST /portal/seed' => 'routes/portal.php@portalSeed',
+    'POST /portal/migrate' => 'routes/portal.php@portalMigrate',
     'POST /portal/auth/me' => 'routes/portal.php@portalAuthMe',
     'GET /portal/units' => 'routes/portal.php@portalGetUnits',
     'GET /portal/units/([^/]+)/members' => 'routes/portal.php@portalGetUnitMembers',

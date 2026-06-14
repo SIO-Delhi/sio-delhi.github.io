@@ -16,6 +16,7 @@ export function sanitizeHtml(html: string): string {
             'target',
             'rel',
             'dir',
+            'style',
         ],
         ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
     })

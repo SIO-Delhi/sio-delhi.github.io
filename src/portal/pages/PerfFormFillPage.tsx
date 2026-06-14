@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import type { PointerEvent, ReactNode } from 'react'
+import type { CSSProperties, PointerEvent, ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { CheckCircle, ArrowLeft } from 'lucide-react'
 import { usePortalAuth } from '../context/PortalAuthContext'
@@ -7,6 +7,7 @@ import { useNotifications } from '../context/NotificationContext'
 import * as api from '../api'
 import type { PerfForm, PerfField } from '../types'
 import { FormFooter } from '../../components/ui/FormFooter'
+import { sanitizeHtml } from '../../lib/sanitize'
 
 const NON_ANSWER_TYPES = ['heading', 'paragraph', 'image', 'submit', 'divider', 'section_collapse', 'page_break', 'section']
 
@@ -31,6 +32,9 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
   const headerClass = publicMode ? 'portal-public-form-header' : 'portal-public-form-header portal-perf-form-header'
   const formClass = publicMode ? 'portal-form-stack-lg portal-perf-fill-form' : 'portal-form-stack-lg portal-perf-fill-form portal-perf-member-fill-form'
   const primaryColor = normalizePrimaryColor(form?.theme_primary_color)
+  const titleStyle = buildHeaderTextStyle(form?.title_color, form?.title_font_size, form?.title_font_weight, 32)
+  const descriptionStyle = buildHeaderTextStyle(form?.description_color, form?.description_font_size, form?.description_font_weight, 16)
+  const formTitleText = form ? plainTextFromHtml(form.title) : ''
   const footerBgColor = form?.footer_bg_color || '#6a63fe'
   const footerTextColor = form?.footer_text_color || '#fdedcb'
   const footerPatternColor = form?.footer_pattern_color || '#6e6ef9'
@@ -132,7 +136,7 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
             <div className="portal-empty">
               <div className="portal-empty-icon" style={{ background: 'rgba(5,150,105,0.1)', color: '#34d399' }}><CheckCircle size={28} /></div>
               <h3 className="portal-empty-title">Response Submitted!</h3>
-              <p className="portal-empty-desc">Your response to "{form.title}" has been saved successfully.</p>
+              <p className="portal-empty-desc">Your response to "{formTitleText}" has been saved successfully.</p>
               <button onClick={() => publicMode ? navigate('/portal/login') : navigate(-1)} className="portal-btn portal-btn-primary mt-6">
                 <ArrowLeft size={16} /> {publicMode ? 'Done' : 'Back'}
               </button>
@@ -159,8 +163,18 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
             </div>
           )}
           <div className="portal-public-form-header-body">
-            <h1 className="portal-heading portal-public-form-title">{form.title}</h1>
-            {form.description && <p className="portal-subheading portal-public-form-desc">{form.description}</p>}
+            <div
+              className="portal-heading portal-public-form-title"
+              style={titleStyle}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.title) }}
+            />
+            {form.description && (
+              <div
+                className="portal-subheading portal-public-form-desc"
+                style={descriptionStyle}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.description) }}
+              />
+            )}
             {form.period && <p className="portal-public-form-period" style={{ color: primaryColor, background: `${primaryColor}14` }}>Period: {form.period}</p>}
           </div>
           {answerFields.length > 0 && (
@@ -209,6 +223,29 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
 
 function normalizePrimaryColor(color?: string | null): string {
   return !color || color.toLowerCase() === '#ff3b3b' ? '#2563eb' : color
+}
+
+function plainTextFromHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+}
+
+function buildHeaderTextStyle(color?: string | null, fontSize?: number | null, fontWeight?: string | null, defaultSize = 16): CSSProperties {
+  return {
+    color: color || undefined,
+    fontSize: `${clampFontSize(fontSize, defaultSize)}px`,
+    fontWeight: normalizeFontWeight(fontWeight),
+  }
+}
+
+function clampFontSize(value?: number | null, fallback = 16): number {
+  const size = Number(value ?? fallback)
+  if (!Number.isFinite(size)) return fallback
+  return Math.max(12, Math.min(64, size))
+}
+
+function normalizeFontWeight(value?: string | null): CSSProperties['fontWeight'] {
+  if (!value) return undefined
+  return ['400', '500', '600', '700', '800', '900'].includes(value) ? value : undefined
 }
 
 function getFieldKey(field: PerfField, index: number): string {

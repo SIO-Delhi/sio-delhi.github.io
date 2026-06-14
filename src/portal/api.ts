@@ -427,6 +427,12 @@ export async function createPerfForm(data: {
   banner_text?: string | null
   banner_zone_text?: string | null
   theme_primary_color?: string | null
+  title_color?: string | null
+  title_font_size?: number | null
+  title_font_weight?: string | null
+  description_color?: string | null
+  description_font_size?: number | null
+  description_font_weight?: string | null
   footer_bg_color?: string | null
   footer_text_color?: string | null
   footer_pattern_color?: string | null

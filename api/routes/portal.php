@@ -216,6 +216,7 @@ function ensurePerfFormsSchema($db)
     if (!tableExists($db, 'portal_perf_forms'))
         return;
     foreach ([
+        "ALTER TABLE portal_perf_forms MODIFY COLUMN title TEXT NOT NULL",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_type VARCHAR(20) DEFAULT 'zone' AFTER created_by",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_region_id VARCHAR(36) NULL AFTER scope_type",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_region_ids TEXT NULL AFTER scope_region_id",
@@ -230,6 +231,12 @@ function ensurePerfFormsSchema($db)
         "ALTER TABLE portal_perf_forms ADD COLUMN banner_zone_text VARCHAR(80) NULL AFTER banner_text",
         "ALTER TABLE portal_perf_forms ADD COLUMN theme_primary_color VARCHAR(20) DEFAULT '#2563eb' AFTER banner_zone_text",
         "ALTER TABLE portal_perf_forms MODIFY COLUMN theme_primary_color VARCHAR(20) DEFAULT '#2563eb'",
+        "ALTER TABLE portal_perf_forms ADD COLUMN title_color VARCHAR(20) NULL AFTER theme_primary_color",
+        "ALTER TABLE portal_perf_forms ADD COLUMN title_font_size INT NULL AFTER title_color",
+        "ALTER TABLE portal_perf_forms ADD COLUMN title_font_weight VARCHAR(10) NULL AFTER title_font_size",
+        "ALTER TABLE portal_perf_forms ADD COLUMN description_color VARCHAR(20) NULL AFTER title_font_weight",
+        "ALTER TABLE portal_perf_forms ADD COLUMN description_font_size INT NULL AFTER description_color",
+        "ALTER TABLE portal_perf_forms ADD COLUMN description_font_weight VARCHAR(10) NULL AFTER description_font_size",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_bg_color VARCHAR(20) NULL AFTER theme_primary_color",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_text_color VARCHAR(20) NULL AFTER footer_bg_color",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_pattern_color VARCHAR(20) NULL AFTER footer_text_color",
@@ -555,7 +562,7 @@ function portalSetup()
     $db->exec("
             CREATE TABLE IF NOT EXISTS portal_perf_forms (
                 id VARCHAR(36) PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
+                title TEXT NOT NULL,
                 description TEXT,
                 created_by VARCHAR(36) NOT NULL,
                 scope_type VARCHAR(20) DEFAULT 'zone',
@@ -574,6 +581,12 @@ function portalSetup()
                 banner_text VARCHAR(120) NULL,
                 banner_zone_text VARCHAR(80) NULL,
                 theme_primary_color VARCHAR(20) DEFAULT '#2563eb',
+                title_color VARCHAR(20) NULL,
+                title_font_size INT NULL,
+                title_font_weight VARCHAR(10) NULL,
+                description_color VARCHAR(20) NULL,
+                description_font_size INT NULL,
+                description_font_weight VARCHAR(10) NULL,
                 footer_bg_color VARCHAR(20) NULL,
                 footer_text_color VARCHAR(20) NULL,
                 footer_pattern_color VARCHAR(20) NULL,
@@ -601,6 +614,7 @@ function portalSetup()
         ");
 
     foreach ([
+        "ALTER TABLE portal_perf_forms MODIFY COLUMN title TEXT NOT NULL",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_type VARCHAR(20) DEFAULT 'zone' AFTER created_by",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_region_id VARCHAR(36) NULL AFTER scope_type",
         "ALTER TABLE portal_perf_forms ADD COLUMN scope_region_ids TEXT NULL AFTER scope_region_id",
@@ -615,6 +629,12 @@ function portalSetup()
         "ALTER TABLE portal_perf_forms ADD COLUMN banner_zone_text VARCHAR(80) NULL AFTER banner_text",
         "ALTER TABLE portal_perf_forms ADD COLUMN theme_primary_color VARCHAR(20) DEFAULT '#2563eb' AFTER banner_zone_text",
         "ALTER TABLE portal_perf_forms MODIFY COLUMN theme_primary_color VARCHAR(20) DEFAULT '#2563eb'",
+        "ALTER TABLE portal_perf_forms ADD COLUMN title_color VARCHAR(20) NULL AFTER theme_primary_color",
+        "ALTER TABLE portal_perf_forms ADD COLUMN title_font_size INT NULL AFTER title_color",
+        "ALTER TABLE portal_perf_forms ADD COLUMN title_font_weight VARCHAR(10) NULL AFTER title_font_size",
+        "ALTER TABLE portal_perf_forms ADD COLUMN description_color VARCHAR(20) NULL AFTER title_font_weight",
+        "ALTER TABLE portal_perf_forms ADD COLUMN description_font_size INT NULL AFTER description_color",
+        "ALTER TABLE portal_perf_forms ADD COLUMN description_font_weight VARCHAR(10) NULL AFTER description_font_size",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_bg_color VARCHAR(20) NULL AFTER theme_primary_color",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_text_color VARCHAR(20) NULL AFTER footer_bg_color",
         "ALTER TABLE portal_perf_forms ADD COLUMN footer_pattern_color VARCHAR(20) NULL AFTER footer_text_color",
@@ -748,6 +768,16 @@ function portalSetup()
         ");
 
     return ['success' => true, 'messssage' => 'Portal tables created.'];
+}
+
+/* ═══════════════════════════════════════════
+Run DB migrations (from api/migrations/*.sql)
+═══════════════════════════════════════════ */
+
+function portalMigrate()
+{
+    require_once __DIR__ . '/../migrate.php';
+    return runMigrations();
 }
 
 /* ═══════════════════════════════════════════
@@ -2896,7 +2926,7 @@ function portalCreatePerfForm()
     $scopeUnitIds = normalizeIdArray($body['scope_unit_ids'] ?? []);
     $scopeRegionId = $body['scope_region_id'] ?? ($scopeRegionIds[0] ?? null);
     $scopeUnitId = $body['scope_unit_id'] ?? ($scopeUnitIds[0] ?? null);
-    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_type, scope_region_id, scope_region_ids, scope_unit_id, scope_unit_ids, scope_circle_id, scope_campus_id, period, is_template, template_key, is_public, banner_image, banner_text, banner_zone_text, theme_primary_color, footer_bg_color, footer_text_color, footer_pattern_color) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_type, scope_region_id, scope_region_ids, scope_unit_id, scope_unit_ids, scope_circle_id, scope_campus_id, period, is_template, template_key, is_public, banner_image, banner_text, banner_zone_text, theme_primary_color, title_color, title_font_size, title_font_weight, description_color, description_font_size, description_font_weight, footer_bg_color, footer_text_color, footer_pattern_color) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         $formId,
         $body['title'],
@@ -2917,6 +2947,12 @@ function portalCreatePerfForm()
         $body['banner_text'] ?? null,
         $body['banner_zone_text'] ?? null,
         $body['theme_primary_color'] ?? '#2563eb',
+        $body['title_color'] ?? null,
+        $body['title_font_size'] ?? null,
+        $body['title_font_weight'] ?? null,
+        $body['description_color'] ?? null,
+        $body['description_font_size'] ?? null,
+        $body['description_font_weight'] ?? null,
         $body['footer_bg_color'] ?? null,
         $body['footer_text_color'] ?? null,
         $body['footer_pattern_color'] ?? null,
@@ -2954,7 +2990,7 @@ function portalUpdatePerfForm($id)
     }
 
     // Update form metadata
-    $allowed = ['title', 'description', 'scope_type', 'scope_region_id', 'scope_region_ids', 'scope_unit_id', 'scope_unit_ids', 'scope_circle_id', 'scope_campus_id', 'period', 'is_active', 'is_template', 'template_key', 'is_public', 'banner_image', 'banner_text', 'banner_zone_text', 'theme_primary_color', 'footer_bg_color', 'footer_text_color', 'footer_pattern_color'];
+    $allowed = ['title', 'description', 'scope_type', 'scope_region_id', 'scope_region_ids', 'scope_unit_id', 'scope_unit_ids', 'scope_circle_id', 'scope_campus_id', 'period', 'is_active', 'is_template', 'template_key', 'is_public', 'banner_image', 'banner_text', 'banner_zone_text', 'theme_primary_color', 'title_color', 'title_font_size', 'title_font_weight', 'description_color', 'description_font_size', 'description_font_weight', 'footer_bg_color', 'footer_text_color', 'footer_pattern_color'];
     $sets = [];
     $params = [];
     foreach ($allowed as $key) {

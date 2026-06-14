@@ -120,8 +120,8 @@ export function PerformancePage() {
             <div key={form.id} className="portal-card portal-card-body-sm portal-form-card">
               <div className="portal-perf-card-header">
                 <div className="portal-perf-card-main">
-                  <h3 className="portal-perf-card-title">{form.title}</h3>
-                  {form.description && <p className="portal-perf-card-desc">{form.description}</p>}
+                  <h3 className="portal-perf-card-title">{plainTextFromHtml(form.title)}</h3>
+                  {form.description && <p className="portal-perf-card-desc">{plainTextFromHtml(form.description)}</p>}
                 </div>
                 <div className="portal-perf-card-badges">
                   {Number(form.is_public ?? 0) === 1 && <span className="portal-badge portal-badge-info"><Globe2 size={12} /> Public</span>}
@@ -207,4 +207,8 @@ function countJsonIds(value?: string[] | string | null): number {
   } catch {
     return 0
   }
+}
+
+function plainTextFromHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
 }

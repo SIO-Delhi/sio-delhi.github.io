@@ -1,11 +1,14 @@
-import { useRef, useState, useEffect } from 'react'
-import type { ChangeEvent } from 'react'
+import { forwardRef, useRef, useState, useEffect } from 'react'
+import type { ChangeEvent, ReactNode } from 'react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import type { Editor } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import {
   Plus, Trash2, GripVertical, Save, ArrowLeft, Loader2, Wand2, Heading1, User,
   Mail, MapPin, Phone, CalendarDays, PenLine, ShoppingCart, Type, AlignLeft,
   ListChecks, CircleDot, CheckSquare, Hash, Image, Upload, Clock, ShieldCheck,
   ChevronsUp, Send, Table2, Star, BarChart3, Minus, PanelTopClose, FileStack,
-  Globe2,
+  Globe2, Bold, Italic, Underline as UnderlineIcon,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -15,6 +18,7 @@ import type { PortalUnit, PortalCircle, PortalCampus, PerfField, PerfFieldType, 
 import { uploadImage } from '../../lib/storage'
 import { validateImage, compressImage } from '../../lib/imageProcessing'
 import { FormFooter } from '../../components/ui/FormFooter'
+import { EDITOR_EXTENSIONS } from '../../lib/tiptap'
 
 interface FieldDraft {
   key: string
@@ -68,6 +72,13 @@ const CHOICE_TYPES: PerfFieldType[] = ['mcq', 'msq', 'dropdown', 'product_list',
 const MAX_VALUE_TYPES: PerfFieldType[] = ['number', 'rating', 'star_rating', 'scale_rating', 'spinner']
 const NON_ANSWER_TYPES: PerfFieldType[] = ['heading', 'paragraph', 'image', 'submit', 'divider', 'section_collapse', 'page_break', 'section']
 const FIELD_LABELS = new Map(FIELD_TYPES.map(t => [t.value, t.label]))
+const FONT_WEIGHT_OPTIONS = [
+  { value: '400', label: 'Regular' },
+  { value: '500', label: 'Medium' },
+  { value: '600', label: 'Semibold' },
+  { value: '700', label: 'Bold' },
+  { value: '800', label: 'Heavy' },
+]
 
 const PRESETS: { key: string; label: string; title: string; description: string; fields: Omit<FieldDraft, 'key'>[] }[] = [
   {
@@ -193,6 +204,16 @@ function normalizePrimaryColor(color?: string | null): string {
   return !color || color.toLowerCase() === '#ff3b3b' ? '#2563eb' : color
 }
 
+function clampFontSize(value?: number | null, fallback = 16): number {
+  const size = Number(value ?? fallback)
+  if (!Number.isFinite(size)) return fallback
+  return Math.max(12, Math.min(64, size))
+}
+
+function plainTextFromHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()
+}
+
 function normalizeIdList(value?: string[] | string | null, fallback?: string | null): string[] {
   let list: unknown = value
   if (typeof value === 'string') {
@@ -237,7 +258,7 @@ export function PerfFormBuilderPage() {
   const navigate = useNavigate()
   const { formId } = useParams<{ formId?: string }>()
   const isEditMode = !!formId
-  const titleRef = useRef<HTMLInputElement>(null)
+  const titleRef = useRef<HTMLDivElement>(null)
   const saveErrorRef = useRef<HTMLDivElement>(null)
 
   const [title, setTitle] = useState('')
@@ -254,6 +275,12 @@ export function PerfFormBuilderPage() {
   const [isActive, setIsActive] = useState(true)
   const [bannerImage, setBannerImage] = useState<string | null>(null)
   const [themePrimaryColor, setThemePrimaryColor] = useState('#2563eb')
+  const [titleColor, setTitleColor] = useState('#111827')
+  const [titleFontSize, setTitleFontSize] = useState(32)
+  const [titleFontWeight, setTitleFontWeight] = useState('700')
+  const [descriptionColor, setDescriptionColor] = useState('#6b7280')
+  const [descriptionFontSize, setDescriptionFontSize] = useState(16)
+  const [descriptionFontWeight, setDescriptionFontWeight] = useState('400')
   const [footerBgColor, setFooterBgColor] = useState('#6a63fe')
   const [footerTextColor, setFooterTextColor] = useState('#fdedcb')
   const [footerPatternColor, setFooterPatternColor] = useState('#6e6ef9')
@@ -318,6 +345,12 @@ export function PerfFormBuilderPage() {
         setIsActive(typeof form.is_active === 'boolean' ? form.is_active : Number(form.is_active) === 1)
         setBannerImage(form.banner_image ?? null)
         setThemePrimaryColor(normalizePrimaryColor(form.theme_primary_color))
+        setTitleColor(form.title_color || '#111827')
+        setTitleFontSize(clampFontSize(form.title_font_size, 32))
+        setTitleFontWeight(form.title_font_weight || '700')
+        setDescriptionColor(form.description_color || '#6b7280')
+        setDescriptionFontSize(clampFontSize(form.description_font_size, 16))
+        setDescriptionFontWeight(form.description_font_weight || '400')
         setFooterBgColor(form.footer_bg_color || '#6a63fe')
         setFooterTextColor(form.footer_text_color || '#fdedcb')
         setFooterPatternColor(form.footer_pattern_color || '#6e6ef9')
@@ -383,6 +416,12 @@ export function PerfFormBuilderPage() {
     setScopeRegionIds(normalizeIdList(form.scope_region_ids, form.scope_region_id))
     setScopeUnitIds(normalizeIdList(form.scope_unit_ids, form.scope_unit_id))
     setThemePrimaryColor(normalizePrimaryColor(form.theme_primary_color))
+    setTitleColor(form.title_color || '#111827')
+    setTitleFontSize(clampFontSize(form.title_font_size, 32))
+    setTitleFontWeight(form.title_font_weight || '700')
+    setDescriptionColor(form.description_color || '#6b7280')
+    setDescriptionFontSize(clampFontSize(form.description_font_size, 16))
+    setDescriptionFontWeight(form.description_font_weight || '400')
     setFooterBgColor(form.footer_bg_color || '#6a63fe')
     setFooterTextColor(form.footer_text_color || '#fdedcb')
     setFooterPatternColor(form.footer_pattern_color || '#6e6ef9')
@@ -453,7 +492,7 @@ export function PerfFormBuilderPage() {
 
   async function handleSave() {
     setError(null)
-    if (!title.trim()) { showSaveError('Title is required before the form can be created.', titleRef.current); return }
+    if (!plainTextFromHtml(title)) { showSaveError('Title is required before the form can be created.', titleRef.current); return }
     const selectedRegionIds = scopeType === 'region' ? scopeRegionIds : []
     const selectedUnitIds = scopeType === 'unit' ? scopeUnitIds : []
     if (scopeType === 'region' && selectedRegionIds.length === 0) { showSaveError('Select at least one region for this form.'); return }
@@ -473,7 +512,7 @@ export function PerfFormBuilderPage() {
       if (isEditMode) {
         await api.updatePerfForm(formId!, {
           title: title.trim(),
-          description: description.trim() || null,
+          description: plainTextFromHtml(description) ? description.trim() : null,
           scope_type: scopeType,
           scope_region_id: selectedRegionIds[0] || null,
           scope_region_ids: selectedRegionIds,
@@ -488,6 +527,12 @@ export function PerfFormBuilderPage() {
           template_key: templateKey,
           banner_image: bannerImage,
           theme_primary_color: themePrimaryColor,
+          title_color: titleColor,
+          title_font_size: titleFontSize,
+          title_font_weight: titleFontWeight,
+          description_color: descriptionColor,
+          description_font_size: descriptionFontSize,
+          description_font_weight: descriptionFontWeight,
           footer_bg_color: footerBgColor,
           footer_text_color: footerTextColor,
           footer_pattern_color: footerPatternColor,
@@ -496,7 +541,7 @@ export function PerfFormBuilderPage() {
       } else {
         await api.createPerfForm({
           title: title.trim(),
-          description: description.trim() || undefined,
+          description: plainTextFromHtml(description) ? description.trim() : undefined,
           created_by: user!.id,
           scope_type: scopeType,
           scope_region_id: selectedRegionIds[0] || null,
@@ -511,6 +556,12 @@ export function PerfFormBuilderPage() {
           template_key: templateKey,
           banner_image: bannerImage,
           theme_primary_color: themePrimaryColor,
+          title_color: titleColor,
+          title_font_size: titleFontSize,
+          title_font_weight: titleFontWeight,
+          description_color: descriptionColor,
+          description_font_size: descriptionFontSize,
+          description_font_weight: descriptionFontWeight,
           footer_bg_color: footerBgColor,
           footer_text_color: footerTextColor,
           footer_pattern_color: footerPatternColor,
@@ -568,11 +619,24 @@ export function PerfFormBuilderPage() {
           )}
           <div>
             <label className="portal-label portal-label-required">Title</label>
-            <input ref={titleRef} type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. January 2026 Evaluation" className="portal-input" />
+            <InlineHeaderEditor
+              ref={titleRef}
+              value={title}
+              onChange={setTitle}
+              placeholder="e.g. January 2026 Evaluation"
+              minHeight={54}
+              variant="title"
+            />
           </div>
           <div>
             <label className="portal-label">Description</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional description for members" rows={2} className="portal-input portal-textarea" />
+            <InlineHeaderEditor
+              value={description}
+              onChange={setDescription}
+              placeholder="Optional description for members"
+              minHeight={86}
+              variant="description"
+            />
           </div>
           <div className="portal-form-row">
             <div className="flex-1">
@@ -706,7 +770,36 @@ export function PerfFormBuilderPage() {
               <ColorControl label="Pattern" value={footerPatternColor} onChange={setFooterPatternColor} swatches={['#6e6ef9', '#60a5fa', '#334155', '#14b8a6', '#f59e0b', '#8b5cf6']} />
             </div>
 
+            <div className="portal-perf-type-grid">
+              <TypographyControl
+                label="Title"
+                color={titleColor}
+                fontSize={titleFontSize}
+                fontWeight={titleFontWeight}
+                onColorChange={setTitleColor}
+                onSizeChange={setTitleFontSize}
+                onWeightChange={setTitleFontWeight}
+                swatches={['#111827', '#7f1d1d', '#7c2d12', '#1d4ed8', '#0f766e', '#6d28d9']}
+              />
+              <TypographyControl
+                label="Description"
+                color={descriptionColor}
+                fontSize={descriptionFontSize}
+                fontWeight={descriptionFontWeight}
+                onColorChange={setDescriptionColor}
+                onSizeChange={setDescriptionFontSize}
+                onWeightChange={setDescriptionFontWeight}
+                swatches={['#6b7280', '#991b1b', '#475569', '#1d4ed8', '#0f766e', '#6d28d9']}
+              />
+            </div>
+
             <div className="portal-perf-appearance-live">
+              <div className="portal-perf-title-preview">
+                <strong style={{ color: titleColor, fontSize: titleFontSize, fontWeight: titleFontWeight }}>{title || 'Form title preview'}</strong>
+                <p style={{ color: descriptionColor, fontSize: descriptionFontSize, fontWeight: descriptionFontWeight }}>
+                  {description || 'Form description preview'}
+                </p>
+              </div>
               <div className="portal-perf-appearance-live-card" style={{ borderTopColor: themePrimaryColor }}>
                 <span>Sample question</span>
                 <div />
@@ -821,6 +914,162 @@ export function PerfFormBuilderPage() {
         <button type="button" onClick={handleSave} disabled={saving} className="portal-btn portal-btn-primary portal-self-start">
           <Save size={16} /> {saving ? 'Saving…' : isEditMode ? 'Save Changes' : 'Create Form'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+const InlineHeaderEditor = forwardRef<HTMLDivElement, {
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  minHeight: number
+  variant: 'title' | 'description'
+}>(function InlineHeaderEditor({ value, onChange, placeholder, minHeight, variant }, ref) {
+  const editor = useEditor({
+    extensions: EDITOR_EXTENSIONS,
+    content: value || '',
+    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    editorProps: {
+      attributes: {
+        class: `portal-inline-rich-editor-content portal-inline-rich-editor-content-${variant}`,
+        style: `min-height: ${minHeight}px;`,
+      },
+    },
+  })
+
+  useEffect(() => {
+    if (!editor || editor.isFocused) return
+    if ((value || '') !== editor.getHTML()) {
+      editor.commands.setContent(value || '', { emitUpdate: false })
+    }
+  }, [editor, value])
+
+  return (
+    <div ref={ref} className={`portal-inline-rich-editor portal-inline-rich-editor-${variant}`}>
+      {editor && <InlineHeaderBubbleToolbar editor={editor} />}
+      <EditorContent editor={editor} />
+      {editor?.isEmpty && (
+        <span className="portal-inline-rich-placeholder">{placeholder}</span>
+      )}
+    </div>
+  )
+})
+
+function InlineHeaderBubbleToolbar({ editor }: { editor: Editor }) {
+  function applyFontSize(value: string) {
+    if (value === 'default') editor.chain().focus().unsetFontSize().run()
+    else editor.chain().focus().setFontSize(value).run()
+  }
+
+  return (
+    <BubbleMenu
+      editor={editor}
+      // @ts-ignore Tiptap BubbleMenu runtime accepts tippyOptions, but its packaged React type omits it.
+      tippyOptions={{
+        duration: 140,
+        placement: 'top',
+        interactive: true,
+        appendTo: () => document.body,
+      }}
+      shouldShow={({ state }) => {
+        const { from, to } = state.selection
+        return from !== to
+      }}
+    >
+      <div className="portal-inline-rich-toolbar">
+        <ToolbarButton label="Bold" active={editor.isActive('bold')} onSelect={() => editor.chain().focus().toggleBold().run()}>
+          <Bold size={14} />
+        </ToolbarButton>
+        <ToolbarButton label="Italic" active={editor.isActive('italic')} onSelect={() => editor.chain().focus().toggleItalic().run()}>
+          <Italic size={14} />
+        </ToolbarButton>
+        <ToolbarButton label="Underline" active={editor.isActive('underline')} onSelect={() => editor.chain().focus().toggleUnderline().run()}>
+          <UnderlineIcon size={14} />
+        </ToolbarButton>
+        <span className="portal-inline-rich-toolbar-divider" />
+        <select
+          value={editor.getAttributes('textStyle').fontSize || 'default'}
+          onMouseDown={e => e.stopPropagation()}
+          onChange={e => applyFontSize(e.target.value)}
+          className="portal-inline-rich-toolbar-select"
+          aria-label="Text size"
+        >
+          <option value="default">Size</option>
+          <option value="0.875rem">S</option>
+          <option value="1rem">M</option>
+          <option value="1.25rem">L</option>
+          <option value="1.5rem">XL</option>
+          <option value="1.875rem">XXL</option>
+          <option value="2.25rem">Hero</option>
+        </select>
+        <input
+          type="color"
+          value={editor.getAttributes('textStyle').color || '#111827'}
+          onMouseDown={e => e.stopPropagation()}
+          onChange={e => editor.chain().focus().setColor(e.target.value).run()}
+          className="portal-inline-rich-toolbar-color"
+          aria-label="Text color"
+        />
+      </div>
+    </BubbleMenu>
+  )
+}
+
+function ToolbarButton({ label, active, onSelect, children }: { label: string; active: boolean; onSelect: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      className={`portal-inline-rich-toolbar-btn ${active ? 'active' : ''}`}
+      onMouseDown={e => { e.preventDefault(); onSelect() }}
+      aria-label={label}
+      title={label}
+    >
+      {children}
+    </button>
+  )
+}
+
+function TypographyControl({
+  label,
+  color,
+  fontSize,
+  fontWeight,
+  onColorChange,
+  onSizeChange,
+  onWeightChange,
+  swatches,
+}: {
+  label: string
+  color: string
+  fontSize: number
+  fontWeight: string
+  onColorChange: (value: string) => void
+  onSizeChange: (value: number) => void
+  onWeightChange: (value: string) => void
+  swatches: string[]
+}) {
+  return (
+    <div className="portal-perf-type-control">
+      <ColorControl label={`${label} Color`} value={color} onChange={onColorChange} swatches={swatches} />
+      <div className="portal-perf-type-row">
+        <label>
+          <span className="portal-label">{label} Size</span>
+          <input
+            type="number"
+            min={12}
+            max={64}
+            value={fontSize}
+            onChange={e => onSizeChange(clampFontSize(Number(e.target.value), fontSize))}
+            className="portal-input"
+          />
+        </label>
+        <label>
+          <span className="portal-label">{label} Weight</span>
+          <select value={fontWeight} onChange={e => onWeightChange(e.target.value)} className="portal-input portal-select">
+            {FONT_WEIGHT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+        </label>
       </div>
     </div>
   )

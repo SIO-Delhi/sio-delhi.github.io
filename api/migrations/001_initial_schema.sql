@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS portal_messages (
 
 CREATE TABLE IF NOT EXISTS portal_perf_forms (
     id VARCHAR(36) PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
+    title TEXT NOT NULL,
     description TEXT,
     created_by VARCHAR(36) NOT NULL,
     scope_type VARCHAR(20) DEFAULT 'zone',
@@ -141,6 +141,12 @@ CREATE TABLE IF NOT EXISTS portal_perf_forms (
     banner_text VARCHAR(120) NULL,
     banner_zone_text VARCHAR(80) NULL,
     theme_primary_color VARCHAR(20) DEFAULT '#2563eb',
+    title_color VARCHAR(20) NULL,
+    title_font_size INT NULL,
+    title_font_weight VARCHAR(10) NULL,
+    description_color VARCHAR(20) NULL,
+    description_font_size INT NULL,
+    description_font_weight VARCHAR(10) NULL,
     footer_bg_color VARCHAR(20) NULL,
     footer_text_color VARCHAR(20) NULL,
     footer_pattern_color VARCHAR(20) NULL,
