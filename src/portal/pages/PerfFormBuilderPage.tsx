@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
+import type { ChangeEvent } from 'react'
 import {
   Plus, Trash2, GripVertical, Save, ArrowLeft, Loader2, Wand2, Heading1, User,
   Mail, MapPin, Phone, CalendarDays, PenLine, ShoppingCart, Type, AlignLeft,
@@ -11,6 +12,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import * as api from '../api'
 import type { PortalUnit, PortalCircle, PortalCampus, PerfField, PerfFieldType, PerfForm, PerfScopeType } from '../types'
+import { uploadImage } from '../../lib/storage'
+import { validateImage, compressImage } from '../../lib/imageProcessing'
+import { FormFooter } from '../../components/ui/FormFooter'
 
 interface FieldDraft {
   key: string
@@ -165,6 +169,12 @@ export function PerfFormBuilderPage() {
   const [isPublic, setIsPublic] = useState(false)
   const [templateKey, setTemplateKey] = useState<string | null>(null)
   const [isActive, setIsActive] = useState(true)
+  const [bannerImage, setBannerImage] = useState<string | null>(null)
+  const [themePrimaryColor, setThemePrimaryColor] = useState('#ff3b3b')
+  const [footerBgColor, setFooterBgColor] = useState('#6a63fe')
+  const [footerTextColor, setFooterTextColor] = useState('#fdedcb')
+  const [footerPatternColor, setFooterPatternColor] = useState('#6e6ef9')
+  const [uploadingBanner, setUploadingBanner] = useState(false)
   const [fields, setFields] = useState<FieldDraft[]>([newField()])
   const [units, setUnits] = useState<PortalUnit[]>([])
   const [regions, setRegions] = useState<{ region_id: string; region_name: string }[]>([])
@@ -223,6 +233,11 @@ export function PerfFormBuilderPage() {
         setIsPublic(typeof form.is_public === 'boolean' ? form.is_public : Number(form.is_public ?? 0) === 1)
         setTemplateKey(form.template_key ?? null)
         setIsActive(typeof form.is_active === 'boolean' ? form.is_active : Number(form.is_active) === 1)
+        setBannerImage(form.banner_image ?? null)
+        setThemePrimaryColor(form.theme_primary_color || '#ff3b3b')
+        setFooterBgColor(form.footer_bg_color || '#6a63fe')
+        setFooterTextColor(form.footer_text_color || '#fdedcb')
+        setFooterPatternColor(form.footer_pattern_color || '#6e6ef9')
         if (form.fields && form.fields.length > 0) {
           setFields(form.fields.map(f => ({
             key: f.id || crypto.randomUUID(),
@@ -281,6 +296,11 @@ export function PerfFormBuilderPage() {
     setTitle(form.title)
     setDescription(form.description ?? '')
     setTemplateKey(form.template_key ?? form.id)
+    setBannerImage(form.banner_image ?? null)
+    setThemePrimaryColor(form.theme_primary_color || '#ff3b3b')
+    setFooterBgColor(form.footer_bg_color || '#6a63fe')
+    setFooterTextColor(form.footer_text_color || '#fdedcb')
+    setFooterPatternColor(form.footer_pattern_color || '#6e6ef9')
 
     try {
       const fullForm = await api.fetchPerfForm(form.id)
@@ -307,6 +327,23 @@ export function PerfFormBuilderPage() {
       is_required: draft.is_required,
       max_value: draft.max_value,
     })
+  }
+
+  async function handleBannerSelect(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    try {
+      validateImage(file)
+      setUploadingBanner(true)
+      const compressed = await compressImage(file)
+      const url = await uploadImage(compressed, undefined, formId)
+      setBannerImage(url)
+    } catch (err) {
+      showSaveError(err instanceof Error ? err.message : 'Banner upload failed.')
+    } finally {
+      setUploadingBanner(false)
+    }
   }
 
   function buildFieldsPayload() {
@@ -360,6 +397,11 @@ export function PerfFormBuilderPage() {
           is_template: isTemplate,
           is_public: isPublic,
           template_key: templateKey,
+          banner_image: bannerImage,
+          theme_primary_color: themePrimaryColor,
+          footer_bg_color: footerBgColor,
+          footer_text_color: footerTextColor,
+          footer_pattern_color: footerPatternColor,
           fields: buildFieldsPayload(),
         })
       } else {
@@ -376,6 +418,11 @@ export function PerfFormBuilderPage() {
           is_template: isTemplate,
           is_public: isPublic,
           template_key: templateKey,
+          banner_image: bannerImage,
+          theme_primary_color: themePrimaryColor,
+          footer_bg_color: footerBgColor,
+          footer_text_color: footerTextColor,
+          footer_pattern_color: footerPatternColor,
           fields: buildFieldsPayload(),
         })
       }
@@ -495,6 +542,60 @@ export function PerfFormBuilderPage() {
               <span>Active (members can fill this form)</span>
             </label>
           )}
+
+          <div className="portal-perf-appearance-panel">
+            <div className="portal-perf-appearance-header">
+              <div>
+                <h2>Appearance</h2>
+                <p>Customize the banner, accent, and footer shown on the fill page.</p>
+              </div>
+            </div>
+
+            <div className="portal-perf-banner-editor">
+              <div className="portal-perf-banner-preview">
+                {bannerImage ? (
+                  <img src={bannerImage} alt="Form banner preview" />
+                ) : (
+                  <FormFooter
+                    bgColor={footerBgColor}
+                    textColor={footerTextColor}
+                    patternColor={footerPatternColor}
+                  />
+                )}
+              </div>
+              <div className="portal-perf-banner-actions">
+                <label className="portal-btn portal-btn-secondary portal-btn-sm">
+                  {uploadingBanner ? <Loader2 size={14} className="portal-spin" /> : <Upload size={14} />}
+                  {bannerImage ? 'Change Banner' : 'Upload Banner'}
+                  <input type="file" accept="image/*" onChange={handleBannerSelect} disabled={uploadingBanner} className="portal-hidden-input" />
+                </label>
+                {bannerImage && (
+                  <button type="button" onClick={() => setBannerImage(null)} className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red">
+                    <Trash2 size={14} /> Remove
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="portal-perf-color-grid">
+              <ColorControl label="Accent" value={themePrimaryColor} onChange={setThemePrimaryColor} swatches={['#ff3b3b', '#2563eb', '#16a34a', '#ca8a04', '#7c3aed', '#0891b2']} />
+              <ColorControl label="Footer BG" value={footerBgColor} onChange={setFooterBgColor} swatches={['#6a63fe', '#ff3b3b', '#111827', '#0f766e', '#7c2d12', '#4338ca']} />
+              <ColorControl label="Footer Text" value={footerTextColor} onChange={setFooterTextColor} swatches={['#fdedcb', '#ffffff', '#111827', '#fef3c7', '#dcfce7', '#e0f2fe']} />
+              <ColorControl label="Pattern" value={footerPatternColor} onChange={setFooterPatternColor} swatches={['#6e6ef9', '#ff7676', '#334155', '#14b8a6', '#f59e0b', '#8b5cf6']} />
+            </div>
+
+            <div className="portal-perf-appearance-live">
+              <div className="portal-perf-appearance-live-card" style={{ borderTopColor: themePrimaryColor }}>
+                <span>Sample question</span>
+                <div />
+              </div>
+              <FormFooter
+                bgColor={footerBgColor}
+                textColor={footerTextColor}
+                patternColor={footerPatternColor}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -595,6 +696,40 @@ export function PerfFormBuilderPage() {
         <button type="button" onClick={handleSave} disabled={saving} className="portal-btn portal-btn-primary portal-self-start">
           <Save size={16} /> {saving ? 'Saving…' : isEditMode ? 'Save Changes' : 'Create Form'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+function ColorControl({
+  label,
+  value,
+  onChange,
+  swatches,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  swatches: string[]
+}) {
+  return (
+    <div className="portal-perf-color-control">
+      <label className="portal-label">{label}</label>
+      <div className="portal-perf-color-swatches">
+        {swatches.map(color => (
+          <button
+            key={color}
+            type="button"
+            className="portal-perf-color-swatch"
+            style={{ background: color, boxShadow: value === color ? `0 0 0 2px var(--p-bg-card), 0 0 0 4px ${color}` : undefined }}
+            onClick={() => onChange(color)}
+            aria-label={`${label} ${color}`}
+          />
+        ))}
+      </div>
+      <div className="portal-perf-color-input-row">
+        <input type="color" value={value} onChange={e => onChange(e.target.value)} aria-label={`${label} color picker`} />
+        <input type="text" value={value} onChange={e => onChange(e.target.value)} className="portal-input" />
       </div>
     </div>
   )

@@ -32,24 +32,24 @@ export function TitlesPage() {
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
-  if (!user) return null
+  const portalUser = user!
 
-  const isAdmin = user.role === 'admin'
-  const isZonal = user.role === 'zonal_secretary'
-  const isUnitPres = user.role === 'unit_president'
+  const isAdmin = portalUser.role === 'admin'
+  const isZonal = portalUser.role === 'zonal_secretary'
+  const isUnitPres = portalUser.role === 'unit_president'
 
   const assignableUsers = allUsers.filter(u => {
-    if (u.id === user.id || u.title) return false
+    if (u.id === portalUser.id || u.title) return false
     if (isAdmin) return true
     if (isZonal) return u.role !== 'admin'
-    if (isUnitPres) return u.role === 'member' && u.unit_id === user.unit_id
+    if (isUnitPres) return u.role === 'member' && u.unit_id === portalUser.unit_id
     return false
   })
 
   const visibleTitled = titledUsers.filter(u => {
     if (isAdmin || isZonal) return true
-    if (isUnitPres) return u.unit_id === user.unit_id
-    if (user.role === 'member') return u.id === user.id
+    if (isUnitPres) return u.unit_id === portalUser.unit_id
+    if (portalUser.role === 'member') return u.id === portalUser.id
     return false
   })
 
@@ -90,7 +90,7 @@ export function TitlesPage() {
       } else {
         colorToSend = getDefaultColorForLevel(level, titleText.trim()) || 'blue'
       }
-      await api.assignTitle(selectedUserId, titleText.trim(), user.id, colorToSend)
+      await api.assignTitle(selectedUserId, titleText.trim(), portalUser.id, colorToSend)
       setShowAssign(false)
       setSelectedUserId('')
       setUserSearchQuery('')
@@ -120,7 +120,7 @@ export function TitlesPage() {
     try {
       const level = titleLevel.trim()
       const colorToSend = getDefaultColorForLevel(level, titleText.trim()) || 'blue'
-      await api.assignTitle(editTarget.id, titleText.trim(), user.id, colorToSend)
+      await api.assignTitle(editTarget.id, titleText.trim(), portalUser.id, colorToSend)
       setEditTarget(null)
       setTitleText('')
       setTitleLevel('')
@@ -210,7 +210,7 @@ export function TitlesPage() {
                 <label className="portal-label">Position (preset)</label>
                 <select
                   value={
-                    (TITLE_PRESETS_BY_ROLE[user.role] ?? []).includes(titleText)
+                    (TITLE_PRESETS_BY_ROLE[portalUser.role] ?? []).includes(titleText)
                       ? titleText
                       : titleText ? '__custom__' : ''
                   }
@@ -221,7 +221,7 @@ export function TitlesPage() {
                   className="portal-input portal-select"
                 >
                   <option value="">Select a position…</option>
-                  {(TITLE_PRESETS_BY_ROLE[user.role] ?? []).map(p => (
+                  {(TITLE_PRESETS_BY_ROLE[portalUser.role] ?? []).map(p => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                   <option value="__custom__">Custom title</option>
@@ -266,7 +266,7 @@ export function TitlesPage() {
                 <label className="portal-label">Position (preset)</label>
                 <select
                   value={
-                    (TITLE_PRESETS_BY_ROLE[user.role] ?? []).includes(titleText)
+                    (TITLE_PRESETS_BY_ROLE[portalUser.role] ?? []).includes(titleText)
                       ? titleText
                       : titleText ? '__custom__' : ''
                   }
@@ -277,7 +277,7 @@ export function TitlesPage() {
                   className="portal-input portal-select"
                 >
                   <option value="">Select a position…</option>
-                  {(TITLE_PRESETS_BY_ROLE[user.role] ?? []).map(p => (
+                  {(TITLE_PRESETS_BY_ROLE[portalUser.role] ?? []).map(p => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                   <option value="__custom__">Custom title</option>

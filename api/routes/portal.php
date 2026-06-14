@@ -223,6 +223,11 @@ function ensurePerfFormsSchema($db)
         "ALTER TABLE portal_perf_forms ADD COLUMN is_template TINYINT(1) DEFAULT 0 AFTER is_active",
         "ALTER TABLE portal_perf_forms ADD COLUMN template_key VARCHAR(100) NULL AFTER is_template",
         "ALTER TABLE portal_perf_forms ADD COLUMN is_public TINYINT(1) DEFAULT 0 AFTER template_key",
+        "ALTER TABLE portal_perf_forms ADD COLUMN banner_image VARCHAR(500) NULL AFTER is_public",
+        "ALTER TABLE portal_perf_forms ADD COLUMN theme_primary_color VARCHAR(20) DEFAULT '#ff3b3b' AFTER banner_image",
+        "ALTER TABLE portal_perf_forms ADD COLUMN footer_bg_color VARCHAR(20) NULL AFTER theme_primary_color",
+        "ALTER TABLE portal_perf_forms ADD COLUMN footer_text_color VARCHAR(20) NULL AFTER footer_bg_color",
+        "ALTER TABLE portal_perf_forms ADD COLUMN footer_pattern_color VARCHAR(20) NULL AFTER footer_text_color",
         "ALTER TABLE portal_perf_fields MODIFY COLUMN type VARCHAR(32) NOT NULL",
     ] as $sql) {
         try {
@@ -558,6 +563,11 @@ function portalSetup()
                 is_template TINYINT(1) DEFAULT 0,
                 template_key VARCHAR(100) NULL,
                 is_public TINYINT(1) DEFAULT 0,
+                banner_image VARCHAR(500) NULL,
+                theme_primary_color VARCHAR(20) DEFAULT '#ff3b3b',
+                footer_bg_color VARCHAR(20) NULL,
+                footer_text_color VARCHAR(20) NULL,
+                footer_pattern_color VARCHAR(20) NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (created_by) REFERENCES portal_users(id) ON DELETE CASCADE,
@@ -589,6 +599,11 @@ function portalSetup()
         "ALTER TABLE portal_perf_forms ADD COLUMN is_template TINYINT(1) DEFAULT 0 AFTER is_active",
         "ALTER TABLE portal_perf_forms ADD COLUMN template_key VARCHAR(100) NULL AFTER is_template",
         "ALTER TABLE portal_perf_forms ADD COLUMN is_public TINYINT(1) DEFAULT 0 AFTER template_key",
+        "ALTER TABLE portal_perf_forms ADD COLUMN banner_image VARCHAR(500) NULL AFTER is_public",
+        "ALTER TABLE portal_perf_forms ADD COLUMN theme_primary_color VARCHAR(20) DEFAULT '#ff3b3b' AFTER banner_image",
+        "ALTER TABLE portal_perf_forms ADD COLUMN footer_bg_color VARCHAR(20) NULL AFTER theme_primary_color",
+        "ALTER TABLE portal_perf_forms ADD COLUMN footer_text_color VARCHAR(20) NULL AFTER footer_bg_color",
+        "ALTER TABLE portal_perf_forms ADD COLUMN footer_pattern_color VARCHAR(20) NULL AFTER footer_text_color",
         "ALTER TABLE portal_perf_fields MODIFY COLUMN type VARCHAR(32) NOT NULL",
     ] as $sql) {
         try {
@@ -2815,7 +2830,7 @@ function portalCreatePerfForm()
     $formId = uuid();
 
     $scopeType = $body['scope_type'] ?? (!empty($body['scope_unit_id']) ? 'unit' : 'zone');
-    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_type, scope_region_id, scope_unit_id, scope_circle_id, scope_campus_id, period, is_template, template_key, is_public) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_type, scope_region_id, scope_unit_id, scope_circle_id, scope_campus_id, period, is_template, template_key, is_public, banner_image, theme_primary_color, footer_bg_color, footer_text_color, footer_pattern_color) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         $formId,
         $body['title'],
@@ -2830,6 +2845,11 @@ function portalCreatePerfForm()
         !empty($body['is_template']) ? 1 : 0,
         $body['template_key'] ?? null,
         !empty($body['is_public']) ? 1 : 0,
+        $body['banner_image'] ?? null,
+        $body['theme_primary_color'] ?? '#ff3b3b',
+        $body['footer_bg_color'] ?? null,
+        $body['footer_text_color'] ?? null,
+        $body['footer_pattern_color'] ?? null,
     ]);
 
     // Insert fields
@@ -2850,7 +2870,7 @@ function portalUpdatePerfForm($id)
     ensurePerfFormsSchema($db);
 
     // Update form metadata
-    $allowed = ['title', 'description', 'scope_type', 'scope_region_id', 'scope_unit_id', 'scope_circle_id', 'scope_campus_id', 'period', 'is_active', 'is_template', 'template_key', 'is_public'];
+    $allowed = ['title', 'description', 'scope_type', 'scope_region_id', 'scope_unit_id', 'scope_circle_id', 'scope_campus_id', 'period', 'is_active', 'is_template', 'template_key', 'is_public', 'banner_image', 'theme_primary_color', 'footer_bg_color', 'footer_text_color', 'footer_pattern_color'];
     $sets = [];
     $params = [];
     foreach ($allowed as $key) {

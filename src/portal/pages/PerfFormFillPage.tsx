@@ -6,6 +6,7 @@ import { usePortalAuth } from '../context/PortalAuthContext'
 import { useNotifications } from '../context/NotificationContext'
 import * as api from '../api'
 import type { PerfForm, PerfField } from '../types'
+import { FormFooter } from '../../components/ui/FormFooter'
 
 const NON_ANSWER_TYPES = ['heading', 'paragraph', 'image', 'submit', 'divider', 'section_collapse', 'page_break', 'section']
 
@@ -23,6 +24,14 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
   const Shell = ({ children }: { children: ReactNode }) => (
     publicMode ? <div className="portal-app portal-theme-light portal-public-form-shell">{children}</div> : <>{children}</>
   )
+  const answerFields = (form?.fields ?? []).filter(field => !NON_ANSWER_TYPES.includes(field.type))
+  const fillWrapClass = publicMode ? 'portal-public-form-wrap' : 'portal-page portal-page-narrow portal-perf-form-wrap'
+  const headerClass = publicMode ? 'portal-public-form-header' : 'portal-public-form-header portal-perf-form-header'
+  const formClass = publicMode ? 'portal-form-stack-lg portal-perf-fill-form' : 'portal-form-stack-lg portal-perf-fill-form portal-perf-member-fill-form'
+  const primaryColor = form?.theme_primary_color || '#ff3b3b'
+  const footerBgColor = form?.footer_bg_color || '#6a63fe'
+  const footerTextColor = form?.footer_text_color || '#fdedcb'
+  const footerPatternColor = form?.footer_pattern_color || '#6e6ef9'
 
   useEffect(() => {
     if (!formId) return
@@ -115,8 +124,8 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
   if (success) {
     return (
       <Shell>
-        <div className="portal-page portal-page-narrow">
-          <div className="portal-card portal-card-body">
+        <div className={fillWrapClass}>
+          <div className={publicMode ? 'portal-card portal-card-body portal-perf-success-card' : 'portal-card portal-card-body'}>
             <div className="portal-empty">
               <div className="portal-empty-icon" style={{ background: 'rgba(5,150,105,0.1)', color: '#34d399' }}><CheckCircle size={28} /></div>
               <h3 className="portal-empty-title">Response Submitted!</h3>
@@ -133,24 +142,46 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
 
   return (
     <Shell>
-      <div className="portal-page portal-page-narrow">
+      <div className={fillWrapClass}>
         {!publicMode && (
           <button onClick={() => navigate(-1)} className="portal-btn portal-btn-ghost portal-btn-sm portal-self-start">
             <ArrowLeft size={16} /> Back
           </button>
         )}
 
-        <div>
-          <h1 className="portal-heading">{form.title}</h1>
-          {form.description && <p className="portal-subheading">{form.description}</p>}
-          {form.period && <p className="portal-subheading">Period: {form.period}</p>}
+        <div className={headerClass}>
+          <div className="portal-public-form-accent" style={{ background: `linear-gradient(90deg, ${primaryColor}, ${footerBgColor})` }} />
+          {form.banner_image ? (
+            <div className="portal-public-form-image-banner">
+              <img src={form.banner_image} alt="" />
+            </div>
+          ) : (
+            <FormFooter
+              className="portal-public-form-top-banner"
+              bgColor={footerBgColor}
+              textColor={footerTextColor}
+              patternColor={footerPatternColor}
+            />
+          )}
+          <div className="portal-public-form-header-body">
+            <span className="portal-public-form-kicker" style={{ color: primaryColor }}>SIO report form</span>
+            <h1 className="portal-heading portal-public-form-title">{form.title}</h1>
+            {form.description && <p className="portal-subheading portal-public-form-desc">{form.description}</p>}
+            {form.period && <p className="portal-public-form-period" style={{ color: primaryColor, background: `${primaryColor}14` }}>Period: {form.period}</p>}
+          </div>
+          {answerFields.length > 0 && (
+            <div className="portal-public-form-meta">
+              <span>{answerFields.length} questions</span>
+              <span>{answerFields.filter(field => field.is_required).length} required</span>
+            </div>
+          )}
         </div>
 
         {error && <div className="portal-alert portal-alert-error">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="portal-form-stack-lg">
+        <form onSubmit={handleSubmit} className={formClass}>
           {(form.fields ?? []).map((field, idx) => (
-            <div key={field.id} className={NON_ANSWER_TYPES.includes(field.type) ? 'portal-perf-section-block' : 'portal-card portal-card-body-sm'}>
+            <div key={field.id} className={NON_ANSWER_TYPES.includes(field.type) ? 'portal-perf-section-block' : 'portal-card portal-card-body-sm portal-perf-fill-card'}>
               {field.type !== 'divider' && (
                 <label className={`portal-label ${field.is_required && !NON_ANSWER_TYPES.includes(field.type) ? 'portal-label-required' : ''}`}>
                   {idx + 1}. {field.label}
@@ -162,10 +193,18 @@ export function PerfFormFillPage({ publicMode = false }: { publicMode?: boolean 
             </div>
           ))}
 
-          <button type="submit" disabled={submitting} className="portal-btn portal-btn-primary portal-self-start">
+          <button type="submit" disabled={submitting} className="portal-btn portal-btn-primary portal-self-start" style={{ background: primaryColor }}>
             {submitting ? 'Submitting…' : 'Submit Response'}
           </button>
         </form>
+
+        <a href="/" className="portal-public-form-footer" aria-label="Go to home">
+          <FormFooter
+            bgColor={footerBgColor}
+            textColor={footerTextColor}
+            patternColor={footerPatternColor}
+          />
+        </a>
       </div>
     </Shell>
   )

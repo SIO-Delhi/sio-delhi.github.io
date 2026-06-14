@@ -129,6 +129,11 @@ export const PerfFormSchema = z.object({
   scope_unit_name: z.string().nullable().optional(),
   period: z.string().nullable().optional(),
   is_active: z.union([z.boolean(), z.number()]).optional(),
+  banner_image: z.string().nullable().optional(),
+  theme_primary_color: z.string().nullable().optional(),
+  footer_bg_color: z.string().nullable().optional(),
+  footer_text_color: z.string().nullable().optional(),
+  footer_pattern_color: z.string().nullable().optional(),
   fields: z.array(z.object({
     id: z.string(),
     form_id: z.string().optional(),

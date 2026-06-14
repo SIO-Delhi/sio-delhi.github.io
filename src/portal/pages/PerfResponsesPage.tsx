@@ -71,11 +71,10 @@ export function PerfResponsesPage() {
     }
   }, [user, selectedResponse, reviews])
 
-  if (!user) return null
-
-  const canReview = ['admin', 'zonal_secretary', 'regional_president', 'unit_president'].includes(user.role)
+  const portalUser = user!
+  const canReview = ['admin', 'zonal_secretary', 'regional_president', 'unit_president'].includes(portalUser.role)
   const selectedIsPublic = selectedResponse?.response_source === 'public'
-  const myReview = selectedResponse ? reviews.find(r => r.reviewer_id === user.id) : null
+  const myReview = selectedResponse ? reviews.find(r => r.reviewer_id === portalUser.id) : null
   const units = useMemo(() => Array.from(new Set(responses.map(r => r.unit_name).filter(Boolean) as string[])).sort(), [responses])
   const filteredResponses = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -93,11 +92,11 @@ export function PerfResponsesPage() {
   }, [responses, query, unitFilter])
 
   async function handleSaveReview() {
-    if (!formId || !selectedResponse || !user) return
+    if (!formId || !selectedResponse || !portalUser) return
     setReviewError(null)
     setReviewSaving(true)
     try {
-      await api.upsertPerfResponseReview(formId, selectedResponse.id, user.id, {
+      await api.upsertPerfResponseReview(formId, selectedResponse.id, portalUser.id, {
         comment: reviewComment.trim() || null,
         rating: reviewRating,
       })
@@ -114,7 +113,7 @@ export function PerfResponsesPage() {
   async function handleDeleteReview(reviewId: string) {
     if (!selectedResponse) return
     try {
-      await api.deletePerfReview(reviewId, user!.id)
+      await api.deletePerfReview(reviewId, portalUser.id)
       setReviews(prev => prev.filter(r => r.id !== reviewId))
       setReviewComment('')
       setReviewRating(null)
@@ -262,7 +261,7 @@ export function PerfResponsesPage() {
                         </span>
                       )}
                       <span className="portal-text-muted portal-text-sm">{fmtDate(r.created_at)}</span>
-                      {r.reviewer_id === user.id && (
+                      {r.reviewer_id === portalUser.id && (
                         <button
                           type="button"
                           onClick={() => handleDeleteReview(r.id)}

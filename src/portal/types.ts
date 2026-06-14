@@ -201,6 +201,11 @@ export interface PerfForm {
   is_template?: boolean | number
   template_key?: string | null
   is_public?: boolean | number
+  banner_image?: string | null
+  theme_primary_color?: string | null
+  footer_bg_color?: string | null
+  footer_text_color?: string | null
+  footer_pattern_color?: string | null
   field_count?: number
   response_count?: number
   fields?: PerfField[]

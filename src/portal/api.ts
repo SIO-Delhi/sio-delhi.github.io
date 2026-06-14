@@ -421,6 +421,11 @@ export async function createPerfForm(data: {
   is_template?: boolean
   is_public?: boolean
   template_key?: string | null
+  banner_image?: string | null
+  theme_primary_color?: string | null
+  footer_bg_color?: string | null
+  footer_text_color?: string | null
+  footer_pattern_color?: string | null
   fields: { type: string; label: string; description?: string; options?: string[]; is_required?: boolean; max_value?: number }[]
 }): Promise<{ id: string }> {
   return post<{ id: string }>('/performance/forms', data)

@@ -5,6 +5,9 @@ RewriteEngine On
 RewriteCond %{HTTP:Authorization} .
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
+# Handle short links: /s/CODE → s.php?code=CODE
+RewriteRule ^s/([a-zA-Z0-9]+)$ s.php?code=$1 [L,QSA]
+
 # If the request is for a real file or directory, serve it directly
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -27,7 +30,7 @@ RewriteRule ^(.*)$ index.php [QSA,L]
     Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
     Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
-    Header set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https://clerk.siodelhi.org https://api.clerk.com"
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https://clerk.siodelhi.org https://api.clerk.com"
 
     # CORS headers for uploaded files (PDFs, images, audio)
     <FilesMatch "\.(pdf|jpg|jpeg|png|gif|webp|mp3|wav|ogg)$">

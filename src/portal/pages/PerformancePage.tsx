@@ -68,11 +68,7 @@ export function PerformancePage() {
       await navigator.clipboard.writeText(link.shortUrl)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not create short link.'
-      try {
-        await navigator.clipboard.writeText(fullUrl)
-      } catch {
-        window.prompt('Form link', fullUrl)
-      }
+      window.prompt('Form link', fullUrl)
       setError(`${message} Copied the full form link instead.`)
     } finally {
       setLinkLoadingId(null)
@@ -163,7 +159,7 @@ export function PerformancePage() {
                       <FileText size={14} /> Preview
                     </Link>
                     <button type="button" onClick={() => copyShortFormLink(form)} disabled={linkLoadingId === form.id} className="portal-btn portal-btn-ghost portal-btn-sm">
-                      <Copy size={14} /> {linkLoadingId === form.id ? 'Shortening...' : 'Short Link'}
+                      <Copy size={14} /> {linkLoadingId === form.id ? 'Copying...' : 'Copy Link'}
                     </button>
                     {canCreate && (
                       <button onClick={() => setDeleteTarget(form)} className="portal-btn portal-btn-ghost portal-btn-sm portal-text-red" aria-label="Delete form">
