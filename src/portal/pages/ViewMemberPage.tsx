@@ -316,7 +316,7 @@ export function ViewMemberPage() {
   const tabs: { key: Tab; label: string; icon: typeof Mail }[] = [
     { key: 'info', label: 'Details', icon: User },
     { key: 'messages', label: 'Messages', icon: Mail },
-    { key: 'performance', label: 'Performance', icon: BarChart3 },
+    { key: 'performance', label: 'Forms', icon: BarChart3 },
     { key: 'migrations', label: 'Migrations', icon: ArrowRightLeft },
   ]
   if (isAdmin) tabs.push({ key: 'permissions', label: 'Permissions', icon: Lock })

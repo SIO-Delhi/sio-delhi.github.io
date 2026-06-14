@@ -131,7 +131,42 @@ export interface PortalMessage {
 
 /* ── Performance Form Builder ── */
 
-export type PerfFieldType = 'mcq' | 'msq' | 'subjective' | 'checkbox' | 'number' | 'rating'
+export type PerfFieldType =
+  | 'heading'
+  | 'full_name'
+  | 'short_text'
+  | 'long_text'
+  | 'paragraph'
+  | 'email'
+  | 'address'
+  | 'phone'
+  | 'date'
+  | 'appointment'
+  | 'signature'
+  | 'fill_blank'
+  | 'product_list'
+  | 'mcq'
+  | 'msq'
+  | 'dropdown'
+  | 'subjective'
+  | 'checkbox'
+  | 'number'
+  | 'image'
+  | 'file_upload'
+  | 'time'
+  | 'captcha'
+  | 'spinner'
+  | 'submit'
+  | 'input_table'
+  | 'rating'
+  | 'star_rating'
+  | 'scale_rating'
+  | 'divider'
+  | 'section_collapse'
+  | 'page_break'
+  | 'section'
+
+export type PerfScopeType = 'zone' | 'region' | 'unit' | 'circle' | 'campus'
 
 export interface PerfField {
   id: string
@@ -153,9 +188,19 @@ export interface PerfForm {
   created_by: string
   creator_name?: string
   scope_unit_id: string | null
+  scope_type?: PerfScopeType | null
+  scope_region_id?: string | null
+  scope_circle_id?: string | null
+  scope_campus_id?: string | null
   scope_unit_name?: string
+  scope_region_name?: string
+  scope_circle_name?: string
+  scope_campus_name?: string
   period: string | null
   is_active: boolean | number
+  is_template?: boolean | number
+  template_key?: string | null
+  is_public?: boolean | number
   field_count?: number
   response_count?: number
   fields?: PerfField[]
@@ -166,7 +211,8 @@ export interface PerfForm {
 export interface PerfResponse {
   id: string
   form_id: string
-  member_id: string
+  member_id: string | null
+  response_source?: 'member' | 'public'
   member_name?: string
   member_phone?: string
   unit_name?: string

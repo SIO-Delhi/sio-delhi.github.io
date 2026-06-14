@@ -407,10 +407,10 @@ export const api = {
 
     // Short Links
     shortLinks: {
-        async create(fullUrl: string, postId?: string) {
+        async create(fullUrl: string, postId?: string, resource?: { type: string; id: string }) {
             return api.post<{ shortCode: string; shortUrl: string; fullUrl: string; clickCount: number }>(
                 '/api/short-links',
-                { fullUrl, postId }
+                { fullUrl, postId, resourceType: resource?.type, resourceId: resource?.id }
             )
         },
         async resolve(code: string) {
@@ -421,6 +421,11 @@ export const api = {
         async getByPost(postId: string) {
             return api.get<{ shortCode: string; shortUrl: string; fullUrl: string; clickCount: number }>(
                 `/api/short-links/post/${postId}`
+            )
+        },
+        async getByForm(formId: string, resourceType = 'portal_perf_form') {
+            return api.get<{ shortCode: string; shortUrl: string; fullUrl: string; clickCount: number }>(
+                `/api/short-links/form/${formId}?type=${encodeURIComponent(resourceType)}`
             )
         }
     },

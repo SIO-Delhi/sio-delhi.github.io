@@ -1,6 +1,6 @@
 import './portal.css'
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { PortalAuthProvider, usePortalAuth } from './context/PortalAuthContext'
 import { PortalLayout } from './components/PortalLayout'
@@ -126,21 +126,34 @@ function PortalIndex() {
   return <Navigate to="/portal/login" replace />
 }
 
+function LegacySharedFormFillRedirect() {
+  const { formId } = useParams()
+  return <Navigate to={`/portal/forms/${formId}/fill`} replace />
+}
+
+function LegacyRoleFormRedirect({ rolePath, action }: { rolePath: string; action: 'edit' | 'fill' | 'responses' }) {
+  const { formId } = useParams()
+  return <Navigate to={`/portal/${rolePath}/forms/${formId}/${action}`} replace />
+}
+
 /* ── Main routes ── */
 
 export function PortalRoutes() {
   return (
-    <ErrorBoundary>
     <PortalAuthProvider>
+    <ErrorBoundary>
       <Suspense fallback={<PortalLoadingFallback />}>
       <Routes>
         <Route index element={<PortalIndex />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="logout" element={<PortalLogoutPage />} />
+        <Route path="public/forms/:formId" element={<PerfFormFillPage publicMode />} />
 
         <Route element={<RequireClerkAuth />}>
           <Route element={<RequirePortalUser />}>
             <Route element={<PortalLayout />}>
+              <Route path="forms/:formId/fill" element={<PerfFormFillPage />} />
+              <Route path="performance/forms/:formId/fill" element={<LegacySharedFormFillRedirect />} />
 
               {/* Admin */}
               <Route element={<RoleGuard role="admin" />}>
@@ -171,11 +184,16 @@ export function PortalRoutes() {
                 <Route path="admin/edit-requests" element={<EditRequestsPage />} />
                 <Route path="admin/titles" element={<TitlesPage />} />
                 <Route path="admin/migrations" element={<MigrationsPage />} />
-                <Route path="admin/performance" element={<PerformancePage />} />
-                <Route path="admin/performance/create" element={<PerfFormBuilderPage />} />
-                <Route path="admin/performance/:formId/edit" element={<PerfFormBuilderPage />} />
-                <Route path="admin/performance/:formId/fill" element={<PerfFormFillPage />} />
-                <Route path="admin/performance/:formId/responses" element={<PerfResponsesPage />} />
+                <Route path="admin/forms" element={<PerformancePage />} />
+                <Route path="admin/forms/create" element={<PerfFormBuilderPage />} />
+                <Route path="admin/forms/:formId/edit" element={<PerfFormBuilderPage />} />
+                <Route path="admin/forms/:formId/fill" element={<PerfFormFillPage />} />
+                <Route path="admin/forms/:formId/responses" element={<PerfResponsesPage />} />
+                <Route path="admin/performance" element={<Navigate to="/portal/admin/forms" replace />} />
+                <Route path="admin/performance/create" element={<Navigate to="/portal/admin/forms/create" replace />} />
+                <Route path="admin/performance/:formId/edit" element={<LegacyRoleFormRedirect rolePath="admin" action="edit" />} />
+                <Route path="admin/performance/:formId/fill" element={<LegacyRoleFormRedirect rolePath="admin" action="fill" />} />
+                <Route path="admin/performance/:formId/responses" element={<LegacyRoleFormRedirect rolePath="admin" action="responses" />} />
                 <Route path="admin/messages/compose" element={<MessagesComposePage />} />
                 <Route path="admin/messages/inbox" element={<MessagesInboxPage />} />
               </Route>
@@ -196,11 +214,16 @@ export function PortalRoutes() {
                 <Route path="zonal/members" element={<ManagePage entity="members" readOnly />} />
                 <Route path="zonal/members/:memberId" element={<ViewMemberPage />} />
                 <Route path="zonal/titles" element={<TitlesPage />} />
-                <Route path="zonal/performance" element={<PerformancePage />} />
-                <Route path="zonal/performance/create" element={<PerfFormBuilderPage />} />
-                <Route path="zonal/performance/:formId/edit" element={<PerfFormBuilderPage />} />
-                <Route path="zonal/performance/:formId/fill" element={<PerfFormFillPage />} />
-                <Route path="zonal/performance/:formId/responses" element={<PerfResponsesPage />} />
+                <Route path="zonal/forms" element={<PerformancePage />} />
+                <Route path="zonal/forms/create" element={<PerfFormBuilderPage />} />
+                <Route path="zonal/forms/:formId/edit" element={<PerfFormBuilderPage />} />
+                <Route path="zonal/forms/:formId/fill" element={<PerfFormFillPage />} />
+                <Route path="zonal/forms/:formId/responses" element={<PerfResponsesPage />} />
+                <Route path="zonal/performance" element={<Navigate to="/portal/zonal/forms" replace />} />
+                <Route path="zonal/performance/create" element={<Navigate to="/portal/zonal/forms/create" replace />} />
+                <Route path="zonal/performance/:formId/edit" element={<LegacyRoleFormRedirect rolePath="zonal" action="edit" />} />
+                <Route path="zonal/performance/:formId/fill" element={<LegacyRoleFormRedirect rolePath="zonal" action="fill" />} />
+                <Route path="zonal/performance/:formId/responses" element={<LegacyRoleFormRedirect rolePath="zonal" action="responses" />} />
                 <Route path="zonal/migrations" element={<MigrationsPage />} />
                 <Route path="zonal/messages/compose" element={<MessagesComposePage />} />
                 <Route path="zonal/messages/inbox" element={<MessagesInboxPage />} />
@@ -214,11 +237,16 @@ export function PortalRoutes() {
                 <Route path="regional/unit-presidents" element={<ManagePage entity="unit-presidents" readOnly />} />
                 <Route path="regional/members" element={<ManagePage entity="members" readOnly />} />
                 <Route path="regional/members/:memberId" element={<ViewMemberPage />} />
-                <Route path="regional/performance" element={<PerformancePage />} />
-                <Route path="regional/performance/create" element={<PerfFormBuilderPage />} />
-                <Route path="regional/performance/:formId/edit" element={<PerfFormBuilderPage />} />
-                <Route path="regional/performance/:formId/fill" element={<PerfFormFillPage />} />
-                <Route path="regional/performance/:formId/responses" element={<PerfResponsesPage />} />
+                <Route path="regional/forms" element={<PerformancePage />} />
+                <Route path="regional/forms/create" element={<PerfFormBuilderPage />} />
+                <Route path="regional/forms/:formId/edit" element={<PerfFormBuilderPage />} />
+                <Route path="regional/forms/:formId/fill" element={<PerfFormFillPage />} />
+                <Route path="regional/forms/:formId/responses" element={<PerfResponsesPage />} />
+                <Route path="regional/performance" element={<Navigate to="/portal/regional/forms" replace />} />
+                <Route path="regional/performance/create" element={<Navigate to="/portal/regional/forms/create" replace />} />
+                <Route path="regional/performance/:formId/edit" element={<LegacyRoleFormRedirect rolePath="regional" action="edit" />} />
+                <Route path="regional/performance/:formId/fill" element={<LegacyRoleFormRedirect rolePath="regional" action="fill" />} />
+                <Route path="regional/performance/:formId/responses" element={<LegacyRoleFormRedirect rolePath="regional" action="responses" />} />
                 <Route path="regional/migrations" element={<MigrationsPage />} />
                 <Route path="regional/messages/compose" element={<MessagesComposePage />} />
                 <Route path="regional/messages/inbox" element={<MessagesInboxPage />} />
@@ -231,11 +259,16 @@ export function PortalRoutes() {
                 <Route path="unit/edit-requests" element={<EditRequestsPage />} />
                 <Route path="unit/members/:memberId" element={<ViewMemberPage />} />
                 <Route path="unit/titles" element={<TitlesPage />} />
-                <Route path="unit/performance" element={<PerformancePage />} />
-                <Route path="unit/performance/create" element={<PerfFormBuilderPage />} />
-                <Route path="unit/performance/:formId/edit" element={<PerfFormBuilderPage />} />
-                <Route path="unit/performance/:formId/fill" element={<PerfFormFillPage />} />
-                <Route path="unit/performance/:formId/responses" element={<PerfResponsesPage />} />
+                <Route path="unit/forms" element={<PerformancePage />} />
+                <Route path="unit/forms/create" element={<PerfFormBuilderPage />} />
+                <Route path="unit/forms/:formId/edit" element={<PerfFormBuilderPage />} />
+                <Route path="unit/forms/:formId/fill" element={<PerfFormFillPage />} />
+                <Route path="unit/forms/:formId/responses" element={<PerfResponsesPage />} />
+                <Route path="unit/performance" element={<Navigate to="/portal/unit/forms" replace />} />
+                <Route path="unit/performance/create" element={<Navigate to="/portal/unit/forms/create" replace />} />
+                <Route path="unit/performance/:formId/edit" element={<LegacyRoleFormRedirect rolePath="unit" action="edit" />} />
+                <Route path="unit/performance/:formId/fill" element={<LegacyRoleFormRedirect rolePath="unit" action="fill" />} />
+                <Route path="unit/performance/:formId/responses" element={<LegacyRoleFormRedirect rolePath="unit" action="responses" />} />
                 <Route path="unit/messages/compose" element={<MessagesComposePage />} />
                 <Route path="unit/messages/inbox" element={<MessagesInboxPage />} />
               </Route>
@@ -245,8 +278,10 @@ export function PortalRoutes() {
                 <Route path="member/dashboard" element={<DashboardPage />} />
                 <Route path="member/profile" element={<MemberProfilePage />} />
                 <Route path="member/account/*" element={<MemberAccountPage />} />
-                <Route path="member/performance" element={<PerformancePage />} />
-                <Route path="member/performance/:formId/fill" element={<PerfFormFillPage />} />
+                <Route path="member/forms" element={<PerformancePage />} />
+                <Route path="member/forms/:formId/fill" element={<PerfFormFillPage />} />
+                <Route path="member/performance" element={<Navigate to="/portal/member/forms" replace />} />
+                <Route path="member/performance/:formId/fill" element={<LegacyRoleFormRedirect rolePath="member" action="fill" />} />
                 <Route path="member/migrations" element={<MigrationsPage />} />
                 <Route path="member/messages/compose" element={<MessagesComposePage />} />
                 <Route path="member/messages/inbox" element={<MessagesInboxPage />} />
@@ -259,7 +294,7 @@ export function PortalRoutes() {
         <Route path="*" element={<Navigate to="/portal/login" replace />} />
       </Routes>
       </Suspense>
-    </PortalAuthProvider>
     </ErrorBoundary>
+    </PortalAuthProvider>
   )
 }

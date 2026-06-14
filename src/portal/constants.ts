@@ -82,7 +82,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
       ],
     },
     { label: 'Titles', path: '/portal/admin/titles', icon: Award },
-    { label: 'Performance', path: '/portal/admin/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    { label: 'Forms', path: '/portal/admin/forms', icon: BarChart3, badgeKey: 'pendingForms' },
     { label: 'Migrations', path: '/portal/admin/migrations', icon: ArrowRightLeft, badgeKey: 'pendingMigrations' },
     {
       label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
@@ -103,7 +103,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
     { label: 'Campus Presidents', path: '/portal/zonal/campus-presidents', icon: GraduationCap },
     { label: 'Members', path: '/portal/zonal/members', icon: Users },
     { label: 'Titles', path: '/portal/zonal/titles', icon: Award },
-    { label: 'Performance', path: '/portal/zonal/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    { label: 'Forms', path: '/portal/zonal/forms', icon: BarChart3, badgeKey: 'pendingForms' },
     { label: 'Migrations', path: '/portal/zonal/migrations', icon: ArrowRightLeft, badgeKey: 'pendingMigrations' },
     {
       label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
@@ -118,7 +118,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
     { label: 'Units', path: '/portal/regional/units', icon: Building2 },
     { label: 'Unit Presidents', path: '/portal/regional/unit-presidents', icon: UserCheck },
     { label: 'Members', path: '/portal/regional/members', icon: Users },
-    { label: 'Performance', path: '/portal/regional/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    { label: 'Forms', path: '/portal/regional/forms', icon: BarChart3, badgeKey: 'pendingForms' },
     { label: 'Migrations', path: '/portal/regional/migrations', icon: ArrowRightLeft, badgeKey: 'pendingMigrations' },
     {
       label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
@@ -133,7 +133,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
     { label: 'Members', path: '/portal/unit/members', icon: Users },
     { label: 'Edit Requests', path: '/portal/unit/edit-requests', icon: ClipboardCheck },
     { label: 'Titles', path: '/portal/unit/titles', icon: Award },
-    { label: 'Performance', path: '/portal/unit/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    { label: 'Forms', path: '/portal/unit/forms', icon: BarChart3, badgeKey: 'pendingForms' },
     {
       label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
       children: [
@@ -147,7 +147,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
     { label: 'Members', path: '/portal/unit/members', icon: Users },
     { label: 'Edit Requests', path: '/portal/unit/edit-requests', icon: ClipboardCheck },
     { label: 'Titles', path: '/portal/unit/titles', icon: Award },
-    { label: 'Performance', path: '/portal/unit/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    { label: 'Forms', path: '/portal/unit/forms', icon: BarChart3, badgeKey: 'pendingForms' },
     {
       label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
       children: [
@@ -159,7 +159,7 @@ export const NAV_CONFIG: Record<PortalRole, NavItem[]> = {
   member: [
     { label: 'Dashboard', path: '/portal/member/dashboard', icon: LayoutDashboard },
     { label: 'Profile', path: '/portal/member/profile', icon: User },
-    { label: 'Performance', path: '/portal/member/performance', icon: BarChart3, badgeKey: 'pendingForms' },
+    { label: 'Forms', path: '/portal/member/forms', icon: BarChart3, badgeKey: 'pendingForms' },
     { label: 'Migrations', path: '/portal/member/migrations', icon: ArrowRightLeft, badgeKey: 'pendingMigrations' },
     {
       label: 'Messages', path: '#', icon: MessageSquare, badgeKey: 'unreadMessages',
@@ -522,4 +522,3 @@ export const STATUS_COLORS: Record<string, string> = {
   approved: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   rejected: 'bg-red-50 text-red-700 border-red-200',
 }
-

@@ -18,7 +18,7 @@ export function LoginPage() {
           appearance={{
             baseTheme: dark,
             variables: {
-              colorPrimary: '#ff3b3b',
+              colorPrimary: 'var(--p-red)',
               colorBackground: 'transparent',
               colorInputBackground: '#111',
               colorInputText: '#fff',

@@ -5,10 +5,12 @@
 
 .portal-app {
   --p-red: #ff3b3b;
+  --p-red-rgb: 255, 59, 59;
   --p-red-dark: #b82a2a;
   --p-red-light: #ff7676;
   --p-red-glow: rgba(255, 59, 59, 0.15);
   --p-red-subtle: rgba(255, 59, 59, 0.06);
+  --p-amber: #efc676;
 
   --p-gold: #efc676;
   --p-gold-dim: rgba(239, 198, 118, 0.6);
@@ -23,6 +25,7 @@
   --p-bg-sidebar: #0a0a0a;
   --p-bg-input: #111111;
   --p-bg-hover: rgba(255, 255, 255, 0.04);
+  --p-topbar-bg: rgba(3, 3, 4, 0.8);
 
   --p-text: #fdedcb;
   --p-text-secondary: #999999;
@@ -49,4 +52,43 @@
   /* Sidebar dimensions */
   --p-sidebar-w: 256px;
   --p-sidebar-collapsed-w: 68px;
+}
+
+.portal-app.portal-theme-light {
+  --p-red: #2563eb;
+  --p-red-rgb: 37, 99, 235;
+  --p-red-dark: #1d4ed8;
+  --p-red-light: #60a5fa;
+  --p-red-glow: rgba(37, 99, 235, 0.14);
+  --p-red-subtle: rgba(37, 99, 235, 0.08);
+  --p-amber: #2563eb;
+
+  --p-gold: #2563eb;
+  --p-gold-dim: rgba(37, 99, 235, 0.62);
+
+  --p-cream: #111827;
+  --p-cream-dim: rgba(17, 24, 39, 0.72);
+
+  --p-bg-body: #f5f7fb;
+  --p-bg-card: #ffffff;
+  --p-bg-elevated: #f9fafb;
+  --p-bg-surface: #eef2f7;
+  --p-bg-sidebar: #ffffff;
+  --p-bg-input: #ffffff;
+  --p-bg-hover: rgba(37, 99, 235, 0.06);
+  --p-topbar-bg: rgba(255, 255, 255, 0.86);
+
+  --p-text: #111827;
+  --p-text-secondary: #374151;
+  --p-text-muted: #6b7280;
+  --p-text-white: #111827;
+
+  --p-border: #d8dee8;
+  --p-border-light: #c8d1df;
+  --p-border-subtle: rgba(15, 23, 42, 0.08);
+
+  --p-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --p-shadow-md: 0 6px 18px rgba(15, 23, 42, 0.1);
+  --p-shadow-lg: 0 14px 34px rgba(15, 23, 42, 0.14);
+  --p-shadow-glow: 0 0 40px rgba(37, 99, 235, 0.08);
 }

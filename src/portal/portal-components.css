@@ -66,12 +66,12 @@
 .portal-btn-primary {
   background: var(--p-red);
   color: white;
-  box-shadow: 0 2px 8px rgba(255, 59, 59, 0.25);
+  box-shadow: 0 2px 8px rgba(var(--p-red-rgb), 0.25);
 }
 
 .portal-btn-primary:hover:not(:disabled) {
   background: var(--p-red-dark);
-  box-shadow: 0 4px 16px rgba(255, 59, 59, 0.3);
+  box-shadow: 0 4px 16px rgba(var(--p-red-rgb), 0.3);
   transform: translateY(-1px);
 }
 
@@ -141,7 +141,7 @@
 .portal-input:focus {
   outline: none;
   border-color: var(--p-red);
-  box-shadow: 0 0 0 3px rgba(255, 59, 59, 0.12);
+  box-shadow: 0 0 0 3px rgba(var(--p-red-rgb), 0.12);
 }
 
 .portal-textarea {
@@ -438,6 +438,13 @@
   text-underline-offset: 2px;
 }
 
+.portal-table-name-with-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* Table action buttons (edit/delete) */
 .portal-table-action {
   padding: 6px;
@@ -606,10 +613,16 @@
   border-color: rgba(220, 38, 38, 0.3);
 }
 
+.portal-badge-info {
+  background: var(--p-red-subtle);
+  color: var(--p-red);
+  border-color: var(--p-red-subtle);
+}
+
 .portal-badge-title {
   background: var(--p-red-subtle);
   color: var(--p-red-light);
-  border-color: rgba(255, 59, 59, 0.2);
+  border-color: rgba(var(--p-red-rgb), 0.2);
   font-weight: 700;
 }
 
@@ -630,7 +643,7 @@
 .portal-badge-title-red {
   background: var(--p-red-subtle);
   color: var(--p-red-light);
-  border-color: rgba(255, 59, 59, 0.2);
+  border-color: rgba(var(--p-red-rgb), 0.2);
   font-weight: 700;
 }
 
@@ -687,7 +700,7 @@
 
 .portal-stat-clickable:hover {
   border-color: var(--p-red);
-  box-shadow: 0 0 0 1px rgba(255, 59, 59, 0.2), var(--p-shadow-glow);
+  box-shadow: 0 0 0 1px rgba(var(--p-red-rgb), 0.2), var(--p-shadow-glow);
   transform: translateY(-1px);
 }
 
@@ -1094,11 +1107,11 @@
 
 .portal-msg-card.unread {
   border-left: 3px solid var(--p-red);
-  background: rgba(255, 59, 59, 0.04);
+  background: rgba(var(--p-red-rgb), 0.04);
 }
 
 .portal-msg-card.unread:hover {
-  background: rgba(255, 59, 59, 0.07);
+  background: rgba(var(--p-red-rgb), 0.07);
 }
 
 .portal-msg-row {

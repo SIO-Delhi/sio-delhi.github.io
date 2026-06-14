@@ -173,6 +173,15 @@ CREATE TABLE IF NOT EXISTS portal_perf_reviews (
     UNIQUE KEY uq_perf_review (response_id, reviewer_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS portal_perf_response_notification_views (
+    response_id VARCHAR(36) NOT NULL,
+    user_id VARCHAR(36) NOT NULL,
+    seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (response_id, user_id),
+    FOREIGN KEY (response_id) REFERENCES portal_perf_responses(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES portal_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS portal_edit_requests (
     id VARCHAR(36) PRIMARY KEY,
     member_id VARCHAR(36) NOT NULL,

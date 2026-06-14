@@ -13,6 +13,7 @@ import type {
   IncompleteDetailsMember,
   PortalSearchResult,
   PerfForm,
+  PerfScopeType,
   PerfResponse,
   PerfReview,
 } from './types'
@@ -31,6 +32,24 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await api.post<T>(`/api/portal${path}`, body)
   if (res.error) throw new Error(res.error)
   return res.data!
+}
+
+async function publicGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}/api/portal${path}`)
+  const data = await res.json()
+  if (!res.ok || data.error) throw new Error(data.error ?? 'Request failed')
+  return data
+}
+
+async function publicPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}/api/portal${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json()
+  if (!res.ok || data.error) throw new Error(data.error ?? 'Request failed')
+  return data
 }
 
 async function put<T>(path: string, body: unknown): Promise<T> {
@@ -385,12 +404,23 @@ export async function fetchPerfForm(id: string): Promise<PerfForm> {
   return get<PerfForm>(`/performance/forms/${id}`)
 }
 
+export async function fetchPublicPerfForm(id: string): Promise<PerfForm> {
+  return publicGet<PerfForm>(`/performance/public/forms/${id}`)
+}
+
 export async function createPerfForm(data: {
   title: string
   description?: string
   created_by: string
+  scope_type?: PerfScopeType
   scope_unit_id?: string | null
+  scope_region_id?: string | null
+  scope_circle_id?: string | null
+  scope_campus_id?: string | null
   period?: string
+  is_template?: boolean
+  is_public?: boolean
+  template_key?: string | null
   fields: { type: string; label: string; description?: string; options?: string[]; is_required?: boolean; max_value?: number }[]
 }): Promise<{ id: string }> {
   return post<{ id: string }>('/performance/forms', data)
@@ -398,6 +428,28 @@ export async function createPerfForm(data: {
 
 export async function updatePerfForm(id: string, data: Record<string, unknown>): Promise<void> {
   await put(`/performance/forms/${id}`, data)
+}
+
+type PerfFormLinkKind = 'public' | 'internal'
+
+function perfFormResourceType(kind: PerfFormLinkKind): string {
+  return kind === 'public' ? 'portal_perf_form_public' : 'portal_perf_form_internal'
+}
+
+export async function getPerfFormShortLink(formId: string, kind: PerfFormLinkKind): Promise<{ shortUrl: string; fullUrl: string; clickCount: number } | null> {
+  const res = await api.shortLinks.getByForm(formId, perfFormResourceType(kind))
+  if (res.error) {
+    if (res.error.toLowerCase().includes('no short link')) return null
+    throw new Error(res.error)
+  }
+  return res.data ?? null
+}
+
+export async function createPerfFormShortLink(formId: string, fullUrl: string, kind: PerfFormLinkKind): Promise<{ shortUrl: string; fullUrl: string; clickCount: number }> {
+  const res = await api.shortLinks.create(fullUrl, undefined, { type: perfFormResourceType(kind), id: formId })
+  if (res.error) throw new Error(res.error)
+  if (!res.data) throw new Error('Failed to create short link.')
+  return res.data
 }
 
 export async function deletePerfForm(id: string): Promise<void> {
@@ -412,9 +464,18 @@ export async function submitPerfResponse(formId: string, memberId: string, respo
   await post(`/performance/forms/${formId}/respond`, { member_id: memberId, response_data: responseData })
 }
 
+export async function submitPublicPerfResponse(formId: string, responseData: Record<string, unknown>): Promise<void> {
+  await publicPost(`/performance/public/forms/${formId}/respond`, { response_data: responseData })
+}
+
 /** Record that a member has opened/seen a performance form (clears its notification badge) */
 export async function markPerfFormSeen(formId: string, memberId: string): Promise<void> {
   await post(`/performance/forms/${formId}/seen`, { member_id: memberId })
+}
+
+/** Mark response-review notifications as seen for a reviewer. */
+export async function markPerfResponseNotificationsSeen(userId: string): Promise<void> {
+  await post('/performance/responses/notifications/seen', { user_id: userId })
 }
 
 export async function fetchPerfResponseReviews(formId: string, responseId: string): Promise<PerfReview[]> {

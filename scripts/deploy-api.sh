@@ -13,12 +13,20 @@
 
 set -euo pipefail
 
+# Load credentials from .env.local if present
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "$SCRIPT_DIR/.env.local" ]; then
+  set -a
+  source "$SCRIPT_DIR/.env.local"
+  set +a
+fi
+
 echo "=== API Deployment ==="
 
 # Check required vars
 for var in FTP_HOST FTP_USER FTP_PASS FTP_PATH; do
   if [ -z "${!var:-}" ]; then
-    echo "Error: $var is not set"
+    echo "Error: $var is not set. Add to .env.local or export it."
     exit 1
   fi
 done
@@ -34,6 +42,7 @@ EXCLUDES=(
   ".env"
   ".env.example"
   "logs/"
+  "tmp/"
   ".clerk_jwks_cache.json"
   "uploads/"
 )

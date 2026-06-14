@@ -32,7 +32,7 @@ export function MemberAccountPage() {
           <UserProfile
             appearance={{
               baseTheme: dark,
-              variables: { colorPrimary: '#ff3b3b', colorBackground: '#0a0a0a' },
+              variables: { colorPrimary: 'var(--p-red)', colorBackground: 'var(--p-bg-sidebar)' },
               elements: {
                 navbarButton__account: { display: 'none' },
                 profileSection__profile: { display: 'none' },

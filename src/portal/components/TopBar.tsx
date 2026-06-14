@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Bell, Mail, ArrowRightLeft, BarChart3, Search } from 'lucide-react'
+import { Bell, Mail, ArrowRightLeft, BarChart3, Search, Moon, Sun } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { usePortalAuth } from '../context/PortalAuthContext'
 import { useNotifications } from '../context/NotificationContext'
@@ -19,9 +19,17 @@ function rolePrefix(role: string): string {
   return map[role] ?? '/portal/member'
 }
 
-export function TopBar({ title }: { title?: string }) {
+type PortalTheme = 'dark' | 'light'
+
+type TopBarProps = {
+  title?: string
+  theme?: PortalTheme
+  onToggleTheme?: () => void
+}
+
+export function TopBar({ title, theme = 'dark', onToggleTheme }: TopBarProps) {
   const { user } = usePortalAuth()
-  const { counts } = useNotifications()
+  const { counts, decrement, refresh } = useNotifications()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -46,12 +54,32 @@ export function TopBar({ title }: { title?: string }) {
     if (!q.trim()) { setSearchResults(null); return }
     try {
       const res = await api.searchPortal(q)
+      const term = q.trim().toLowerCase()
+      if (user) {
+        const selfMatches = [
+          user.full_name,
+          user.first_name,
+          user.middle_name ?? '',
+          user.last_name,
+          user.username ?? '',
+          user.phone ?? '',
+        ].some(v => String(v ?? '').toLowerCase().includes(term))
+        const hasSelf = res.members.some(m => m.id === user.id)
+        if (selfMatches && !hasSelf) {
+          res.members = [{
+            id: user.id,
+            full_name: user.full_name,
+            phone: user.phone,
+            unit_name: user.membership_name ?? user.unit_name ?? user.circle_name ?? user.campus_name ?? null,
+          }, ...res.members]
+        }
+      }
       setSearchResults(res)
       setSearchOpen(true)
     } catch {
       setSearchResults(null)
     }
-  }, [])
+  }, [user])
 
   useEffect(() => {
     if (!searchQuery.trim()) return
@@ -109,12 +137,23 @@ export function TopBar({ title }: { title?: string }) {
   const items = [
     { key: 'messages', label: 'Unread Messages', count: counts.unreadMessages, icon: Mail, path: `${prefix}/messages/inbox` },
     { key: 'migrations', label: 'Pending Migrations', count: counts.pendingMigrations, icon: ArrowRightLeft, path: `${prefix}/migrations` },
-    { key: 'forms', label: 'Pending Forms', count: counts.pendingForms, icon: BarChart3, path: `${prefix}/performance` },
+    {
+      key: 'forms',
+      label: user.role === 'member' ? 'Pending Forms' : 'Responses Needing Review',
+      count: counts.pendingForms,
+      icon: BarChart3,
+      path: `${prefix}/forms`,
+    },
   ]
 
-  function handleItemClick(path: string) {
+  async function handleItemClick(item: typeof items[number]) {
     setOpen(false)
-    navigate(path)
+    if (item.key === 'forms' && user.role !== 'member') {
+      api.markPerfResponseNotificationsSeen(user.id)
+        .then(() => decrement('pendingForms', item.count))
+        .catch(() => refresh())
+    }
+    navigate(item.path)
   }
 
   return (
@@ -188,8 +227,20 @@ export function TopBar({ title }: { title?: string }) {
       </div>
 
       <div className="portal-topbar-right">
+        {onToggleTheme && (
+          <button
+            type="button"
+            className="portal-topbar-theme-toggle"
+            aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            title={theme === 'light' ? 'Dark mode' : 'Light mode'}
+            onClick={onToggleTheme}
+          >
+            {theme === 'light' ? <Moon size={19} /> : <Sun size={19} />}
+          </button>
+        )}
+
         <div className="portal-topbar-notif-wrap" ref={dropdownRef}>
-          <button className="portal-topbar-notif" aria-label="Notifications" onClick={() => setOpen(prev => !prev)}>
+          <button className="portal-topbar-notif" aria-label="Notifications" onClick={() => { setOpen(prev => !prev); refresh() }}>
             <Bell size={20} />
             {total > 0 && <span className="portal-topbar-notif-badge">{total > 99 ? '99+' : total}</span>}
           </button>
@@ -204,7 +255,7 @@ export function TopBar({ title }: { title?: string }) {
                   {items.filter(i => i.count > 0).map(item => {
                     const Icon = item.icon
                     return (
-                      <button key={item.key} className="portal-topbar-dropdown-item" onClick={() => handleItemClick(item.path)}>
+                      <button key={item.key} className="portal-topbar-dropdown-item" onClick={() => handleItemClick(item)}>
                         <div className="portal-topbar-dropdown-icon"><Icon size={16} /></div>
                         <span className="portal-topbar-dropdown-label">{item.label}</span>
                         <span className="portal-topbar-dropdown-count">{item.count}</span>

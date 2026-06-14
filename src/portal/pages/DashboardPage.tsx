@@ -108,8 +108,11 @@ export function DashboardPage() {
     const cards: DashboardStat[] = []
 
     if (role === 'admin' || role === 'zonal_secretary' || role === 'regional_president') {
+      const unitAndCampusTotal = role === 'admin' || role === 'zonal_secretary'
+        ? (stats.totalRegionUnits ?? stats.totalUnits) + (stats.totalCampuses ?? 0)
+        : stats.totalUnits
       cards.push(
-        { label: 'Units', value: stats.totalUnits, icon: Building2, color: 'amber', to: `${prefix}/units${role === 'admin' ? '/manage' : ''}` },
+        { label: 'Units', value: unitAndCampusTotal, icon: Building2, color: 'amber', to: `${prefix}/units${role === 'admin' ? '/manage' : ''}` },
       )
       if (role === 'admin' || role === 'zonal_secretary') {
         cards.push(
@@ -141,14 +144,14 @@ export function DashboardPage() {
         { label: 'Inactive', value: stats.inactiveMembers, icon: UserX, color: 'slate', to: `${prefix}/members` },
         { label: 'Migrated', value: stats.migratedMembers, icon: ArrowRightLeft, color: 'amber', to: `${prefix}/members` },
         { label: 'Incomplete Details', value: stats.membersWithIncompleteDetails ?? 0, icon: AlertCircle, color: 'amber', onClick: () => setIncompleteDetailsOpen(prev => !prev) },
-        { label: 'Performance', value: 'View', icon: TrendingUp, color: 'green', to: `${prefix}/performance` },
+        { label: 'Forms', value: 'View', icon: TrendingUp, color: 'green', to: `${prefix}/forms` },
         { label: 'Unread Messages', value: stats.unreadMessages, icon: Mail, color: 'red', to: `${prefix}/messages/inbox` },
       )
     }
 
     if (role === 'member') {
       cards.push(
-        { label: 'Performance', value: 'View', icon: TrendingUp, color: 'green', to: `${prefix}/performance` },
+        { label: 'Forms', value: 'View', icon: TrendingUp, color: 'green', to: `${prefix}/forms` },
         { label: 'Migrations', value: 'View', icon: ArrowRightLeft, color: 'amber', to: `${prefix}/migrations` },
         { label: 'Unread Messages', value: stats.unreadMessages, icon: Mail, color: 'red', to: `${prefix}/messages/inbox` },
       )

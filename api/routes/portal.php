@@ -9,7 +9,7 @@ require_once __DIR__ . '/../db.php';
 function uuid()
 {
     return sprintf(
-        '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        '%04x%04x-%05x-%04x-%04x-%04x%04x%04x',
         mt_rand(0, 0xffff),
         mt_rand(0, 0xffff),
         mt_rand(0, 0xffff),
@@ -163,6 +163,77 @@ function tableExists($db, $table)
         $cache[$table] = false;
     }
     return $cache[$table];
+}
+
+function ensurePerfFormViewsTable($db)
+{
+    $db->exec("
+            CREATE TABLE IF NOT EXISTS portal_perf_form_views (
+                form_id VARCHAR(36) NOT NULL,
+                member_id VARCHAR(36) NOT NULL,
+                seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (form_id, member_id),
+                FOREIGN KEY (form_id) REFERENCES portal_perf_forms(id) ON DELETE CASCADE,
+                FOREIGN KEY (member_id) REFERENCES portal_users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+}
+
+function ensurePerfResponseNotificationViewsTable($db)
+{
+    $db->exec("
+            CREATE TABLE IF NOT EXISTS portal_perf_response_notification_views (
+                response_id VARCHAR(36) NOT NULL,
+                user_id VARCHAR(36) NOT NULL,
+                seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (response_id, user_id),
+                FOREIGN KEY (response_id) REFERENCES portal_perf_responses(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES portal_users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+}
+
+function ensurePerfPublicResponsesTable($db)
+{
+    $db->exec("
+            CREATE TABLE IF NOT EXISTS portal_perf_public_responses (
+                id VARCHAR(36) PRIMARY KEY,
+                form_id VARCHAR(36) NOT NULL,
+                respondent_name VARCHAR(255) NULL,
+                respondent_email VARCHAR(255) NULL,
+                respondent_phone VARCHAR(32) NULL,
+                response_data JSON NOT NULL,
+                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (form_id) REFERENCES portal_perf_forms(id) ON DELETE CASCADE,
+                INDEX idx_pppr_form (form_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+}
+
+function ensurePerfFormsSchema($db)
+{
+    if (!tableExists($db, 'portal_perf_forms'))
+        return;
+    foreach ([
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_type VARCHAR(20) DEFAULT 'zone' AFTER created_by",
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_region_id VARCHAR(36) NULL AFTER scope_type",
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_circle_id VARCHAR(36) NULL AFTER scope_unit_id",
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_campus_id VARCHAR(36) NULL AFTER scope_circle_id",
+        "ALTER TABLE portal_perf_forms ADD COLUMN is_template TINYINT(1) DEFAULT 0 AFTER is_active",
+        "ALTER TABLE portal_perf_forms ADD COLUMN template_key VARCHAR(100) NULL AFTER is_template",
+        "ALTER TABLE portal_perf_forms ADD COLUMN is_public TINYINT(1) DEFAULT 0 AFTER template_key",
+        "ALTER TABLE portal_perf_fields MODIFY COLUMN type VARCHAR(32) NOT NULL",
+    ] as $sql) {
+        try {
+            $db->exec($sql);
+        } catch (Exception $e) { /* already migrated */
+        }
+    }
+    try {
+        $db->exec("UPDATE portal_perf_forms SET scope_type = CASE WHEN scope_unit_id IS NULL THEN 'zone' ELSE 'unit' END WHERE scope_type IS NULL OR scope_type = ''");
+    } catch (Exception $e) { /* ignore */
+    }
 }
 
 /**
@@ -477,9 +548,16 @@ function portalSetup()
                 title VARCHAR(255) NOT NULL,
                 description TEXT,
                 created_by VARCHAR(36) NOT NULL,
+                scope_type VARCHAR(20) DEFAULT 'zone',
+                scope_region_id VARCHAR(36) NULL,
                 scope_unit_id VARCHAR(36),
+                scope_circle_id VARCHAR(36) NULL,
+                scope_campus_id VARCHAR(36) NULL,
                 period VARCHAR(50),
                 is_active TINYINT(1) DEFAULT 1,
+                is_template TINYINT(1) DEFAULT 0,
+                template_key VARCHAR(100) NULL,
+                is_public TINYINT(1) DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (created_by) REFERENCES portal_users(id) ON DELETE CASCADE,
@@ -491,7 +569,7 @@ function portalSetup()
             CREATE TABLE IF NOT EXISTS portal_perf_fields (
                 id VARCHAR(36) PRIMARY KEY,
                 form_id VARCHAR(36) NOT NULL,
-                type ENUM('mcq','msq','subjective','checkbox','number','rating') NOT NULL,
+                type VARCHAR(32) NOT NULL,
                 label VARCHAR(500) NOT NULL,
                 description TEXT,
                 options JSON,
@@ -502,6 +580,27 @@ function portalSetup()
                 FOREIGN KEY (form_id) REFERENCES portal_perf_forms(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
+
+    foreach ([
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_type VARCHAR(20) DEFAULT 'zone' AFTER created_by",
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_region_id VARCHAR(36) NULL AFTER scope_type",
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_circle_id VARCHAR(36) NULL AFTER scope_unit_id",
+        "ALTER TABLE portal_perf_forms ADD COLUMN scope_campus_id VARCHAR(36) NULL AFTER scope_circle_id",
+        "ALTER TABLE portal_perf_forms ADD COLUMN is_template TINYINT(1) DEFAULT 0 AFTER is_active",
+        "ALTER TABLE portal_perf_forms ADD COLUMN template_key VARCHAR(100) NULL AFTER is_template",
+        "ALTER TABLE portal_perf_forms ADD COLUMN is_public TINYINT(1) DEFAULT 0 AFTER template_key",
+        "ALTER TABLE portal_perf_fields MODIFY COLUMN type VARCHAR(32) NOT NULL",
+    ] as $sql) {
+        try {
+            $db->exec($sql);
+        } catch (Exception $e) { /* Column/type already migrated */
+        }
+    }
+
+    try {
+        $db->exec("UPDATE portal_perf_forms SET scope_type = CASE WHEN scope_unit_id IS NULL THEN 'zone' ELSE 'unit' END WHERE scope_type IS NULL OR scope_type = ''");
+    } catch (Exception $e) { /* ignore */
+    }
 
     $db->exec("
             CREATE TABLE IF NOT EXISTS portal_perf_responses (
@@ -518,6 +617,32 @@ function portalSetup()
         ");
 
     $db->exec("
+            CREATE TABLE IF NOT EXISTS portal_perf_public_responses (
+                id VARCHAR(36) PRIMARY KEY,
+                form_id VARCHAR(36) NOT NULL,
+                respondent_name VARCHAR(255) NULL,
+                respondent_email VARCHAR(255) NULL,
+                respondent_phone VARCHAR(32) NULL,
+                response_data JSON NOT NULL,
+                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (form_id) REFERENCES portal_perf_forms(id) ON DELETE CASCADE,
+                INDEX idx_pppr_form (form_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+
+    $db->exec("
+            CREATE TABLE IF NOT EXISTS portal_perf_form_views (
+                form_id VARCHAR(36) NOT NULL,
+                member_id VARCHAR(36) NOT NULL,
+                seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (form_id, member_id),
+                FOREIGN KEY (form_id) REFERENCES portal_perf_forms(id) ON DELETE CASCADE,
+                FOREIGN KEY (member_id) REFERENCES portal_users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+
+    $db->exec("
             CREATE TABLE IF NOT EXISTS portal_perf_reviews (
                 id VARCHAR(36) PRIMARY KEY,
                 response_id VARCHAR(36) NOT NULL,
@@ -529,6 +654,17 @@ function portalSetup()
                 FOREIGN KEY (response_id) REFERENCES portal_perf_responses(id) ON DELETE CASCADE,
                 FOREIGN KEY (reviewer_id) REFERENCES portal_users(id) ON DELETE CASCADE,
                 UNIQUE KEY uq_perf_review (response_id, reviewer_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+
+    $db->exec("
+            CREATE TABLE IF NOT EXISTS portal_perf_response_notification_views (
+                response_id VARCHAR(36) NOT NULL,
+                user_id VARCHAR(36) NOT NULL,
+                seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (response_id, user_id),
+                FOREIGN KEY (response_id) REFERENCES portal_perf_responses(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES portal_users(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
 
@@ -2072,13 +2208,13 @@ function portalSearch()
     }
     $term = '%' . $q . '%';
 
-    // Members: first_name, middle_name, last_name, phone
+    // Members: first_name, middle_name, last_name, username, phone
     $stmt = $db->prepare("SELECT u.id, u.first_name, u.middle_name, u.last_name, u.phone, pu.name AS unit_name FROM portal_users u
             LEFT JOIN portal_units pu ON u.unit_id = pu.id
-            WHERE (u.first_name LIKE ? OR u.middle_name LIKE ? OR u.last_name LIKE ? OR u.phone LIKE ?
+            WHERE (u.first_name LIKE ? OR u.middle_name LIKE ? OR u.last_name LIKE ? OR u.username LIKE ? OR u.phone LIKE ?
             OR CONCAT(COALESCE(u.first_name,''), ' ', COALESCE(u.middle_name,''), ' ', COALESCE(u.last_name,'')) LIKE ?)
             ORDER BY u.first_name, u.last_name LIMIT 20");
-    $stmt->execute([$term, $term, $term, $term, $term]);
+    $stmt->execute([$term, $term, $term, $term, $term, $term]);
     $members = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $members[] = [
@@ -2164,17 +2300,32 @@ function portalNotificationCounts()
     if (!tableExists($db, 'portal_perf_forms'))
         return $out;
 
+    ensurePerfFormsSchema($db);
+    ensurePerfFormViewsTable($db);
+
     if ($role === 'member' && $userId && $unitId) {
+        $member = ['circle_id' => null, 'campus_id' => null, 'region_id' => null];
+        $userStmt = $db->prepare("SELECT circle_id, campus_id, region_id FROM portal_users WHERE id = ?");
+        $userStmt->execute([$userId]);
+        $member = $userStmt->fetch() ?: $member;
         $stmt = $db->prepare("
                 SELECT COUNT(*) FROM portal_perf_forms f
-                WHERE f.is_active = 1 AND (f.scope_unit_id = ? OR f.scope_unit_id IS NULL)
+                WHERE f.is_active = 1 AND (
+                    COALESCE(f.scope_type, CASE WHEN f.scope_unit_id IS NULL THEN 'zone' ELSE 'unit' END) = 'zone'
+                    OR f.scope_unit_id = ?
+                    OR (f.scope_circle_id IS NOT NULL AND f.scope_circle_id = ?)
+                    OR (f.scope_campus_id IS NOT NULL AND f.scope_campus_id = ?)
+                    OR (f.scope_region_id IS NOT NULL AND f.scope_region_id = ?)
+                )
                 AND NOT EXISTS (SELECT 1 FROM portal_perf_responses r WHERE r.form_id = f.id AND r.member_id = ?)
+                AND NOT EXISTS (SELECT 1 FROM portal_perf_form_views v WHERE v.form_id = f.id AND v.member_id = ?)
             ");
-        $stmt->execute([$unitId, $userId]);
+        $stmt->execute([$unitId, $member['circle_id'] ?? null, $member['campus_id'] ?? null, $member['region_id'] ?? null, $userId, $userId]);
         $out['pendingForms'] = (int) $stmt->fetchColumn();
     } elseif (in_array($role, ['admin', 'zonal_secretary', 'regional_president', 'unit_president'], true) && $userId) {
-        $base = "SELECT COUNT(*) FROM portal_perf_responses r WHERE NOT EXISTS (SELECT 1 FROM portal_perf_reviews rev WHERE rev.response_id = r.id)";
-        $params = [];
+        ensurePerfResponseNotificationViewsTable($db);
+        $base = "SELECT COUNT(*) FROM portal_perf_responses r WHERE NOT EXISTS (SELECT 1 FROM portal_perf_reviews rev WHERE rev.response_id = r.id) AND NOT EXISTS (SELECT 1 FROM portal_perf_response_notification_views v WHERE v.response_id = r.id AND v.user_id = ?)";
+        $params = [$userId];
         if ($role === 'unit_president' && $unitId) {
             $base .= " AND r.member_id IN (SELECT id FROM portal_users WHERE unit_id = ?)";
             $params[] = $unitId;
@@ -2506,17 +2657,26 @@ Performance Forms
 function portalGetPerfForms()
 {
     $db = getDB();
+    ensurePerfFormsSchema($db);
+    ensurePerfPublicResponsesTable($db);
     $unitId = $_GET['unitId'] ?? null;
     $role = $_GET['role'] ?? null;
     $userId = $_GET['userId'] ?? null;
 
     $baseSql = "
-            SELECT f.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS creator_name, pu.name AS scope_unit_name,
+            SELECT f.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS creator_name,
+                pu.name AS scope_unit_name, pr.name AS scope_region_name, pc.name AS scope_circle_name, pca.name AS scope_campus_name,
                 (SELECT COUNT(*) FROM portal_perf_fields WHERE form_id = f.id) AS field_count,
-                (SELECT COUNT(*) FROM portal_perf_responses WHERE form_id = f.id) AS response_count
+                (
+                    (SELECT COUNT(*) FROM portal_perf_responses WHERE form_id = f.id)
+                    + (SELECT COUNT(*) FROM portal_perf_public_responses WHERE form_id = f.id)
+                ) AS response_count
             FROM portal_perf_forms f
             LEFT JOIN portal_users u ON f.created_by = u.id
             LEFT JOIN portal_units pu ON f.scope_unit_id = pu.id
+            LEFT JOIN portal_regions pr ON f.scope_region_id = pr.id
+            LEFT JOIN portal_circles pc ON f.scope_circle_id = pc.id
+            LEFT JOIN portal_campuses pca ON f.scope_campus_id = pca.id
         ";
     $params = [];
 
@@ -2544,12 +2704,27 @@ function portalGetPerfForms()
         }
     } elseif ($role === 'unit_president' && $unitId) {
         // Unit president sees forms scoped to their unit + zone-wide forms
-        $baseSql .= " WHERE (f.scope_unit_id = ? OR f.scope_unit_id IS NULL)";
+        $baseSql .= " WHERE (COALESCE(f.scope_type, CASE WHEN f.scope_unit_id IS NULL THEN 'zone' ELSE 'unit' END) = 'zone' OR f.scope_unit_id = ?)";
         $params[] = $unitId;
     } elseif ($role === 'member' && $unitId) {
-        // Members see forms scoped to their unit + zone-wide forms
-        $baseSql .= " WHERE (f.scope_unit_id = ? OR f.scope_unit_id IS NULL)";
+        // Members see active forms scoped to their hierarchy + zone-wide forms.
+        $member = null;
+        if ($userId) {
+            $userStmt = $db->prepare("SELECT unit_id, circle_id, campus_id, region_id FROM portal_users WHERE id = ?");
+            $userStmt->execute([$userId]);
+            $member = $userStmt->fetch();
+        }
+        $baseSql .= " WHERE f.is_active = 1 AND (
+                COALESCE(f.scope_type, CASE WHEN f.scope_unit_id IS NULL THEN 'zone' ELSE 'unit' END) = 'zone'
+                OR f.scope_unit_id = ?
+                OR (f.scope_circle_id IS NOT NULL AND f.scope_circle_id = ?)
+                OR (f.scope_campus_id IS NOT NULL AND f.scope_campus_id = ?)
+                OR (f.scope_region_id IS NOT NULL AND f.scope_region_id = ?)
+            )";
         $params[] = $unitId;
+        $params[] = $member['circle_id'] ?? null;
+        $params[] = $member['campus_id'] ?? null;
+        $params[] = $member['region_id'] ?? null;
     }
     // Admin and zonal_secretary see ALL forms (no filter)
 
@@ -2563,13 +2738,18 @@ function portalGetPerfForms()
 function portalGetPerfForm($id)
 {
     $db = getDB();
+    ensurePerfFormsSchema($db);
 
     // Form
     $stmt = $db->prepare("
-            SELECT f.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS creator_name, pu.name AS scope_unit_name
+            SELECT f.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS creator_name,
+                pu.name AS scope_unit_name, pr.name AS scope_region_name, pc.name AS scope_circle_name, pca.name AS scope_campus_name
             FROM portal_perf_forms f
             LEFT JOIN portal_users u ON f.created_by = u.id
             LEFT JOIN portal_units pu ON f.scope_unit_id = pu.id
+            LEFT JOIN portal_regions pr ON f.scope_region_id = pr.id
+            LEFT JOIN portal_circles pc ON f.scope_circle_id = pc.id
+            LEFT JOIN portal_campuses pca ON f.scope_campus_id = pca.id
             WHERE f.id = ?
         ");
     $stmt->execute([$id]);
@@ -2593,14 +2773,64 @@ function portalGetPerfForm($id)
     return $form;
 }
 
+function portalGetPublicPerfForm($id)
+{
+    $db = getDB();
+    ensurePerfFormsSchema($db);
+
+    $stmt = $db->prepare("
+            SELECT f.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS creator_name,
+                pu.name AS scope_unit_name, pr.name AS scope_region_name, pc.name AS scope_circle_name, pca.name AS scope_campus_name
+            FROM portal_perf_forms f
+            LEFT JOIN portal_users u ON f.created_by = u.id
+            LEFT JOIN portal_units pu ON f.scope_unit_id = pu.id
+            LEFT JOIN portal_regions pr ON f.scope_region_id = pr.id
+            LEFT JOIN portal_circles pc ON f.scope_circle_id = pc.id
+            LEFT JOIN portal_campuses pca ON f.scope_campus_id = pca.id
+            WHERE f.id = ? AND f.is_public = 1 AND f.is_active = 1
+        ");
+    $stmt->execute([$id]);
+    $form = $stmt->fetch();
+    if (!$form) {
+        http_response_code(404);
+        return ['error' => 'Public form not found.'];
+    }
+
+    $fields = $db->prepare("SELECT * FROM portal_perf_fields WHERE form_id = ? ORDER BY display_order");
+    $fields->execute([$id]);
+    $form['fields'] = $fields->fetchAll();
+    foreach ($form['fields'] as &$f) {
+        if ($f['options'] && is_string($f['options']))
+            $f['options'] = json_decode($f['options'], true);
+    }
+
+    return $form;
+}
+
 function portalCreatePerfForm()
 {
     $body = jsonBody();
     $db = getDB();
+    ensurePerfFormsSchema($db);
     $formId = uuid();
 
-    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_unit_id, period) VALUES (?,?,?,?,?,?)");
-    $stmt->execute([$formId, $body['title'], $body['description'] ?? null, $body['created_by'], $body['scope_unit_id'] ?? null, $body['period'] ?? null]);
+    $scopeType = $body['scope_type'] ?? (!empty($body['scope_unit_id']) ? 'unit' : 'zone');
+    $stmt = $db->prepare("INSERT INTO portal_perf_forms (id, title, description, created_by, scope_type, scope_region_id, scope_unit_id, scope_circle_id, scope_campus_id, period, is_template, template_key, is_public) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    $stmt->execute([
+        $formId,
+        $body['title'],
+        $body['description'] ?? null,
+        $body['created_by'],
+        $scopeType,
+        $body['scope_region_id'] ?? null,
+        $body['scope_unit_id'] ?? null,
+        $body['scope_circle_id'] ?? null,
+        $body['scope_campus_id'] ?? null,
+        $body['period'] ?? null,
+        !empty($body['is_template']) ? 1 : 0,
+        $body['template_key'] ?? null,
+        !empty($body['is_public']) ? 1 : 0,
+    ]);
 
     // Insert fields
     if (!empty($body['fields'])) {
@@ -2617,9 +2847,10 @@ function portalUpdatePerfForm($id)
 {
     $body = jsonBody();
     $db = getDB();
+    ensurePerfFormsSchema($db);
 
     // Update form metadata
-    $allowed = ['title', 'description', 'scope_unit_id', 'period', 'is_active'];
+    $allowed = ['title', 'description', 'scope_type', 'scope_region_id', 'scope_unit_id', 'scope_circle_id', 'scope_campus_id', 'period', 'is_active', 'is_template', 'template_key', 'is_public'];
     $sets = [];
     $params = [];
     foreach ($allowed as $key) {
@@ -2659,8 +2890,12 @@ Performance Responses
 function portalGetPerfResponses($formId)
 {
     $db = getDB();
+    ensurePerfPublicResponsesTable($db);
     $stmt = $db->prepare("
-            SELECT r.*, TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS member_name, u.phone AS member_phone, pu.name AS unit_name
+            SELECT r.*, 'member' AS response_source,
+                TRIM(CONCAT_WS(' ', u.first_name, u.middle_name, u.last_name)) AS member_name,
+                u.phone AS member_phone,
+                pu.name AS unit_name
             FROM portal_perf_responses r
             LEFT JOIN portal_users u ON r.member_id = u.id
             LEFT JOIN portal_units pu ON u.unit_id = pu.id
@@ -2669,6 +2904,23 @@ function portalGetPerfResponses($formId)
         ");
     $stmt->execute([$formId]);
     $rows = $stmt->fetchAll();
+    $publicStmt = $db->prepare("
+            SELECT id, form_id, NULL AS member_id, 'public' AS response_source,
+                COALESCE(NULLIF(TRIM(respondent_name), ''), 'Public respondent') AS member_name,
+                respondent_phone AS member_phone,
+                'Public' AS unit_name,
+                response_data,
+                submitted_at,
+                updated_at
+            FROM portal_perf_public_responses
+            WHERE form_id = ?
+            ORDER BY submitted_at DESC
+        ");
+    $publicStmt->execute([$formId]);
+    $rows = array_merge($rows, $publicStmt->fetchAll());
+    usort($rows, function ($a, $b) {
+        return strcmp($b['submitted_at'] ?? '', $a['submitted_at'] ?? '');
+    });
     foreach ($rows as &$r) {
         if ($r['response_data'] && is_string($r['response_data']))
             $r['response_data'] = json_decode($r['response_data'], true);
@@ -2689,13 +2941,125 @@ function portalSubmitPerfResponse($formId)
         // Update
         $db->prepare("UPDATE portal_perf_responses SET response_data = ? WHERE form_id = ? AND member_id = ?")
             ->execute([json_encode($body['response_data']), $formId, $body['member_id']]);
+        ensurePerfFormViewsTable($db);
+        $db->prepare("INSERT INTO portal_perf_form_views (form_id, member_id, seen_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE seen_at = NOW()")
+            ->execute([$formId, $body['member_id']]);
         return ['success' => true, 'updated' => true];
     } else {
         // Insert
         $db->prepare("INSERT INTO portal_perf_responses (id, form_id, member_id, response_data) VALUES (?,?,?,?)")
             ->execute([uuid(), $formId, $body['member_id'], json_encode($body['response_data'])]);
+        ensurePerfFormViewsTable($db);
+        $db->prepare("INSERT INTO portal_perf_form_views (form_id, member_id, seen_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE seen_at = NOW()")
+            ->execute([$formId, $body['member_id']]);
         return ['success' => true, 'created' => true];
     }
+}
+
+function portalSubmitPublicPerfResponse($formId)
+{
+    $body = jsonBody();
+    $db = getDB();
+    ensurePerfFormsSchema($db);
+    ensurePerfPublicResponsesTable($db);
+
+    $stmt = $db->prepare("SELECT id FROM portal_perf_forms WHERE id = ? AND is_public = 1 AND is_active = 1");
+    $stmt->execute([$formId]);
+    if (!$stmt->fetch()) {
+        http_response_code(404);
+        return ['error' => 'Public form not found.'];
+    }
+
+    $responseData = $body['response_data'] ?? null;
+    if (!$responseData || !is_array($responseData)) {
+        http_response_code(400);
+        return ['error' => 'response_data is required.'];
+    }
+
+    $id = uuid();
+    $db->prepare("
+            INSERT INTO portal_perf_public_responses
+                (id, form_id, respondent_name, respondent_email, respondent_phone, response_data)
+            VALUES (?,?,?,?,?,?)
+        ")->execute([
+            $id,
+            $formId,
+            isset($body['respondent_name']) ? trim((string) $body['respondent_name']) : null,
+            isset($body['respondent_email']) ? trim((string) $body['respondent_email']) : null,
+            isset($body['respondent_phone']) ? trim((string) $body['respondent_phone']) : null,
+            json_encode($responseData),
+        ]);
+
+    return ['success' => true, 'id' => $id];
+}
+
+function portalMarkPerfFormSeen($formId)
+{
+    $body = jsonBody();
+    $memberId = $body['member_id'] ?? null;
+    if (!$memberId) {
+        http_response_code(400);
+        return ['error' => 'member_id required.'];
+    }
+    $db = getDB();
+    ensurePerfFormViewsTable($db);
+    $stmt = $db->prepare("INSERT INTO portal_perf_form_views (form_id, member_id, seen_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE seen_at = NOW()");
+    $stmt->execute([$formId, $memberId]);
+    return ['success' => true];
+}
+
+function portalMarkPerfResponseNotificationsSeen()
+{
+    $body = jsonBody();
+    $userId = $body['user_id'] ?? null;
+    if (!$userId) {
+        http_response_code(400);
+        return ['error' => 'user_id required.'];
+    }
+
+    $db = getDB();
+    ensurePerfFormsSchema($db);
+    ensurePerfResponseNotificationViewsTable($db);
+
+    $stmt = $db->prepare("SELECT id, role, unit_id FROM portal_users WHERE id = ? LIMIT 1");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$user) {
+        http_response_code(400);
+        return ['error' => 'Invalid user ID.'];
+    }
+
+    $role = $user['role'] ?? 'member';
+    if (!in_array($role, ['admin', 'zonal_secretary', 'regional_president', 'unit_president'], true)) {
+        return ['success' => true, 'seen' => 0];
+    }
+
+    $regionCols = hasRegionColumns($db);
+    $hasUserRegion = $regionCols['users'];
+    $hasUnitRegion = $regionCols['units'];
+    $sql = "
+        INSERT IGNORE INTO portal_perf_response_notification_views (response_id, user_id, seen_at)
+        SELECT r.id, ?, NOW()
+        FROM portal_perf_responses r
+        WHERE NOT EXISTS (SELECT 1 FROM portal_perf_reviews rev WHERE rev.response_id = r.id)
+    ";
+    $params = [$userId];
+
+    if ($role === 'unit_president') {
+        $sql .= " AND r.member_id IN (SELECT id FROM portal_users WHERE unit_id = ?)";
+        $params[] = $user['unit_id'] ?? null;
+    } elseif ($role === 'regional_president') {
+        if (!$hasUserRegion || !$hasUnitRegion) {
+            return ['success' => true, 'seen' => 0];
+        }
+        $sql .= " AND r.member_id IN (SELECT id FROM portal_users WHERE unit_id IN (SELECT id FROM portal_units WHERE region_id = (SELECT region_id FROM portal_users WHERE id = ? AND role = 'regional_president')))";
+        $params[] = $userId;
+    }
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+
+    return ['success' => true, 'seen' => $stmt->rowCount()];
 }
 
 /* ═══════════════════════════════════════════

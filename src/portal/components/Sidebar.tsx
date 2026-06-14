@@ -8,6 +8,7 @@ import { NAV_CONFIG, ROLE_LABELS } from '../constants'
 import type { NavItem } from '../constants'
 import { UserAvatar } from './UserAvatar'
 import logo from '../../assets/logo.svg'
+import lightLogo from '../../assets/siodel_logo.png'
 
 export function Sidebar() {
   const { user } = usePortalAuth()
@@ -136,7 +137,8 @@ export function Sidebar() {
           {/* Brand */}
           <div className="portal-sidebar-brand">
             <div className="portal-sidebar-logo">
-              <img src={logo} alt="SIO Delhi" />
+              <img className="portal-sidebar-logo-dark" src={logo} alt="SIO Delhi" />
+              <img className="portal-sidebar-logo-light" src={lightLogo} alt="SIO Delhi" />
             </div>
             {!collapsed && (
               <div className="min-w-0 flex-1">

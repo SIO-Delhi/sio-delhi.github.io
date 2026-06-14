@@ -79,10 +79,13 @@ $publicRoutes = [
     'POST /analytics/heartbeat',
     'POST /analytics/event',
     'POST /forms/([^/]+)/submit',
+    'GET /portal/performance/public/forms/([^/]+)',
+    'POST /portal/performance/public/forms/([^/]+)/respond',
     'POST /posters/save',
     'POST /short-links',
     'GET /short-links/resolve/([a-zA-Z0-9]+)',
     'GET /short-links/post/([^/]+)',
+    'GET /short-links/form/([^/]+)',
     'POST /dev-reports',
 ];
 
@@ -225,10 +228,13 @@ $routes = [
     'POST /portal/messages' => 'routes/portal.php@portalSendMessage',
     'PUT /portal/messages/([^/]+)/read' => 'routes/portal.php@portalMarkMessageRead',
     'GET /portal/performance/forms' => 'routes/portal.php@portalGetPerfForms',
+    'GET /portal/performance/public/forms/([^/]+)' => 'routes/portal.php@portalGetPublicPerfForm',
+    'POST /portal/performance/public/forms/([^/]+)/respond' => 'routes/portal.php@portalSubmitPublicPerfResponse',
     'GET /portal/performance/forms/([^/]+)' => 'routes/portal.php@portalGetPerfForm',
     'POST /portal/performance/forms' => 'routes/portal.php@portalCreatePerfForm',
     'PUT /portal/performance/forms/([^/]+)' => 'routes/portal.php@portalUpdatePerfForm',
     'DELETE /portal/performance/forms/([^/]+)' => 'routes/portal.php@portalDeletePerfForm',
+    'POST /portal/performance/responses/notifications/seen' => 'routes/portal.php@portalMarkPerfResponseNotificationsSeen',
     'GET /portal/performance/forms/([^/]+)/responses/([^/]+)/reviews' => 'routes/portal.php@portalGetPerfResponseReviews',
     'POST /portal/performance/forms/([^/]+)/responses/([^/]+)/reviews' => 'routes/portal.php@portalUpsertPerfResponseReview',
     'GET /portal/performance/forms/([^/]+)/responses' => 'routes/portal.php@portalGetPerfResponses',
@@ -258,6 +264,7 @@ $routes = [
     'POST /short-links' => 'routes/short-links.php@createShortLink',
     'GET /short-links/resolve/([a-zA-Z0-9]+)' => 'routes/short-links.php@resolveShortLink',
     'GET /short-links/post/([^/]+)' => 'routes/short-links.php@getShortLinkByPost',
+    'GET /short-links/form/([^/]+)' => 'routes/short-links.php@getShortLinkByForm',
 
     // Dev Reports
     'POST /dev-reports' => 'routes/dev-reports.php@submitDevReport',

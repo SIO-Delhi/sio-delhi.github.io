@@ -39,7 +39,25 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
   const fetchData = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      if (entity === 'units') setData(await api.fetchUnits({ excludeCampusUnits: true }) as unknown as Record<string, unknown>[])
+      if (entity === 'units') {
+        const [unitRows, campusRows] = await Promise.all([api.fetchUnits(), api.fetchCampuses()])
+        const unitNames = new Set(unitRows.map(u => u.name.trim().toLowerCase()))
+        const normalizedUnits = unitRows.map(u => ({
+          ...u,
+          entity_kind: 'unit',
+          type_label: u.is_campus ? 'Campus' : 'Unit',
+        }))
+        const campusOnlyRows = campusRows
+          .filter(c => !unitNames.has(c.name.trim().toLowerCase()))
+          .map(c => ({
+            ...c,
+            entity_kind: 'campus',
+            is_campus: true,
+            type_label: 'Campus',
+            unit_president_name: c.campus_president_name ?? null,
+          }))
+        setData([...normalizedUnits, ...campusOnlyRows] as unknown as Record<string, unknown>[])
+      }
       else if (entity === 'circles') setData(await api.fetchCircles() as unknown as Record<string, unknown>[])
       else if (entity === 'campuses') setData(await api.fetchCampuses() as unknown as Record<string, unknown>[])
       else if (entity === 'regions') {
@@ -47,8 +65,9 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
         const regions = await api.fetchRegions()
         setData(regions.map(r => ({ id: r.region_id, name: r.region_name, regional_president_name: r.regional_president_name ?? '—', created_at: '' })))
       } else {
-        const membershipId = user?.role === 'unit_president' ? (user.membership_id ?? undefined) : undefined
+        const membershipId = user?.role === 'unit_president' ? (user.unit_id ?? user.membership_id ?? undefined) : undefined
         const regionId = user?.role === 'regional_president' ? (user.region_id ?? undefined) : undefined
+        const fetchRole = entity === 'members' && user?.role === 'unit_president' ? undefined : role
         const excludeCampusUnits = entity === 'unit-presidents'
         const campusUnitsOnly = entity === 'campus-presidents'
         const options = {
@@ -57,7 +76,7 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
           regionId,
           requestingRole: user?.role,
         }
-        setData(await api.fetchUsers(role ?? undefined, membershipId, options) as unknown as Record<string, unknown>[])
+        setData(await api.fetchUsers(fetchRole ?? undefined, membershipId, options) as unknown as Record<string, unknown>[])
       }
       setUnits(await api.fetchUnits())
       setCircles(await api.fetchCircles())
@@ -70,7 +89,25 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
 
   function getColumns(): TableColumn<Record<string, unknown>>[] {
     if (entity === 'units') return [
-      { key: 'name', label: 'Unit Name', sortable: true },
+      {
+        key: 'name',
+        label: 'Unit Name',
+        sortable: true,
+        render: (v, row) => (
+          <span className="portal-table-name-with-badge">
+            <span>{String(v ?? '—')}</span>
+            {row.is_campus ? <span className="portal-badge portal-badge-info">Campus</span> : null}
+          </span>
+        ),
+      },
+      {
+        key: 'type_label',
+        label: 'Type',
+        sortable: true,
+        render: (v, row) => row.is_campus
+          ? <span className="portal-badge portal-badge-info">Campus</span>
+          : <span className="portal-badge portal-badge-inactive">{String(v ?? 'Unit')}</span>,
+      },
       { key: 'unit_president_name', label: 'President', sortable: true, render: v => (v as string) || '—' },
       { key: 'created_at', label: 'Created', sortable: true, render: v => fmtDate(v as string) },
     ]
@@ -164,7 +201,10 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
   async function handleSaveEdit(values: Record<string, string>) {
     if (!editRow) return
     const id = editRow.id as string
-    if (entity === 'units') await api.updateUnit(id, { name: values.name })
+    if (entity === 'units') {
+      if (editRow.entity_kind === 'campus') await api.updateCampus(id, { name: values.name })
+      else await api.updateUnit(id, { name: values.name })
+    }
     else if (entity === 'circles') await api.updateCircle(id, { name: values.name })
     else if (entity === 'campuses') await api.updateCampus(id, { name: values.name })
     else if (entity === 'regions') {
@@ -198,7 +238,10 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
       if (isDemoteEntity) {
         // Demote back to member — don't delete their account
         await api.updateUser(deleteRow.id as string, { role: 'member' })
-      } else if (entity === 'units') await api.deleteUnit(deleteRow.id as string)
+      } else if (entity === 'units') {
+        if (deleteRow.entity_kind === 'campus') await api.deleteCampus(deleteRow.id as string)
+        else await api.deleteUnit(deleteRow.id as string)
+      }
       else if (entity === 'circles') await api.deleteCircle(deleteRow.id as string)
       else if (entity === 'campuses') await api.deleteCampus(deleteRow.id as string)
       else if (entity === 'regions') await api.deleteRegion(deleteRow.id as string)
@@ -220,7 +263,10 @@ export function ManagePage({ entity, readOnly = false }: ManagePageProps) {
     : isEntityDetail
       ? (row: Record<string, unknown>) => {
         const id = row.id as string
-        if (entity === 'units') navigate(`${prefix}/units/${id}`)
+        if (entity === 'units') {
+          if (row.entity_kind === 'campus') navigate(`${prefix}/campuses/${id}`)
+          else navigate(`${prefix}/units/${id}`)
+        }
         else if (entity === 'circles') navigate(`${prefix}/circles/${id}`)
         else navigate(`${prefix}/campuses/${id}`)
       }
