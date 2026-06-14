@@ -47,8 +47,7 @@ export function PerformancePage() {
   }
 
   function getCanonicalOrigin() {
-    if (typeof window === 'undefined') return 'https://siodelhi.org'
-    return window.location.hostname.endsWith('siodelhi.org') ? window.location.origin : 'https://siodelhi.org'
+    return 'https://siodelhi.org'
   }
 
   function getShareTarget(form: PerfForm) {
