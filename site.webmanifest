@@ -1,0 +1,14 @@
+{
+    "name": "SIO Delhi",
+    "short_name": "SIO Delhi",
+    "icons": [
+        {
+            "src": "/siodel-cricular.png",
+            "sizes": "192x192 512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#ffffff",
+    "background_color": "#ffffff",
+    "display": "standalone"
+}
