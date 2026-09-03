@@ -626,8 +626,8 @@ function DonationContent() {
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: '#999' }}>UPI ID</span>
                         <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            Stude05.07@cmsidfc
-                            <button onClick={() => copyToClipboard('Stude05.07@cmsidfc')} style={{ background: 'none', border: 'none', color: '#ff3b3b', cursor: 'pointer', padding: 0 }} title="Copy">
+                            Stude05.07@idfcbank
+                            <button onClick={() => copyToClipboard('Stude05.07@idfcbank')} style={{ background: 'none', border: 'none', color: '#ff3b3b', cursor: 'pointer', padding: 0 }} title="Copy">
                                 <Copy size={14} />
                             </button>
                         </span>
